@@ -8,45 +8,44 @@ export default function Layout() {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <Link to="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition">
+    <div className="min-h-screen bg-gradient-to-br from-purple-300 via-purple-100 to-blue-200 flex items-center justify-center p-6">
+      {/* Main container */}
+      <div className="w-full max-w-6xl h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        {/* Navbar */}
+        <nav className="bg-white px-8 py-6 border-b border-gray-100">
+          <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition">
             Heap
           </Link>
+        </nav>
+
+        {/* Main content with sidebar */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <aside className="w-64 bg-gray-50 border-r border-gray-100 px-6 py-8">
+            <nav className="space-y-2">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className="block px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition font-medium"
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </nav>
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1 bg-white p-8 overflow-auto">
+            <Outlet />
+          </main>
         </div>
-      </nav>
 
-      {/* Main content with sidebar */}
-      <div className="flex flex-1 gap-6 max-w-7xl mx-auto w-full px-6 py-6">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white rounded-lg p-6">
-          <nav className="space-y-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className="block px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition"
-              >
-                {link.name}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 bg-white rounded-lg p-8 border border-gray-200">
-          <Outlet />
-        </main>
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-white rounded-lg m-6 mt-0 border border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-600">
+        {/* Footer */}
+        <footer className="bg-gray-50 border-t border-gray-100 px-8 py-6 text-center text-sm text-gray-600">
           © 2026 Heap. All rights reserved.
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   )
 }
