@@ -9,8 +9,8 @@ export default function Layout() {
 
   return (
     
-      <div className="w-screen h-screen bg-gray-100 rounded-2xl flex flex-col gap-6 p-6">
-        {/* Navbar */}
+      <div className="w-screen h-screen bg-gradient-to-br from-purple-500 via-purple-100 to-purple-200 flex flex-col gap-6 p-6">
+        {/* zasad placeholder navbar */}
         <nav className="bg-white rounded-xl px-8 py-6">
           <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition">
             Heap
