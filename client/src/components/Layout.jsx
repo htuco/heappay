@@ -8,20 +8,20 @@ export default function Layout() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-300 via-purple-100 to-blue-200 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
       {/* Main container */}
-      <div className="w-full max-w-6xl h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-6xl h-[90vh] bg-gray-100 rounded-2xl flex flex-col gap-6 p-6">
         {/* Navbar */}
-        <nav className="bg-white px-8 py-6 border-b border-gray-100">
+        <nav className="bg-white rounded-xl px-8 py-6">
           <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition">
             Heap
           </Link>
         </nav>
 
         {/* Main content with sidebar */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 gap-6 overflow-hidden">
           {/* Sidebar */}
-          <aside className="w-64 bg-gray-50 border-r border-gray-100 px-6 py-8">
+          <aside className="w-64 bg-white rounded-xl px-6 py-8">
             <nav className="space-y-2">
               {navLinks.map((link) => (
                 <Link
@@ -36,13 +36,13 @@ export default function Layout() {
           </aside>
 
           {/* Main content */}
-          <main className="flex-1 bg-white p-8 overflow-auto">
+          <main className="flex-1 bg-white rounded-xl p-8 overflow-auto">
             <Outlet />
           </main>
         </div>
 
         {/* Footer */}
-        <footer className="bg-gray-50 border-t border-gray-100 px-8 py-6 text-center text-sm text-gray-600">
+        <footer className="bg-white rounded-xl px-8 py-6 text-center text-sm text-gray-600">
           © 2026 Heap. All rights reserved.
         </footer>
       </div>
