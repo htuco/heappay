@@ -9,24 +9,24 @@ export default function Layout() {
 
   return (
     
-      <div className="w-screen h-screen bg-gradient-to-br from-purple-500 via-purple-100 to-purple-200 flex flex-col gap-6 p-6">
+      <div className="w-screen h-screen bg-gradient-to-tr from-indigo-600 via-purple-400 to-cyan-300 flex flex-col gap-5 p-5">
         {/* zasad placeholder navbar */}
-        <nav className="bg-white rounded-xl px-8 py-6">
-          <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition">
-            Heap
+        <nav className="bg-white rounded-xl px-7 py-5">
+          <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-indigo-600 transition">
+            Heap - Header Placeholder
           </Link>
         </nav>
 
-        {/* Main content with sidebar */}
-        <div className="flex flex-1 gap-6 overflow-hidden">
-          {/* Sidebar */}
-          <aside className="w-64 bg-white rounded-xl px-6 py-8">
+        {/* glavni sadrzaj sa sidebarom */}
+        <div className="flex flex-1 gap-5 overflow-hidden">
+          {/* sidebar */}
+          <aside className="w-64 bg-white rounded-xl px-5 py-7">
             <nav className="space-y-2">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className="block px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition font-medium"
+                  className="block px-4 py-3 text-gray-700 hover:text-indigo-600  rounded-lg transition font-medium"
                 >
                   {link.name}
                 </Link>
@@ -34,16 +34,16 @@ export default function Layout() {
             </nav>
           </aside>
         
-          {/* Main content and footer */}
-          <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-            {/* Main content */}
-            <main className="flex-1 bg-white rounded-xl p-8 overflow-auto">
+          {/* glavni sadrzaj i footer */}
+          <div className="flex-1 flex flex-col gap-5 overflow-hidden">
+            {/* glavni sadrzaj */}
+            <main className="flex-1 bg-white/80 backdrop-blur-md rounded-xl p-7 overflow-auto">
               <Outlet />
             </main>
 
-            {/* Footer */}
-            <footer className="bg-white rounded-xl px-8 py-6 text-center text-sm text-gray-600">
-              © 2026 Heap. All rights reserved.
+            {/* footer */}
+            <footer className="bg-white rounded-xl px-7 py-5 text-center text-sm text-gray-600">
+              © 2026 Heap. All rights reserved. Footer placeholder.
             </footer>
           </div>
         </div>
