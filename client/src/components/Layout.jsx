@@ -8,9 +8,8 @@ export default function Layout() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-300 via-purple-100 to-blue-200 flex items-center justify-center p-6">
-      {/* Main container */}
-      <div className="w-full max-w-8xl h-[90vh] bg-gray-100 rounded-2xl flex flex-col gap-6 p-6">
+    
+      <div className="w-screen h-screen bg-gray-100 rounded-2xl flex flex-col gap-6 p-6">
         {/* Navbar */}
         <nav className="bg-white rounded-xl px-8 py-6">
           <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition">
@@ -50,6 +49,5 @@ export default function Layout() {
         </div>
         </div>
       
-    </div>
   )
 }
