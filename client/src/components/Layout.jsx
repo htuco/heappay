@@ -1,10 +1,10 @@
-import { Outlet } from 'react-router-dom'
-import { Link } from 'react-router-dom'
+import { Outlet, NavLink, Link } from 'react-router-dom'
+import { Home, Info, TrendingUp, BarChart3, CreditCard, FileText, Download, Settings, LifeBuoy } from 'lucide-react'
 
 export default function Layout() {
   const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'About', path: '/about' },
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'About', path: '/about', icon: Info },
   ]
 
   return (
@@ -20,24 +20,36 @@ export default function Layout() {
         {/* glavni sadrzaj sa sidebarom */}
         <div className="flex flex-1 gap-5 overflow-hidden">
           {/* sidebar */}
-          <aside className="w-64 bg-white rounded-xl px-5 py-7">
-            <nav className="space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className="block px-4 py-3 text-gray-700 hover:text-indigo-600  rounded-lg transition font-medium"
-                >
-                  {link.name}
-                </Link>
-              ))}
+          <aside className="w-64 bg-white rounded-xl px-5 py-7 border border-gray-200 shadow-sm">
+            <nav className="flex flex-col gap-1">
+              {navLinks.map((item) => {
+                const Icon = item.icon
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all pb-5 ${
+                        isActive
+                          ? 'bg-indigo-100 text-indigo-700 border-l-4 border-indigo-500 font-semibold'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`
+                    }
+                    
+                  >
+                    <Icon className="w-5 h-5" />
+                    {item.name}
+                  </NavLink>
+                )
+              })}
             </nav>
           </aside>
         
           {/* glavni sadrzaj i footer */}
           <div className="flex-1 flex flex-col gap-5 overflow-hidden">
             {/* glavni sadrzaj */}
-            <main className="flex-1 bg-white/80 backdrop-blur-md rounded-xl p-7 overflow-auto">
+            <main className="flex-1 bg-white/80 backdrop-blur-md rounded-xl p-7 overflow-auto ">
               <Outlet />
             </main>
 
