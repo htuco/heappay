@@ -29,10 +29,18 @@ export default function Layout() {
         </div>
       </nav>
 
-      {/* filer page */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        <Outlet />
-      </main>
+      {/* Main content with sidebar */}
+      <div className="flex flex-1">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white border-r border-gray-200 px-6 py-8">
+          {/* Sidebar content goes here */}
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+          <Outlet />
+        </main>
+      </div>
 
       {/* footer (for now) */}
       <footer className="bg-white border-t border-gray-200 mt-auto">
