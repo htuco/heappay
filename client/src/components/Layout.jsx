@@ -35,15 +35,19 @@ export default function Layout() {
             </nav>
           </aside>
         
-          {/* Main content */}
-          <main className="flex-1 bg-white rounded-xl p-8 overflow-auto">
-            <Outlet />
-          </main>
+          {/* Main content and footer */}
+          <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+            {/* Main content */}
+            <main className="flex-1 bg-white rounded-xl p-8 overflow-auto">
+              <Outlet />
+            </main>
+
+            {/* Footer */}
+            <footer className="bg-white rounded-xl px-8 py-6 text-center text-sm text-gray-600">
+              © 2026 Heap. All rights reserved.
+            </footer>
+          </div>
         </div>
-        {/* Footer */}
-        <footer className="bg-white rounded-xl px-8 py-6 text-center text-sm text-gray-600">
-          © 2026 Heap. All rights reserved.
-        </footer>
         </div>
       
     </div>
