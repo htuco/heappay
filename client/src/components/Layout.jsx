@@ -6,7 +6,7 @@ export default function Layout() {
     <div className="w-screen h-screen bg-background flex flex-col gap-5 p-5">
       
       {/* Header */}
-      <nav className="bg-card text-card-foreground rounded-xl px-7 py-5 border border-border">
+      <nav className="bg-card text-card-foreground rounded-md px-7 py-5 border border-border">
         <Link
           to="/"
           className="text-2xl font-bold hover:text-primary transition"
@@ -15,7 +15,7 @@ export default function Layout() {
         </Link>
         <button
   onClick={() => document.documentElement.classList.toggle('dark')}
-  className="ml-4 px-3 py-1 rounded-md bg-primary text-primary-foreground"
+  className="ml-4 px-3 py-1 rounded-sm bg-primary text-primary-foreground"
 >
   Toggle theme
 </button>
@@ -25,7 +25,7 @@ export default function Layout() {
       <div className="flex flex-1 gap-5 overflow-hidden">
         
         {/* Sidebar */}
-        <aside className="w-64 bg-sidebar text-sidebar-foreground rounded-xl px-5 py-7 border bg-card">
+        <aside className="w-64 text-sidebar-foreground rounded-sm px-5 py-7 border bg-card">
           <Navbar />
         </aside>
 
@@ -33,12 +33,12 @@ export default function Layout() {
         <div className="flex-1 flex flex-col gap-5 overflow-hidden">
           
           {/* Main */}
-          <main className="flex-1 bg-card rounded-xl p-7 overflow-auto border">
+          <main className="flex-1 bg-card rounded-sm p-7 overflow-auto border">
             <Outlet />
           </main>
 
           {/* Footer */}
-          <footer className="bg-card text-muted-foreground rounded-xl px-7 py-5 text-center text-sm border">
+          <footer className="bg-card text-muted-foreground rounded-sm px-7 py-5 text-center text-sm border">
             © 2026 Heap. All rights reserved.
           </footer>
         </div>
