@@ -1,13 +1,13 @@
 export default function LoginForm() {
 	return (
-		<section className="min-h-screen bg-[#09090c] px-6 py-14 text-white">
-			<div className="mx-auto w-full max-w-[720px] rounded-[28px] bg-[#0f1016] p-8 shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:p-10">
-				<div className="mx-auto w-full max-w-[640px] space-y-7">
-					<form className="space-y-6" noValidate>
+		<section className="min-h-screen bg-border px-6 py-16 text-white">
+			<div className="mx-auto w-full max-w-140">
+				<div className="space-y-6">
+					<form className="space-y-5" noValidate>
 						<div>
 							<label
 								htmlFor="email"
-								className="mb-2 block text-sm font-semibold text-white/65"
+								className="mb-2 block text-sm font-medium text-white/55"
 							>
 								Enter your email
 							</label>
@@ -15,14 +15,15 @@ export default function LoginForm() {
 								id="email"
 								type="email"
 								placeholder="Name@marvilo.net"
-								className="h-16 w-full rounded-2xl border border-[#7d42ff] bg-[#1b1c24] px-5 text-[2rem] font-semibold tracking-tight text-white outline-none placeholder:text-white/90"
+								className="h-14 w-full rounded-2xl border bg-[#17181f] px-4 text-[17px] font-semibold text-white outline-none placeholder:text-white/90 focus-visible:border-accent"
+								style={{ borderColor: 'var(--accent)' }}
 							/>
 						</div>
 
 						<div>
 							<label
 								htmlFor="password"
-								className="mb-2 block text-sm font-semibold text-white/65"
+								className="mb-2 block text-sm font-medium text-white/55"
 							>
 								Password
 							</label>
@@ -30,34 +31,39 @@ export default function LoginForm() {
 								id="password"
 								type="password"
 								placeholder="Password"
-								className="h-16 w-full rounded-2xl border border-transparent bg-[#171820] px-5 text-[2rem] font-semibold tracking-tight text-white outline-none placeholder:text-white/55"
+								className="h-14 w-full rounded-2xl border border-transparent bg-[#17181f] px-4 text-[17px] font-semibold text-white outline-none placeholder:text-white/55"
 							/>
 						</div>
 
-						<div className="flex items-center justify-between gap-4 pt-1">
-							<label className="inline-flex items-center gap-3 text-[2rem] font-semibold text-white/90">
+						<div className="flex items-center justify-between gap-4 pt-1 text-base">
+							<label className="inline-flex items-center gap-3 text-[16px] font-semibold text-white/90">
 								<input
 									type="checkbox"
-									className="h-9 w-9 appearance-none rounded-lg border border-white/40 bg-transparent"
+									className="h-6 w-6 appearance-none rounded-xl border border-border bg-transparent align-middle"
+									style={{ borderColor: 'var(--border)' }}
 								/>
 								<span>Remember me</span>
 							</label>
-							<a href="#" className="text-[2rem] font-semibold text-[#a956ff]">
+							<a href="#" className="text-[16px] font-semibold" style={{ color: 'var(--accent)' }}>
 								Forgot password
 							</a>
 						</div>
 
 						<button
 							type="button"
-							className="h-[72px] w-full rounded-full bg-gradient-to-r from-[#a34eff] to-[#8b5cff] text-[2.2rem] font-bold text-white shadow-[0_18px_45px_rgba(163,78,255,0.35)]"
+							className="h-14 w-full rounded-full text-[20px] font-bold text-white"
+							style={{
+								backgroundImage:
+									'linear-gradient(90deg, color-mix(in oklab, var(--accent) 90%, white 6%), color-mix(in oklab, var(--accent) 72%, white 18%))',
+							}}
 						>
 							Log in
 						</button>
 					</form>
 
-					<p className="pt-4 text-center text-[1.9rem] font-semibold text-white/85">
+					<p className="pt-6 text-center text-[17px] font-semibold text-white/85">
 						Don&apos;t have an account?{' '}
-						<a href="#" className="text-[#a956ff]">
+						<a href="#" style={{ color: 'var(--accent)' }}>
 							Sign up
 						</a>
 					</p>
