@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Info, TrendingUp, BarChart3, CreditCard, FileText, Download, Settings, LifeBuoy } from 'lucide-react'
+import { Home, Info } from 'lucide-react'
 
 const navLinks = [
   { name: 'Home', path: '/', icon: Home },
   { name: 'About', path: '/about', icon: Info },
 ]
 
-export default function navbar() {
+export default function Navbar() {
   return (
     
       <nav className="flex flex-col gap-1">
