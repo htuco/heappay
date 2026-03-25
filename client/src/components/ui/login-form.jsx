@@ -7,15 +7,15 @@ export default function LoginForm() {
 						<div>
 							<label
 								htmlFor="email"
-								className="mb-2 block text-sm font-medium text-white/55"
+								className="mb-2 block text-sm font-bold text-white/55"
 							>
 								Enter your email
 							</label>
 							<input
 								id="email"
 								type="email"
-								placeholder="Name@marvilo.net"
-								className="h-14 w-full rounded-2xl border bg-[#17181f] px-4 text-[17px] font-semibold text-white outline-none placeholder:text-white/90 focus-visible:border-accent"
+								placeholder="E-mail"
+								className="h-14 w-full rounded-2xl border bg-[#17181f] px-4 text-[15px] font-normal text-white outline-none placeholder:text-white/90 focus-visible:border-accent"
 								style={{ borderColor: 'var(--accent)' }}
 							/>
 						</div>
@@ -23,7 +23,7 @@ export default function LoginForm() {
 						<div>
 							<label
 								htmlFor="password"
-								className="mb-2 block text-sm font-medium text-white/55"
+								className="mb-2 block text-sm font-bold text-white/55"
 							>
 								Password
 							</label>
@@ -31,12 +31,12 @@ export default function LoginForm() {
 								id="password"
 								type="password"
 								placeholder="Password"
-								className="h-14 w-full rounded-2xl border border-transparent bg-[#17181f] px-4 text-[17px] font-semibold text-white outline-none placeholder:text-white/55"
+								className="h-14 w-full rounded-2xl border bg-[#17181f] px-4 text-[15px] font-normal text-white outline-none placeholder:text-white/90 focus-visible:border-accent"
 							/>
 						</div>
 
 						<div className="flex items-center justify-between gap-4 pt-1 text-base">
-							<label className="inline-flex items-center gap-3 text-[16px] font-semibold text-white/90">
+							<label className="inline-flex items-center gap-3 text-[15px] font-normal text-white/90">
 								<input
 									type="checkbox"
 									className="h-6 w-6 appearance-none rounded-xl border border-border bg-transparent align-middle"
@@ -44,7 +44,7 @@ export default function LoginForm() {
 								/>
 								<span>Remember me</span>
 							</label>
-							<a href="#" className="text-[16px] font-semibold" style={{ color: 'var(--accent)' }}>
+							<a href="#" className="text-[15px] font-normal" style={{ color: 'var(--accent)' }}>
 								Forgot password
 							</a>
 						</div>
@@ -61,7 +61,7 @@ export default function LoginForm() {
 						</button>
 					</form>
 
-					<p className="pt-6 text-center text-[17px] font-semibold text-white/85">
+					<p className="pt-6 text-center text-[17px] font-normal text-white/85">
 						Don&apos;t have an account?{' '}
 						<a href="#" style={{ color: 'var(--accent)' }}>
 							Sign up
