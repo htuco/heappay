@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Bell, Eye, KeyRound, Paintbrush, ShieldCheck, Sparkles } from 'lucide-react'
 
@@ -28,6 +29,26 @@ function SettingsCard({ title, description, icon: Icon, action, children }) {
       </div>
       {children}
     </section>
+  )
+}
+
+function ControlRow({ label, hint, children, emphasize = false }) {
+  return (
+    <div
+      className={`rounded-2xl border border-border px-4 py-4 ${
+        emphasize
+          ? 'bg-[linear-gradient(135deg,rgba(167,76,255,0.08),transparent_75%)]'
+          : 'bg-background'
+      }`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-card-foreground">{label}</p>
+          {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
+        </div>
+        <div className="w-full sm:ml-4 sm:w-auto">{children}</div>
+      </div>
+    </div>
   )
 }
 
@@ -66,6 +87,54 @@ function ActionRow({ label, value, hint, action, tone = 'default' }) {
         <p className="text-sm font-medium text-card-foreground sm:text-right">{value}</p>
         {action}
       </div>
+    </div>
+  )
+}
+
+function Toggle({ enabled = false, label, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={enabled}
+      className="flex w-full items-center justify-between gap-3 rounded-xl border border-transparent px-1 py-1 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-auto sm:justify-end"
+    >
+      {label ? <span className="text-sm font-medium text-card-foreground">{label}</span> : null}
+      <span
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-all ${
+          enabled
+            ? 'border-primary bg-[linear-gradient(135deg,var(--color-primary),color-mix(in_oklab,var(--color-primary)_78%,white))]'
+            : 'border-border bg-muted'
+        }`}
+      >
+        <span
+          className={`absolute h-5 w-5 rounded-full bg-card shadow-sm transition-transform ${
+            enabled ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </span>
+    </button>
+  )
+}
+
+function OptionGroup({ options, active, onSelect }) {
+  return (
+    <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => onSelect(option)}
+          aria-pressed={option === active}
+          className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+            option === active
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-border bg-background text-card-foreground'
+          }`}
+        >
+          {option}
+        </button>
+      ))}
     </div>
   )
 }
@@ -118,6 +187,13 @@ function HeroCard({ onBack }) {
 
 export default function SettingsPage() {
   const navigate = useNavigate()
+  const [billingRemindersEnabled, setBillingRemindersEnabled] = useState(true)
+  const [loginAlertsEnabled, setLoginAlertsEnabled] = useState(true)
+  const [securityAlertChannel, setSecurityAlertChannel] = useState('Email')
+  const [productUpdatesFrequency, setProductUpdatesFrequency] = useState('Weekly')
+  const [themePreference, setThemePreference] = useState('System')
+  const [densityPreference, setDensityPreference] = useState('Comfortable')
+  const [startPagePreference, setStartPagePreference] = useState('Dashboard')
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
@@ -156,22 +232,37 @@ export default function SettingsPage() {
           description="Choose which updates deserve your attention and where they should arrive."
         >
           <div className="space-y-3">
-            <SettingRow
+            <ControlRow
               label="Security alerts"
-              value="Email + in-app"
               hint="Recommended for password resets, new logins, and suspicious activity."
               emphasize
-            />
-            <SettingRow
+            >
+              <OptionGroup
+                options={['Email', 'In-app', 'SMS']}
+                active={securityAlertChannel}
+                onSelect={setSecurityAlertChannel}
+              />
+            </ControlRow>
+            <ControlRow
               label="Billing reminders"
-              value="Email"
               hint="Renewal reminders and payment confirmations."
-            />
-            <SettingRow
+            >
+              <Toggle
+                enabled={billingRemindersEnabled}
+                label={billingRemindersEnabled ? 'Enabled' : 'Disabled'}
+                onToggle={() => setBillingRemindersEnabled((current) => !current)}
+              />
+            </ControlRow>
+            <ControlRow
               label="Product updates"
-              value="Weekly digest"
               hint="Low-frequency product announcements and release notes."
-            />
+            >
+              <OptionGroup
+                options={['Off', 'Weekly', 'Monthly']}
+                active={productUpdatesFrequency}
+                onSelect={setProductUpdatesFrequency}
+              />
+            </ControlRow>
           </div>
         </SettingsCard>
 
@@ -187,11 +278,16 @@ export default function SettingsPage() {
               hint="Add a second step to strengthen account access."
               emphasize
             />
-            <SettingRow
+            <ControlRow
               label="Login alerts"
-              value="Enabled"
               hint="Get notified when a new device signs in to your account."
-            />
+            >
+              <Toggle
+                enabled={loginAlertsEnabled}
+                label={loginAlertsEnabled ? 'Enabled' : 'Disabled'}
+                onToggle={() => setLoginAlertsEnabled((current) => !current)}
+              />
+            </ControlRow>
             <SettingRow
               label="Active sessions"
               value="4 devices"
@@ -206,22 +302,37 @@ export default function SettingsPage() {
           description="Control how the workspace looks and how the app behaves day to day."
         >
           <div className="space-y-3">
-            <SettingRow
+            <ControlRow
               label="Theme"
-              value="System"
               hint="Follow the light or dark mode set by your device."
               emphasize
-            />
-            <SettingRow
+            >
+              <OptionGroup
+                options={['Light', 'Dark', 'System']}
+                active={themePreference}
+                onSelect={setThemePreference}
+              />
+            </ControlRow>
+            <ControlRow
               label="Density"
-              value="Comfortable"
               hint="Balanced spacing for tables, cards, and page layouts."
-            />
-            <SettingRow
+            >
+              <OptionGroup
+                options={['Compact', 'Comfortable']}
+                active={densityPreference}
+                onSelect={setDensityPreference}
+              />
+            </ControlRow>
+            <ControlRow
               label="Start page"
-              value="Dashboard"
               hint="Choose which area opens first after sign-in."
-            />
+            >
+              <OptionGroup
+                options={['Dashboard', 'Activity', 'Settings']}
+                active={startPagePreference}
+                onSelect={setStartPagePreference}
+              />
+            </ControlRow>
           </div>
         </SettingsCard>
 
@@ -257,11 +368,21 @@ export default function SettingsPage() {
         </SettingsCard>
       </div>
 
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="outline" className="w-full sm:w-auto">
-          Discard
-        </Button>
-        <Button className="w-full px-5 sm:w-auto">Save Changes</Button>
+      <div className="sticky bottom-0 z-10 rounded-[24px] border border-border bg-card/95 p-3 shadow-xs backdrop-blur sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-card-foreground">Unsaved preferences</p>
+            <p className="text-xs text-muted-foreground">
+              Review your settings and save when you are ready.
+            </p>
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Discard
+            </Button>
+            <Button className="w-full px-5 sm:w-auto">Save Changes</Button>
+          </div>
+        </div>
       </div>
     </div>
   )
