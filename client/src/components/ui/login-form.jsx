@@ -1,8 +1,19 @@
+import { ShieldCheck } from 'lucide-react'
+
 export default function LoginForm() {
 	return (
-		<section className="min-h-screen bg-border px-6 py-16 text-white">
-			<div className="mx-auto w-full max-w-140">
+		<section className="flex min-h-screen items-center justify-center bg-border px-6 py-10 text-white">
+			<div className="mx-auto w-full max-w-110">
 				<div className="space-y-6">
+					<div className="space-y-3 text-center">
+						<div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br from-primary to-secondary text-white">
+							<ShieldCheck className="h-6 w-6" strokeWidth={2.2} />
+						</div>
+
+						<h1 className="text-5xl font-semibold tracking-tight text-white">Welcome back</h1>
+						<p className="text-[16px] text-white/70">Welcome back! Please enter your details.</p>
+					</div>
+
 					<form className="space-y-5" noValidate>
 						<div>
 							<label
