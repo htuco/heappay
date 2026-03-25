@@ -5,7 +5,6 @@ import { CreditCard, Send, Shield } from 'lucide-react'
 
 export default function LoginPage() {
 	return (
-		<section className="grid min-h-screen grid-cols-1 lg:grid-cols-[70%_30%]">
 		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[65%_35%]">
 			<div>
 				<LoginForm />
