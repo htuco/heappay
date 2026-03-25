@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, KeyRound, Paintbrush, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowLeft, Bell, Eye, KeyRound, Paintbrush, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -47,6 +47,25 @@ function SettingRow({ label, value, hint, emphasize = false }) {
       <p className="text-sm font-medium text-card-foreground sm:max-w-[15rem] sm:text-right">
         {value}
       </p>
+    </div>
+  )
+}
+
+function ActionRow({ label, value, hint, action, tone = 'default' }) {
+  return (
+    <div
+      className={`flex flex-col gap-3 rounded-2xl border border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between ${
+        tone === 'danger' ? 'bg-destructive/5' : 'bg-background'
+      }`}
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-card-foreground">{label}</p>
+        {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
+      </div>
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:max-w-[15rem] sm:items-end">
+        <p className="text-sm font-medium text-card-foreground sm:text-right">{value}</p>
+        {action}
+      </div>
     </div>
   )
 }
@@ -205,6 +224,44 @@ export default function SettingsPage() {
             />
           </div>
         </SettingsCard>
+
+        <SettingsCard
+          title="Privacy & Account"
+          icon={Eye}
+          description="Review account visibility, data access, and high-impact account actions."
+        >
+          <div className="space-y-3">
+            <SettingRow
+              label="Profile visibility"
+              value="Private"
+              hint="Only you and workspace admins can see personal account metadata."
+              emphasize
+            />
+            <SettingRow
+              label="Data export"
+              value="Available"
+              hint="Generate a downloadable copy of personal settings and account activity."
+            />
+            <ActionRow
+              label="Deactivate account"
+              value="Manual review"
+              hint="High-impact account actions should require confirmation and recovery steps."
+              tone="danger"
+              action={
+                <Button variant="destructive" className="w-full sm:w-auto">
+                  Deactivate
+                </Button>
+              }
+            />
+          </div>
+        </SettingsCard>
+      </div>
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button variant="outline" className="w-full sm:w-auto">
+          Discard
+        </Button>
+        <Button className="w-full px-5 sm:w-auto">Save Changes</Button>
       </div>
     </div>
   )
