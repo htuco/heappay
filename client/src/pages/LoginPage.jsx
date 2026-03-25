@@ -34,6 +34,28 @@ export default function LoginPage() {
 						/>
 					</div>
 				</div>
+
+				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 text-center text-white md:px-6 xl:px-8">
+					<div className="max-w-85">
+						<div className="mb-6 md:mb-8 flex justify-center gap-4 md:gap-6">
+							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full bg-white/40 backdrop-blur-md border border-white/50">
+								<CreditCard className="h-5 w-5 md:h-6 md:w-6" />
+							</div>
+							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full bg-white/40 backdrop-blur-md border border-white/50">
+								<Send className="h-5 w-5 md:h-6 md:w-6" />
+							</div>
+							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full bg-white/40 backdrop-blur-md border border-white/50">
+								<Shield className="h-5 w-5 md:h-6 md:w-6" />
+							</div>
+						</div>
+						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight">
+						"Your cards, finally connected."
+						</h2>
+						<p className="mx-auto mt-2 md:mt-4 text-sm md:text-[15px] leading-relaxed text-white/85">
+						Manage all your cards and track every transaction in one place, with clear insights that help you understand and control your spending.
+						</p>
+					</div>
+				</div>
 			</div>
 		</section>
 	)
