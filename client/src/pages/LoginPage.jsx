@@ -11,7 +11,7 @@ export default function LoginPage() {
 				<LoginForm />
 			</div>
 
-			<div className="relative hidden overflow-hidden lg:block">
+			<div className="relative overflow-hidden">
 				<div
 					className="absolute inset-0"
 					style={{
