@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, KeyRound, Sparkles } from 'lucide-react'
+import { ArrowLeft, Bell, KeyRound, Paintbrush, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -152,6 +152,56 @@ export default function SettingsPage() {
               label="Product updates"
               value="Weekly digest"
               hint="Low-frequency product announcements and release notes."
+            />
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Security Settings"
+          icon={ShieldCheck}
+          description="Review sign-in protection, session visibility, and account safety controls."
+        >
+          <div className="space-y-3">
+            <SettingRow
+              label="Two-factor authentication"
+              value="Not enabled"
+              hint="Add a second step to strengthen account access."
+              emphasize
+            />
+            <SettingRow
+              label="Login alerts"
+              value="Enabled"
+              hint="Get notified when a new device signs in to your account."
+            />
+            <SettingRow
+              label="Active sessions"
+              value="4 devices"
+              hint="Review current signed-in devices and remove anything suspicious."
+            />
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Theme & Preferences"
+          icon={Paintbrush}
+          description="Control how the workspace looks and how the app behaves day to day."
+        >
+          <div className="space-y-3">
+            <SettingRow
+              label="Theme"
+              value="System"
+              hint="Follow the light or dark mode set by your device."
+              emphasize
+            />
+            <SettingRow
+              label="Density"
+              value="Comfortable"
+              hint="Balanced spacing for tables, cards, and page layouts."
+            />
+            <SettingRow
+              label="Start page"
+              value="Dashboard"
+              hint="Choose which area opens first after sign-in."
             />
           </div>
         </SettingsCard>
