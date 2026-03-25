@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Sparkles } from 'lucide-react'
+import { ArrowLeft, Bell, KeyRound, Sparkles } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -8,6 +8,48 @@ const quickStats = [
   { label: 'Security', value: 'Strong', helper: 'Password rotated recently' },
   { label: 'Theme', value: 'System', helper: 'Following device preference' },
 ]
+
+function SettingsCard({ title, description, icon: Icon, action, children }) {
+  return (
+    <section className="rounded-[24px] border border-border bg-card p-4 shadow-xs sm:p-6">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-border bg-muted p-2.5 text-primary">
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold sm:text-xl">{title}</h2>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{description}</p>
+            </div>
+          </div>
+        </div>
+        {action ? <div className="w-full sm:w-auto">{action}</div> : null}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function SettingRow({ label, value, hint, emphasize = false }) {
+  return (
+    <div
+      className={`flex flex-col gap-3 rounded-2xl border border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between ${
+        emphasize
+          ? 'bg-[linear-gradient(135deg,rgba(167,76,255,0.08),transparent_75%)]'
+          : 'bg-background'
+      }`}
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-card-foreground">{label}</p>
+        {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
+      </div>
+      <p className="text-sm font-medium text-card-foreground sm:max-w-[15rem] sm:text-right">
+        {value}
+      </p>
+    </div>
+  )
+}
 
 function HeroCard({ onBack }) {
   return (
@@ -59,8 +101,61 @@ export default function SettingsPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
       <HeroCard onBack={() => navigate(-1)} />
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SettingsCard
+          title="Change Password"
+          icon={KeyRound}
+          description="Keep access secure with clear password hygiene and recovery controls."
+          action={<Button className="w-full sm:w-auto">Change Password</Button>}
+        >
+          <div className="space-y-3">
+            <SettingRow
+              label="Password status"
+              value="Healthy"
+              hint="Password hash exists and was last rotated on 18 Feb 2026."
+              emphasize
+            />
+            <SettingRow
+              label="Recovery method"
+              value="Email link"
+              hint="Reset links go to your primary account email."
+            />
+            <SettingRow
+              label="Password requirements"
+              value="Enabled"
+              hint="Minimum length, complexity, and password reuse protection."
+            />
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Notification Preferences"
+          icon={Bell}
+          description="Choose which updates deserve your attention and where they should arrive."
+        >
+          <div className="space-y-3">
+            <SettingRow
+              label="Security alerts"
+              value="Email + in-app"
+              hint="Recommended for password resets, new logins, and suspicious activity."
+              emphasize
+            />
+            <SettingRow
+              label="Billing reminders"
+              value="Email"
+              hint="Renewal reminders and payment confirmations."
+            />
+            <SettingRow
+              label="Product updates"
+              value="Weekly digest"
+              hint="Low-frequency product announcements and release notes."
+            />
+          </div>
+        </SettingsCard>
+      </div>
     </div>
   )
 }
