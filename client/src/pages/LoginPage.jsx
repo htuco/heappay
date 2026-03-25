@@ -1,6 +1,7 @@
 import LoginForm from '@/components/ui/login-form'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
+import { CreditCard, Send, Shield } from 'lucide-react'
 
 export default function LoginPage() {
 	return (
