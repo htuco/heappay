@@ -46,7 +46,7 @@ function ControlRow({ label, hint, children, emphasize = false }) {
           <p className="text-sm font-semibold text-card-foreground">{label}</p>
           {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
         </div>
-        <div className="w-full sm:ml-4 sm:w-auto">{children}</div>
+        <div className="w-full min-w-0 sm:ml-4 sm:w-auto">{children}</div>
       </div>
     </div>
   )
@@ -97,18 +97,20 @@ function Toggle({ enabled = false, label, onToggle }) {
       type="button"
       onClick={onToggle}
       aria-pressed={enabled}
-      className="flex w-full items-center justify-between gap-3 rounded-xl border border-transparent px-1 py-1 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-auto sm:justify-end"
+      className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-auto sm:min-w-[11rem]"
     >
-      {label ? <span className="text-sm font-medium text-card-foreground">{label}</span> : null}
+      {label ? (
+        <span className="min-w-0 text-left text-sm font-medium text-card-foreground">{label}</span>
+      ) : null}
       <span
-        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-all ${
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-all duration-200 ${
           enabled
-            ? 'border-primary bg-[linear-gradient(135deg,var(--color-primary),color-mix(in_oklab,var(--color-primary)_78%,white))]'
+            ? 'border-primary bg-primary'
             : 'border-border bg-muted'
         }`}
       >
         <span
-          className={`absolute h-5 w-5 rounded-full bg-card shadow-sm transition-transform ${
+          className={`absolute h-5 w-5 rounded-full bg-card shadow-xs transition-transform duration-200 ${
             enabled ? 'translate-x-6' : 'translate-x-1'
           }`}
         />
