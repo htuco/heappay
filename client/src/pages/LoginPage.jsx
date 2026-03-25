@@ -1,5 +1,36 @@
 import LoginForm from '@/components/ui/login-form'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import loginAnimation from '@/assets/login-anim.lottie?url'
 
 export default function LoginPage() {
-	return <LoginForm />
+	return (
+		<section className="grid min-h-screen grid-cols-1 lg:grid-cols-[70%_30%]">
+			<div>
+				<LoginForm />
+			</div>
+
+			<div className="relative hidden overflow-hidden lg:block">
+				<div
+					className="absolute inset-0"
+					style={{
+						backgroundImage:
+							'linear-gradient(130deg, color-mix(in oklab, var(--accent) 74%, #fff 18%), color-mix(in oklab, var(--accent) 88%, #000 2%), color-mix(in oklab, var(--accent) 68%, #fff 26%))',
+					}}
+				/>
+				<div className="relative z-10 flex h-full items-center justify-center p-6 xl:p-8">
+					<div className="w-full max-w-105 aspect-4/5">
+						<DotLottieReact
+							src={loginAnimation}
+							loop
+							speed={0.90}
+							useFrameInterpolation={false}
+							renderConfig={{ devicePixelRatio: 1 }}
+							layout={{ fit: 'contain', align: [0.5, 0.5] }}
+							className="h-full w-full"
+						/>
+					</div>
+				</div>
+			</div>
+		</section>
+	)
 }
