@@ -1,6 +1,7 @@
 import { ShieldCheck } from 'lucide-react'
 
 export default function LoginForm() {
+	const [rememberMe, setRememberMe] = useState(false)
 	return (
 		<section className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
 			<div className="mx-auto w-full max-w-110">
@@ -51,7 +52,9 @@ export default function LoginForm() {
 							<label className="inline-flex items-center gap-3 text-[15px] font-normal text-foreground/90">
 								<input
 									type="checkbox"
-									className="h-6 w-6 appearance-none rounded-xl border border-border bg-transparent align-middle"
+									checked={rememberMe}
+									onChange={(e) => setRememberMe(e.target.checked)}
+									className="h-6 w-6 appearance-none rounded-xl border border-border bg-transparent align-middle cursor-pointer accent-accent checked:bg-accent"
 									style={{ borderColor: 'var(--border)' }}
 								/>
 								<span>Remember me</span>
