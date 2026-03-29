@@ -41,9 +41,7 @@ export default function LoginPage() {
 			</button>
 
 			<div>
-				<LoginForm />
-			</div>
-
+			<LoginForm isDark={isDark} />		</div>
 			<div className="relative overflow-hidden bg-gradient-to-br from-background to-background">
 				<div
 					className="absolute inset-0"
@@ -72,14 +70,14 @@ export default function LoginPage() {
 				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 text-center text-white dark:text-white md:px-6 xl:px-8">
 					<div className="max-w-85">
 						<div className="mb-6 md:mb-8 flex justify-center gap-4 md:gap-6">
-						<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
-							<CreditCard className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
-						</div>
-						<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
-							<Send className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
-						</div>
-						<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
-							<Shield className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
+							<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
+								<CreditCard className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
+							</div>
+							<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
+								<Send className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
+							</div>
+							<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
+								<Shield className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
 							</div>
 						</div>
 						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight text-white dark:text-white">

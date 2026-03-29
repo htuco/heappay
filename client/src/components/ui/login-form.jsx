@@ -1,6 +1,7 @@
 import { ShieldCheck } from 'lucide-react'
 
 export default function LoginForm() {
+export default function LoginForm({ isDark = true }) {
 	const [rememberMe, setRememberMe] = useState(false)
 	return (
 		<section className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
