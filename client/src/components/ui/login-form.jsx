@@ -18,6 +18,24 @@ export default function LoginForm({ isDark = true }) {
 	const [error, setError] = useState('')
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
+	const handleSubmit = async (e) => {
+		e.preventDefault()
+		setError('')
+		setLoading(true)
+
+		// Simulate API delay
+		await new Promise(resolve => setTimeout(resolve, 500))
+
+		if (email.trim() === MOCK_USER.email && password === MOCK_USER.password) {
+			setSuccess(true)
+			setEmail('')
+			setPassword('')
+			console.log('Login successful', { email, rememberMe })
+		} else {
+			setError('Invalid email or password. Try: Talha Zlatar@symphony.is / password123')
+		}
+		setLoading(false)
+	}
 	return (
 		<section className="relative flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground md:bg-background">
 			{/* Mobile Animation Background */}
@@ -59,6 +77,17 @@ export default function LoginForm({ isDark = true }) {
 					</div>
 
 					<form className="space-y-5" noValidate>
+					<form className="space-y-5" onSubmit={handleSubmit}>
+						{error && (
+							<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
+								{error}
+							</div>
+						)}
+						{success && (
+							<div className="rounded-xl bg-green-950/30 border border-green-500/50 px-4 py-3 text-sm text-green-200">
+								✓ Login successful!
+							</div>
+						)}
 						<div>
 							<label
 								htmlFor="email"
@@ -70,7 +99,10 @@ export default function LoginForm({ isDark = true }) {
 								id="email"
 								type="email"
 								placeholder="E-mail"
-								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								disabled={loading}
+								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
 								style={{ borderColor: 'var(--accent)' }}
 							/>
 						</div>
@@ -86,7 +118,10 @@ export default function LoginForm({ isDark = true }) {
 								id="password"
 								type="password"
 								placeholder="Password"
-								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								disabled={loading}
+								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
                                 style={{ borderColor: 'var(--accent)' }}
 							/>
 						</div>
@@ -114,8 +149,8 @@ export default function LoginForm({ isDark = true }) {
 								backgroundImage:
 									'linear-gradient(90deg, color-mix(in oklab, var(--accent) 90%, white 6%), color-mix(in oklab, var(--accent) 72%, white 18%))',
 							}}
-						>
-							Log in
+							>
+							{loading ? 'Logging in...' : 'Log in'}
 						</button>
 					</form>
 
