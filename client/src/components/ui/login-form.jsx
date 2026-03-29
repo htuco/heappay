@@ -5,6 +5,31 @@ export default function LoginForm() {
 	return (
 		<section className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
 			<div className="mx-auto w-full max-w-110">
+		<section className="relative flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground md:bg-background">
+			{/* Mobile Animation Background */}
+			<div className="absolute inset-0 md:hidden overflow-hidden">
+				<div
+					className="absolute inset-0"
+					style={{
+						backgroundImage: isDark
+							? 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 74%, #000 26%), color-mix(in oklab, var(--accent) 88%, #000 12%), color-mix(in oklab, var(--accent) 68%, #000 32%))'
+							: 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 50%, #fff 50%), color-mix(in oklab, var(--accent) 60%, #fff 40%), color-mix(in oklab, var(--accent) 45%, #fff 55%))',
+					}}
+				/>
+				<div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent dark:to-black/20 to-white/20" />
+				<div className="relative w-full h-full p-4">
+					<DotLottieReact
+						src={loginAnimation}
+						autoplay
+						loop
+						speed={0.90}
+						useFrameInterpolation={false}
+						renderConfig={{ devicePixelRatio: 1 }}
+						layout={{ fit: 'contain', align: [0.5, 0.5] }}
+						className="h-full w-full"
+					/>
+				</div>
+			</div>
 				<div className="space-y-6">
 					<div className="space-y-3 text-center">
 						<div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br from-primary to-secondary text-primary-foreground">
