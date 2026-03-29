@@ -18,17 +18,19 @@ export default function LoginForm({ isDark = true }) {
 					}}
 				/>
 				<div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent dark:to-black/20 to-white/20" />
-				<div className="relative w-full h-full p-4">
-					<DotLottieReact
-						src={loginAnimation}
-						autoplay
-						loop
-						speed={0.90}
-						useFrameInterpolation={false}
-						renderConfig={{ devicePixelRatio: 1 }}
-						layout={{ fit: 'contain', align: [0.5, 0.5] }}
-						className="h-full w-full"
-					/>
+				<div className="absolute inset-0 flex items-center justify-center p-4 overflow-hidden">
+					<div className="w-full max-w-sm aspect-square">
+						<DotLottieReact
+							src={loginAnimation}
+							autoplay
+							loop
+							speed={0.90}
+							useFrameInterpolation={false}
+							renderConfig={{ devicePixelRatio: 1 }}
+							layout={{ fit: 'contain', align: [0.5, 0.5] }}
+							className="h-full w-full"
+						/>
+					</div>
 				</div>
 			</div>
 
