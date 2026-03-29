@@ -1,10 +1,23 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
 
+const MOCK_USER = {
+	email: 'talha.zlatar@symphony.is',
+	password: 'password123'
+}
+
 export default function LoginForm({ isDark = true }) {
+	const navigate = useNavigate()
+	const [email, setEmail] = useState('')
+	const [password, setPassword] = useState('')
 	const [rememberMe, setRememberMe] = useState(false)
+	const [error, setError] = useState('')
+	const [loading, setLoading] = useState(false)
+	const [success, setSuccess] = useState(false)
 	return (
 		<section className="relative flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground md:bg-background">
 			{/* Mobile Animation Background */}
