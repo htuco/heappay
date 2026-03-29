@@ -18,6 +18,16 @@ export default function LoginForm({ isDark = true }) {
 	const [error, setError] = useState('')
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
+
+	useEffect(() => {
+		if (success) {
+			const timer = setTimeout(() => {
+				navigate('/')
+			}, 1000)
+			return () => clearTimeout(timer)
+		}
+	}, [success, navigate])
+
 	const handleSubmit = async (e) => {
 		e.preventDefault()
 		setError('')
@@ -76,7 +86,6 @@ export default function LoginForm({ isDark = true }) {
 						<p className="text-[16px] text-foreground/70">Welcome back! Please enter your details.</p>
 					</div>
 
-					<form className="space-y-5" noValidate>
 					<form className="space-y-5" onSubmit={handleSubmit}>
 						{error && (
 							<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
@@ -143,8 +152,9 @@ export default function LoginForm({ isDark = true }) {
 						</div>
 
 						<button
-							type="button"
-							className="h-14 w-full rounded-full text-[20px] font-bold text-primary-foreground"
+							type="submit"
+							disabled={loading}
+							className="h-14 w-full rounded-full text-[20px] font-bold text-primary-foreground disabled:opacity-70"
 							style={{
 								backgroundImage:
 									'linear-gradient(90deg, color-mix(in oklab, var(--accent) 90%, white 6%), color-mix(in oklab, var(--accent) 72%, white 18%))',
