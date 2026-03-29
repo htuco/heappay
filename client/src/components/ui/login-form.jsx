@@ -1,11 +1,11 @@
 import { ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import loginAnimation from '@/assets/login-anim.lottie?url'
 
-export default function LoginForm() {
 export default function LoginForm({ isDark = true }) {
 	const [rememberMe, setRememberMe] = useState(false)
 	return (
-		<section className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
-			<div className="mx-auto w-full max-w-110">
 		<section className="relative flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground md:bg-background">
 			{/* Mobile Animation Background */}
 			<div className="absolute inset-0 md:hidden overflow-hidden">
@@ -31,6 +31,8 @@ export default function LoginForm({ isDark = true }) {
 					/>
 				</div>
 			</div>
+
+			<div className="mx-auto w-full max-w-110 relative z-10">
 				<div className="space-y-6">
 					<div className="space-y-3 text-center">
 						<div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br from-primary to-secondary text-primary-foreground">
@@ -75,7 +77,7 @@ export default function LoginForm({ isDark = true }) {
 						</div>
 
 						<div className="flex items-center justify-between gap-4 pt-1 text-base">
-							<label className="inline-flex items-center gap-3 text-[15px] font-normal text-foreground/90">
+							<label className="inline-flex items-center gap-3 text-[15px] font-normal text-foreground/90 cursor-pointer">
 								<input
 									type="checkbox"
 									checked={rememberMe}
