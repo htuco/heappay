@@ -46,7 +46,6 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
-  text,
   children,
   ...props
 }) {
@@ -60,7 +59,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {text ?? children}
+      {children}
     </Comp>
   );
 }
