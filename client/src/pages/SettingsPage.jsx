@@ -1,191 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, Eye, KeyRound, Paintbrush, ShieldCheck, Sparkles } from 'lucide-react'
+import { Bell, Eye, KeyRound, Paintbrush, ShieldCheck } from 'lucide-react'
 
+import ActionRow from '@/components/settings/ActionRow'
+import ControlRow from '@/components/settings/ControlRow'
+import OptionGroup from '@/components/settings/OptionGroup'
+import SettingRow from '@/components/settings/SettingRow'
+import SettingsCard from '@/components/settings/SettingsCard'
+import SettingsHero from '@/components/settings/SettingsHero'
+import Toggle from '@/components/settings/Toggle'
 import { Button } from '@/components/ui/button'
-
-const quickStats = [
-  { label: 'Access', value: 'Admin', helper: 'Workspace-level permissions enabled' },
-  { label: 'Security', value: 'Strong', helper: 'Password rotated recently' },
-  { label: 'Theme', value: 'System', helper: 'Following device preference' },
-]
-
-function SettingsCard({ title, description, icon: Icon, action, children }) {
-  return (
-    <section className="rounded-[24px] border border-border bg-card p-4 shadow-xs sm:p-6">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-border bg-muted p-2.5 text-primary">
-              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold sm:text-xl">{title}</h2>
-              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{description}</p>
-            </div>
-          </div>
-        </div>
-        {action ? <div className="w-full sm:w-auto">{action}</div> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-function ControlRow({ label, hint, children, emphasize = false }) {
-  return (
-    <div
-      className={`rounded-2xl border border-border px-4 py-4 ${
-        emphasize
-          ? 'bg-[linear-gradient(135deg,rgba(167,76,255,0.08),transparent_75%)]'
-          : 'bg-background'
-      }`}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-card-foreground">{label}</p>
-          {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
-        </div>
-        <div className="w-full min-w-0 sm:ml-4 sm:w-auto">{children}</div>
-      </div>
-    </div>
-  )
-}
-
-function SettingRow({ label, value, hint, emphasize = false }) {
-  return (
-    <div
-      className={`flex flex-col gap-3 rounded-2xl border border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between ${
-        emphasize
-          ? 'bg-[linear-gradient(135deg,rgba(167,76,255,0.08),transparent_75%)]'
-          : 'bg-background'
-      }`}
-    >
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-card-foreground">{label}</p>
-        {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
-      </div>
-      <p className="text-sm font-medium text-card-foreground sm:max-w-[15rem] sm:text-right">
-        {value}
-      </p>
-    </div>
-  )
-}
-
-function ActionRow({ label, value, hint, action, tone = 'default' }) {
-  return (
-    <div
-      className={`flex flex-col gap-3 rounded-2xl border border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between ${
-        tone === 'danger' ? 'bg-destructive/5' : 'bg-background'
-      }`}
-    >
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-card-foreground">{label}</p>
-        {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
-      </div>
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:max-w-[15rem] sm:items-end">
-        <p className="text-sm font-medium text-card-foreground sm:text-right">{value}</p>
-        {action}
-      </div>
-    </div>
-  )
-}
-
-function Toggle({ enabled = false, label, onToggle }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={enabled}
-      className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-auto sm:min-w-[11rem]"
-    >
-      {label ? (
-        <span className="min-w-0 text-left text-sm font-medium text-card-foreground">{label}</span>
-      ) : null}
-      <span
-        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-all duration-200 ${
-          enabled
-            ? 'border-primary bg-primary'
-            : 'border-border bg-muted'
-        }`}
-      >
-        <span
-          className={`absolute h-5 w-5 rounded-full bg-card shadow-xs transition-transform duration-200 ${
-            enabled ? 'translate-x-6' : 'translate-x-1'
-          }`}
-        />
-      </span>
-    </button>
-  )
-}
-
-function OptionGroup({ options, active, onSelect }) {
-  return (
-    <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onSelect(option)}
-          aria-pressed={option === active}
-          className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
-            option === active
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border bg-background text-card-foreground'
-          }`}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function HeroCard({ onBack }) {
-  return (
-    <section className="overflow-hidden rounded-[28px] border border-border bg-card shadow-xs">
-      <div className="border-b border-border/70 bg-[linear-gradient(135deg,rgba(167,76,255,0.12),rgba(167,76,255,0.02)_55%,transparent)] p-4 sm:p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={onBack}>
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Back
-            </Button>
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary sm:text-xs">
-              <Sparkles className="h-3.5 w-3.5" />
-              Settings
-            </div>
-          </div>
-
-          <div className="max-w-4xl">
-            <h1 className="text-2xl font-bold tracking-tight text-card-foreground sm:text-4xl">
-              Account settings that feel like a control center
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-              Password, notifications, security, theme preferences, and account privacy all live
-              here in one focused space without an extra sidebar.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-0 sm:grid-cols-3">
-        {quickStats.map((stat, index) => (
-          <div
-            key={stat.label}
-            className={`p-4 sm:p-5 ${index < quickStats.length - 1 ? 'border-b border-border/70 sm:border-r sm:border-b-0' : ''}`}
-          >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {stat.label}
-            </p>
-            <p className="mt-2 text-2xl font-bold text-card-foreground">{stat.value}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{stat.helper}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -199,7 +23,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
-      <HeroCard onBack={() => navigate(-1)} />
+      <SettingsHero onBack={() => navigate('/')} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <SettingsCard
