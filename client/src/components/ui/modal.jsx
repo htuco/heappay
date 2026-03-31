@@ -1,4 +1,4 @@
-import * as React from "react"
+import { forwardRef, useEffect } from "react"
 import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
@@ -19,7 +19,7 @@ const modalVariants = cva(
   }
 )
 
-const Modal = React.forwardRef(
+const Modal = forwardRef(
   ({ isOpen, onClose, title, children, className, size = "default", ...props }, ref) => {
     const handleBackdropClick = (e) => {
       if (e.target === e.currentTarget) onClose()
@@ -29,7 +29,7 @@ const Modal = React.forwardRef(
       if (e.key === "Escape") onClose()
     }
 
-    React.useEffect(() => {
+    useEffect(() => {
       if (!isOpen) return
       document.addEventListener("keydown", handleKeyDown)
       return () => document.removeEventListener("keydown", handleKeyDown)

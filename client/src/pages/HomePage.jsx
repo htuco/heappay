@@ -1,26 +1,25 @@
-import { useState } from "react"
+import { useCallback, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 
 export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const openModal = useCallback(() => setIsModalOpen(true), [])
+  const closeModal = useCallback(() => setIsModalOpen(false), [])
 
   return (
     <div className="space-y-6">
       <section className="rounded-md border p-5 bg-card">
         <h1 className="text-2xl font-semibold mb-3">Modal Demo</h1>
 
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-        >
+        <Button type="button" onClick={openModal}>
           Open Modal
-        </button>
+        </Button>
       </section>
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeModal}
         title="Demo Modal"
       >
         <p className="text-sm">
