@@ -1,5 +1,4 @@
 import { ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
@@ -42,7 +41,7 @@ export default function LoginForm({ isDark = true }) {
 			setPassword('')
 			console.log('Login successful', { email, rememberMe })
 		} else {
-			setError('Invalid email or password. Try: Talha Zlatar@symphony.is / password123')
+			setError('Invalid email or password. Try: talha.zlatar@symphony.is / password123')
 		}
 		setLoading(false)
 	}
