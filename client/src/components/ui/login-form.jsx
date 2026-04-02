@@ -3,11 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
-
-const MOCK_USER = {
-	email: 'talha.zlatar@symphony.is',
-	password: 'password123'
-}
+import { MOCK_USERS } from '@/lib/mocks'
 
 export default function LoginForm({ isDark = true }) {
 	const navigate = useNavigate()
@@ -35,7 +31,9 @@ export default function LoginForm({ isDark = true }) {
 		// Simulate API delay
 		await new Promise(resolve => setTimeout(resolve, 500))
 
-		if (email.trim() === MOCK_USER.email && password === MOCK_USER.password) {
+		const user = MOCK_USERS.find(u => u.email === email.trim() && u.password === password)
+
+		if (user) {
 			setSuccess(true)
 			setEmail('')
 			setPassword('')
