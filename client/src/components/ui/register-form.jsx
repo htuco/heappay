@@ -30,3 +30,12 @@ export default function RegisterForm({ isDark = true }) {
 		}
 	}, [success, navigate])
 
+	const calculatePasswordStrength = (pass) => {
+		let strength = 0
+		if (pass.length >= 8) strength++
+		if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) strength++
+		if (/[0-9]/.test(pass)) strength++
+		if (/[^a-zA-Z0-9]/.test(pass)) strength++
+		return strength
+	}
+
