@@ -1,0 +1,5 @@
+import RegisterForm from '@/components/ui/register-form'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import loginAnimation from '@/assets/login-anim.lottie?url'
+import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
+import { useState, useEffect } from 'react'
