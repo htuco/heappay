@@ -39,3 +39,7 @@ export default function RegisterForm({ isDark = true }) {
 		return strength
 	}
 
+	useEffect(() => {
+		setPasswordStrength(calculatePasswordStrength(password))
+	}, [password])
+
