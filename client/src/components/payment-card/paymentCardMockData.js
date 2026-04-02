@@ -1,7 +1,7 @@
 export const paymentCardMockData = [
   {
     id: 'card-1',
-    cardHolderName: 'Ahmed M Y Alazaiza',
+    cardHolderName: 'Hamza Tucou',
     cardNumber: '4558 8844 1122 1121',
     expiryDate: '08/30',
     brand: 'visa',
@@ -10,7 +10,7 @@ export const paymentCardMockData = [
   },
   {
     id: 'card-2',
-    cardHolderName: 'Jasmine Ali Al-Mutairi With Very Long Name',
+    cardHolderName: 'Dzelila Anjak Tinjak Scrum Master',
     cardNumber: '5555 2312 9999 6512',
     expiryDate: '11/29',
     brand: 'mastercard',
@@ -19,7 +19,7 @@ export const paymentCardMockData = [
   },
   {
     id: 'card-3',
-    cardHolderName: 'Omar Nasser',
+    cardHolderName: 'Nedim Nedimarlija',
     cardNumber: '378282246310005',
     expiryDate: '2029-05-01',
     brand: 'amex',
@@ -28,7 +28,7 @@ export const paymentCardMockData = [
   },
   {
     id: 'card-4',
-    cardHolderName: 'Noura A. Alkhaleel',
+    cardHolderName: 'DINO BAJRAM0VIC',
     cardNumber: '6011123456789012',
     expiryDate: '09/28',
     brand: 'discover',
