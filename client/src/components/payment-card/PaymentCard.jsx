@@ -1,3 +1,9 @@
+import {
+  formatBrandLabel,
+  formatExpiryDate,
+  maskCardNumber,
+} from './paymentCard.utils'
+
 export default function PaymentCard({
   card,
   className,
@@ -5,8 +11,8 @@ export default function PaymentCard({
 }) {
   const {
     cardHolderName = 'Unknown card holder',
-    cardNumber = '**** **** **** 0000',
-    expiryDate = '--/--',
+    cardNumber = '',
+    expiryDate = '',
     brand = 'Card',
     isActive = false,
     isDisabled = false,
@@ -36,17 +42,17 @@ export default function PaymentCard({
               Payment Card
             </p>
             <p className="text-sm font-semibold tracking-wide text-white/90">
-              {brand}
+              {formatBrandLabel(brand)}
             </p>
           </div>
           <div className="rounded-lg border border-white/30 bg-white/15 px-2 py-1 text-xs font-bold uppercase tracking-[0.18em]">
-            {brand}
+            {formatBrandLabel(brand)}
           </div>
         </div>
 
         <div className="space-y-3">
           <p className="text-lg font-semibold tracking-[0.18em] sm:text-xl md:text-2xl">
-            {cardNumber}
+            {maskCardNumber(cardNumber)}
           </p>
 
           <div className="grid grid-cols-2 items-end gap-4 text-white/95">
@@ -63,7 +69,7 @@ export default function PaymentCard({
                 Expiry
               </p>
               <p className="text-sm font-semibold sm:text-base md:text-lg">
-                {expiryDate}
+                {formatExpiryDate(expiryDate)}
               </p>
             </div>
           </div>
