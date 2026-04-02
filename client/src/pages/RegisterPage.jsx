@@ -77,4 +77,9 @@ export default function RegisterPage() {
 						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight text-white dark:text-white">
 						Your money shouldn’t be a mystery
 					</h2>
+					<p className="mx-auto mt-2 md:mt-4 text-sm md:text-[15px] leading-relaxed text-white/85 dark:text-white/85">
+							Create your account and get a clear view of every payment you make.
+						</p>
+					</div>
+				</div>
 }
