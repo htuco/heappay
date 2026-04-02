@@ -9,3 +9,6 @@ const MOCK_USERS = {
 }
 
 export default function RegisterForm({ isDark = true }) {
+	const navigate = useNavigate()
+	const [firstName, setFirstName] = useState('')
+	const [lastName, setLastName] = useState('')
