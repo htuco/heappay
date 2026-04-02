@@ -92,3 +92,10 @@ export default function RegisterForm({ isDark = true }) {
 		setLoading(false)
 	}
 
+	const getPasswordStrengthColor = () => {
+		if (passwordStrength === 0) return 'bg-gray-500'
+		if (passwordStrength === 1) return 'bg-red-500'
+		if (passwordStrength === 2) return 'bg-yellow-500'
+		if (passwordStrength === 3) return 'bg-blue-500'
+		return 'bg-green-500'
+	}
