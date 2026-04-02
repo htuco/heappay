@@ -1,7 +1,17 @@
+import { BRAND_THEMES } from './paymentCard.themes'
+
 export function formatBrandLabel(brand) {
   const value = String(brand ?? '').trim()
   if (!value) return 'Card'
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+}
+
+export function normalizeBrand(brand) {
+  return String(brand ?? '').trim().toLowerCase()
+}
+
+export function getBrandTheme(brand) {
+  return BRAND_THEMES[normalizeBrand(brand)] || BRAND_THEMES.default
 }
 
 function getLast4(cardNumber) {

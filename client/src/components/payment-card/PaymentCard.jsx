@@ -1,6 +1,7 @@
 import {
   formatBrandLabel,
   formatExpiryDate,
+  getBrandTheme,
   maskCardNumber,
 } from './paymentCard.utils'
 
@@ -17,9 +18,10 @@ export default function PaymentCard({
     isActive = false,
     isDisabled = false,
   } = card || {}
+  const theme = getBrandTheme(brand)
   const cardAction = isDisabled ? undefined : onClick
   const classes = [
-    'relative w-full max-w-[430px] rounded-3xl bg-blue-600 p-6 text-white shadow-xl',
+    'relative w-full max-w-[430px] rounded-3xl p-6 text-white shadow-xl',
     isActive &&
       'ring-2 ring-white/80 ring-offset-2 ring-offset-background scale-[1.015]',
     isDisabled && 'opacity-55 grayscale-[0.25] saturate-[0.8]',
@@ -32,6 +34,7 @@ export default function PaymentCard({
   return (
     <article
       className={classes}
+      style={{ background: theme.background }}
       aria-disabled={isDisabled}
       onClick={cardAction}
     >
@@ -51,7 +54,10 @@ export default function PaymentCard({
         </div>
 
         <div className="space-y-3">
-          <p className="text-lg font-semibold tracking-[0.18em] sm:text-xl md:text-2xl">
+          <p
+            className="text-lg font-semibold tracking-[0.18em] sm:text-xl md:text-2xl"
+            style={{ color: theme.accent }}
+          >
             {maskCardNumber(cardNumber)}
           </p>
 
