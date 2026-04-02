@@ -37,4 +37,12 @@ export default function RegisterPage() {
 				)}
 			</button>
 
+				<div
+					className="absolute inset-0"
+					style={{
+						backgroundImage: isDark
+							? 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 74%, #000 26%), color-mix(in oklab, var(--accent) 88%, #000 12%), color-mix(in oklab, var(--accent) 68%, #000 32%))'
+							: 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 50%, #fff 50%), color-mix(in oklab, var(--accent) 60%, #fff 40%), color-mix(in oklab, var(--accent) 45%, #fff 55%))',
+					}}
+				/>
 }
