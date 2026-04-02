@@ -4,6 +4,7 @@ import {
   getBrandTheme,
   maskCardNumber,
 } from './paymentCard.utils'
+import PaymentCardBrandIndicator from './PaymentCardBrandIndicator'
 
 export default function PaymentCard({
   card,
@@ -49,7 +50,7 @@ export default function PaymentCard({
             </p>
           </div>
           <div className="rounded-lg border border-white/30 bg-white/15 px-2 py-1 text-xs font-bold uppercase tracking-[0.18em]">
-            {formatBrandLabel(brand)}
+            <PaymentCardBrandIndicator brand={brand} />
           </div>
         </div>
 
