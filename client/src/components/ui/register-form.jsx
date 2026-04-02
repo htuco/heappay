@@ -20,3 +20,13 @@ export default function RegisterForm({ isDark = true }) {
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
 	const [passwordStrength, setPasswordStrength] = useState(0)
+
+	useEffect(() => {
+		if (success) {
+			const timer = setTimeout(() => {
+				navigate('/')
+			}, 1000)
+			return () => clearTimeout(timer)
+		}
+	}, [success, navigate])
+
