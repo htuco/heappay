@@ -25,4 +25,16 @@ export default function RegisterPage() {
 		document.documentElement.classList.toggle('dark')
 		localStorage.setItem('theme', newTheme)
 	}
+			<button
+				onClick={toggleTheme}
+				className="absolute top-4 right-4 z-50 p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition-colors"
+				aria-label="Toggle theme"
+			>
+				{isDark ? (
+					<Sun className="h-5 w-5 text-foreground" />
+				) : (
+					<Moon className="h-5 w-5 text-foreground" />
+				)}
+			</button>
+
 }
