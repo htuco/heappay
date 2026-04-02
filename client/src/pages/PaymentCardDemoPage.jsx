@@ -1,15 +1,7 @@
 import PaymentCard from '@/components/payment-card/PaymentCard'
+import { paymentCardMockData } from '@/components/payment-card/paymentCardMockData'
 
 export default function PaymentCardDemoPage() {
-  const sampleCard = {
-    cardHolderName: 'Sample User',
-    cardNumber: '**** **** **** 1121',
-    expiryDate: '08/30',
-    brand: 'Visa',
-    isActive: true,
-    isDisabled: false,
-  }
-
   return (
     <section className="space-y-6 p-3 sm:p-6">
       <div>
@@ -20,10 +12,12 @@ export default function PaymentCardDemoPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <div className="w-full max-w-[430px]">
-          <PaymentCard card={sampleCard} />
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {paymentCardMockData.map((entry) => (
+          <div key={entry.id} className="w-full max-w-[430px]">
+            <PaymentCard card={entry.card} />
+          </div>
+        ))}
       </div>
     </section>
   )
