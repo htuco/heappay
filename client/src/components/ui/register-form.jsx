@@ -43,3 +43,40 @@ export default function RegisterForm({ isDark = true }) {
 		setPasswordStrength(calculatePasswordStrength(password))
 	}, [password])
 
+	const handleSubmit = async (e) => {
+		e.preventDefault()
+		setError('')
+
+		if (!firstName.trim() || !lastName.trim()) {
+			setError('First name and last name are required')
+			return
+		}
+
+		if (!email.trim().includes('@')) {
+			setError('Please enter a valid email address')
+			return
+		}
+
+		if (password.length < 8) {
+			setError('Password must be at least 8 characters')
+			return
+		}
+
+		if (password !== confirmPassword) {
+			setError('Passwords do not match')
+			return
+		}
+
+		if (!agreedToTerms) {
+			setError('You must agree to the Terms of Service')
+			return
+		}
+
+		setLoading(true)
+		await new Promise(resolve => setTimeout(resolve, 500))
+
+		if (MOCK_USERS[email.trim()]) {
+			setError('Email already registered')
+			setLoading(false)
+			return
+		}
