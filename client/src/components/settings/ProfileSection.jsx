@@ -1,7 +1,24 @@
+import { useState } from 'react'
 import { Camera, UserRound } from 'lucide-react'
 
 import SettingsCard from '@/components/settings/SettingsCard'
 import { Button } from '@/components/ui/button'
+
+const initialProfile = {
+  fullName: 'Selim Kovacevic',
+  username: 'selimk',
+  email: 'selim@example.com',
+  location: 'Sarajevo, Bosnia and Herzegovina',
+}
+
+function getInitials(name) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
 
 function Field({ label, hint, ...props }) {
   return (
@@ -19,6 +36,17 @@ function Field({ label, hint, ...props }) {
 }
 
 export default function ProfileSection() {
+  const [profile, setProfile] = useState(initialProfile)
+
+  function handleFieldChange(event) {
+    const { name, value } = event.target
+    setProfile((current) => ({ ...current, [name]: value }))
+  }
+
+  function handleReset() {
+    setProfile(initialProfile)
+  }
+
   return (
     <SettingsCard
       title="Profile Details"
@@ -30,11 +58,11 @@ export default function ProfileSection() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-primary text-lg font-semibold text-primary-foreground">
-                SK
+                {getInitials(profile.fullName)}
               </div>
               <div>
-                <p className="text-sm font-semibold text-card-foreground">Selim Kovacevic</p>
-                <p className="text-xs text-muted-foreground">@selimk</p>
+                <p className="text-sm font-semibold text-card-foreground">{profile.fullName}</p>
+                <p className="text-xs text-muted-foreground">@{profile.username}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Personal details appear in your account settings and workspace profile.
                 </p>
@@ -52,14 +80,16 @@ export default function ProfileSection() {
             label="Full name"
             hint="Used for your account identity and team-facing profile."
             name="fullName"
-            defaultValue="Selim Kovacevic"
+            value={profile.fullName}
+            onChange={handleFieldChange}
             placeholder="Enter your full name"
           />
           <Field
             label="Username"
             hint="Short handle used in mentions and profile links."
             name="username"
-            defaultValue="selimk"
+            value={profile.username}
+            onChange={handleFieldChange}
             placeholder="Enter your username"
           />
           <Field
@@ -67,19 +97,21 @@ export default function ProfileSection() {
             hint="Primary address for account access and recovery updates."
             name="email"
             type="email"
-            defaultValue="selim@example.com"
+            value={profile.email}
+            onChange={handleFieldChange}
             placeholder="Enter your email address"
           />
           <Field
             label="Location"
             hint="Optional location shown for account context."
             name="location"
-            defaultValue="Sarajevo, Bosnia and Herzegovina"
+            value={profile.location}
+            onChange={handleFieldChange}
             placeholder="Enter your location"
           />
         </div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" className="w-full sm:w-auto">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={handleReset}>
             Reset
           </Button>
           <Button type="button" className="w-full sm:w-auto">
