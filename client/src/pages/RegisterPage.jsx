@@ -18,4 +18,11 @@ export default function RegisterPage() {
 		document.documentElement.classList.toggle('dark', theme === 'dark')
 		localStorage.setItem('theme', theme)
 	}, [])
+
+	const toggleTheme = () => {
+		const newTheme = isDark ? 'light' : 'dark'
+		setIsDark(!isDark)
+		document.documentElement.classList.toggle('dark')
+		localStorage.setItem('theme', newTheme)
+	}
 }
