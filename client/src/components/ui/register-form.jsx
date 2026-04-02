@@ -137,7 +137,7 @@ export default function RegisterForm({ isDark = true }) {
 						</div>
 
 						<h1 className="text-5xl font-semibold tracking-tight text-foreground">Create An Account</h1>
-						<p className="text-[16px] text-foreground/70">Access your card management dashboard and take control.</p>
+						<p className="text-[16px] text-foreground/70">Sign up to get started with your cards</p>
 					</div>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
