@@ -80,3 +80,15 @@ export default function RegisterForm({ isDark = true }) {
 			setLoading(false)
 			return
 		}
+
+		setSuccess(true)
+		setFirstName('')
+		setLastName('')
+		setEmail('')
+		setPassword('')
+		setConfirmPassword('')
+		setAgreedToTerms(false)
+		console.log('Registration successful', { firstName, lastName, email })
+		setLoading(false)
+	}
+
