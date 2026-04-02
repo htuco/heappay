@@ -25,6 +25,9 @@ export default function RegisterPage() {
 		document.documentElement.classList.toggle('dark')
 		localStorage.setItem('theme', newTheme)
 	}
+	return (
+		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[35%_65%]">
+			{/* Theme Switch Button */}
 			<button
 				onClick={toggleTheme}
 				className="absolute top-4 right-4 z-50 p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition-colors"
@@ -37,6 +40,7 @@ export default function RegisterPage() {
 				)}
 			</button>
 
+			<div className="relative overflow-hidden bg-gradient-to-br from-background to-background">
 				<div
 					className="absolute inset-0"
 					style={{
@@ -82,4 +86,11 @@ export default function RegisterPage() {
 						</p>
 					</div>
 				</div>
+			</div>
+
+			<div>
+				<RegisterForm isDark={isDark} />
+			</div>
+		</section>
+	)
 }
