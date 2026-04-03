@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Info } from 'lucide-react'
+import { Home, Info, LayoutDashboard } from 'lucide-react'
 
 const navLinks = [
   { name: 'Home', path: '/', icon: Home },
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'About', path: '/about', icon: Info },
 ]
 
