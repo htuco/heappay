@@ -13,7 +13,7 @@ export const paymentCardMockData = [
   {
     id: 'card-2',
     card: {
-      cardHolderName: 'Dzelila Anjak Tinjak Scrum Master',
+      cardHolderName: 'Dzelila Anjak Tinjo Scrum Master',
       cardNumber: '5555 2312 9999 6512',
       expiryDate: '11/29',
       brand: 'mastercard',
