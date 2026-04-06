@@ -37,9 +37,11 @@ export default function LoginForm({ isDark = true }) {
 			password
 		})
 
+		console.log('Validation result:', result)
+
 		if (!result.success) {
 			const fieldErrors = {}
-			result.error.errors.forEach(err => {
+			result.error.issues.forEach(err => {
 				fieldErrors[err.path[0]] = err.message
 			})
 			setErrors(fieldErrors)
