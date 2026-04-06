@@ -78,14 +78,15 @@ export default function RegisterForm({ isDark = true }) {
 
 		if (!agreedToTerms) {
 			setError('You must agree to the Terms of Service')
+			setLoading(false)
 			return
 		}
 
-		setLoading(true)
 		await new Promise(resolve => setTimeout(resolve, 500))
 
-		if (MOCK_USERS[email.trim()]) {
-			setError('Email already registered')
+		const userExists = MOCK_USERS.find(u => u.email === email.trim())
+		if (userExists) {
+			setErrors({ email: 'Email already registered' })
 			setLoading(false)
 			return
 		}
