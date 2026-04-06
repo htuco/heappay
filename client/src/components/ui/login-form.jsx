@@ -187,9 +187,14 @@ export default function LoginForm({ isDark = true }) {
 								/>
 								<span>Remember me</span>
 							</label>
-							<a href="#" className="text-[15px] font-normal" style={{ color: 'var(--accent)' }}>
+							<button 
+								type="button"
+								onClick={() => navigate('/forgot-password')}
+								className="text-[15px] font-normal" 
+								style={{ color: 'var(--accent)' }}
+							>
 								Forgot password
-							</a>
+							</button>
 						</div>
 
 						<button
@@ -207,9 +212,14 @@ export default function LoginForm({ isDark = true }) {
 
 					<p className="pt-6 text-center text-[17px] font-normal text-foreground/85">
 						Don&apos;t have an account?{' '}
-						<a href="#" style={{ color: 'var(--accent)' }}>
+						<button
+							type="button"
+							onClick={() => navigate('/register')}
+							style={{ color: 'var(--accent)' }}
+							className="font-semibold hover:opacity-80 transition-opacity"
+						>
 							Sign up
-						</a>
+						</button>
 					</p>
 				</div>
 			</div>
