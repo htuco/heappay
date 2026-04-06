@@ -37,8 +37,6 @@ export default function LoginForm({ isDark = true }) {
 			password
 		})
 
-		console.log('Validation result:', result)
-
 		if (!result.success) {
 			const fieldErrors = {}
 			result.error.issues.forEach(err => {
@@ -58,7 +56,6 @@ export default function LoginForm({ isDark = true }) {
 			setSuccess(true)
 			setEmail('')
 			setPassword('')
-			console.log('Login successful', { email, rememberMe })
 		} else {
 			setError('Invalid email or password. Try: talha.zlatar@symphony.is / password123')
 		}
@@ -129,8 +126,18 @@ export default function LoginForm({ isDark = true }) {
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
-								style={{ borderColor: errors.email ? '#ef4444' : 'var(--accent)' }}
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus:ring-2 focus:ring-offset-0 disabled:opacity-50 transition-all duration-200"
+								style={{ 
+									borderColor: errors.email ? '#ef4444' : 'var(--accent)',
+									boxShadow: 'var(--tw-ring-inset) var(--tw-ring-offset-width) var(--tw-ring-offset-color), 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, transparent)'
+								}}
+								onFocus={(e) => {
+									e.target.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 6px rgba(168, 85, 247, 0.15)'
+									e.target.style.transitionDuration = '200ms'
+								}}
+								onBlur={(e) => {
+									e.target.style.boxShadow = 'none'
+								}}
 							/>
 							{errors.email && (
 								<p className="mt-1 text-sm text-red-400">{errors.email}</p>
@@ -151,8 +158,18 @@ export default function LoginForm({ isDark = true }) {
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
-								style={{ borderColor: errors.password ? '#ef4444' : 'var(--accent)' }}
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus:ring-2 focus:ring-offset-0 disabled:opacity-50 transition-all duration-200"
+								style={{ 
+									borderColor: errors.password ? '#ef4444' : 'var(--accent)',
+									boxShadow: 'var(--tw-ring-inset) var(--tw-ring-offset-width) var(--tw-ring-offset-color), 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, transparent)'
+								}}
+								onFocus={(e) => {
+									e.target.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 6px rgba(168, 85, 247, 0.15)'
+									e.target.style.transitionDuration = '200ms'
+								}}
+								onBlur={(e) => {
+									e.target.style.boxShadow = 'none'
+								}}
 							/>
 							{errors.password && (
 								<p className="mt-1 text-sm text-red-400">{errors.password}</p>
