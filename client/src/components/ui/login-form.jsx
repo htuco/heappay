@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
 import { MOCK_USERS } from '@/lib/mocks'
+import { loginSchema } from '@/lib/validation'
 
 export default function LoginForm({ isDark = true }) {
 	const navigate = useNavigate()
@@ -11,6 +12,7 @@ export default function LoginForm({ isDark = true }) {
 	const [password, setPassword] = useState('')
 	const [rememberMe, setRememberMe] = useState(false)
 	const [error, setError] = useState('')
+	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
 
@@ -26,7 +28,24 @@ export default function LoginForm({ isDark = true }) {
 	const handleSubmit = async (e) => {
 		e.preventDefault()
 		setError('')
+		setErrors({})
 		setLoading(true)
+
+		// Validate with Zod
+		const result = loginSchema.safeParse({
+			email: email.trim(),
+			password
+		})
+
+		if (!result.success) {
+			const fieldErrors = {}
+			result.error.errors.forEach(err => {
+				fieldErrors[err.path[0]] = err.message
+			})
+			setErrors(fieldErrors)
+			setLoading(false)
+			return
+		}
 
 		// Simulate API delay
 		await new Promise(resolve => setTimeout(resolve, 500))
@@ -109,8 +128,11 @@ export default function LoginForm({ isDark = true }) {
 								onChange={(e) => setEmail(e.target.value)}
 								disabled={loading}
 								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
-								style={{ borderColor: 'var(--accent)' }}
+								style={{ borderColor: errors.email ? '#ef4444' : 'var(--accent)' }}
 							/>
+							{errors.email && (
+								<p className="mt-1 text-sm text-red-400">{errors.email}</p>
+							)}
 						</div>
 
 						<div>
@@ -128,8 +150,11 @@ export default function LoginForm({ isDark = true }) {
 								onChange={(e) => setPassword(e.target.value)}
 								disabled={loading}
 								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
-                                style={{ borderColor: 'var(--accent)' }}
+								style={{ borderColor: errors.password ? '#ef4444' : 'var(--accent)' }}
 							/>
+							{errors.password && (
+								<p className="mt-1 text-sm text-red-400">{errors.password}</p>
+							)}
 						</div>
 
 						<div className="flex items-center justify-between gap-4 pt-1 text-base">
