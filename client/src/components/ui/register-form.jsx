@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
 import { MOCK_USERS } from '@/lib/mocks'
+import { registerSchema } from '@/lib/validation'
 
 export default function RegisterForm({ isDark = true }) {
 	const navigate = useNavigate()
@@ -14,6 +15,7 @@ export default function RegisterForm({ isDark = true }) {
 	const [confirmPassword, setConfirmPassword] = useState('')
 	const [agreedToTerms, setAgreedToTerms] = useState(false)
 	const [error, setError] = useState('')
+	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
 	const [passwordStrength, setPasswordStrength] = useState(0)
@@ -40,27 +42,37 @@ export default function RegisterForm({ isDark = true }) {
 		setPasswordStrength(calculatePasswordStrength(password))
 	}, [password])
 
+	const handleInputFocus = (e) => {
+		e.target.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 6px rgba(168, 85, 247, 0.15)'
+		e.target.style.transitionDuration = '200ms'
+	}
+
+	const handleInputBlur = (e) => {
+		e.target.style.boxShadow = 'none'
+	}
+
 	const handleSubmit = async (e) => {
 		e.preventDefault()
 		setError('')
+		setErrors({})
+		setLoading(true)
 
-		if (!firstName.trim() || !lastName.trim()) {
-			setError('First name and last name are required')
-			return
-		}
+		// Validate with Zod
+		const result = registerSchema.safeParse({
+			firstName: firstName.trim(),
+			lastName: lastName.trim(),
+			email: email.trim(),
+			password,
+			confirmPassword,
+		})
 
-		if (!email.trim().includes('@')) {
-			setError('Please enter a valid email address')
-			return
-		}
-
-		if (password.length < 8) {
-			setError('Password must be at least 8 characters')
-			return
-		}
-
-		if (password !== confirmPassword) {
-			setError('Passwords do not match')
+		if (!result.success) {
+			const fieldErrors = {}
+			result.error.issues.forEach(err => {
+				fieldErrors[err.path[0]] = err.message
+			})
+			setErrors(fieldErrors)
+			setLoading(false)
 			return
 		}
 
@@ -85,7 +97,6 @@ export default function RegisterForm({ isDark = true }) {
 		setPassword('')
 		setConfirmPassword('')
 		setAgreedToTerms(false)
-		console.log('Registration successful', { firstName, lastName, email })
 		setLoading(false)
 	}
 
@@ -151,67 +162,70 @@ export default function RegisterForm({ isDark = true }) {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label
-									htmlFor="firstName"
-									className="mb-2 block text-sm font-bold text-foreground/55"
-								>
+								<label htmlFor="firstName" className="mb-2 block text-sm font-bold text-foreground/55">
 									First Name
 								</label>
 								<input
 									id="firstName"
 									type="text"
-									placeholder="John"
+									placeholder="First name"
 									value={firstName}
 									onChange={(e) => setFirstName(e.target.value)}
 									disabled={loading}
-									className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
+									className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
 									style={{ borderColor: 'var(--accent)' }}
+									onFocus={handleInputFocus}
+									onBlur={handleInputBlur}
 								/>
+								{errors.firstName && (
+									<p className="mt-1 text-sm text-red-400">{errors.firstName}</p>
+								)}
 							</div>
 							<div>
-								<label
-									htmlFor="lastName"
-									className="mb-2 block text-sm font-bold text-foreground/55"
-								>
+								<label htmlFor="lastName" className="mb-2 block text-sm font-bold text-foreground/55">
 									Last Name
 								</label>
 								<input
 									id="lastName"
 									type="text"
-									placeholder="Doe"
+									placeholder="Last name"
 									value={lastName}
 									onChange={(e) => setLastName(e.target.value)}
 									disabled={loading}
-									className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
+									className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
 									style={{ borderColor: 'var(--accent)' }}
+									onFocus={handleInputFocus}
+									onBlur={handleInputBlur}
 								/>
+								{errors.lastName && (
+									<p className="mt-1 text-sm text-red-400">{errors.lastName}</p>
+								)}
 							</div>
 						</div>
 
 						<div>
-							<label
-								htmlFor="email"
-								className="mb-2 block text-sm font-bold text-foreground/55"
-							>
+							<label htmlFor="email" className="mb-2 block text-sm font-bold text-foreground/55">
 								Email Address
 							</label>
 							<input
 								id="email"
 								type="email"
-								placeholder="john@example.com"
+								placeholder="Email address"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
 								style={{ borderColor: 'var(--accent)' }}
+								onFocus={handleInputFocus}
+								onBlur={handleInputBlur}
 							/>
+							{errors.email && (
+								<p className="mt-1 text-sm text-red-400">{errors.email}</p>
+							)}
 						</div>
 
 						<div>
-							<label
-								htmlFor="password"
-								className="mb-2 block text-sm font-bold text-foreground/55"
-							>
+							<label htmlFor="password" className="mb-2 block text-sm font-bold text-foreground/55">
 								Password
 							</label>
 							<input
@@ -221,10 +235,15 @@ export default function RegisterForm({ isDark = true }) {
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
 								style={{ borderColor: 'var(--accent)' }}
+								onFocus={handleInputFocus}
+								onBlur={handleInputBlur}
 							/>
-							{password && (
+							{errors.password && (
+								<p className="mt-1 text-sm text-red-400">{errors.password}</p>
+							)}
+							{password && !errors.password && (
 								<div className="mt-2 flex gap-1">
 									{[...Array(4)].map((_, i) => (
 										<div
@@ -239,10 +258,7 @@ export default function RegisterForm({ isDark = true }) {
 						</div>
 
 						<div>
-							<label
-								htmlFor="confirmPassword"
-								className="mb-2 block text-sm font-bold text-foreground/55"
-							>
+							<label htmlFor="confirmPassword" className="mb-2 block text-sm font-bold text-foreground/55">
 								Confirm Password
 							</label>
 							<input
@@ -252,9 +268,14 @@ export default function RegisterForm({ isDark = true }) {
 								value={confirmPassword}
 								onChange={(e) => setConfirmPassword(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:border-accent disabled:opacity-50"
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
 								style={{ borderColor: 'var(--accent)' }}
+								onFocus={handleInputFocus}
+								onBlur={handleInputBlur}
 							/>
+							{errors.confirmPassword && (
+								<p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>
+							)}
 						</div>
 
 						<label className="inline-flex items-center gap-3 text-[14px] font-normal text-foreground/90 cursor-pointer">
@@ -268,9 +289,14 @@ export default function RegisterForm({ isDark = true }) {
 							/>
 							<span>
 								I agree to the{' '}
-								<a href="#" className="font-semibold" style={{ color: 'var(--accent)' }}>
+								<button
+									type="button"
+									onClick={() => navigate('/terms-of-service')}
+									className="font-semibold hover:opacity-80 transition-opacity"
+									style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+								>
 									Terms of Service
-								</a>
+								</button>
 							</span>
 						</label>
 
@@ -289,9 +315,14 @@ export default function RegisterForm({ isDark = true }) {
 
 					<p className="pt-6 text-center text-[17px] font-normal text-foreground/85">
 						Already have an account?{' '}
-						<a href="/login" style={{ color: 'var(--accent)' }}>
+						<button
+							type="button"
+							onClick={() => navigate('/login')}
+							style={{ color: 'var(--accent)' }}
+							className="font-semibold hover:opacity-80 transition-opacity"
+						>
 							Log in
-						</a>
+						</button>
 					</p>
 				</div>
 			</div>
