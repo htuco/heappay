@@ -3,36 +3,37 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 
-const currencyOptions = [
-  { value: 'bam', label: 'BAM — Konvertibilna marka' },
+const DEFAULT_OPTIONS = [
+  { value: 'bam', label: 'BAM — Bosnian Mark' },
   { value: 'eur', label: 'EUR — Euro' },
-  { value: 'usd', label: 'USD — Američki dolar' },
-  { value: 'gbp', label: 'GBP — Britanska funta' },
+  { value: 'usd', label: 'USD — US Dollar' },
+  { value: 'gbp', label: 'GBP — British Pound' },
 ]
 
-export default function SelectPreview() {
-  const [currency, setCurrency] = useState('')
+export default function SelectPreview({ label = "Select", placeholder = "Choose an option...", options = DEFAULT_OPTIONS, disabled = false }) {
+  const [value, setValue] = useState('')
 
   return (
     <Card className="max-w-sm">
       <CardHeader>
         <CardTitle>Select</CardTitle>
-        <CardDescription>Dropdown za odabir valute</CardDescription>
+        <CardDescription>Dropdown component</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="currency-select">Valuta</Label>
+          <Label htmlFor="preview-select">{label}</Label>
           <Select
-            id="currency-select"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            placeholder="Odaberi valutu..."
-            options={currencyOptions}
+            id="preview-select"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={placeholder}
+            options={options}
+            disabled={disabled}
           />
         </div>
-        {currency && (
+        {value && (
           <p className="text-sm text-muted-foreground">
-            Odabrano: <span className="text-foreground font-semibold">{currency.toUpperCase()}</span>
+            Selected: <span className="text-foreground font-semibold">{value.toUpperCase()}</span>
           </p>
         )}
       </CardContent>
