@@ -70,7 +70,7 @@ export default function PaymentCard({
             </p>
           </div>
           <div className="payment-card-brand-chip">
-            <PaymentCardBrandIndicator brand={brand} />
+            <PaymentCardBrandIndicator brand={brand} icon={theme.icon} />
           </div>
         </div>
 

@@ -1,22 +1,14 @@
-import { formatBrandLabel, normalizeBrand } from './paymentCard.utils'
+import { formatBrandLabel } from './paymentCard.utils'
 
-export default function PaymentCardBrandIndicator({ brand }) {
-  const normalized = normalizeBrand(brand)
-
-  if (normalized === 'mastercard') {
+export default function PaymentCardBrandIndicator({ brand, icon }) {
+  if (icon) {
     return (
-      <div className="flex items-center" aria-label="Mastercard">
-        <span className="h-6 w-6 rounded-full bg-[#ea4335] opacity-95" />
-        <span className="-ml-2 h-6 w-6 rounded-full bg-[#fbbc04] opacity-90" />
-      </div>
-    )
-  }
-
-  if (normalized === 'visa') {
-    return (
-      <span className="text-xs font-bold tracking-[0.18em] uppercase text-white/95">
-        VISA
-      </span>
+      <img
+        src={icon}
+        alt={`${formatBrandLabel(brand)} logo`}
+        className="h-6 w-auto max-w-12 object-contain"
+        loading="lazy"
+      />
     )
   }
 
