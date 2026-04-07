@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
@@ -18,7 +18,6 @@ export default function RegisterForm({ isDark = true }) {
 	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
-	const [passwordStrength, setPasswordStrength] = useState(0)
 
 	const calculatePasswordStrength = (pass) => {
 		let strength = 0
@@ -29,9 +28,10 @@ export default function RegisterForm({ isDark = true }) {
 		return strength
 	}
 
-	useEffect(() => {
-		setPasswordStrength(calculatePasswordStrength(password))
-	}, [password])
+	const passwordStrength = useMemo(
+		() => calculatePasswordStrength(password),
+		[password]
+	)
 
 	const handleInputFocus = (e) => {
 		e.target.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 6px rgba(168, 85, 247, 0.15)'
