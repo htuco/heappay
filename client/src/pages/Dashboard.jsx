@@ -1,13 +1,5 @@
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
-
-const mockCardData = {
-  totalCards: 3,
-  statusCounts: {
-    active: 1,
-    blocked: 1,
-    reported: 1,
-  },
-}
+import { cardStatusMockData } from '@/mocks/cardStatusMockData'
 
 export default function DashboardPage() {
   return (
@@ -19,8 +11,8 @@ export default function DashboardPage() {
         </p>
       </header>
       <CardStatusOverview
-        totalCards={mockCardData.totalCards}
-        statusCounts={mockCardData.statusCounts}
+        totalCards={cardStatusMockData.totalCards}
+        statusCounts={cardStatusMockData.statusCounts}
       />
     </div>
   )
