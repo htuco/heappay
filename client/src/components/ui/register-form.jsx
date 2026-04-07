@@ -33,14 +33,7 @@ export default function RegisterForm({ isDark = true }) {
 		[password]
 	)
 
-	const handleInputFocus = (e) => {
-		e.target.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 6px rgba(168, 85, 247, 0.15)'
-		e.target.style.transitionDuration = '200ms'
-	}
 
-	const handleInputBlur = (e) => {
-		e.target.style.boxShadow = 'none'
-	}
 
 	const handleSubmit = async (e) => {
 		e.preventDefault()
@@ -168,10 +161,8 @@ export default function RegisterForm({ isDark = true }) {
 									value={firstName}
 									onChange={(e) => setFirstName(e.target.value)}
 									disabled={loading}
-									className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
-									style={{ borderColor: 'var(--accent)' }}
-									onFocus={handleInputFocus}
-									onBlur={handleInputBlur}
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
+								style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
 								/>
 								{errors.firstName && (
 									<p className="mt-1 text-sm text-red-400">{errors.firstName}</p>
@@ -188,10 +179,8 @@ export default function RegisterForm({ isDark = true }) {
 									value={lastName}
 									onChange={(e) => setLastName(e.target.value)}
 									disabled={loading}
-									className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
-									style={{ borderColor: 'var(--accent)' }}
-									onFocus={handleInputFocus}
-									onBlur={handleInputBlur}
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
+								style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
 								/>
 								{errors.lastName && (
 									<p className="mt-1 text-sm text-red-400">{errors.lastName}</p>
@@ -210,10 +199,8 @@ export default function RegisterForm({ isDark = true }) {
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
-								style={{ borderColor: 'var(--accent)' }}
-								onFocus={handleInputFocus}
-								onBlur={handleInputBlur}
+							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
+							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
 							/>
 							{errors.email && (
 								<p className="mt-1 text-sm text-red-400">{errors.email}</p>
@@ -231,10 +218,8 @@ export default function RegisterForm({ isDark = true }) {
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
-								style={{ borderColor: 'var(--accent)' }}
-								onFocus={handleInputFocus}
-								onBlur={handleInputBlur}
+							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
+							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
 							/>
 							{errors.password && (
 								<p className="mt-1 text-sm text-red-400">{errors.password}</p>
@@ -264,10 +249,8 @@ export default function RegisterForm({ isDark = true }) {
 								value={confirmPassword}
 								onChange={(e) => setConfirmPassword(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200"
-								style={{ borderColor: 'var(--accent)' }}
-								onFocus={handleInputFocus}
-								onBlur={handleInputBlur}
+							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
+							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
 							/>
 							{errors.confirmPassword && (
 								<p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>
