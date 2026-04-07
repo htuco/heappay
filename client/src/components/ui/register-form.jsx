@@ -48,6 +48,7 @@ export default function RegisterForm({ isDark = true }) {
 			email: email.trim(),
 			password,
 			confirmPassword,
+			agreedToTerms,
 		})
 
 		if (!result.success) {
@@ -56,12 +57,6 @@ export default function RegisterForm({ isDark = true }) {
 				fieldErrors[err.path[0]] = err.message
 			})
 			setErrors(fieldErrors)
-			setLoading(false)
-			return
-		}
-
-		if (!agreedToTerms) {
-			setError('You must agree to the Terms of Service')
 			setLoading(false)
 			return
 		}
