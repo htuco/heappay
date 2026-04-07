@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ArrowUpRight, Eye, TrendingUp } from 'lucide-react'
 
 export default function TotalBalanceWidget({
@@ -6,6 +7,9 @@ export default function TotalBalanceWidget({
   monthlyGrowth = '+12.5%',
   monthlyAmount = '$2,756.43',
 }) {
+  const [isBalanceVisible, setIsBalanceVisible] = useState(true)
+  const visibleBalance = isBalanceVisible ? totalBalance : '••••••••'
+
   return (
     <section className="relative overflow-hidden rounded-3xl border border-white/20 bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-700 p-6 text-white shadow-xl sm:p-8">
       <div className="pointer-events-none absolute -top-20 right-0 h-56 w-56 rounded-full bg-white/15 blur-3xl" />
@@ -21,14 +25,16 @@ export default function TotalBalanceWidget({
         <button
           type="button"
           className="cursor-pointer rounded-full border border-white/20 bg-white/10 p-2 text-white/80 transition hover:text-white"
+          onClick={() => setIsBalanceVisible((prev) => !prev)}
           aria-label="Toggle balance visibility"
+          aria-pressed={!isBalanceVisible}
         >
           <Eye className="h-4 w-4" />
         </button>
       </div>
 
       <h2 className="relative z-10 mt-8 mb-7 text-4xl font-bold tracking-tight sm:text-5xl md:text-[3.35rem]">
-        {totalBalance}
+        {visibleBalance}
       </h2>
       <p className="relative z-10 -mt-4 mb-6 text-sm font-medium text-white/80">{currency}</p>
 
