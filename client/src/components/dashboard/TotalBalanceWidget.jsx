@@ -1,7 +1,8 @@
 import { ArrowUpRight, Eye, TrendingUp } from 'lucide-react'
 
 export default function TotalBalanceWidget({
-  totalBalance = '$24,567.89',
+  totalBalance = '$12,450.00',
+  currency = 'USD',
   monthlyGrowth = '+12.5%',
   monthlyAmount = '$2,756.43',
 }) {
@@ -29,6 +30,7 @@ export default function TotalBalanceWidget({
       <h2 className="relative z-10 mt-8 mb-7 text-4xl font-bold tracking-tight sm:text-5xl md:text-[3.35rem]">
         {totalBalance}
       </h2>
+      <p className="relative z-10 -mt-4 mb-6 text-sm font-medium text-white/80">{currency}</p>
 
       <hr className="mb-6 border-white/25" />
 

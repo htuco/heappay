@@ -1,4 +1,5 @@
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
+import { dashboardMockData } from '@/mocks/dashboardMockData'
 
 export default function DashboardPage() {
   return (
@@ -11,9 +12,10 @@ export default function DashboardPage() {
       </header>
 
       <TotalBalanceWidget
-        totalBalance="$12,450.00"
-        monthlyGrowth="+12.5%"
-        monthlyAmount="$2,756.43"
+        totalBalance={dashboardMockData.balance.totalBalance}
+        currency={dashboardMockData.balance.currency}
+        monthlyGrowth={dashboardMockData.balance.monthlyGrowth}
+        monthlyAmount={dashboardMockData.balance.monthlyAmount}
       />
     </div>
   )
