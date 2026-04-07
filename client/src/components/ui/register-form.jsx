@@ -20,15 +20,6 @@ export default function RegisterForm({ isDark = true }) {
 	const [success, setSuccess] = useState(false)
 	const [passwordStrength, setPasswordStrength] = useState(0)
 
-	useEffect(() => {
-		if (success) {
-			const timer = setTimeout(() => {
-				navigate('/')
-			}, 1000)
-			return () => clearTimeout(timer)
-		}
-	}, [success, navigate])
-
 	const calculatePasswordStrength = (pass) => {
 		let strength = 0
 		if (pass.length >= 8) strength++
@@ -99,6 +90,10 @@ export default function RegisterForm({ isDark = true }) {
 		setConfirmPassword('')
 		setAgreedToTerms(false)
 		setLoading(false)
+
+		setTimeout(() => {
+			navigate('/')
+		}, 1000)
 	}
 
 	const getPasswordStrengthColor = () => {
