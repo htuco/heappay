@@ -2,14 +2,9 @@ import { useState } from 'react'
 import { Camera, UserRound } from 'lucide-react'
 
 import SettingsCard from '@/components/settings/SettingsCard'
+import ProfileField from '@/components/settings/ProfileField'
 import { Button } from '@/components/ui/button'
-
-const initialProfile = {
-  fullName: 'Selim Kovacevic',
-  username: 'selimk',
-  email: 'selim@example.com',
-  location: 'Sarajevo, Bosnia and Herzegovina',
-}
+import { initialProfile } from '@/lib/mockData'
 
 function getInitials(name) {
   return name
@@ -18,21 +13,6 @@ function getInitials(name) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
-}
-
-function Field({ label, hint, ...props }) {
-  return (
-    <label className="block space-y-2">
-      <div>
-        <span className="text-sm font-semibold text-card-foreground">{label}</span>
-        {hint ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p> : null}
-      </div>
-      <input
-        className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary"
-        {...props}
-      />
-    </label>
-  )
 }
 
 export default function ProfileSection() {
@@ -76,7 +56,7 @@ export default function ProfileSection() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
+          <ProfileField
             label="Full name"
             hint="Used for your account identity and team-facing profile."
             name="fullName"
@@ -84,7 +64,7 @@ export default function ProfileSection() {
             onChange={handleFieldChange}
             placeholder="Enter your full name"
           />
-          <Field
+          <ProfileField
             label="Username"
             hint="Short handle used in mentions and profile links."
             name="username"
@@ -92,7 +72,7 @@ export default function ProfileSection() {
             onChange={handleFieldChange}
             placeholder="Enter your username"
           />
-          <Field
+          <ProfileField
             label="Email address"
             hint="Primary address for account access and recovery updates."
             name="email"
@@ -101,7 +81,7 @@ export default function ProfileSection() {
             onChange={handleFieldChange}
             placeholder="Enter your email address"
           />
-          <Field
+          <ProfileField
             label="Location"
             hint="Optional location shown for account context."
             name="location"
