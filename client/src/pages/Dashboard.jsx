@@ -11,7 +11,9 @@ export default function DashboardPage() {
         </p>
       </header>
       <CardStatusOverview
+        title={cardStatusMockData.title}
         totalCards={cardStatusMockData.totalCards}
+        statuses={cardStatusMockData.statuses}
         statusCounts={cardStatusMockData.statusCounts}
       />
     </div>
