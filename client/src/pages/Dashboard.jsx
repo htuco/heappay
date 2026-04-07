@@ -1,5 +1,5 @@
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
-import { dashboardMockData } from '@/mocks/dashboardMockData'
+import { dashboardMockData } from '@/mock-data/dashboardMockData'
 
 export default function DashboardPage() {
   return (
