@@ -178,3 +178,45 @@
     letter-spacing: var(--tracking-normal);
   }
 }
+
+@layer components {
+  .payment-card-shell {
+    @apply relative aspect-[1.58/1] min-h-[210px] w-full min-w-0 overflow-hidden rounded-3xl text-white shadow-xl transition-all duration-300;
+  }
+
+  .payment-card-overlay {
+    @apply pointer-events-none absolute inset-0;
+  }
+
+  .payment-card-gloss {
+    @apply pointer-events-none absolute -top-8 left-4 h-20 w-[78%] rotate-[8deg] rounded-full;
+  }
+
+  .payment-card-content {
+    @apply absolute inset-0 flex flex-col p-4 sm:p-5 md:p-6;
+  }
+
+  .payment-card-header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .payment-card-brand-chip {
+    @apply rounded-lg border border-white/30 bg-white/15 px-2 py-1 backdrop-blur-sm;
+  }
+
+  .payment-card-label {
+    @apply text-[0.63rem] uppercase tracking-[0.16em] text-white/70;
+  }
+
+  .payment-card-number {
+    @apply text-lg font-semibold tracking-[0.18em] sm:text-xl md:text-2xl;
+  }
+
+  .payment-card-bottom {
+    @apply mt-auto space-y-3 pb-2;
+  }
+
+  .payment-card-meta {
+    @apply grid grid-cols-2 items-end gap-4 text-white/95;
+  }
+}
