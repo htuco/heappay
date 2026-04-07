@@ -1,4 +1,4 @@
-import { formatBrandLabel } from './paymentCard.utils'
+import { formatBrandLabel } from '@/utils/paymentCard.utils'
 
 export default function PaymentCardBrandIndicator({ brand, icon }) {
   if (icon) {

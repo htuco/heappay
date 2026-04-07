@@ -1,4 +1,4 @@
-import { BRAND_THEMES } from './paymentCard.themes'
+import { BRAND_THEMES } from '@/components/payment-card/paymentCard.themes'
 
 export function formatBrandLabel(brand) {
   const value = String(brand ?? '').trim()

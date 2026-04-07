@@ -3,7 +3,7 @@ import {
   formatExpiryDate,
   getBrandTheme,
   maskCardNumber,
-} from './paymentCard.utils'
+} from '@/utils/paymentCard.utils'
 import PaymentCardBrandIndicator from './PaymentCardBrandIndicator'
 
 export default function PaymentCard({
