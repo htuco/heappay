@@ -1,5 +1,5 @@
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
-import { cardStatusMockData } from '@/mocks/cardStatusMockData'
+import { cardStatusMockData } from '@/mock-data/cardStatusMockData'
 
 export default function DashboardPage() {
   return (
