@@ -1,0 +1,46 @@
+export const paymentCardMockData = [
+  {
+    id: 'card-1',
+    card: {
+      cardHolderName: 'Hamza Tucou',
+      cardNumber: '4558 8844 1122 1121',
+      expiryDate: '08/30',
+      brand: 'visa',
+      isActive: true,
+      isDisabled: false,
+    },
+  },
+  {
+    id: 'card-2',
+    card: {
+      cardHolderName: 'Dzelila Anjak Tinjo Scrum Master',
+      cardNumber: '5555 2312 9999 6512',
+      expiryDate: '11/29',
+      brand: 'mastercard',
+      isActive: false,
+      isDisabled: false,
+    },
+  },
+  {
+    id: 'card-3',
+    card: {
+      cardHolderName: 'Nedim Nedimarlija',
+      cardNumber: '378282246310005',
+      expiryDate: '2029-05-01',
+      brand: 'amex',
+      isActive: false,
+      isDisabled: false,
+    },
+  },
+  {
+    id: 'card-4',
+    card: {
+      cardHolderName: 'DINO BAJRAM0VIC',
+      cardNumber: '6011123456789012',
+      expiryDate: '09/28',
+      brand: 'discover',
+      isActive: false,
+      isDisabled: true,
+    },
+  },
+]
