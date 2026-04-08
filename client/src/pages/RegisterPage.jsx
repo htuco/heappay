@@ -88,7 +88,7 @@ export default function RegisterPage() {
 			</div>
 
 			<div>
-				<RegisterForm isDark={isDark} />
+				<RegisterForm />
 			</div>
 		</section>
 	)

@@ -1,8 +1,6 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DotLottieReact } from '@lottiefiles/dotlottie-react'
-import loginAnimation from '@/assets/login-anim.lottie?url'
 import { MOCK_USERS } from '@/lib/mocks'
 import { registerSchema } from '@/schemas/registerSchema'
 
@@ -15,7 +13,7 @@ const INITIAL_FORM_STATE = {
 	agreedToTerms: false,
 }
 
-export default function RegisterForm({ isDark = true }) {
+export default function RegisterForm() {
 	const navigate = useNavigate()
 	const [form, setForm] = useState(INITIAL_FORM_STATE)
 	const [error, setError] = useState('')
@@ -102,35 +100,8 @@ export default function RegisterForm({ isDark = true }) {
 	}
 
 	return (
-		<section className="relative flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground md:bg-background">
-			{/* Mobile Animation Background */}
-			<div className="absolute inset-0 md:hidden overflow-hidden">
-				<div
-					className="absolute inset-0"
-					style={{
-						backgroundImage: isDark
-							? 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 74%, #000 26%), color-mix(in oklab, var(--accent) 88%, #000 12%), color-mix(in oklab, var(--accent) 68%, #000 32%))'
-							: 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 50%, #fff 50%), color-mix(in oklab, var(--accent) 60%, #fff 40%), color-mix(in oklab, var(--accent) 45%, #fff 55%))',
-					}}
-				/>
-				<div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent dark:to-black/20 to-white/20" />
-				<div className="absolute inset-0 flex items-center justify-center p-4 overflow-hidden">
-					<div className="w-full max-w-sm aspect-square">
-						<DotLottieReact
-							src={loginAnimation}
-							autoplay
-							loop
-							speed={0.90}
-							useFrameInterpolation={false}
-							renderConfig={{ devicePixelRatio: 1 }}
-							layout={{ fit: 'contain', align: [0.5, 0.5] }}
-							className="h-full w-full"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div className="mx-auto w-full max-w-110 relative z-10">
+		<div className="flex items-center justify-center px-6 py-10 text-foreground min-h-screen">
+			<div className="mx-auto w-full max-w-110 mt-5">
 				<div className="space-y-6">
 					<div className="space-y-3 text-center">
 						<div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br from-primary to-secondary text-primary-foreground">
@@ -315,6 +286,6 @@ export default function RegisterForm({ isDark = true }) {
 					</p>
 				</div>
 			</div>
-		</section>
+		</div>
 	)
 }
