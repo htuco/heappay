@@ -1,7 +1,7 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_USERS } from '@/lib/mocks'
+import { MOCK_USERS } from '@/mock-data/userMocks'
 import { loginSchema } from '@/schemas/loginSchema'
 
 const INITIAL_FORM_STATE = {
