@@ -122,17 +122,11 @@ export default function LoginForm({ isDark = true }) {
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus:ring-2 focus:ring-offset-0 disabled:opacity-50 transition-all duration-200"
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200"
 								style={{ 
 									borderColor: errors.email ? '#ef4444' : 'var(--accent)',
-									boxShadow: 'var(--tw-ring-inset) var(--tw-ring-offset-width) var(--tw-ring-offset-color), 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, transparent)'
-								}}
-								onFocus={(e) => {
-									e.target.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 6px rgba(168, 85, 247, 0.15)'
-									e.target.style.transitionDuration = '200ms'
-								}}
-								onBlur={(e) => {
-									e.target.style.boxShadow = 'none'
+									'--tw-ring-color': 'var(--accent)',
+									'--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)'
 								}}
 							/>
 							{errors.email && (
@@ -154,17 +148,11 @@ export default function LoginForm({ isDark = true }) {
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus:ring-2 focus:ring-offset-0 disabled:opacity-50 transition-all duration-200"
+								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200"
 								style={{ 
 									borderColor: errors.password ? '#ef4444' : 'var(--accent)',
-									boxShadow: 'var(--tw-ring-inset) var(--tw-ring-offset-width) var(--tw-ring-offset-color), 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, transparent)'
-								}}
-								onFocus={(e) => {
-									e.target.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 6px rgba(168, 85, 247, 0.15)'
-									e.target.style.transitionDuration = '200ms'
-								}}
-								onBlur={(e) => {
-									e.target.style.boxShadow = 'none'
+									'--tw-ring-color': 'var(--accent)',
+									'--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)'
 								}}
 							/>
 							{errors.password && (
