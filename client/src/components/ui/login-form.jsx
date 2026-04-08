@@ -6,15 +6,29 @@ import loginAnimation from '@/assets/login-anim.lottie?url'
 import { MOCK_USERS } from '@/lib/mocks'
 import { loginSchema } from '@/schemas/loginSchema'
 
+const INITIAL_FORM_STATE = {
+	email: '',
+	password: '',
+	rememberMe: false,
+}
+
 export default function LoginForm({ isDark = true }) {
 	const navigate = useNavigate()
-	const [email, setEmail] = useState('')
-	const [password, setPassword] = useState('')
-	const [rememberMe, setRememberMe] = useState(false)
+	const [form, setForm] = useState(INITIAL_FORM_STATE)
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
+
+	const handleChange = (e) => {
+		const { name, value, type, checked } = e.target
+		setForm(prev => ({
+			...prev,
+			[name]: type === 'checkbox' ? checked : value,
+		}))
+	}
+
+	const resetForm = () => setForm(INITIAL_FORM_STATE)
 
 	const handleSubmit = async (e) => {
 		e.preventDefault()
@@ -24,8 +38,8 @@ export default function LoginForm({ isDark = true }) {
 
 		// Validate with Zod
 		const result = loginSchema.safeParse({
-			email: email.trim(),
-			password
+			email: form.email.trim(),
+			password: form.password
 		})
 
 		if (!result.success) {
@@ -41,12 +55,11 @@ export default function LoginForm({ isDark = true }) {
 		// Simulate API delay
 		await new Promise(resolve => setTimeout(resolve, 500))
 
-		const user = MOCK_USERS.find(u => u.email === email.trim() && u.password === password)
+		const user = MOCK_USERS.find(u => u.email === form.email.trim() && u.password === form.password)
 
 		if (user) {
 			setSuccess(true)
-			setEmail('')
-			setPassword('')
+			resetForm()
 			setLoading(false)
 
 			setTimeout(() => {
@@ -117,10 +130,11 @@ export default function LoginForm({ isDark = true }) {
 							</label>
 							<input
 								id="email"
+								name="email"
 								type="email"
 								placeholder="E-mail"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
+								value={form.email}
+								onChange={handleChange}
 								disabled={loading}
 								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200"
 								style={{ 
@@ -143,10 +157,11 @@ export default function LoginForm({ isDark = true }) {
 							</label>
 							<input
 								id="password"
+								name="password"
 								type="password"
 								placeholder="Password"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
+								value={form.password}
+								onChange={handleChange}
 								disabled={loading}
 								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200"
 								style={{ 
@@ -164,8 +179,9 @@ export default function LoginForm({ isDark = true }) {
 							<label className="inline-flex items-center gap-3 text-[15px] font-normal text-foreground/90 cursor-pointer">
 								<input
 									type="checkbox"
-									checked={rememberMe}
-									onChange={(e) => setRememberMe(e.target.checked)}
+									name="rememberMe"
+									checked={form.rememberMe}
+									onChange={handleChange}
 									className="h-6 w-6 appearance-none rounded-xl border border-border bg-transparent align-middle cursor-pointer accent-accent checked:bg-accent"
 									style={{ borderColor: 'var(--border)' }}
 								/>
