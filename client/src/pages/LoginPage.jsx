@@ -40,7 +40,8 @@ export default function LoginPage() {
 			</button>
 
 			<div>
-			<LoginForm isDark={isDark} />		</div>
+				<LoginForm />
+			</div>
 			<div className="relative overflow-hidden bg-gradient-to-br from-background to-background">
 				<div
 					className="absolute inset-0"
