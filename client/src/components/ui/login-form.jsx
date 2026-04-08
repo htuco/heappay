@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
@@ -15,15 +15,6 @@ export default function LoginForm({ isDark = true }) {
 	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
-
-	useEffect(() => {
-		if (success) {
-			const timer = setTimeout(() => {
-				navigate('/')
-			}, 1000)
-			return () => clearTimeout(timer)
-		}
-	}, [success, navigate])
 
 	const handleSubmit = async (e) => {
 		e.preventDefault()
@@ -56,10 +47,15 @@ export default function LoginForm({ isDark = true }) {
 			setSuccess(true)
 			setEmail('')
 			setPassword('')
+			setLoading(false)
+
+			setTimeout(() => {
+				navigate('/')
+			}, 1000)
 		} else {
 			setError('Invalid email or password. Try: talha.zlatar@symphony.is / password123')
+			setLoading(false)
 		}
-		setLoading(false)
 	}
 	return (
 		<section className="relative flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground md:bg-background">
