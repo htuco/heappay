@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
 import { MOCK_USERS } from '@/lib/mocks'
-import { registerSchema } from '@/lib/validation'
+import { registerSchema } from '@/schemas/registerSchema'
 
 const INITIAL_FORM_STATE = {
 	firstName: '',
