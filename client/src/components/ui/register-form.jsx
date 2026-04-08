@@ -6,14 +6,18 @@ import loginAnimation from '@/assets/login-anim.lottie?url'
 import { MOCK_USERS } from '@/lib/mocks'
 import { registerSchema } from '@/lib/validation'
 
+const INITIAL_FORM_STATE = {
+	firstName: '',
+	lastName: '',
+	email: '',
+	password: '',
+	confirmPassword: '',
+	agreedToTerms: false,
+}
+
 export default function RegisterForm({ isDark = true }) {
 	const navigate = useNavigate()
-	const [firstName, setFirstName] = useState('')
-	const [lastName, setLastName] = useState('')
-	const [email, setEmail] = useState('')
-	const [password, setPassword] = useState('')
-	const [confirmPassword, setConfirmPassword] = useState('')
-	const [agreedToTerms, setAgreedToTerms] = useState(false)
+	const [form, setForm] = useState(INITIAL_FORM_STATE)
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
@@ -28,9 +32,19 @@ export default function RegisterForm({ isDark = true }) {
 		return strength
 	}
 
+	const handleChange = (e) => {
+		const { name, value, type, checked } = e.target
+		setForm(prev => ({
+			...prev,
+			[name]: type === 'checkbox' ? checked : value,
+		}))
+	}
+
+	const resetForm = () => setForm(INITIAL_FORM_STATE)
+
 	const passwordStrength = useMemo(
-		() => calculatePasswordStrength(password),
-		[password]
+		() => calculatePasswordStrength(form.password),
+		[form.password]
 	)
 
 
@@ -43,12 +57,12 @@ export default function RegisterForm({ isDark = true }) {
 
 		// Validate with Zod
 		const result = registerSchema.safeParse({
-			firstName: firstName.trim(),
-			lastName: lastName.trim(),
-			email: email.trim(),
-			password,
-			confirmPassword,
-			agreedToTerms,
+			firstName: form.firstName.trim(),
+			lastName: form.lastName.trim(),
+			email: form.email.trim(),
+			password: form.password,
+			confirmPassword: form.confirmPassword,
+			agreedToTerms: form.agreedToTerms,
 		})
 
 		if (!result.success) {
@@ -63,7 +77,7 @@ export default function RegisterForm({ isDark = true }) {
 
 		await new Promise(resolve => setTimeout(resolve, 500))
 
-		const userExists = MOCK_USERS.find(u => u.email === email.trim())
+		const userExists = MOCK_USERS.find(u => u.email === form.email.trim())
 		if (userExists) {
 			setErrors({ email: 'Email already registered' })
 			setLoading(false)
@@ -71,12 +85,7 @@ export default function RegisterForm({ isDark = true }) {
 		}
 
 		setSuccess(true)
-		setFirstName('')
-		setLastName('')
-		setEmail('')
-		setPassword('')
-		setConfirmPassword('')
-		setAgreedToTerms(false)
+		resetForm()
 		setLoading(false)
 
 		setTimeout(() => {
@@ -151,10 +160,11 @@ export default function RegisterForm({ isDark = true }) {
 								</label>
 								<input
 									id="firstName"
+						name="firstName"
 									type="text"
 									placeholder="First name"
-									value={firstName}
-									onChange={(e) => setFirstName(e.target.value)}
+									value={form.firstName}
+									onChange={handleChange}
 									disabled={loading}
 								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
 								style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
@@ -169,10 +179,11 @@ export default function RegisterForm({ isDark = true }) {
 								</label>
 								<input
 									id="lastName"
+						name="lastName"
 									type="text"
 									placeholder="Last name"
-									value={lastName}
-									onChange={(e) => setLastName(e.target.value)}
+									value={form.lastName}
+									onChange={handleChange}
 									disabled={loading}
 								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
 								style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
@@ -189,10 +200,11 @@ export default function RegisterForm({ isDark = true }) {
 							</label>
 							<input
 								id="email"
+				name="email"
 								type="email"
 								placeholder="Email address"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
+								value={form.email}
+								onChange={handleChange}
 								disabled={loading}
 							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
 							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
@@ -208,10 +220,11 @@ export default function RegisterForm({ isDark = true }) {
 							</label>
 							<input
 								id="password"
+				name="password"
 								type="password"
 								placeholder="Minimum 8 characters"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
+								value={form.password}
+								onChange={handleChange}
 								disabled={loading}
 							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
 							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
@@ -219,7 +232,7 @@ export default function RegisterForm({ isDark = true }) {
 							{errors.password && (
 								<p className="mt-1 text-sm text-red-400">{errors.password}</p>
 							)}
-							{password && !errors.password && (
+							{form.password && !errors.password && (
 								<div className="mt-2 flex gap-1">
 									{[...Array(4)].map((_, i) => (
 										<div
@@ -239,10 +252,11 @@ export default function RegisterForm({ isDark = true }) {
 							</label>
 							<input
 								id="confirmPassword"
+				name="confirmPassword"
 								type="password"
 								placeholder="Repeat your password"
-								value={confirmPassword}
-								onChange={(e) => setConfirmPassword(e.target.value)}
+								value={form.confirmPassword}
+								onChange={handleChange}
 								disabled={loading}
 							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
 							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
@@ -255,8 +269,9 @@ export default function RegisterForm({ isDark = true }) {
 						<label className="inline-flex items-center gap-3 text-[14px] font-normal text-foreground/90 cursor-pointer">
 							<input
 								type="checkbox"
-								checked={agreedToTerms}
-								onChange={(e) => setAgreedToTerms(e.target.checked)}
+				name="agreedToTerms"
+								checked={form.agreedToTerms}
+								onChange={handleChange}
 								disabled={loading}
 								className="h-5 w-5 appearance-none rounded-lg border border-border bg-transparent align-middle cursor-pointer accent-accent checked:bg-accent"
 								style={{ borderColor: 'var(--border)' }}
