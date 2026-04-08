@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
 import { MOCK_USERS } from '@/lib/mocks'
-import { loginSchema } from '@/lib/validation'
+import { loginSchema } from '@/schemas/loginSchema'
 
 export default function LoginForm({ isDark = true }) {
 	const navigate = useNavigate()
