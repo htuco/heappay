@@ -5,7 +5,6 @@ const navLinks = [
   { name: 'Home', path: '/', icon: Home },
   { name: 'About', path: '/about', icon: Info },
   { name: 'Settings', path: '/settings', icon: Settings },
-  { name: 'Card View Demo', path: '/card-view-demo', icon: CreditCard },
 ]
 
 export default function Navbar() {
