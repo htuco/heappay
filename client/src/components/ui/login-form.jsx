@@ -3,6 +3,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MOCK_USERS } from '@/mock-data/userMocks'
 import { loginSchema } from '@/schemas/loginSchema'
+import AuthButton from '@/components/auth-ui/AuthButton'
+import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
+import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
+import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
+import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
 const INITIAL_FORM_STATE = {
 	email: '',
@@ -72,14 +77,11 @@ export default function LoginForm() {
 		<div className="flex items-center justify-center px-6 py-10 text-foreground min-h-screen">
 			<div className="mx-auto w-full max-w-110 mt-5">
 				<div className="space-y-6">
-					<div className="space-y-3 text-center">
-						<div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br from-primary to-secondary text-primary-foreground">
-							<ShieldCheck className="h-6 w-6" strokeWidth={2.2} />
-						</div>
-
-						<h1 className="text-5xl font-semibold tracking-tight text-foreground">Welcome back</h1>
-						<p className="text-[16px] text-foreground/70">Welcome back! Please enter your details.</p>
-					</div>
+					<AuthPageHeader
+						title="Welcome back"
+						subtitle="Welcome back! Please enter your details."
+						icon={<ShieldCheck className="h-6 w-6" strokeWidth={2.2} />}
+					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
 						{error && (
@@ -89,75 +91,41 @@ export default function LoginForm() {
 						)}
 						{success && (
 							<div className="rounded-xl bg-green-950/30 border border-green-500/50 px-4 py-3 text-sm text-green-200">
-								✓ Login successful!
+								Login successful!
 							</div>
 						)}
-						<div>
-							<label
-								htmlFor="email"
-								className="mb-2 block text-sm font-bold text-foreground/55"
-							>
-								Enter your email
-							</label>
-							<input
-								id="email"
-								name="email"
-								type="email"
-								placeholder="E-mail"
-								value={form.email}
-								onChange={handleChange}
-								disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200"
-								style={{ 
-									borderColor: errors.email ? '#ef4444' : 'var(--accent)',
-									'--tw-ring-color': 'var(--accent)',
-									'--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)'
-								}}
-							/>
-							{errors.email && (
-								<p className="mt-1 text-sm text-red-400">{errors.email}</p>
-							)}
-						</div>
+						<AuthTextInput
+							id="email"
+							name="email"
+							type="email"
+							label="Enter your email"
+							placeholder="E-mail"
+							value={form.email}
+							onChange={handleChange}
+							disabled={loading}
+							error={errors.email}
+						/>
 
-						<div>
-							<label
-								htmlFor="password"
-								className="mb-2 block text-sm font-bold text-foreground/55"
-							>
-								Password
-							</label>
-							<input
-								id="password"
-								name="password"
-								type="password"
-								placeholder="Password"
-								value={form.password}
-								onChange={handleChange}
-								disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200"
-								style={{ 
-									borderColor: errors.password ? '#ef4444' : 'var(--accent)',
-									'--tw-ring-color': 'var(--accent)',
-									'--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)'
-								}}
-							/>
-							{errors.password && (
-								<p className="mt-1 text-sm text-red-400">{errors.password}</p>
-							)}
-						</div>
+						<AuthTextInput
+							id="password"
+							name="password"
+							type="password"
+							label="Password"
+							placeholder="Password"
+							value={form.password}
+							onChange={handleChange}
+							disabled={loading}
+							error={errors.password}
+						/>
 
 						<div className="flex items-center justify-between gap-4 pt-1 text-base">
-							<label className="inline-flex items-center gap-3 text-[15px] font-normal text-foreground/90 cursor-pointer">
-								<input
-									type="checkbox"
-									name="rememberMe"
-									checked={form.rememberMe}
-									onChange={handleChange}
-									className="h-6 w-6 appearance-none rounded-xl border border-border bg-transparent align-middle cursor-pointer accent-accent checked:bg-accent"
-									style={{ borderColor: 'var(--border)' }}
-								/>
-								<span>Remember me</span>
-							</label>
+							<AuthCheckbox
+								name="rememberMe"
+								checked={form.rememberMe}
+								onChange={handleChange}
+								disabled={loading}
+								label="Remember me"
+							/>
 							<button 
 								type="button"
 								onClick={() => navigate('/forgot-password')}
@@ -168,30 +136,19 @@ export default function LoginForm() {
 							</button>
 						</div>
 
-						<button
+						<AuthButton
 							type="submit"
 							disabled={loading}
-							className="h-14 w-full rounded-full text-[20px] font-bold text-primary-foreground disabled:opacity-70"
-							style={{
-								backgroundImage:
-									'linear-gradient(90deg, color-mix(in oklab, var(--accent) 90%, white 6%), color-mix(in oklab, var(--accent) 72%, white 18%))',
-							}}
-							>
+						>
 							{loading ? 'Logging in...' : 'Log in'}
-						</button>
+						</AuthButton>
 					</form>
 
-					<p className="pt-6 text-center text-[17px] font-normal text-foreground/85">
-						Don&apos;t have an account?{' '}
-						<button
-							type="button"
-							onClick={() => navigate('/register')}
-							style={{ color: 'var(--accent)' }}
-							className="font-semibold hover:opacity-80 transition-opacity"
-						>
-							Sign up
-						</button>
-					</p>
+					<AuthLinkLabel
+						label="Don&apos;t have an account?"
+						actionText="Sign up"
+						onAction={() => navigate('/register')}
+					/>
 				</div>
 			</div>
 		</div>
