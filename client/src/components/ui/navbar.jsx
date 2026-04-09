@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Info, Settings } from 'lucide-react'
+import { CreditCard, Home, Info, Settings } from 'lucide-react'
 
 const navLinks = [
   { name: 'Home', path: '/', icon: Home },
   { name: 'About', path: '/about', icon: Info },
   { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Card View Demo', path: '/card-view-demo', icon: CreditCard },
 ]
 
 export default function Navbar() {
