@@ -3,6 +3,11 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MOCK_USERS } from '@/mock-data/userMocks'
 import { registerSchema } from '@/schemas/registerSchema'
+import AuthButton from '@/components/auth-ui/AuthButton'
+import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
+import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
+import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
+import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
 const INITIAL_FORM_STATE = {
 	firstName: '',
@@ -103,14 +108,11 @@ export default function RegisterForm() {
 		<div className="flex items-center justify-center px-6 py-10 text-foreground min-h-screen">
 			<div className="mx-auto w-full max-w-110 mt-5">
 				<div className="space-y-6">
-					<div className="space-y-3 text-center">
-						<div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br from-primary to-secondary text-primary-foreground">
-							<ShieldCheck className="h-6 w-6" strokeWidth={2.2} />
-						</div>
-
-						<h1 className="text-5xl font-semibold tracking-tight text-foreground">Create An Account</h1>
-						<p className="text-[16px] text-foreground/70">Sign up to get started with your cards</p>
-					</div>
+					<AuthPageHeader
+						title="Create An Account"
+						subtitle="Sign up to get started with your cards"
+						icon={<ShieldCheck className="h-6 w-6" strokeWidth={2.2} />}
+					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
 						{error && (
@@ -125,84 +127,54 @@ export default function RegisterForm() {
 						)}
 
 						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<label htmlFor="firstName" className="mb-2 block text-sm font-bold text-foreground/55">
-									First Name
-								</label>
-								<input
-									id="firstName"
-						name="firstName"
-									type="text"
-									placeholder="First name"
-									value={form.firstName}
-									onChange={handleChange}
-									disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
-								style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
-								/>
-								{errors.firstName && (
-									<p className="mt-1 text-sm text-red-400">{errors.firstName}</p>
-								)}
-							</div>
-							<div>
-								<label htmlFor="lastName" className="mb-2 block text-sm font-bold text-foreground/55">
-									Last Name
-								</label>
-								<input
-									id="lastName"
-						name="lastName"
-									type="text"
-									placeholder="Last name"
-									value={form.lastName}
-									onChange={handleChange}
-									disabled={loading}
-								className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
-								style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
-								/>
-								{errors.lastName && (
-									<p className="mt-1 text-sm text-red-400">{errors.lastName}</p>
-								)}
-							</div>
-						</div>
-
-						<div>
-							<label htmlFor="email" className="mb-2 block text-sm font-bold text-foreground/55">
-								Email Address
-							</label>
-							<input
-								id="email"
-				name="email"
-								type="email"
-								placeholder="Email address"
-								value={form.email}
+							<AuthTextInput
+								id="firstName"
+								name="firstName"
+								type="text"
+								label="First Name"
+								placeholder="First name"
+								value={form.firstName}
 								onChange={handleChange}
 								disabled={loading}
-							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
-							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
+								error={errors.firstName}
 							/>
-							{errors.email && (
-								<p className="mt-1 text-sm text-red-400">{errors.email}</p>
-							)}
+							<AuthTextInput
+								id="lastName"
+								name="lastName"
+								type="text"
+								label="Last Name"
+								placeholder="Last name"
+								value={form.lastName}
+								onChange={handleChange}
+								disabled={loading}
+								error={errors.lastName}
+							/>
 						</div>
 
+						<AuthTextInput
+							id="email"
+							name="email"
+							type="email"
+							label="Email Address"
+							placeholder="Email address"
+							value={form.email}
+							onChange={handleChange}
+							disabled={loading}
+							error={errors.email}
+						/>
+
 						<div>
-							<label htmlFor="password" className="mb-2 block text-sm font-bold text-foreground/55">
-								Password
-							</label>
-							<input
+							<AuthTextInput
 								id="password"
-				name="password"
+								name="password"
 								type="password"
+								label="Password"
 								placeholder="Minimum 8 characters"
 								value={form.password}
 								onChange={handleChange}
 								disabled={loading}
-							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
-							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
+								error={errors.password}
 							/>
-							{errors.password && (
-								<p className="mt-1 text-sm text-red-400">{errors.password}</p>
-							)}
 							{form.password && !errors.password && (
 								<div className="mt-2 flex gap-1">
 									{[...Array(4)].map((_, i) => (
@@ -217,73 +189,55 @@ export default function RegisterForm() {
 							)}
 						</div>
 
-						<div>
-							<label htmlFor="confirmPassword" className="mb-2 block text-sm font-bold text-foreground/55">
-								Confirm Password
-							</label>
-							<input
-								id="confirmPassword"
-				name="confirmPassword"
-								type="password"
-								placeholder="Repeat your password"
-								value={form.confirmPassword}
-								onChange={handleChange}
-								disabled={loading}
-							className="h-14 w-full rounded-2xl border-none bg-input px-4 text-[15px] font-normal text-foreground outline-none placeholder:text-foreground/90 disabled:opacity-50 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-0"
-							style={{ borderColor: 'var(--accent)', '--tw-ring-color': 'var(--accent)', '--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)' }}
-							/>
-							{errors.confirmPassword && (
-								<p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>
+						<AuthTextInput
+							id="confirmPassword"
+							name="confirmPassword"
+							type="password"
+							label="Confirm Password"
+							placeholder="Repeat your password"
+							value={form.confirmPassword}
+							onChange={handleChange}
+							disabled={loading}
+							error={errors.confirmPassword}
+						/>
+
+						<AuthCheckbox
+							name="agreedToTerms"
+							checked={form.agreedToTerms}
+							onChange={handleChange}
+							disabled={loading}
+							label={(
+								<span>
+									I agree to the{' '}
+									<button
+										type="button"
+										onClick={() => navigate('/terms-of-service')}
+										className="font-semibold hover:opacity-80 transition-opacity"
+										style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+									>
+										Terms of Service
+									</button>
+								</span>
 							)}
-						</div>
+							className="text-[14px]"
+						/>
+						{errors.agreedToTerms && (
+							<p className="mt-1 text-sm text-red-400">{errors.agreedToTerms}</p>
+						)}
 
-						<label className="inline-flex items-center gap-3 text-[14px] font-normal text-foreground/90 cursor-pointer">
-							<input
-								type="checkbox"
-				name="agreedToTerms"
-								checked={form.agreedToTerms}
-								onChange={handleChange}
-								disabled={loading}
-								className="h-5 w-5 appearance-none rounded-lg border border-border bg-transparent align-middle cursor-pointer accent-accent checked:bg-accent"
-								style={{ borderColor: 'var(--border)' }}
-							/>
-							<span>
-								I agree to the{' '}
-								<button
-									type="button"
-									onClick={() => navigate('/terms-of-service')}
-									className="font-semibold hover:opacity-80 transition-opacity"
-									style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-								>
-									Terms of Service
-								</button>
-							</span>
-						</label>
-
-						<button
+						<AuthButton
 							type="submit"
 							disabled={loading}
-							className="h-14 w-full rounded-full text-[20px] font-bold text-primary-foreground disabled:opacity-70"
-							style={{
-								backgroundImage:
-									'linear-gradient(90deg, color-mix(in oklab, var(--accent) 90%, white 6%), color-mix(in oklab, var(--accent) 72%, white 18%))',
-							}}
 						>
 							{loading ? 'Creating Account...' : 'Sign Up'}
-						</button>
+						</AuthButton>
 					</form>
 
-					<p className="pt-6 text-center text-[17px] font-normal text-foreground/85">
-						Already have an account?{' '}
-						<button
-							type="button"
-							onClick={() => navigate('/login')}
-							style={{ color: 'var(--accent)' }}
-							className="font-semibold hover:opacity-80 transition-opacity"
-						>
-							Log in
-						</button>
-					</p>
+					<AuthLinkLabel
+						label="Already have an account?"
+						actionText="Log in"
+						onAction={() => navigate('/login')}
+					/>
 				</div>
 			</div>
 		</div>
