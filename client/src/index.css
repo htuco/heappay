@@ -219,4 +219,64 @@
   .payment-card-meta {
     @apply grid grid-cols-2 items-end gap-4 text-white/95;
   }
+
+  @keyframes carousel-cycle-next-main {
+    from {
+      opacity: 0.88;
+      transform: translateX(1.35rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes carousel-cycle-next-side {
+    from {
+      opacity: 0.88;
+      transform: translateX(0.65rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes carousel-cycle-prev-main {
+    from {
+      opacity: 0.88;
+      transform: translateX(-1.35rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes carousel-cycle-prev-side {
+    from {
+      opacity: 0.88;
+      transform: translateX(-0.65rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-carousel-cycle-next-main {
+    animation: carousel-cycle-next-main 320ms ease-out forwards;
+  }
+
+  .animate-carousel-cycle-next-side {
+    animation: carousel-cycle-next-side 320ms ease-out forwards;
+  }
+
+  .animate-carousel-cycle-prev-main {
+    animation: carousel-cycle-prev-main 320ms ease-out forwards;
+  }
+
+  .animate-carousel-cycle-prev-side {
+    animation: carousel-cycle-prev-side 320ms ease-out forwards;
+  }
 }
