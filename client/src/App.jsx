@@ -11,7 +11,6 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/components" element={<ComponentsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
     </Routes>

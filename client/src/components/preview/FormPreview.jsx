@@ -9,7 +9,7 @@ export default function FormPreview({ submitLabel = "Submit", cancelLabel = "Can
 
   function handleSubmit() {
     if (onSubmit) onSubmit(email)
-    else alert(`Email: ${email}`)
+    else console.log(`Email: ${email}`)
   }
 
   function handleCancel() {
