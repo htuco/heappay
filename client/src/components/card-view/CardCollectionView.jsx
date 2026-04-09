@@ -1,10 +1,6 @@
 import CardCarousel from './CardCarousel'
 import CardList from './CardList'
 
-/**
- * Viewer: picks list vs carousel by variant.
- * @param {{ variant?: 'carousel' | 'list', items?: { id: string, card: object }[] }} props
- */
 export default function CardCollectionView({ variant = 'carousel', items = [] }) {
   return (
     <section className="space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
@@ -14,8 +10,8 @@ export default function CardCollectionView({ variant = 'carousel', items = [] })
         </h2>
         <p className="text-sm text-muted-foreground">
           {variant === 'carousel'
-            ? 'Carousel view (skeleton). List view is live in the grid.'
-            : 'All cards in a grid.'}
+            ? 'Carousel preview with a centered active card and side previews.'
+            : 'List preview showing all cards at once.'}
         </p>
       </header>
 
