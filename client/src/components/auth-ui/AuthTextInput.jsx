@@ -17,6 +17,7 @@ export default function AuthTextInput({
 			>
 				{label}
 			</label>
+
 			<input
 				id={id}
 				name={name}
@@ -32,8 +33,11 @@ export default function AuthTextInput({
 					'--tw-ring-offset-color': 'rgba(168, 85, 247, 0.15)',
 				}}
 			/>
+
 			{error && (
-				<p className="mt-1 text-sm text-red-400">{error}</p>
+				<p className="mt-1 text-sm text-red-400">
+					{error}
+				</p>
 			)}
 		</div>
 	)
