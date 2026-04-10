@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Info, Settings } from 'lucide-react'
+import { CreditCard, Home, Info, Settings } from 'lucide-react'
 
 const navLinks = [
   { name: 'Home', path: '/', icon: Home },
