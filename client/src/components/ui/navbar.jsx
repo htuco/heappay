@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Info, LayoutGrid } from 'lucide-react'
+import { Home, Info } from 'lucide-react'
 
 const navLinks = [
   { name: 'Home', path: '/', icon: Home },
   { name: 'About', path: '/about', icon: Info },
-  { name: 'Components', path: '/components', icon: LayoutGrid },
 ]
 
 export default function Navbar() {
