@@ -45,9 +45,11 @@ export default function DashboardPage() {
         </div>
 
         <div className="xl:col-span-8">
-          <DashboardPlaceholder
-            title="Card Status Overview"
-            description="Card status widget placeholder until feature/card-status-overview-widget is merged to main."
+          <CardStatusOverview
+            title={cardStatusMockData.title}
+            totalCards={cardStatusMockData.totalCards}
+            statuses={cardStatusMockData.statuses}
+            statusCounts={cardStatusMockData.statusCounts}
           />
         </div>
 
