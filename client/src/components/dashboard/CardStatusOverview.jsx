@@ -7,6 +7,27 @@ const iconMap = {
   shieldAlert: ShieldAlert,
 }
 
+const statusThemeMap = {
+  active: {
+    iconWrapperClass: 'bg-primary/10 text-primary',
+    chipClass: 'border-primary/25 bg-primary/10 text-primary',
+    progressTrackClass: 'bg-primary/15',
+    progressBarClass: 'bg-primary',
+  },
+  blocked: {
+    iconWrapperClass: 'bg-destructive/10 text-destructive',
+    chipClass: 'border-destructive/25 bg-destructive/10 text-destructive',
+    progressTrackClass: 'bg-destructive/15',
+    progressBarClass: 'bg-destructive',
+  },
+  reported: {
+    iconWrapperClass: 'bg-secondary/20 text-secondary-foreground',
+    chipClass: 'border-secondary/30 bg-secondary/30 text-secondary-foreground',
+    progressTrackClass: 'bg-secondary/30',
+    progressBarClass: 'bg-secondary-foreground/70',
+  },
+}
+
 export default function CardStatusOverview({
   title = 'Card Status Overview',
   totalCards = 0,
@@ -15,29 +36,50 @@ export default function CardStatusOverview({
 }) {
   return (
     <DashboardWidgetShell title={title} summary={totalCards}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {statuses.map((status) => {
           const Icon = iconMap[status.icon] ?? CheckCircle2
           const count = statusCounts[status.id] ?? 0
+          const toneClass = statusThemeMap[status.id] ?? {
+            iconWrapperClass: 'bg-accent/10 text-accent',
+            chipClass: 'border-accent/25 bg-accent/10 text-accent',
+            progressTrackClass: 'bg-accent/15',
+            progressBarClass: 'bg-accent',
+          }
 
           return (
             <article
               key={status.id}
-              className={`relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br p-4 text-white shadow-lg transition-transform duration-200 hover:-translate-y-0.5 ${status.toneClass}`}
+              className="rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.25),transparent_45%)]" />
-              <div className="relative z-10 flex items-start justify-between">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-white/80">Status</p>
-                  <p className="mt-1 text-base font-semibold">{status.label}</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                  <p className="mt-1 text-lg font-semibold leading-tight">{status.label}</p>
                 </div>
-                <span className="rounded-full border border-white/30 bg-white/15 p-2 backdrop-blur">
+                <span className={`rounded-full p-2 ${toneClass.iconWrapperClass}`}>
                   <Icon className="h-4 w-4" />
                 </span>
               </div>
-              <div className="relative z-10 mt-8">
-                <p className="text-xs uppercase tracking-[0.14em] text-white/80">Cards</p>
-                <p className="mt-1 text-3xl font-bold leading-none tabular-nums">{count}</p>
+              <div className="mt-7 flex items-end justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Cards</p>
+                  <p className="mt-1 text-3xl font-bold leading-none tabular-nums">{count}</p>
+                </div>
+                <p className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${toneClass.chipClass}`}>
+                  {Math.round((count / Math.max(totalCards, 1)) * 100)}%
+                </p>
+              </div>
+              <div className={`mt-3 h-1.5 rounded-full ${toneClass.progressTrackClass}`}>
+                <div
+                  className={`h-full rounded-full ${toneClass.progressBarClass}`}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round((count / Math.max(totalCards, 1)) * 100)
+                    )}%`,
+                  }}
+                />
               </div>
             </article>
           )
