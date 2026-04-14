@@ -1,6 +1,4 @@
-import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
-import { cardStatusMockData } from '@/mock-data/cardStatusMockData'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 
 export default function DashboardPage() {
@@ -13,21 +11,12 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      <section className="grid gap-4">
-        <TotalBalanceWidget
-          totalBalance={dashboardMockData.balance.totalBalance}
-          currency={dashboardMockData.balance.currency}
-          monthlyGrowth={dashboardMockData.balance.monthlyGrowth}
-          monthlyAmount={dashboardMockData.balance.monthlyAmount}
-        />
-
-        <CardStatusOverview
-          title={cardStatusMockData.title}
-          totalCards={cardStatusMockData.totalCards}
-          statuses={cardStatusMockData.statuses}
-          statusCounts={cardStatusMockData.statusCounts}
-        />
-      </section>
+      <TotalBalanceWidget
+        totalBalance={dashboardMockData.balance.totalBalance}
+        currency={dashboardMockData.balance.currency}
+        monthlyGrowth={dashboardMockData.balance.monthlyGrowth}
+        monthlyAmount={dashboardMockData.balance.monthlyAmount}
+      />
     </div>
   )
 }
