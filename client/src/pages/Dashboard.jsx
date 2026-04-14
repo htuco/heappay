@@ -1,5 +1,3 @@
-import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
-import { cardStatusMockData } from '@/mock-data/cardStatusMockData'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import { paymentCardMockData } from '@/mock-data/paymentCardMockData'
@@ -62,11 +60,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="xl:col-span-8">
-          <CardStatusOverview
-            title={cardStatusMockData.title}
-            totalCards={cardStatusMockData.totalCards}
-            statuses={cardStatusMockData.statuses}
-            statusCounts={cardStatusMockData.statusCounts}
+          <DashboardPlaceholder
+            title="Card Status Overview"
+            description="Card status widget placeholder until feature/card-status-overview-widget is merged to main."
           />
         </div>
 
