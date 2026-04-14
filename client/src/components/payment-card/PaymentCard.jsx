@@ -22,7 +22,7 @@ export default function PaymentCard({
   const theme = getBrandTheme(brand)
   const cardAction = isDisabled ? undefined : onClick
   const classes = [
-    'payment-card-shell',
+    'payment-card-shell max-w-full',
     isActive &&
       'ring-2 ring-white/80 ring-offset-2 ring-offset-background scale-[1.015]',
     isDisabled && 'opacity-55 grayscale-[0.25] saturate-[0.8]',
@@ -61,7 +61,7 @@ export default function PaymentCard({
 
       <div className="payment-card-content">
         <div className="payment-card-header">
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <p className="text-[0.68rem] uppercase tracking-[0.2em] text-white/75">
               Payment Card
             </p>
