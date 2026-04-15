@@ -1,12 +1,13 @@
 import { Outlet, Link } from 'react-router-dom'
 import Navbar from './ui/navbar'
+import LoginNavButton from './ui/LoginNavButton'
 
 export default function Layout() {
   return (
     <div className="w-screen h-screen bg-background flex flex-col gap-5 p-5">
       
       {/* Header */}
-      <nav className="bg-card text-card-foreground rounded-md px-7 py-5 border border-border">
+      <nav className="bg-card text-card-foreground rounded-md px-7 py-5 border border-border flex items-center">
         <Link
           to="/"
           className="text-2xl font-bold hover:text-primary transition"
@@ -19,6 +20,7 @@ export default function Layout() {
 >
   Toggle theme
 </button>
+        <LoginNavButton />
       </nav>
 
       {/* Body */}
