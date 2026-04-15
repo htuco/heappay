@@ -18,6 +18,7 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
     </Routes>
