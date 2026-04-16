@@ -78,6 +78,13 @@ export default function DashboardPage() {
             monthlyGrowth={dashboardMockData.balance.monthlyGrowth}
             monthlyAmount={dashboardMockData.balance.monthlyAmount}
           />
+          <MoneyFlowPlaceholder />
+          <CardStatusOverview
+            title={cardStatusMockData.title}
+            totalCards={cardStatusMockData.totalCards}
+            statuses={cardStatusMockData.statuses}
+            statusCounts={cardStatusMockData.statusCounts}
+          />
         </div>
 
         <div className="space-y-4 xl:col-span-4">
@@ -97,18 +104,7 @@ export default function DashboardPage() {
             title="Quick Actions"
             description="Transfer, pay bills, and card controls will be placed here in the next ticket."
           />
-        </div>
 
-        <div className="xl:col-span-8">
-          <CardStatusOverview
-            title={cardStatusMockData.title}
-            totalCards={cardStatusMockData.totalCards}
-            statuses={cardStatusMockData.statuses}
-            statusCounts={cardStatusMockData.statusCounts}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
           <DashboardPlaceholder
             title="Recent Activity"
             description="Latest transactions and alerts placeholder to preserve final dashboard balance."
