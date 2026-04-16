@@ -1,9 +1,9 @@
-import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
-import PaymentCard from '@/components/payment-card/PaymentCard'
 import { cardStatusMockData } from '@/mock-data/cardStatusMockData'
+import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import { paymentCardMockData } from '@/mock-data/paymentCardMockData'
+import PaymentCard from '@/components/payment-card/PaymentCard'
 
 export default function DashboardPage() {
   return (
