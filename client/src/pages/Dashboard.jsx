@@ -71,7 +71,7 @@ export default function DashboardPage() {
       </header>
 
       <section className="grid gap-4 xl:grid-cols-12 xl:gap-5">
-        <div className="xl:col-span-8">
+        <div className="space-y-4 xl:col-span-8">
           <TotalBalanceWidget
             totalBalance={dashboardMockData.balance.totalBalance}
             currency={dashboardMockData.balance.currency}
