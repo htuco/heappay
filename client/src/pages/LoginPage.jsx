@@ -1,10 +1,12 @@
 import LoginForm from '@/components/ui/login-form'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import loginAnimation from '@/assets/login-anim.lottie?url'
-import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
+import { CreditCard, Send, Shield, Moon, Sun, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function LoginPage() {
+	const navigate = useNavigate()
 
 	// Theme state and persistence TO:DO USE GLOBAL THEME SERVICE
 	const [isDark, setIsDark] = useState(true)
@@ -26,6 +28,15 @@ export default function LoginPage() {
 	}
 	return (
 		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[65%_35%]">
+			<button
+				onClick={() => navigate('/')}
+				className="absolute top-4 left-4 z-50 p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition-colors"
+				aria-label="Back to home"
+				type="button"
+			>
+				<X className="h-5 w-5 text-foreground" />
+			</button>
+
 			{/* Theme Switch Temp Button */}
 			<button
 				onClick={toggleTheme}
