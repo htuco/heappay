@@ -1,4 +1,3 @@
-import AdminCardPreviewSection from '@/components/admin/AdminCardPreviewSection'
 import AdminCardsManagementPanel from '@/components/admin/AdminCardsManagementPanel'
 import AdminDemoToast from '@/components/admin/AdminDemoToast'
 import AdminKpiRow from '@/components/admin/AdminKpiRow'
@@ -92,7 +91,6 @@ export default function AdminPage() {
           setCardPage={setCardPage}
         />
 
-        <AdminCardPreviewSection items={paginatedCards} />
       </section>
 
       <UserDetailsDialog selectedUser={selectedUser} setSelectedUser={setSelectedUser} />

@@ -1,4 +1,4 @@
-import { USER_CHIP_OPTIONS, USER_SORT_OPTIONS } from '@/components/admin/adminConstants'
+import { USER_CHIP_OPTIONS, USER_PAGE_SIZE, USER_SORT_OPTIONS } from '@/components/admin/adminConstants'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,8 @@ export default function AdminUsersPanel({
   totalUserPages,
   setUserPage,
 }) {
+  const emptyRows = Math.max(0, USER_PAGE_SIZE - paginatedUsers.length)
+
   return (
     <article
       className={`rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5 xl:col-span-7 ${
@@ -76,7 +78,7 @@ export default function AdminUsersPanel({
       ) : (
         <>
           <div className="hidden overflow-x-auto rounded-2xl border border-border md:block">
-            <table className="w-full min-w-[620px] text-left text-sm">
+            <table className="w-full min-w-[620px] table-fixed text-left text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-[0.12em] text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Name</th>
@@ -95,8 +97,16 @@ export default function AdminUsersPanel({
                     }`}
                     onClick={() => focusUserCards(user)}
                   >
-                    <td className="px-4 py-3 font-medium text-card-foreground">{user.fullName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
+                    <td className="px-4 py-3 font-medium text-card-foreground">
+                      <span className="block truncate" title={user.fullName}>
+                        {user.fullName}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <span className="block truncate" title={user.email}>
+                        {user.email}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
                     </td>
@@ -117,6 +127,13 @@ export default function AdminUsersPanel({
                     </td>
                   </tr>
                 ))}
+                {emptyRows > 0 && (
+                  <tr className="border-t border-border">
+                    <td colSpan={5} className="p-0">
+                      <div style={{ minHeight: `${emptyRows * 56}px` }} />
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
