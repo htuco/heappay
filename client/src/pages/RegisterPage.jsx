@@ -2,9 +2,9 @@ import RegisterForm from '@/components/ui/register-form'
 import heroImage from '@/assets/hero.png'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 
 export default function RegisterPage() {
-
 	// Theme state and persistence
 	const [isDark, setIsDark] = useState(true)
 
@@ -25,6 +25,8 @@ export default function RegisterPage() {
 	}
 	return (
 		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[35%_65%]">
+			<AuthCloseButton />
+
 			{/* Theme Switch Button */}
 			<button
 				onClick={toggleTheme}

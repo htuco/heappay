@@ -2,9 +2,9 @@ import LoginForm from '@/components/ui/login-form'
 import heroImage from '@/assets/hero.png'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 
 export default function LoginPage() {
-
 	// Theme state and persistence TO:DO USE GLOBAL THEME SERVICE
 	const [isDark, setIsDark] = useState(true)
 
@@ -25,6 +25,8 @@ export default function LoginPage() {
 	}
 	return (
 		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[65%_35%]">
+			<AuthCloseButton />
+
 			{/* Theme Switch Temp Button */}
 			<button
 				onClick={toggleTheme}
