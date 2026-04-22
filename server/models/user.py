@@ -23,6 +23,7 @@ class User(Base):
     modified_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    refresh_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     status = relationship("UserStatus", back_populates="users")
