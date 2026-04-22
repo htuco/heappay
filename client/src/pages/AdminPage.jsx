@@ -87,36 +87,65 @@ function getStatusBadgeVariant(status) {
   return 'outline'
 }
 
-function withLast4(cardNumber, last4) {
-  const digits = cardNumber.replace(/\D/g, '')
-  const prefix = digits.slice(0, Math.max(0, digits.length - 4))
-  const padded = `${prefix}${last4}`.slice(-digits.length)
-  return padded.replace(/(.{4})/g, '$1 ').trim()
+function normalizeIdentity(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-function buildUserCard(template, user, userIndex, slot) {
-  const seed = userIndex * 2 + slot
-  const rawLast4 = `${1000 + seed}`
-  const isDisabled = seed % 4 === 0
-  const isActive = !isDisabled && seed % 3 === 0
-
-  return {
-    id: `${template.id}-u${userIndex}-s${slot}`,
-    card: {
-      ...template.card,
-      cardHolderName: user.fullName,
-      cardNumber: withLast4(template.card.cardNumber, rawLast4.slice(-4)),
-      isActive,
-      isDisabled,
-    },
-  }
+function getUserEmailLocal(email) {
+  return email.split('@')[0] ?? ''
 }
 
-function getUserCards(user, userIndex) {
-  const firstTemplate = paymentCardMockData[userIndex % paymentCardMockData.length]
-  const secondTemplate = paymentCardMockData[(userIndex + 1) % paymentCardMockData.length]
+function scoreCardOwnerMatch(cardHolderName, user) {
+  const holder = normalizeIdentity(cardHolderName ?? '')
+  if (!holder) return 0
 
-  return [buildUserCard(firstTemplate, user, userIndex, 0), buildUserCard(secondTemplate, user, userIndex, 1)]
+  const fullName = normalizeIdentity(user.fullName)
+  const emailLocal = normalizeIdentity(getUserEmailLocal(user.email))
+
+  if (holder === fullName) return 4
+  if (holder === emailLocal) return 3
+  if (fullName && (holder.includes(fullName) || fullName.includes(holder))) return 2
+  if (emailLocal && (holder.includes(emailLocal) || emailLocal.includes(holder))) return 1
+  return 0
+}
+
+function buildUsersWithMatchedCards(users, cards) {
+  const cardsByUserId = new Map(users.map((user) => [user.id, []]))
+  const usersById = new Map(users.map((user) => [user.id, user]))
+
+  cards.forEach((item, index) => {
+    const cardWithStableId = {
+      ...item,
+      id: `${item.id}-${index}`,
+    }
+
+    if (item.userId && usersById.has(item.userId)) {
+      cardsByUserId.get(item.userId).push(cardWithStableId)
+      return
+    }
+
+    let bestUser = null
+    let bestScore = 0
+
+    users.forEach((user) => {
+      const score = scoreCardOwnerMatch(item.card?.cardHolderName, user)
+      if (score > bestScore) {
+        bestScore = score
+        bestUser = user
+      }
+    })
+
+    if (bestUser && bestScore > 0) {
+      cardsByUserId.get(bestUser.id).push(cardWithStableId)
+    }
+  })
+
+  return users.map((user) => {
+    return {
+      ...user,
+      cards: cardsByUserId.get(user.id) ?? [],
+    }
+  })
 }
 
 export default function AdminPage() {
@@ -139,10 +168,7 @@ export default function AdminPage() {
   const users = useMemo(() => deriveUsers(MOCK_USERS), [])
 
   const usersWithCards = useMemo(() => {
-    return users.map((user, index) => ({
-      ...user,
-      cards: getUserCards(user, index),
-    }))
+    return buildUsersWithMatchedCards(users, paymentCardMockData)
   }, [users])
 
   const filteredUsersWithCards = useMemo(() => {
