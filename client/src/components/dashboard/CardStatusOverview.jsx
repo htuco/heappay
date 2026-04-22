@@ -1,5 +1,10 @@
 import { AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react'
 import DashboardWidgetShell from '@/components/dashboard/DashboardWidgetShell'
+import {
+  cardStatusOverviewStatuses,
+  cardStatusOverviewThemeMap,
+  cardStatusOverviewTitle,
+} from '@/mock-data/paymentCardMockData'
 
 const iconMap = {
   checkCircle: CheckCircle2,
@@ -7,31 +12,10 @@ const iconMap = {
   shieldAlert: ShieldAlert,
 }
 
-const statusThemeMap = {
-  active: {
-    iconWrapperClass: 'bg-primary/10 text-primary',
-    chipClass: 'border-primary/25 bg-primary/10 text-primary',
-    progressTrackClass: 'bg-primary/15',
-    progressBarClass: 'bg-primary',
-  },
-  blocked: {
-    iconWrapperClass: 'bg-destructive/10 text-destructive',
-    chipClass: 'border-destructive/25 bg-destructive/10 text-destructive',
-    progressTrackClass: 'bg-destructive/15',
-    progressBarClass: 'bg-destructive',
-  },
-  reported: {
-    iconWrapperClass: 'bg-secondary/20 text-secondary-foreground',
-    chipClass: 'border-secondary/30 bg-secondary/30 text-secondary-foreground',
-    progressTrackClass: 'bg-secondary/30',
-    progressBarClass: 'bg-secondary-foreground/70',
-  },
-}
-
 export default function CardStatusOverview({
-  title = 'Card Status Overview',
+  title = cardStatusOverviewTitle,
   totalCards = 0,
-  statuses = [],
+  statuses = cardStatusOverviewStatuses,
   statusCounts = {},
 }) {
   return (
@@ -40,7 +24,7 @@ export default function CardStatusOverview({
         {statuses.map((status) => {
           const Icon = iconMap[status.icon] ?? CheckCircle2
           const count = statusCounts[status.id] ?? 0
-          const toneClass = statusThemeMap[status.id] ?? {
+          const toneClass = cardStatusOverviewThemeMap[status.id] ?? {
             iconWrapperClass: 'bg-accent/10 text-accent',
             chipClass: 'border-accent/25 bg-accent/10 text-accent',
             progressTrackClass: 'bg-accent/15',

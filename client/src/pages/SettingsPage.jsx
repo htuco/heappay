@@ -7,6 +7,7 @@ import ControlRow from '@/components/settings/ControlRow'
 import OptionGroup from '@/components/settings/OptionGroup'
 import SettingRow from '@/components/settings/SettingRow'
 import SettingsCard from '@/components/settings/SettingsCard'
+import ProfileSection from '@/components/settings/ProfileSection'
 import SettingsHero from '@/components/settings/SettingsHero'
 import Toggle from '@/components/settings/Toggle'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,10 @@ export default function SettingsPage() {
       <SettingsHero onBack={() => navigate('/')} />
 
       <div className="grid gap-4 xl:grid-cols-2">
+        <div className="xl:col-span-2">
+          <ProfileSection />    
+        </div>
+
         <SettingsCard
           title="Change Password"
           icon={KeyRound}
