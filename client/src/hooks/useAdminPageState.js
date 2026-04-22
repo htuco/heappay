@@ -1,0 +1,254 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+
+import { CARD_PAGE_SIZE, USER_PAGE_SIZE } from '@/components/admin/adminConstants'
+import { paymentCardMockData } from '@/mock-data/paymentCardMockData'
+import { MOCK_USERS } from '@/mock-data/userMocks'
+import { buildCardAssignments, deriveUsers, getCardStatus } from '@/utils/admin.utils'
+
+export default function useAdminPageState() {
+  const [searchParams] = useSearchParams()
+  const sectionParam = searchParams.get('section')
+  const activeSection = sectionParam === 'cards' ? 'cards' : 'users'
+
+  const [userSearch, setUserSearchState] = useState('')
+  const [userChipFilter, setUserChipFilterState] = useState('all')
+  const [userSort, setUserSortState] = useState('name-asc')
+  const [cardStatusFilter, setCardStatusFilterState] = useState('all')
+  const [cardSort, setCardSortState] = useState('status-asc')
+  const [selectedUserId, setSelectedUserId] = useState(null)
+  const [manualFocusedUserId, setManualFocusedUserId] = useState(null)
+  const [showAllCards, setShowAllCards] = useState(false)
+  const [userPage, setUserPageState] = useState(1)
+  const [cardPage, setCardPageState] = useState(1)
+  const [feedbackToast, setFeedbackToast] = useState('')
+
+  const users = useMemo(() => deriveUsers(MOCK_USERS), [])
+  const normalizedUserSearch = useMemo(() => userSearch.trim().toLowerCase(), [userSearch])
+
+  const { usersWithCards, unmatchedCards } = useMemo(() => {
+    return buildCardAssignments(users, paymentCardMockData)
+  }, [users])
+
+  const filteredUsersWithCards = useMemo(() => {
+    return usersWithCards.filter((user) => {
+      const matchesSearch =
+        user.fullName.toLowerCase().includes(normalizedUserSearch) ||
+        user.email.toLowerCase().includes(normalizedUserSearch)
+
+      const matchesChip =
+        userChipFilter === 'all' ||
+        (userChipFilter === 'invited' ? user.status === 'invited' : user.role === userChipFilter)
+
+      return matchesSearch && matchesChip
+    })
+  }, [normalizedUserSearch, userChipFilter, usersWithCards])
+
+  const focusedUserId = useMemo(() => {
+    if (showAllCards) return null
+
+    if (filteredUsersWithCards.length === 1) {
+      return filteredUsersWithCards[0].id
+    }
+
+    if (!manualFocusedUserId) return null
+
+    const stillVisible = filteredUsersWithCards.some((user) => user.id === manualFocusedUserId)
+    return stillVisible ? manualFocusedUserId : null
+  }, [filteredUsersWithCards, manualFocusedUserId, showAllCards])
+
+  const selectedUser = useMemo(() => {
+    if (!selectedUserId) return null
+    return usersWithCards.find((user) => user.id === selectedUserId) ?? null
+  }, [selectedUserId, usersWithCards])
+
+  const sortedUsers = useMemo(() => {
+    const copy = [...filteredUsersWithCards]
+    copy.sort((a, b) => {
+      if (userSort === 'role-asc') return a.role.localeCompare(b.role)
+      if (userSort === 'status-asc') return a.status.localeCompare(b.status)
+      return a.fullName.localeCompare(b.fullName)
+    })
+    return copy
+  }, [filteredUsersWithCards, userSort])
+
+  const scopedUsersForCards = useMemo(() => {
+    if (showAllCards) return sortedUsers
+    if (!focusedUserId) return []
+    return sortedUsers.filter((user) => user.id === focusedUserId)
+  }, [focusedUserId, showAllCards, sortedUsers])
+
+  const activeUserForCards = useMemo(() => {
+    if (!focusedUserId) return null
+    return sortedUsers.find((user) => user.id === focusedUserId) ?? null
+  }, [focusedUserId, sortedUsers])
+
+  const filteredCards = useMemo(() => {
+    const cardsFromScopedUsers = scopedUsersForCards.flatMap((user) =>
+      user.cards.map((item, cardIndex) => ({
+        ...item,
+        id: `${user.id}-${item.id}-${cardIndex}`,
+        ownerName: user.fullName,
+        ownerEmail: user.email,
+      }))
+    )
+
+    return cardsFromScopedUsers.filter(({ card }) => {
+      if (cardStatusFilter === 'all') return true
+      return getCardStatus(card) === cardStatusFilter
+    })
+  }, [cardStatusFilter, scopedUsersForCards])
+
+  const sortedCards = useMemo(() => {
+    const copy = [...filteredCards]
+    copy.sort((a, b) => {
+      if (cardSort === 'brand-asc') return a.card.brand.localeCompare(b.card.brand)
+      return getCardStatus(a.card).localeCompare(getCardStatus(b.card))
+    })
+    return copy
+  }, [cardSort, filteredCards])
+
+  const totalUserPages = Math.max(1, Math.ceil(sortedUsers.length / USER_PAGE_SIZE))
+  const totalCardPages = Math.max(1, Math.ceil(sortedCards.length / CARD_PAGE_SIZE))
+  const resolvedUserPage = Math.min(userPage, totalUserPages)
+  const resolvedCardPage = Math.min(cardPage, totalCardPages)
+
+  const paginatedUsers = useMemo(() => {
+    const start = (resolvedUserPage - 1) * USER_PAGE_SIZE
+    return sortedUsers.slice(start, start + USER_PAGE_SIZE)
+  }, [resolvedUserPage, sortedUsers])
+
+  const paginatedCards = useMemo(() => {
+    const start = (resolvedCardPage - 1) * CARD_PAGE_SIZE
+    return sortedCards.slice(start, start + CARD_PAGE_SIZE)
+  }, [resolvedCardPage, sortedCards])
+
+  const kpiTotals = useMemo(() => {
+    const allCards = usersWithCards.flatMap((user) => user.cards)
+    return {
+      totalUsers: usersWithCards.length,
+      activeUsers: usersWithCards.filter((user) => user.status === 'active').length,
+      totalCards: allCards.length,
+      disabledCards: allCards.filter((item) => item.card.isDisabled).length,
+    }
+  }, [usersWithCards])
+
+  useEffect(() => {
+    if (!feedbackToast) return
+    const timeout = setTimeout(() => setFeedbackToast(''), 1800)
+    return () => clearTimeout(timeout)
+  }, [feedbackToast])
+
+  function setUserSearch(nextValue) {
+    setUserSearchState(nextValue)
+    setUserPage(1)
+    setCardPage(1)
+  }
+
+  function setUserChipFilter(nextValue) {
+    setUserChipFilterState(nextValue)
+    setUserPage(1)
+    setCardPage(1)
+  }
+
+  function setUserSort(nextValue) {
+    setUserSortState(nextValue)
+    setUserPage(1)
+    setCardPage(1)
+  }
+
+  function setCardStatusFilter(nextValue) {
+    setCardStatusFilterState(nextValue)
+    setCardPage(1)
+  }
+
+  function setCardSort(nextValue) {
+    setCardSortState(nextValue)
+    setCardPage(1)
+  }
+
+  function resetAllFilters() {
+    setUserSearchState('')
+    setUserChipFilterState('all')
+    setUserSortState('name-asc')
+    setCardStatusFilterState('all')
+    setCardSortState('status-asc')
+    setSelectedUserId(null)
+    setManualFocusedUserId(null)
+    setShowAllCards(false)
+    setUserPage(1)
+    setCardPage(1)
+  }
+
+  function focusUserCards(user) {
+    setManualFocusedUserId(user.id)
+    setShowAllCards(false)
+    setCardPage(1)
+  }
+
+  function openUserDetails(user) {
+    focusUserCards(user)
+    setSelectedUserId(user.id)
+  }
+
+  function showCardsForAllUsers() {
+    setManualFocusedUserId(null)
+    setShowAllCards(true)
+    setCardPage(1)
+  }
+
+  function setSelectedUser(user) {
+    setSelectedUserId(user?.id ?? null)
+  }
+
+  function setUserPage(nextValueOrUpdater) {
+    setUserPageState((currentPage) => {
+      const requestedPage =
+        typeof nextValueOrUpdater === 'function' ? nextValueOrUpdater(currentPage) : nextValueOrUpdater
+      return Math.max(1, requestedPage)
+    })
+  }
+
+  function setCardPage(nextValueOrUpdater) {
+    setCardPageState((currentPage) => {
+      const requestedPage =
+        typeof nextValueOrUpdater === 'function' ? nextValueOrUpdater(currentPage) : nextValueOrUpdater
+      return Math.max(1, requestedPage)
+    })
+  }
+
+  return {
+    activeSection,
+    userSearch,
+    setUserSearch,
+    userChipFilter,
+    setUserChipFilter,
+    userSort,
+    setUserSort,
+    cardStatusFilter,
+    setCardStatusFilter,
+    cardSort,
+    setCardSort,
+    selectedUser,
+    setSelectedUser,
+    focusedUserId,
+    showAllCards,
+    feedbackToast,
+    setFeedbackToast,
+    unmatchedCards,
+    activeUserForCards,
+    paginatedUsers,
+    paginatedCards,
+    totalUserPages,
+    totalCardPages,
+    userPage: resolvedUserPage,
+    setUserPage,
+    cardPage: resolvedCardPage,
+    setCardPage,
+    kpiTotals,
+    resetAllFilters,
+    focusUserCards,
+    openUserDetails,
+    showCardsForAllUsers,
+  }
+}
