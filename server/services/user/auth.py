@@ -1,0 +1,98 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+import bcrypt
+import jwt
+from jwt.exceptions import InvalidTokenError
+
+from repositories.user.auth import UserAuthRepository
+from schemas.user.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from settings import get_settings
+
+
+class UserAuthService:
+    """
+    Authentication service handling user registration, login, and token management.
+    Uses bcrypt for password hashing and JWT for token generation.
+    """
+
+    def __init__(self, repo: UserAuthRepository) -> None:
+        self.repo = repo
+        self.settings = get_settings()
+
+    def hash_password(self, password: str) -> str:
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+        return hashed.decode("utf-8")
+
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+        )
+
+    def create_refresh_token(self, user_id: int, expires_delta: Optional[timedelta] = None) -> str:
+        if expires_delta is None:
+            expires_delta = timedelta(days=7)
+
+        expire = datetime.now(timezone.utc) + expires_delta
+        payload = {"sub": str(user_id), "exp": expire}
+
+        return jwt.encode(
+            payload, self.settings.secret_key, algorithm=self.settings.algorithm
+        )
+
+    def verify_refresh_token(self, token: str) -> Optional[int]:
+        try:
+            payload = jwt.decode(
+                token, self.settings.secret_key, algorithms=[self.settings.algorithm]
+            )
+            user_id: str = payload.get("sub")
+            if user_id is None:
+                return None
+            return int(user_id)
+        except InvalidTokenError:
+            return None
+
+    def register(self, register_data: RegisterRequest) -> TokenResponse:
+        existing_user = self.repo.get_user_by_email(str(register_data.email))
+        if existing_user:
+            raise ValueError(f"Email {register_data.email} already registered")
+
+        hashed_password = self.hash_password(register_data.password)
+        user = self.repo.create_user(register_data, hashed_password)
+        refresh_token = self.create_refresh_token(user.user_id)
+
+        user_response = UserResponse(
+            id=user.user_id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            created_at=user.created_at,
+        )
+
+        return TokenResponse(
+            refresh_token=refresh_token, token_type="bearer", user=user_response
+        )
+
+    def login(self, login_data: LoginRequest) -> TokenResponse:
+        user = self.repo.get_user_by_email(str(login_data.email))
+        if not user:
+            raise ValueError("Invalid email or password")
+
+        if not self.verify_password(login_data.password, user.password_hash):
+            raise ValueError("Invalid email or password")
+
+        self.repo.update_last_login(user.user_id)
+        refresh_token = self.create_refresh_token(user.user_id)
+
+        user_response = UserResponse(
+            id=user.user_id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            created_at=user.created_at,
+        )
+
+        return TokenResponse(
+            refresh_token=refresh_token, token_type="bearer", user=user_response
+        )
