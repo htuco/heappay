@@ -1,6 +1,5 @@
 import RegisterForm from '@/components/ui/register-form'
-import { DotLottieReact } from '@lottiefiles/dotlottie-react'
-import loginAnimation from '@/assets/login-anim.lottie?url'
+import heroImage from '@/assets/hero.png'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -51,16 +50,16 @@ export default function RegisterPage() {
 				<div className="absolute inset-0 z-10 bg-linear-to-b from-transparent via-transparent to-black/20 dark:to-black/20 to-white/10" />
 				<div className="relative z-10 flex h-full min-h-80 items-center justify-center p-4 md:p-6 xl:p-8">
 					<div className="w-full max-w-xs md:max-w-none md:aspect-4/5">
-						<DotLottieReact
-							src={loginAnimation}
-							autoplay
-							loop
-							speed={0.90}
-							useFrameInterpolation={false}
-							renderConfig={{ devicePixelRatio: 1 }}
-							layout={{ fit: 'contain', align: [0.5, 0.5] }}
-							className="h-full w-full"
-						/>
+						<div className="relative h-full w-full">
+							<img
+								src={heroImage}
+								alt=""
+								aria-hidden="true"
+								className="h-full w-full object-contain opacity-80 blur-[1px] saturate-110"
+								draggable={false}
+							/>
+							<div className="absolute inset-0 rounded-none bg-background/0 backdrop-blur-md" />
+						</div>
 					</div>
 				</div>
 
