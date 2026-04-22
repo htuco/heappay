@@ -1,9 +1,11 @@
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import PaymentCard from '@/components/payment-card/PaymentCard'
-import { cardStatusMockData } from '@/mock-data/cardStatusMockData'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
-import { paymentCardMockData } from '@/mock-data/paymentCardMockData'
+import {
+  buildCardStatusOverviewProps,
+  paymentCardMockData,
+} from '@/mock-data/paymentCardMockData'
 
 export default function DashboardPage() {
   return (
@@ -45,12 +47,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="xl:col-span-8">
-          <CardStatusOverview
-            title={cardStatusMockData.title}
-            totalCards={cardStatusMockData.totalCards}
-            statuses={cardStatusMockData.statuses}
-            statusCounts={cardStatusMockData.statusCounts}
-          />
+          <CardStatusOverview {...buildCardStatusOverviewProps(paymentCardMockData)} />
         </div>
 
         <div className="xl:col-span-4">
