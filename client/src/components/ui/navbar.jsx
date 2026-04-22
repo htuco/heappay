@@ -1,8 +1,7 @@
 import { NavLink } from 'react-router-dom'
-import { CreditCard, Home, LayoutDashboard, Settings } from 'lucide-react'
+import { CreditCard, LayoutDashboard, Settings } from 'lucide-react'
 
 const navLinks = [
-  { name: 'Home', path: '/', icon: Home },
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
   { name: 'Settings', path: '/settings', icon: Settings },
