@@ -109,9 +109,10 @@ function scoreCardOwnerMatch(cardHolderName, user) {
   return 0
 }
 
-function buildUsersWithMatchedCards(users, cards) {
+function buildCardAssignments(users, cards) {
   const cardsByUserId = new Map(users.map((user) => [user.id, []]))
   const usersById = new Map(users.map((user) => [user.id, user]))
+  const unmatchedCards = []
 
   cards.forEach((item, index) => {
     const cardWithStableId = {
@@ -137,15 +138,23 @@ function buildUsersWithMatchedCards(users, cards) {
 
     if (bestUser && bestScore > 0) {
       cardsByUserId.get(bestUser.id).push(cardWithStableId)
+      return
     }
+
+    unmatchedCards.push(cardWithStableId)
   })
 
-  return users.map((user) => {
+  const usersWithCards = users.map((user) => {
     return {
       ...user,
       cards: cardsByUserId.get(user.id) ?? [],
     }
   })
+
+  return {
+    usersWithCards,
+    unmatchedCards,
+  }
 }
 
 export default function AdminPage() {
@@ -166,16 +175,17 @@ export default function AdminPage() {
   const [feedbackToast, setFeedbackToast] = useState('')
 
   const users = useMemo(() => deriveUsers(MOCK_USERS), [])
+  const normalizedUserSearch = useMemo(() => userSearch.trim().toLowerCase(), [userSearch])
 
-  const usersWithCards = useMemo(() => {
-    return buildUsersWithMatchedCards(users, paymentCardMockData)
+  const { usersWithCards, unmatchedCards } = useMemo(() => {
+    return buildCardAssignments(users, paymentCardMockData)
   }, [users])
 
   const filteredUsersWithCards = useMemo(() => {
     return usersWithCards.filter((user) => {
       const matchesSearch =
-        user.fullName.toLowerCase().includes(userSearch.toLowerCase()) ||
-        user.email.toLowerCase().includes(userSearch.toLowerCase())
+        user.fullName.toLowerCase().includes(normalizedUserSearch) ||
+        user.email.toLowerCase().includes(normalizedUserSearch)
 
       const matchesChip =
         userChipFilter === 'all' ||
@@ -183,7 +193,7 @@ export default function AdminPage() {
 
       return matchesSearch && matchesChip
     })
-  }, [userChipFilter, userSearch, usersWithCards])
+  }, [normalizedUserSearch, userChipFilter, usersWithCards])
 
   useEffect(() => {
     if (!focusedUserId) return
@@ -193,6 +203,20 @@ export default function AdminPage() {
       setShowAllCards(false)
     }
   }, [filteredUsersWithCards, focusedUserId])
+
+  useEffect(() => {
+    if (!selectedUser) return
+    const nextSelectedUser = usersWithCards.find((user) => user.id === selectedUser.id) ?? null
+
+    if (!nextSelectedUser) {
+      setSelectedUser(null)
+      return
+    }
+
+    if (nextSelectedUser !== selectedUser) {
+      setSelectedUser(nextSelectedUser)
+    }
+  }, [selectedUser, usersWithCards])
 
   useEffect(() => {
     if (showAllCards) return
@@ -285,7 +309,15 @@ export default function AdminPage() {
 
   useEffect(() => {
     setCardPage(1)
-  }, [cardSort, cardStatusFilter, focusedUserId, userChipFilter, userSearch, userSort])
+  }, [cardSort, cardStatusFilter, focusedUserId, showAllCards, userChipFilter, userSearch, userSort])
+
+  useEffect(() => {
+    setUserPage((page) => Math.min(page, totalUserPages))
+  }, [totalUserPages])
+
+  useEffect(() => {
+    setCardPage((page) => Math.min(page, totalCardPages))
+  }, [totalCardPages])
 
   useEffect(() => {
     if (!feedbackToast) return
@@ -299,8 +331,24 @@ export default function AdminPage() {
     setUserSort('name-asc')
     setCardStatusFilter('all')
     setCardSort('status-asc')
+    setSelectedUser(null)
     setFocusedUserId(null)
     setShowAllCards(false)
+  }
+
+  function focusUserCards(user) {
+    setFocusedUserId(user.id)
+    setShowAllCards(false)
+  }
+
+  function openUserDetails(user) {
+    focusUserCards(user)
+    setSelectedUser(user)
+  }
+
+  function showCardsForAllUsers() {
+    setFocusedUserId(null)
+    setShowAllCards(true)
   }
 
   return (
@@ -396,7 +444,13 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {paginatedUsers.map((user) => (
-                      <tr key={user.id} className="border-t border-border">
+                      <tr
+                        key={user.id}
+                        className={`border-t border-border transition-colors ${
+                          !showAllCards && focusedUserId === user.id ? 'bg-primary/5' : 'hover:bg-muted/40'
+                        }`}
+                        onClick={() => focusUserCards(user)}
+                      >
                         <td className="px-4 py-3 font-medium text-card-foreground">{user.fullName}</td>
                         <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
                         <td className="px-4 py-3">
@@ -411,10 +465,9 @@ export default function AdminPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              setSelectedUser(user)
-                              setFocusedUserId(user.id)
-                              setShowAllCards(false)
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              openUserDetails(user)
                             }}
                           >
                             View
@@ -428,7 +481,15 @@ export default function AdminPage() {
 
               <div className="grid gap-3 md:hidden">
                 {paginatedUsers.map((user) => (
-                  <article key={user.id} className="rounded-2xl border border-border bg-background p-3">
+                  <article
+                    key={user.id}
+                    className={`rounded-2xl border bg-background p-3 transition-colors ${
+                      !showAllCards && focusedUserId === user.id
+                        ? 'border-primary/40 ring-1 ring-primary/30'
+                        : 'border-border'
+                    }`}
+                    onClick={() => focusUserCards(user)}
+                  >
                     <p className="font-medium text-card-foreground">{user.fullName}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                     <div className="mt-2 flex items-center gap-2">
@@ -441,9 +502,9 @@ export default function AdminPage() {
                       className="mt-3"
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setSelectedUser(user)
-                        setFocusedUserId(user.id)
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        openUserDetails(user)
                       }}
                     >
                       View
@@ -509,10 +570,7 @@ export default function AdminPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setFocusedUserId(null)
-                  setShowAllCards(true)
-                }}
+                onClick={showCardsForAllUsers}
                 disabled={showAllCards}
               >
                 Show all users
@@ -526,9 +584,17 @@ export default function AdminPage() {
             </p>
           )}
 
+          {showAllCards && unmatchedCards.length > 0 && (
+            <div className="mb-3 rounded-2xl border border-dashed border-border bg-background/50 p-4 text-xs text-muted-foreground">
+              {unmatchedCards.length} card{unmatchedCards.length === 1 ? '' : 's'} from mock data could not be
+              matched to any user and are hidden.
+            </div>
+          )}
+
           {!showAllCards && !focusedUserId && (
             <div className="mb-3 rounded-2xl border border-dashed border-border bg-background/50 p-4 text-xs text-muted-foreground">
-              Select a user via <span className="font-medium text-card-foreground">View</span> to load their cards.
+              Select a user row/card to load their cards. Use{' '}
+              <span className="font-medium text-card-foreground">View</span> for details.
             </div>
           )}
 
@@ -536,7 +602,9 @@ export default function AdminPage() {
             <div className="rounded-2xl border border-dashed border-border bg-background/50 p-6 text-center">
               <p className="font-medium text-card-foreground">No cards found</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Update user or status filters to see card results.
+                {!showAllCards && focusedUserId
+                  ? 'This selected user currently has no matched cards in mock card data.'
+                  : 'Update user or status filters to see card results.'}
               </p>
               <Button className="mt-4" variant="outline" onClick={resetAllFilters}>
                 Reset filters
