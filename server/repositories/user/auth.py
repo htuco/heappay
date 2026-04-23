@@ -2,12 +2,14 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from models.user_role import UserRole
+from models.user_status import UserStatus
 from models.user import User
 from schemas.user.auth import RegisterRequest
 
 # No last_login column yet; bump modified_at on successful auth activity.
-_ACTIVE_STATUS_ID = 1
-_DEFAULT_USER_ROLE_ID = 1
+_ACTIVE_STATUS_NAME = "active"
+_DEFAULT_USER_ROLE_NAME = "user"
 
 
 class UserAuthRepository:
@@ -18,15 +20,34 @@ class UserAuthRepository:
         stmt = select(User).where(User.email == email)
         return self._db.scalars(stmt).first()
 
+    def _get_status_id_by_name(self, status_name: str) -> int:
+        status_id = self._db.execute(
+            select(UserStatus.id).where(UserStatus.status_name == status_name)
+        ).scalar_one_or_none()
+        if status_id is None:
+            raise ValueError(f"Missing required user status: {status_name}")
+        return status_id
+
+    def _get_role_id_by_name(self, role_name: str) -> int:
+        role_id = self._db.execute(
+            select(UserRole.role_id).where(UserRole.role_name == role_name)
+        ).scalar_one_or_none()
+        if role_id is None:
+            raise ValueError(f"Missing required user role: {role_name}")
+        return role_id
+
     def create_user(self, user_data: RegisterRequest, hashed_password: str) -> User:
+        active_status_id = self._get_status_id_by_name(_ACTIVE_STATUS_NAME)
+        default_role_id = self._get_role_id_by_name(_DEFAULT_USER_ROLE_NAME)
+
         user = User(
             email=str(user_data.email),
             first_name=user_data.first_name,
             last_name=user_data.last_name,
             password_hash=hashed_password,
             address=None,
-            status_id=_ACTIVE_STATUS_ID,
-            user_role_id=_DEFAULT_USER_ROLE_ID,
+            status_id=active_status_id,
+            user_role_id=default_role_id,
         )
         try:
             self._db.add(user)
