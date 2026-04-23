@@ -3,13 +3,13 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import AuthResponse, LoginRequest, RegisterRequest, UserResponse
+from schemas.user.auth import AuthResponse, LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _build_service(db: Session) -> UserAuthService:
+def get_auth_service(db: Session = Depends(get_db)) -> UserAuthService:
     return UserAuthService(UserAuthRepository(db))
 
 
@@ -39,12 +39,18 @@ def _extract_bearer_token(authorization: str | None) -> str:
     response_model=AuthResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthResponse:
-    service = _build_service(db)
+def register(
+    payload: RegisterRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
     try:
         token_response = service.register(payload)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except ValueError:
+        # Duplicate or invalid registration; do not echo internal or user-identifying details
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration could not be completed",
+        ) from None
 
     return AuthResponse(
         success=True,
@@ -54,12 +60,17 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
-    service = _build_service(db)
+def login(
+    payload: LoginRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
     try:
         token_response = service.login(payload)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        ) from exc
 
     return AuthResponse(
         success=True,
@@ -68,12 +79,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
     )
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=AuthResponse)
 def me(
+    service: UserAuthService = Depends(get_auth_service),
     authorization: str | None = Header(default=None, alias="Authorization"),
-    db: Session = Depends(get_db),
-) -> UserResponse:
-    service = _build_service(db)
+) -> AuthResponse:
     token = _extract_bearer_token(authorization)
     user_id = service.verify_refresh_token(token)
     if user_id is None:
@@ -89,4 +99,14 @@ def me(
             detail="Invalid or expired token",
         )
 
-    return UserResponse.model_validate(user)
+    user_out = UserResponse.model_validate(user)
+    token_data = TokenResponse(
+        refresh_token=token,
+        token_type="bearer",
+        user=user_out,
+    )
+    return AuthResponse(
+        success=True,
+        message="User profile retrieved",
+        data=token_data,
+    )

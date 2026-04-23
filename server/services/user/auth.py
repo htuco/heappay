@@ -56,7 +56,7 @@ class UserAuthService:
     def register(self, register_data: RegisterRequest) -> TokenResponse:
         existing_user = self.repo.get_user_by_email(str(register_data.email))
         if existing_user:
-            raise ValueError(f"Email {register_data.email} already registered")
+            raise ValueError("EMAIL_NOT_AVAILABLE")
 
         hashed_password = self.hash_password(register_data.password)
         user = self.repo.create_user(register_data, hashed_password)
