@@ -1,4 +1,4 @@
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -7,7 +7,6 @@ from models.user_status import UserStatus
 from models.user import User
 from schemas.user.auth import RegisterRequest
 
-# No last_login column yet; bump modified_at on successful auth activity.
 _ACTIVE_STATUS_NAME = "active"
 _DEFAULT_USER_ROLE_NAME = "user"
 
@@ -62,10 +61,10 @@ class UserAuthRepository:
         stmt = select(User).where(User.user_id == user_id)
         return self._db.scalars(stmt).first()
 
-    def update_last_login(self, user_id: int) -> None:
+    def save_refresh_token(self, user_id: int, refresh_token: str) -> None:
         self._db.execute(
             update(User)
             .where(User.user_id == user_id)
-            .values(modified_at=func.now())
+            .values(refresh_token=refresh_token)
         )
         self._db.commit()
