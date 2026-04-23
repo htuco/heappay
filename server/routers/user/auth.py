@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -8,30 +9,11 @@ from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+bearer_scheme = HTTPBearer(auto_error=False)
+
 
 def get_auth_service(db: Session = Depends(get_db)) -> UserAuthService:
     return UserAuthService(UserAuthRepository(db))
-
-
-def _extract_bearer_token(authorization: str | None) -> str:
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header is required",
-        )
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authorization scheme",
-        )
-
-    token = authorization.removeprefix("Bearer ").strip()
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token is required",
-        )
-    return token
 
 
 @router.post(
@@ -46,7 +28,6 @@ def register(
     try:
         token_response = service.register(payload)
     except ValueError:
-        # Duplicate or invalid registration; do not echo internal or user-identifying details
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Registration could not be completed",
@@ -81,10 +62,16 @@ def login(
 
 @router.get("/me", response_model=AuthResponse)
 def me(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
     service: UserAuthService = Depends(get_auth_service),
-    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> AuthResponse:
-    token = _extract_bearer_token(authorization)
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header is required",
+        )
+
+    token = credentials.credentials
     user_id = service.verify_refresh_token(token)
     if user_id is None:
         raise HTTPException(
