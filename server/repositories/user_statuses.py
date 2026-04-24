@@ -28,11 +28,7 @@ def create_status(db: Session, status_name: str) -> UserStatus:
     return status
 
 
-def update_status(db: Session, status_id: int, status_name: str) -> UserStatus | None:
-    status = get_status_by_id(db, status_id)
-    if status is None:
-        return None
-
+def update_status(db: Session, status: UserStatus, status_name: str) -> UserStatus:
     status.status_name = status_name
     db.commit()
     db.refresh(status)
