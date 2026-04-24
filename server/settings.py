@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     database_url: str
     cors_origins: str
     forwarded_allow_ips: str | None = None
+    secret_key: str
+    algorithm: str = "HS256"
 
     @computed_field
     @property
