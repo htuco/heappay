@@ -8,37 +8,15 @@ import useAdminPageState from '@/hooks/useAdminPageState'
 export default function AdminPage() {
   const {
     activeSection,
-    userSearch,
-    setUserSearch,
-    userChipFilter,
-    setUserChipFilter,
-    userSort,
-    setUserSort,
-    cardStatusFilter,
-    setCardStatusFilter,
-    cardSort,
-    setCardSort,
+    usersPanel,
+    cardsPanel,
     selectedUser,
     setSelectedUser,
-    focusedUserId,
     showAllCards,
     feedbackToast,
     setFeedbackToast,
-    unmatchedCards,
-    activeUserForCards,
-    paginatedUsers,
-    paginatedCards,
-    totalUserPages,
-    totalCardPages,
-    userPage,
-    setUserPage,
-    cardPage,
-    setCardPage,
     kpiTotals,
     resetAllFilters,
-    focusUserCards,
-    openUserDetails,
-    showCardsForAllUsers,
   } = useAdminPageState()
 
   return (
@@ -55,42 +33,41 @@ export default function AdminPage() {
       <section className="grid gap-4 xl:grid-cols-12">
         <AdminUsersPanel
           activeSection={activeSection}
-          userSearch={userSearch}
-          setUserSearch={setUserSearch}
-          userSort={userSort}
-          setUserSort={setUserSort}
-          userChipFilter={userChipFilter}
-          setUserChipFilter={setUserChipFilter}
-          paginatedUsers={paginatedUsers}
+          userSearch={usersPanel.userSearch}
+          setUserSearch={usersPanel.setUserSearch}
+          userSort={usersPanel.userSort}
+          setUserSort={usersPanel.setUserSort}
+          userChipFilter={usersPanel.userChipFilter}
+          setUserChipFilter={usersPanel.setUserChipFilter}
+          paginatedUsers={usersPanel.paginatedUsers}
           resetAllFilters={resetAllFilters}
           showAllCards={showAllCards}
-          focusedUserId={focusedUserId}
-          focusUserCards={focusUserCards}
-          openUserDetails={openUserDetails}
-          userPage={userPage}
-          totalUserPages={totalUserPages}
-          setUserPage={setUserPage}
+          focusedUserId={usersPanel.focusedUserId}
+          focusUserCards={usersPanel.focusUserCards}
+          openUserDetails={usersPanel.openUserDetails}
+          userPage={usersPanel.userPage}
+          totalUserPages={usersPanel.totalUserPages}
+          setUserPage={usersPanel.setUserPage}
         />
 
         <AdminCardsManagementPanel
           activeSection={activeSection}
-          activeUserForCards={activeUserForCards}
+          activeUserForCards={cardsPanel.activeUserForCards}
           showAllCards={showAllCards}
-          cardStatusFilter={cardStatusFilter}
-          setCardStatusFilter={setCardStatusFilter}
-          cardSort={cardSort}
-          setCardSort={setCardSort}
-          showCardsForAllUsers={showCardsForAllUsers}
-          focusedUserId={focusedUserId}
-          unmatchedCards={unmatchedCards}
-          paginatedCards={paginatedCards}
+          cardStatusFilter={cardsPanel.cardStatusFilter}
+          setCardStatusFilter={cardsPanel.setCardStatusFilter}
+          cardSort={cardsPanel.cardSort}
+          setCardSort={cardsPanel.setCardSort}
+          showCardsForAllUsers={cardsPanel.showCardsForAllUsers}
+          focusedUserId={usersPanel.focusedUserId}
+          unmatchedCards={cardsPanel.unmatchedCards}
+          paginatedCards={cardsPanel.paginatedCards}
           resetAllFilters={resetAllFilters}
           setFeedbackToast={setFeedbackToast}
-          cardPage={cardPage}
-          totalCardPages={totalCardPages}
-          setCardPage={setCardPage}
+          cardPage={cardsPanel.cardPage}
+          totalCardPages={cardsPanel.totalCardPages}
+          setCardPage={cardsPanel.setCardPage}
         />
-
       </section>
 
       <UserDetailsDialog selectedUser={selectedUser} setSelectedUser={setSelectedUser} />

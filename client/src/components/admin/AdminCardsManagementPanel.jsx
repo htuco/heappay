@@ -1,4 +1,4 @@
-import { CARD_SORT_OPTIONS, CARD_STATUS_OPTIONS } from '@/components/admin/adminConstants'
+import { CARD_SORT_OPTIONS, CARD_STATUS_OPTIONS } from '@/utils/admin.constants'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'

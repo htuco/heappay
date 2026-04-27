@@ -1,4 +1,4 @@
-import { USER_CHIP_OPTIONS, USER_PAGE_SIZE, USER_SORT_OPTIONS } from '@/components/admin/adminConstants'
+import { USER_CHIP_OPTIONS, USER_PAGE_SIZE, USER_SORT_OPTIONS } from '@/utils/admin.constants'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

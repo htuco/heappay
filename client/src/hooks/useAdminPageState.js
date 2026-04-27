@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import { CARD_PAGE_SIZE, USER_PAGE_SIZE } from '@/components/admin/adminConstants'
+import { CARD_PAGE_SIZE, USER_PAGE_SIZE } from '@/utils/admin.constants'
 import { paymentCardMockData } from '@/mock-data/paymentCardMockData'
 import { MOCK_USERS } from '@/mock-data/userMocks'
 import { buildCardAssignments, deriveUsers, getCardStatus } from '@/utils/admin.utils'
+
+function userMatchesChip(user, chip) {
+  if (chip === 'all') return true
+  if (chip === 'invited') return user.status === 'invited'
+  return user.role === chip
+}
 
 export default function useAdminPageState() {
   const [searchParams] = useSearchParams()
@@ -35,10 +41,7 @@ export default function useAdminPageState() {
       const matchesSearch =
         user.fullName.toLowerCase().includes(normalizedUserSearch) ||
         user.email.toLowerCase().includes(normalizedUserSearch)
-
-      const matchesChip =
-        userChipFilter === 'all' ||
-        (userChipFilter === 'invited' ? user.status === 'invited' : user.role === userChipFilter)
+      const matchesChip = userMatchesChip(user, userChipFilter)
 
       return matchesSearch && matchesChip
     })
@@ -217,38 +220,46 @@ export default function useAdminPageState() {
     })
   }
 
-  return {
-    activeSection,
+  const usersPanel = {
     userSearch,
     setUserSearch,
     userChipFilter,
     setUserChipFilter,
     userSort,
     setUserSort,
+    paginatedUsers,
+    totalUserPages,
+    userPage: resolvedUserPage,
+    setUserPage,
+    focusedUserId,
+    focusUserCards,
+    openUserDetails,
+  }
+
+  const cardsPanel = {
     cardStatusFilter,
     setCardStatusFilter,
     cardSort,
     setCardSort,
+    activeUserForCards,
+    paginatedCards,
+    totalCardPages,
+    cardPage: resolvedCardPage,
+    setCardPage,
+    showCardsForAllUsers,
+    unmatchedCards,
+  }
+
+  return {
+    activeSection,
+    usersPanel,
+    cardsPanel,
     selectedUser,
     setSelectedUser,
-    focusedUserId,
     showAllCards,
     feedbackToast,
     setFeedbackToast,
-    unmatchedCards,
-    activeUserForCards,
-    paginatedUsers,
-    paginatedCards,
-    totalUserPages,
-    totalCardPages,
-    userPage: resolvedUserPage,
-    setUserPage,
-    cardPage: resolvedCardPage,
-    setCardPage,
     kpiTotals,
     resetAllFilters,
-    focusUserCards,
-    openUserDetails,
-    showCardsForAllUsers,
   }
 }
