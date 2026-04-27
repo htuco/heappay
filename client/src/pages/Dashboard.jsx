@@ -1,7 +1,9 @@
-import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
-import PaymentCard from '@/components/payment-card/PaymentCard'
+import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
+import DashboardPlaceholder from '@/components/dashboard/DashboardPlaceholder'
+import MoneyFlowPlaceholder from '@/components/dashboard/MoneyFlowPlaceholder'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
+import PaymentCard from '@/components/payment-card/PaymentCard'
 import {
   buildCardStatusOverviewProps,
   paymentCardMockData,
@@ -18,13 +20,15 @@ export default function DashboardPage() {
       </header>
 
       <section className="grid gap-4 xl:grid-cols-12 xl:gap-5">
-        <div className="xl:col-span-8">
+        <div className="space-y-4 xl:col-span-8">
           <TotalBalanceWidget
             totalBalance={dashboardMockData.balance.totalBalance}
             currency={dashboardMockData.balance.currency}
             monthlyGrowth={dashboardMockData.balance.monthlyGrowth}
             monthlyAmount={dashboardMockData.balance.monthlyAmount}
           />
+          <MoneyFlowPlaceholder />
+          <CardStatusOverview {...buildCardStatusOverviewProps(paymentCardMockData)} />
         </div>
 
         <div className="space-y-4 xl:col-span-4">
@@ -44,13 +48,7 @@ export default function DashboardPage() {
             title="Quick Actions"
             description="Transfer, pay bills, and card controls will be placed here in the next ticket."
           />
-        </div>
 
-        <div className="xl:col-span-8">
-          <CardStatusOverview {...buildCardStatusOverviewProps(paymentCardMockData)} />
-        </div>
-
-        <div className="xl:col-span-4">
           <DashboardPlaceholder
             title="Recent Activity"
             description="Latest transactions and alerts placeholder to preserve final dashboard balance."
@@ -58,14 +56,5 @@ export default function DashboardPage() {
         </div>
       </section>
     </div>
-  )
-}
-
-function DashboardPlaceholder({ title, description }) {
-  return (
-    <section className="rounded-2xl border border-dashed border-border/70 bg-card/70 p-4 shadow-sm sm:p-5">
-      <h2 className="text-base font-semibold text-card-foreground sm:text-lg">{title}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-    </section>
   )
 }
