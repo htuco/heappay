@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers.user import router as auth_router
 from routers.card_type import router as card_type_router
-from routers import card_status, health, system
+from routers import card, card_status, health, system
 from settings import get_settings
 
 
@@ -19,6 +19,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health.router)
     app.include_router(system.router)
+    app.include_router(card.router)
     app.include_router(card_status.router)
     app.include_router(card_type_router)
     app.include_router(auth_router)
