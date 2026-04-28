@@ -70,6 +70,24 @@ class UserAuthService:
             refresh_token=refresh_token, token_type="bearer", user=user_response
         )
 
+    def get_me(self, token: str) -> TokenResponse | None:
+        user_id = self.verify_refresh_token(token)
+        if user_id is None:
+            return None
+
+        user = self.repo.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        user_response = UserResponse(
+            id=user.user_id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            created_at=user.created_at,
+        )
+        return TokenResponse(refresh_token=token, token_type="bearer", user=user_response)
+
     def login(self, login_data: LoginRequest) -> TokenResponse:
         user = self.repo.get_user_by_email(str(login_data.email))
         if not user:
