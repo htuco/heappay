@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import AuthResponse, LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from schemas.user.auth import AuthResponse, LoginRequest, RegisterRequest
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -71,27 +71,13 @@ def me(
             detail="Authorization header is required",
         )
 
-    token = credentials.credentials
-    user_id = service.verify_refresh_token(token)
-    if user_id is None:
+    token_data = service.get_me(credentials.credentials)
+    if token_data is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
 
-    user = service.repo.get_user_by_id(user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-        )
-
-    user_out = UserResponse.model_validate(user)
-    token_data = TokenResponse(
-        refresh_token=token,
-        token_type="bearer",
-        user=user_out,
-    )
     return AuthResponse(
         success=True,
         message="User profile retrieved",
