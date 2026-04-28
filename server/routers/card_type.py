@@ -48,8 +48,8 @@ def create_card_type(
 ) -> CardTypeResponse:
     try:
         row = service.create(payload.type_name, payload.vendor)
-    except DuplicateCardTypeError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_DETAIL) from None
+    except DuplicateCardTypeError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_DETAIL) from exc
     return CardTypeResponse.model_validate(row)
 
 
@@ -65,8 +65,8 @@ def update_card_type(
             type_name=payload.type_name,
             vendor=payload.vendor,
         )
-    except DuplicateCardTypeError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_DETAIL) from None
+    except DuplicateCardTypeError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_DETAIL) from exc
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL)
     return CardTypeResponse.model_validate(row)
@@ -79,8 +79,8 @@ def delete_card_type(
 ) -> Response:
     try:
         deleted = service.delete(card_type_id)
-    except CardTypeInUseError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_IN_USE_DETAIL) from None
+    except CardTypeInUseError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_IN_USE_DETAIL) from exc
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

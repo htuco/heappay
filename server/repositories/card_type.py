@@ -12,7 +12,7 @@ class CardTypeRepository:
 
     def list_all(self) -> list[CardType]:
         stmt = select(CardType).order_by(CardType.card_type_id)
-        return list(self._db.scalars(stmt).all())
+        return list(self._db.scalars(stmt))
 
     def get_by_id(self, card_type_id: int) -> CardType | None:
         stmt = select(CardType).where(CardType.card_type_id == card_type_id)
