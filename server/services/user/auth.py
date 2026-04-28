@@ -11,11 +11,6 @@ from settings import get_settings
 
 
 class UserAuthService:
-    """
-    Authentication service handling user registration, login, and token management.
-    Uses bcrypt for password hashing and JWT for token generation.
-    """
-
     def __init__(self, repo: UserAuthRepository) -> None:
         self.repo = repo
         self.settings = get_settings()
@@ -61,6 +56,7 @@ class UserAuthService:
         hashed_password = self.hash_password(register_data.password)
         user = self.repo.create_user(register_data, hashed_password)
         refresh_token = self.create_refresh_token(user.user_id)
+        self.repo.save_refresh_token(user.user_id, refresh_token)
 
         user_response = UserResponse(
             id=user.user_id,
@@ -74,6 +70,24 @@ class UserAuthService:
             refresh_token=refresh_token, token_type="bearer", user=user_response
         )
 
+    def get_me(self, token: str) -> TokenResponse | None:
+        user_id = self.verify_refresh_token(token)
+        if user_id is None:
+            return None
+
+        user = self.repo.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        user_response = UserResponse(
+            id=user.user_id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            created_at=user.created_at,
+        )
+        return TokenResponse(refresh_token=token, token_type="bearer", user=user_response)
+
     def login(self, login_data: LoginRequest) -> TokenResponse:
         user = self.repo.get_user_by_email(str(login_data.email))
         if not user:
@@ -82,8 +96,8 @@ class UserAuthService:
         if not self.verify_password(login_data.password, user.password_hash):
             raise ValueError("Invalid email or password")
 
-        self.repo.update_last_login(user.user_id)
         refresh_token = self.create_refresh_token(user.user_id)
+        self.repo.save_refresh_token(user.user_id, refresh_token)
 
         user_response = UserResponse(
             id=user.user_id,
