@@ -54,7 +54,7 @@ export default function LoginForm() {
 			await login({ email: form.email.trim(), password: form.password, remember: form.rememberMe })
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
-			navigate('/dashboard')
+			setTimeout(() => navigate('/dashboard'), 1000)
 		} catch (err) {
 			setError(err?.response?.data?.message ?? 'Invalid email or password.')
 		}

@@ -80,7 +80,7 @@ export default function RegisterForm() {
 			})
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
-			navigate('/dashboard')
+			setTimeout(() => navigate('/dashboard'), 1000)
 		} catch (err) {
 			setError(err?.response?.data?.message ?? 'Registration failed.')
 		}
