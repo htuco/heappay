@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearAuthSession, getAuthToken } from './authStorage'
+import { clearAuthSession, getAuthRefreshToken, getAuthToken, setAuthRefreshToken, setAuthToken } from './authStorage'
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
@@ -92,16 +92,53 @@ const requestInterceptor = api.interceptors.request.use((config) => {
 	return config
 })
 
+let refreshPromise = null
+
 const responseInterceptor = api.interceptors.response.use(
 	(response) => response,
-	(error) => {
-		if (error?.response?.status === 401 && !error.config?.skipAuthRedirect) {
-			clearAuthSession()
+	async (error) => {
+		const originalRequest = error.config
 
-			try {
-				unauthorizedHandler(error)
-			} catch {
-				defaultUnauthorizedHandler()
+		if (error?.response?.status === 401 && !originalRequest?._retry && !originalRequest?.skipAuthRedirect) {
+			const refreshToken = getAuthRefreshToken()
+
+			if (refreshToken) {
+				originalRequest._retry = true
+
+				if (!refreshPromise) {
+					refreshPromise = axios.post(`${API_BASE_URL}/auth/refresh`, { refresh_token: refreshToken })
+						.then(({ data }) => {
+							setAuthToken(data.data.access_token)
+							setAuthRefreshToken(data.data.refresh_token)
+							return data.data.access_token
+						})
+						.catch(() => {
+							clearAuthSession()
+							refreshPromise = null
+							defaultUnauthorizedHandler()
+							return null
+						})
+						.finally(() => {
+							refreshPromise = null
+						})
+				}
+
+				const newAccessToken = await refreshPromise
+
+				if (newAccessToken) {
+					originalRequest.headers = {
+						...originalRequest.headers,
+						Authorization: `Bearer ${newAccessToken}`,
+					}
+					return api(originalRequest)
+				}
+			} else {
+				clearAuthSession()
+				try {
+					unauthorizedHandler(error)
+				} catch {
+					defaultUnauthorizedHandler()
+				}
 			}
 		}
 
