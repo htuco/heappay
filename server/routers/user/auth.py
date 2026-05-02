@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import AuthResponse, LoginRequest, RegisterRequest
+from schemas.user.auth import AuthResponse, LoginRequest, RefreshRequest, RegisterRequest
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -58,6 +58,20 @@ def login(
         message="Login successful",
         data=token_response,
     )
+
+
+@router.post("/refresh", response_model=AuthResponse)
+def refresh(
+    payload: RefreshRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    token_data = service.refresh(payload.refresh_token)
+    if token_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+    return AuthResponse(success=True, message="Token refreshed", data=token_data)
 
 
 @router.get("/me", response_model=AuthResponse)
