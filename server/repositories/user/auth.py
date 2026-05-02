@@ -61,6 +61,10 @@ class UserAuthRepository:
         stmt = select(User).where(User.user_id == user_id)
         return self._db.scalars(stmt).first()
 
+    def get_user_by_refresh_token(self, refresh_token: str) -> User | None:
+        stmt = select(User).where(User.refresh_token == refresh_token)
+        return self._db.scalars(stmt).first()
+
     def save_refresh_token(self, user_id: int, refresh_token: str) -> None:
         self._db.execute(
             update(User)
