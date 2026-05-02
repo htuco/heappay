@@ -112,6 +112,19 @@ class UserAuthService:
         self.repo.save_refresh_token(user.user_id, refresh_token)
         return self._build_token_response(user.user_id, refresh_token)
 
+    def refresh(self, refresh_token: str) -> TokenResponse | None:
+        user_id = self.verify_refresh_token(refresh_token)
+        if user_id is None:
+            return None
+
+        user = self.repo.get_user_by_refresh_token(refresh_token)
+        if user is None or user.user_id != user_id:
+            return None
+
+        new_refresh_token = self.create_refresh_token(user_id)
+        self.repo.save_refresh_token(user_id, new_refresh_token)
+        return self._build_token_response(user_id, new_refresh_token)
+
     def get_me(self, token: str) -> TokenResponse | None:
         user_id = self.verify_access_token(token)
         if user_id is None:
