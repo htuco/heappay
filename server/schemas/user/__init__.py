@@ -3,13 +3,17 @@ from schemas.user.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
-    UserResponse,
+    UserResponse as AuthUserResponse,
 )
+from schemas.user.crud import UserCreateRequest, UserResponse, UserUpdateRequest
 
 __all__ = [
     "AuthResponse",
     "LoginRequest",
     "RegisterRequest",
     "TokenResponse",
+    "AuthUserResponse",
+    "UserCreateRequest",
     "UserResponse",
+    "UserUpdateRequest",
 ]

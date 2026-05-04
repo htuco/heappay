@@ -1,7 +1,7 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login } from '@/services/authService'
+import { useAuth } from '@/hooks/useAuth'
 import { loginSchema } from '@/schemas/loginSchema'
 import { getApiErrorMessage } from '@/utils/api'
 import AuthButton from '@/components/auth-ui/AuthButton'
@@ -18,10 +18,10 @@ const INITIAL_FORM_STATE = {
 
 export default function LoginForm() {
 	const navigate = useNavigate()
+	const { login, isLoading: loading } = useAuth()
 	const [form, setForm] = useState(INITIAL_FORM_STATE)
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
-	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
 
 	const handleChange = (e) => {
@@ -32,18 +32,14 @@ export default function LoginForm() {
 		}))
 	}
 
-	const resetForm = () => setForm(INITIAL_FORM_STATE)
-
 	const handleSubmit = async (e) => {
 		e.preventDefault()
 		setError('')
 		setErrors({})
-		setLoading(true)
 
-		// Validate with Zod
 		const result = loginSchema.safeParse({
 			email: form.email.trim(),
-			password: form.password
+			password: form.password,
 		})
 
 		if (!result.success) {
@@ -52,7 +48,6 @@ export default function LoginForm() {
 				fieldErrors[err.path[0]] = err.message
 			})
 			setErrors(fieldErrors)
-			setLoading(false)
 			return
 		}
 
@@ -63,12 +58,10 @@ export default function LoginForm() {
 				remember: form.rememberMe,
 			})
 			setSuccess(true)
-			resetForm()
+			setForm(INITIAL_FORM_STATE)
 			navigate('/dashboard', { replace: true })
 		} catch (err) {
 			setError(getApiErrorMessage(err, 'Invalid email or password'))
-		} finally {
-			setLoading(false)
 		}
 	}
 	return (

@@ -47,12 +47,6 @@ export default function LandingPage() {
             >
               Create account
             </a>
-            <a
-              href="/dashboard"
-              className="rounded-full border border-dashed border-border px-10 py-3.5 text-sm font-semibold text-muted-foreground hover:bg-muted/60 transition"
-            >
-              Development mode: Go to dashboard
-            </a>
           </div>
         </div>
       </div>
