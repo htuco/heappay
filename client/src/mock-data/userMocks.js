@@ -130,5 +130,21 @@ export const MOCK_USERS = [
 	{
 		email: 'jolliviert@pen.io',
 		password: 'eR0+g}s#R,&}rE9q'
+	},
+	{
+		email: 'hamza.tucou@symphony.is',
+		password: 'password123'
+	},
+	{
+		email: 'dzelila.anjak.tinjo.scrum.master@symphony.is',
+		password: 'password123'
+	},
+	{
+		email: 'nedim.nedimarlija@symphony.is',
+		password: 'password123'
+	},
+	{
+		email: 'dino.bajram0vic@symphony.is',
+		password: 'password123'
 	}
 ]
