@@ -16,11 +16,18 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+function PublicOnlyRoute({ children }) {
+  if (getAuthToken()) {
+    return <Navigate to="/dashboard" replace />
+  }
+  return children
+}
+
 export default function App() {
   return (
     <Routes>
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
+      <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
 
       <Route element={<Layout />}>
         <Route index element={<LandingPage />} />
