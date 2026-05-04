@@ -1,8 +1,9 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { loginSchema } from '@/schemas/loginSchema'
 import { useAuth } from '@/hooks/useAuth'
+import { loginSchema } from '@/schemas/loginSchema'
+import { getApiErrorMessage } from '@/utils/api'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
@@ -51,12 +52,16 @@ export default function LoginForm() {
 		}
 
 		try {
-			await login({ email: form.email.trim(), password: form.password, remember: form.rememberMe })
+			await login({
+				email: result.data.email,
+				password: result.data.password,
+				remember: form.rememberMe,
+			})
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
-			setTimeout(() => navigate('/dashboard'), 1000)
+			navigate('/dashboard', { replace: true })
 		} catch (err) {
-			setError(err?.response?.data?.message ?? 'Invalid email or password.')
+			setError(getApiErrorMessage(err, 'Invalid email or password'))
 		}
 	}
 	return (
