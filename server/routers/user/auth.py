@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -55,6 +55,21 @@ def refresh(
             detail="Invalid or expired refresh token",
         )
     return AuthResponse(success=True, message="Token refreshed", data=token_data)
+
+
+@router.post("/logout", response_model=AuthResponse)
+def logout(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    success = service.logout(credentials.credentials)
+    if not success:
+        raise Unauthorized("Invalid or expired token.")
+
+    return AuthResponse(success=True, message="Logged out successfully", data=None)
 
 
 @router.get("/me", response_model=AuthResponse)

@@ -72,3 +72,11 @@ class UserAuthRepository:
             .values(refresh_token=refresh_token)
         )
         self._db.commit()
+
+    def clear_refresh_token(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(refresh_token=None)
+        )
+        self._db.commit()
