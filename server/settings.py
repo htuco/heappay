@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     forwarded_allow_ips: str | None = None
     secret_key: str
     algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
 
     @computed_field
     @property
