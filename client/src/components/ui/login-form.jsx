@@ -1,8 +1,8 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_USERS } from '@/mock-data/userMocks'
 import { loginSchema } from '@/schemas/loginSchema'
+import { useAuth } from '@/hooks/useAuth'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
@@ -17,10 +17,10 @@ const INITIAL_FORM_STATE = {
 
 export default function LoginForm() {
 	const navigate = useNavigate()
+	const { login, isLoading: loading } = useAuth()
 	const [form, setForm] = useState(INITIAL_FORM_STATE)
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
-	const [loading, setLoading] = useState(false)
 	const [success, setSuccess] = useState(false)
 
 	const handleChange = (e) => {
@@ -31,18 +31,14 @@ export default function LoginForm() {
 		}))
 	}
 
-	const resetForm = () => setForm(INITIAL_FORM_STATE)
-
 	const handleSubmit = async (e) => {
 		e.preventDefault()
 		setError('')
 		setErrors({})
-		setLoading(true)
 
-		// Validate with Zod
 		const result = loginSchema.safeParse({
 			email: form.email.trim(),
-			password: form.password
+			password: form.password,
 		})
 
 		if (!result.success) {
@@ -51,26 +47,16 @@ export default function LoginForm() {
 				fieldErrors[err.path[0]] = err.message
 			})
 			setErrors(fieldErrors)
-			setLoading(false)
 			return
 		}
 
-		// Simulate API delay
-		await new Promise(resolve => setTimeout(resolve, 500))
-
-		const user = MOCK_USERS.find(u => u.email === form.email.trim() && u.password === form.password)
-
-		if (user) {
+		try {
+			await login({ email: form.email.trim(), password: form.password, remember: form.rememberMe })
 			setSuccess(true)
-			resetForm()
-			setLoading(false)
-
-			setTimeout(() => {
-				navigate('/')
-			}, 1000)
-		} else {
-			setError('Invalid email or password. Try: talha.zlatar@symphony.is / password123')
-			setLoading(false)
+			setForm(INITIAL_FORM_STATE)
+			setTimeout(() => navigate('/dashboard'), 1000)
+		} catch (err) {
+			setError(err?.response?.data?.message ?? 'Invalid email or password.')
 		}
 	}
 	return (

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import AdminPage from './pages/AdminPage'
 import LandingPage from './pages/LandingPage'
@@ -7,6 +7,14 @@ import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
+import { getAuthToken } from './utils/authStorage'
+
+function ProtectedRoute({ children }) {
+  if (!getAuthToken()) {
+    return <Navigate to="/login" replace />
+  }
+  return children
+}
 
 export default function App() {
   return (
@@ -14,13 +22,12 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Everything else (including `/`) uses Layout */}
       <Route element={<Layout />}>
         <Route index element={<LandingPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/wallet" element={<WalletPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       </Route>
     </Routes>
   )
