@@ -7,13 +7,21 @@ const FK_ERROR_MAP = {
   'Card type not found.': 'card_type_id',
 }
 
+function httpErrorText(response) {
+  const data = response?.data
+  if (typeof data?.message === 'string') return data.message
+  if (typeof data?.detail === 'string') return data.detail
+  return null
+}
+
 function normalizeError(error) {
   const response = error?.response
+  const msg = httpErrorText(response)
 
-  if (response?.status === 404 && typeof response.data?.detail === 'string') {
-    const field = FK_ERROR_MAP[response.data.detail]
+  if (response?.status === 404 && msg) {
+    const field = FK_ERROR_MAP[msg]
     if (field) {
-      throw new CardFkError(field, response.data.detail)
+      throw new CardFkError(field, msg)
     }
   }
 
