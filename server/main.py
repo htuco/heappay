@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import card, card_status, health, system, user_roles
+from routers import card, card_status, health, system, user_roles, user_statuses
 from routers.user import router as auth_router
 from settings import get_settings
 
