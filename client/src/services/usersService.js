@@ -9,23 +9,46 @@ const ERROR_MESSAGE_BY_DETAIL = {
 }
 
 /**
+ * @param {{ message?: unknown, detail?: unknown, details?: unknown }} [data]
+ * @returns {string}
+ */
+function getServerErrorMessage(data) {
+  if (typeof data?.message === 'string' && data.message.trim()) {
+    return data.message
+  }
+
+  const detail = data?.detail
+
+  if (typeof detail === 'string' && detail.trim()) {
+    return detail
+  }
+
+  if (Array.isArray(detail) && detail[0] && typeof detail[0].msg === 'string') {
+    return detail[0].msg
+  }
+
+  return ''
+}
+
+/**
  * @param {unknown} rawError
  * @returns {import('../types/user').UserServiceError}
  */
 function mapUserApiError(rawError) {
-  const error = /** @type {{ response?: { status?: number, data?: { detail?: unknown } }, message?: string }} */ (
+  const error = /** @type {{ response?: { status?: number, data?: { detail?: unknown, message?: unknown, details?: unknown } }, message?: string }} */ (
     rawError
   )
   const status = error?.response?.status
-  const detail = error?.response?.data?.detail
-  const detailText = typeof detail === 'string' ? detail : ''
+  const data = error?.response?.data
+  const serverMessage = getServerErrorMessage(data ?? {})
+  const detailsPayload = data?.details ?? data?.detail
 
-  if (detailText && ERROR_MESSAGE_BY_DETAIL[detailText]) {
+  if (serverMessage && ERROR_MESSAGE_BY_DETAIL[serverMessage]) {
     return {
-      code: ERROR_MESSAGE_BY_DETAIL[detailText],
+      code: ERROR_MESSAGE_BY_DETAIL[serverMessage],
       status,
-      message: detailText,
-      details: detail,
+      message: serverMessage,
+      details: detailsPayload,
     }
   }
 
@@ -34,7 +57,7 @@ function mapUserApiError(rawError) {
       code: USER_API_ERROR_CODES.VALIDATION_ERROR,
       status,
       message: getApiErrorMessage(error, 'Validation failed'),
-      details: detail,
+      details: detailsPayload,
     }
   }
 
@@ -49,7 +72,7 @@ function mapUserApiError(rawError) {
     code: USER_API_ERROR_CODES.UNKNOWN_ERROR,
     status,
     message: getApiErrorMessage(error, 'User request failed'),
-    details: detail,
+    details: detailsPayload,
   }
 }
 
