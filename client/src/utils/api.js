@@ -1,5 +1,12 @@
 import axios from 'axios'
-import { clearAuthSession, getAuthToken } from './authStorage'
+import {
+	clearAuthSession,
+	getAuthRefreshToken,
+	getAuthRememberPreference,
+	getAuthToken,
+	setAuthUser,
+	swapAuthTokens,
+} from './authStorage'
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
@@ -92,21 +99,78 @@ const requestInterceptor = api.interceptors.request.use((config) => {
 	return config
 })
 
+let refreshPromise = null
+
+const isPublicAuthRequest = (config) => {
+	const url = config?.url ?? ''
+	return ['/auth/login', '/auth/register', '/auth/refresh'].some((segment) =>
+		url.includes(segment),
+	)
+}
+
 const responseInterceptor = api.interceptors.response.use(
 	(response) => response,
-	(error) => {
-		if (error?.response?.status === 401 && !error.config?.skipAuthRedirect) {
-			clearAuthSession()
+	async (error) => {
+		const originalRequest = error.config
+		const status = error?.response?.status
 
-			try {
-				unauthorizedHandler(error)
-			} catch {
-				defaultUnauthorizedHandler()
+		if (
+			status === 401 &&
+			originalRequest &&
+			!originalRequest._retry &&
+			!originalRequest.skipAuthRedirect &&
+			!isPublicAuthRequest(originalRequest)
+		) {
+			const refreshToken = getAuthRefreshToken()
+
+			if (refreshToken) {
+				originalRequest._retry = true
+
+				if (!refreshPromise) {
+					refreshPromise = axios
+						.post(`${API_BASE_URL}/auth/refresh`, { refresh_token: refreshToken })
+						.then(({ data: body }) => {
+							const td = body?.data
+							if (!td?.access_token || !td?.refresh_token) {
+								throw new Error('Invalid refresh response')
+							}
+							swapAuthTokens(td.access_token, td.refresh_token)
+							if (td.user) {
+								setAuthUser(td.user, { remember: getAuthRememberPreference() })
+							}
+							return td.access_token
+						})
+						.catch(() => {
+							clearAuthSession()
+							defaultUnauthorizedHandler()
+							return null
+						})
+						.finally(() => {
+							refreshPromise = null
+						})
+				}
+
+				const newAccessToken = await refreshPromise
+
+				if (newAccessToken) {
+					originalRequest.headers = {
+						...originalRequest.headers,
+						Authorization: `Bearer ${newAccessToken}`,
+					}
+					return api(originalRequest)
+				}
+			} else {
+				clearAuthSession()
+				try {
+					unauthorizedHandler(error)
+				} catch {
+					defaultUnauthorizedHandler()
+				}
 			}
 		}
 
 		return Promise.reject(error)
-	}
+	},
 )
 
 globalThis[API_INTERCEPTORS_KEY] = {

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Depends, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from database import get_db
+from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import AuthResponse, LoginRequest, RegisterRequest
+from schemas.user.auth import AuthResponse, LoginRequest, RefreshRequest, RegisterRequest
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -16,11 +17,7 @@ def get_auth_service(db: Session = Depends(get_db)) -> UserAuthService:
     return UserAuthService(UserAuthRepository(db))
 
 
-@router.post(
-    "/register",
-    response_model=AuthResponse,
-    status_code=status.HTTP_201_CREATED,
-)
+@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(
     payload: RegisterRequest,
     service: UserAuthService = Depends(get_auth_service),
@@ -28,16 +25,9 @@ def register(
     try:
         token_response = service.register(payload)
     except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration could not be completed",
-        ) from None
+        raise InvalidInput("An account with this email already exists.") from None
 
-    return AuthResponse(
-        success=True,
-        message="Registration successful",
-        data=token_response,
-    )
+    return AuthResponse(success=True, message="Registration successful", data=token_response)
 
 
 @router.post("/login", response_model=AuthResponse)
@@ -47,17 +37,24 @@ def login(
 ) -> AuthResponse:
     try:
         token_response = service.login(payload)
-    except ValueError as exc:
+    except ValueError:
+        raise Unauthorized("Invalid email or password.") from None
+
+    return AuthResponse(success=True, message="Login successful", data=token_response)
+
+
+@router.post("/refresh", response_model=AuthResponse)
+def refresh(
+    payload: RefreshRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    token_data = service.refresh(payload.refresh_token)
+    if token_data is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        ) from exc
-
-    return AuthResponse(
-        success=True,
-        message="Login successful",
-        data=token_response,
-    )
+            detail="Invalid or expired refresh token",
+        )
+    return AuthResponse(success=True, message="Token refreshed", data=token_data)
 
 
 @router.get("/me", response_model=AuthResponse)
@@ -66,20 +63,10 @@ def me(
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:
     if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header is required",
-        )
+        raise Unauthorized("Authorization header is required.")
 
     token_data = service.get_me(credentials.credentials)
     if token_data is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-        )
+        raise Unauthorized("Invalid or expired token.")
 
-    return AuthResponse(
-        success=True,
-        message="User profile retrieved",
-        data=token_data,
-    )
+    return AuthResponse(success=True, message="User profile retrieved", data=token_data)
