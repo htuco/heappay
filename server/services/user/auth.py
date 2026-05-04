@@ -125,6 +125,13 @@ class UserAuthService:
         self.repo.save_refresh_token(user_id, new_refresh_token)
         return self._build_token_response(user_id, new_refresh_token)
 
+    def logout(self, token: str) -> bool:
+        user_id = self.verify_access_token(token)
+        if user_id is None:
+            return False
+        self.repo.clear_refresh_token(user_id)
+        return True
+
     def get_me(self, token: str) -> TokenResponse | None:
         user_id = self.verify_access_token(token)
         if user_id is None:
