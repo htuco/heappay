@@ -8,14 +8,14 @@ export async function register({ firstName, lastName, email, password }) {
 		email,
 		password,
 	})
-	setAuthToken(data.data.refresh_token)
+	setAuthToken(data.data.access_token)
 	setAuthUser(data.data.user)
 	return data.data.user
 }
 
 export async function login({ email, password, remember = true }) {
 	const { data } = await api.post('/auth/login', { email, password })
-	setAuthToken(data.data.refresh_token, { remember })
+	setAuthToken(data.data.access_token, { remember })
 	setAuthUser(data.data.user, { remember })
 	return data.data.user
 }

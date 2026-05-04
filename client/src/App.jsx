@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
+import AdminPage from './pages/AdminPage'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
 import SettingsPage from './pages/SettingsPage'
@@ -23,6 +24,7 @@ export default function App() {
 
       <Route element={<Layout />}>
         <Route index element={<LandingPage />} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
