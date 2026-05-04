@@ -22,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(card.router)
     app.include_router(card_status.router)
     app.include_router(auth_router)
+    app.include_router(user_statuses.router)
     return app
 
 
