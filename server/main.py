@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from routers import card, card_status, health, system, user_roles
 from routers.user import router as auth_router
-from routers import card, card_status, health, system
 from settings import get_settings
 
 
@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health.router)
     app.include_router(system.router)
+    app.include_router(user_roles.router)
     app.include_router(card.router)
     app.include_router(card_status.router)
     app.include_router(auth_router)
