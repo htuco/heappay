@@ -1,5 +1,5 @@
 import api from '@/utils/api'
-import { clearAuthSession, setAuthRefreshToken, setAuthToken, setAuthUser } from '@/utils/authStorage'
+import { clearAuthSession, setAuthUser, writeAuthTokens } from '@/utils/authStorage'
 
 export async function register({ firstName, lastName, email, password }) {
 	const { data } = await api.post('/auth/register', {
@@ -8,16 +8,16 @@ export async function register({ firstName, lastName, email, password }) {
 		email,
 		password,
 	})
-	setAuthToken(data.data.access_token)
-	setAuthRefreshToken(data.data.refresh_token)
-	setAuthUser(data.data.user)
+	clearAuthSession()
+	writeAuthTokens(data.data.access_token, data.data.refresh_token, { remember: true })
+	setAuthUser(data.data.user, { remember: true })
 	return data.data.user
 }
 
 export async function login({ email, password, remember = true }) {
 	const { data } = await api.post('/auth/login', { email, password })
-	setAuthToken(data.data.access_token, { remember })
-	setAuthRefreshToken(data.data.refresh_token, { remember })
+	clearAuthSession()
+	writeAuthTokens(data.data.access_token, data.data.refresh_token, { remember })
 	setAuthUser(data.data.user, { remember })
 	return data.data.user
 }

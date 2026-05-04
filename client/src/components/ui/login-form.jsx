@@ -1,8 +1,9 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_USERS } from '@/mock-data/userMocks'
+import { login } from '@/services/authService'
 import { loginSchema } from '@/schemas/loginSchema'
+import { getApiErrorMessage } from '@/utils/api'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
@@ -55,21 +56,18 @@ export default function LoginForm() {
 			return
 		}
 
-		// Simulate API delay
-		await new Promise(resolve => setTimeout(resolve, 500))
-
-		const user = MOCK_USERS.find(u => u.email === form.email.trim() && u.password === form.password)
-
-		if (user) {
+		try {
+			await login({
+				email: result.data.email,
+				password: result.data.password,
+				remember: form.rememberMe,
+			})
 			setSuccess(true)
 			resetForm()
-			setLoading(false)
-
-			setTimeout(() => {
-				navigate('/')
-			}, 1000)
-		} else {
-			setError('Invalid email or password. Try: talha.zlatar@symphony.is / password123')
+			navigate('/dashboard', { replace: true })
+		} catch (err) {
+			setError(getApiErrorMessage(err, 'Invalid email or password'))
+		} finally {
 			setLoading(false)
 		}
 	}
