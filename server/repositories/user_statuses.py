@@ -10,6 +10,11 @@ def get_status_by_id(db: Session, status_id: int) -> UserStatus | None:
     return db.scalar(statement)
 
 
+def get_status_by_name(db: Session, status_name: str) -> UserStatus | None:
+    statement = select(UserStatus).where(UserStatus.status_name == status_name)
+    return db.scalar(statement)
+
+
 
 def list_statuses(db: Session) -> list[UserStatus]:
     statement = select(UserStatus).order_by(UserStatus.id)

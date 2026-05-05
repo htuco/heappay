@@ -35,7 +35,7 @@ class CardStatusService:
         except IntegrityError as exc:
             raise CardStatusDuplicate() from exc
 
-j    def delete(self, card_status_id: int) -> None:
+    def delete(self, card_status_id: int) -> None:
         if self._repo.get_by_id(card_status_id) is None:
             raise CardStatusNotFound()
         if self._repo.count_referencing_cards(card_status_id) > 0:
