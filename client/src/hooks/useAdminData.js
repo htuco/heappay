@@ -54,8 +54,8 @@ export function useAdminData() {
     setError(null)
 
     Promise.all([
-      usersService.list({ limit: 200 }),
-      listCards({ limit: 500 }),
+      usersService.list({ limit: 1000 }),
+      listCards({ limit: 1000 }),
       cardTypesService.list(),
       cardStatusesService.list(),
       userRolesService.list(),
