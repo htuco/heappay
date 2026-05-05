@@ -45,7 +45,14 @@ export default function App() {
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
 
       <Route element={<Layout />}>
-        <Route index element={<LandingPage />} />
+        <Route
+          index
+          element={
+            getAuthToken() || getAuthRefreshToken()
+              ? <Navigate to="/dashboard" replace />
+              : <LandingPage />
+          }
+        />
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
