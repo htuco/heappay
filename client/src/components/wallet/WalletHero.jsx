@@ -1,28 +1,31 @@
-import { Wallet } from 'lucide-react'
+import { CreditCard } from 'lucide-react'
 
 import AddCardModal from '@/components/AddCardModal'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 
 export default function WalletHero({ cards, onAddCard, isSaving = false, saveError = null }) {
+  const cardCount = cards?.length ?? 0
+  const cardLabel = cardCount === 1 ? 'card' : 'cards'
+
   return (
-    <header className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6 lg:flex-row lg:items-start lg:justify-between">
-      <div className="space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-          <Wallet className="h-3.5 w-3.5" />
-          Wallet
-        </div>
-        <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-card-foreground sm:text-4xl">
-            Manage your payment cards
-          </h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-            This page reuses the existing card components already in the project
-            so you can preview cards in both carousel and grid layouts.
+    <header className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/15 to-sky-500/15 text-primary">
+          <CreditCard className="h-5 w-5" strokeWidth={2} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-card-foreground">
+            {cardCount} {cardLabel}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {cardCount === 0
+              ? 'Add your first card to get started'
+              : 'Active in your wallet'}
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <AllCardsModal items={cards} />
         <AddCardModal onSubmit={onAddCard} isSubmitting={isSaving} submitError={saveError} />
       </div>
