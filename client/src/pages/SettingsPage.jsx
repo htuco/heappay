@@ -24,7 +24,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
-      <SettingsHero onBack={() => navigate('/')} />
+      <SettingsHero onBack={() => navigate('/dashboard')} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="xl:col-span-2">

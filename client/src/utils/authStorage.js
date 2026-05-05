@@ -107,6 +107,20 @@ export const setAuthRefreshToken = (token, { remember = true } = {}) => {
 }
 
 
+export const getAuthUser = () => {
+	for (const storage of getStoragePair()) {
+		const raw = storage.getItem(AUTH_USER_KEY)
+		if (raw) {
+			try {
+				return JSON.parse(raw)
+			} catch {
+				return null
+			}
+		}
+	}
+	return null
+}
+
 export const setAuthUser = (user, { remember = true } = {}) => {
 	if (!user) {
 		return

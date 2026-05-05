@@ -30,7 +30,7 @@ def list_users(
     status_id: int | None = Query(default=None, ge=1),
     user_role_id: int | None = Query(default=None, ge=1),
     include_deleted: bool = Query(default=False),
-    limit: int = Query(default=50, ge=1, le=100),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     service: UserService = Depends(get_user_service),
 ) -> list[UserResponse]:

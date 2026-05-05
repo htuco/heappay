@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { CARD_PAGE_SIZE, USER_PAGE_SIZE } from '@/utils/admin.constants'
-import { paymentCardMockData } from '@/mock-data/paymentCardMockData'
-import { MOCK_USERS } from '@/mock-data/userMocks'
-import { buildCardAssignments, deriveUsers, getCardStatus } from '@/utils/admin.utils'
+import { useAdminData } from '@/hooks/useAdminData'
+import { getCardStatus } from '@/utils/admin.utils'
 
 function userMatchesChip(user, chip) {
   if (chip === 'all') return true
@@ -29,12 +28,8 @@ export default function useAdminPageState() {
   const [cardPage, setCardPageState] = useState(1)
   const [feedbackToast, setFeedbackToast] = useState('')
 
-  const users = useMemo(() => deriveUsers(MOCK_USERS), [])
+  const { usersWithCards, unmatchedCards, isLoading, error } = useAdminData()
   const normalizedUserSearch = useMemo(() => userSearch.trim().toLowerCase(), [userSearch])
-
-  const { usersWithCards, unmatchedCards } = useMemo(() => {
-    return buildCardAssignments(users, paymentCardMockData)
-  }, [users])
 
   const filteredUsersWithCards = useMemo(() => {
     return usersWithCards.filter((user) => {
@@ -261,5 +256,7 @@ export default function useAdminPageState() {
     setFeedbackToast,
     kpiTotals,
     resetAllFilters,
+    isLoading,
+    error,
   }
 }

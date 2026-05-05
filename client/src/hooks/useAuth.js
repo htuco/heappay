@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as authService from '@/services/authService'
-import { getAuthToken } from '@/utils/authStorage'
+import { getAuthRefreshToken, getAuthToken } from '@/utils/authStorage'
 
 export function useAuth() {
 	const [user, setUser] = useState(null)
@@ -9,7 +9,8 @@ export function useAuth() {
 
 	useEffect(() => {
 		const token = getAuthToken()
-		if (!token) {
+		const refreshToken = getAuthRefreshToken()
+		if (!token && !refreshToken) {
 			setIsLoading(false)
 			return
 		}
@@ -54,5 +55,8 @@ export function useAuth() {
 		setUser(null)
 	}, [])
 
-	return { user, isLoading, error, login, register, logout }
+	const isAdmin = user?.role_name === 'admin'
+	const hasRole = (roleName) => user?.role_name === roleName
+
+	return { user, isLoading, error, login, register, logout, isAdmin, hasRole }
 }

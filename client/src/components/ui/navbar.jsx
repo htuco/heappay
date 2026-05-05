@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { CreditCard, Home, LayoutDashboard, Settings, Shield } from 'lucide-react'
+import { CreditCard, LayoutDashboard, Settings, Shield } from 'lucide-react'
+import { getAuthUser } from '@/utils/authStorage'
 
 const mainLinks = [
-  { name: 'Home', path: '/', icon: Home },
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
 ]
@@ -33,6 +33,9 @@ function NavLinkItem({ item }) {
 }
 
 export default function Navbar() {
+  const user = getAuthUser()
+  const isAdmin = user?.role_name === 'admin'
+
   return (
     <nav className="flex h-full flex-col">
       <div className="flex flex-col gap-1">
@@ -40,14 +43,17 @@ export default function Navbar() {
           <NavLinkItem key={item.path} item={item} />
         ))}
 
-        <div className="my-3 border-t border-border" />
-        <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Admin Features
-        </p>
-
-        {adminLinks.map((item) => (
-          <NavLinkItem key={item.path} item={item} />
-        ))}
+        {isAdmin && (
+          <>
+            <div className="my-3 border-t border-border" />
+            <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Admin Features
+            </p>
+            {adminLinks.map((item) => (
+              <NavLinkItem key={item.path} item={item} />
+            ))}
+          </>
+        )}
       </div>
 
       <div className="mt-auto border-t border-border pt-3">
