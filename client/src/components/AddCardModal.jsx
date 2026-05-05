@@ -33,9 +33,24 @@ function formatExpiry(value) {
   return digits
 }
 
+function isFutureExpiry(value) {
+  const match = value.match(/^(\d{2})\/(\d{2})$/)
+  if (!match) return false
+
+  const month = Number(match[1])
+  if (month < 1 || month > 12) return false
+
+  const year = 2000 + Number(match[2])
+  const expiryDate = new Date(year, month, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return expiryDate > today
+}
+
 const emptyForm = { number: "", name: "", expiry: "", cvv: "" }
 
-export default function AddCardModal({ onSubmit }) {
+export default function AddCardModal({ onSubmit, isSubmitting = false, submitError = null }) {
   const [open, setOpen] = React.useState(false)
   const [form, setForm] = React.useState(emptyForm)
   const [errors, setErrors] = React.useState({})
@@ -54,22 +69,33 @@ export default function AddCardModal({ onSubmit }) {
     const e = {}
     if (form.number.replace(/\s/g, "").length < 16) e.number = "Enter a valid 16-digit card number."
     if (!form.name.trim()) e.name = "Cardholder name is required."
-    if (!/^\d{2}\/\d{2}$/.test(form.expiry)) e.expiry = "Enter expiry in MM/YY format."
-    if (form.cvv.length < 3) e.cvv = "CVV must be 3–4 digits."
+    if (!isFutureExpiry(form.expiry)) e.expiry = "Enter a future expiry in MM/YY format."
+    if (form.cvv.length !== 3) e.cvv = "CVV must be exactly 3 digits."
     return e
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       return
     }
-    onSubmit?.({ number: form.number, name: form.name, expiry: form.expiry, type: cardType ?? "Unknown" })
-    setForm(emptyForm)
-    setErrors({})
-    setOpen(false)
+
+    try {
+      await onSubmit?.({
+        number: form.number,
+        name: form.name,
+        expiry: form.expiry,
+        cvv: form.cvv,
+        type: cardType ?? "Unknown",
+      })
+      setForm(emptyForm)
+      setErrors({})
+      setOpen(false)
+    } catch {
+      // Parent renders the API error and keeps the dialog open for correction.
+    }
   }
 
   function handleOpenChange(val) {
@@ -157,21 +183,29 @@ export default function AddCardModal({ onSubmit }) {
                 id="card-cvv"
                 type="password"
                 value={form.cvv}
-                onChange={(e) => setForm((f) => ({ ...f, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                onChange={(e) => setForm((f) => ({ ...f, cvv: e.target.value.replace(/\D/g, "").slice(0, 3) }))}
                 placeholder="•••"
                 inputMode="numeric"
-                maxLength={4}
+                maxLength={3}
                 className={errors.cvv ? "border-destructive" : ""}
               />
               {errors.cvv && <p className="text-xs text-destructive">{errors.cvv}</p>}
             </div>
           </div>
 
+          {submitError ? (
+            <p className="rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {submitError}
+            </p>
+          ) : null}
+
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">Cancel</Button>
+              <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
             </DialogClose>
-            <Button type="submit">Add Card</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Card"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
