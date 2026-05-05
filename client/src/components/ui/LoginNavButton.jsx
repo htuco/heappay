@@ -65,7 +65,7 @@ export default function LoginNavButton() {
 
             <DropdownMenuItem asChild className="mt-5 p-0 focus:bg-transparent">
               <Link
-                to="/account"
+                to="/settings"
                 className="group inline-flex cursor-pointer items-center gap-2 rounded-full bg-linear-to-r from-primary/10 to-sky-500/10 px-5 py-2 text-sm font-medium text-primary ring-1 ring-primary/20 transition-all duration-200 hover:from-primary/15 hover:to-sky-500/15 hover:ring-primary/40"
               >
                 Manage your account
