@@ -3,10 +3,10 @@ import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import DashboardPlaceholder from '@/components/dashboard/DashboardPlaceholder'
 import MoneyFlowPlaceholder from '@/components/dashboard/MoneyFlowPlaceholder'
 import PaymentCard from '@/components/payment-card/PaymentCard'
-import { buildCardStatusOverviewProps } from '@/mock-data/paymentCardMockData'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
+import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
 
-// Balance data requires a future transactions endpoint — show placeholders until then.
+//  placeholders.
 const BALANCE_PLACEHOLDER = {
   totalBalance: '—',
   currency: 'USD',
