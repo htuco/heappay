@@ -100,7 +100,7 @@ def test_get_missing_card_type_returns_404() -> None:
     client, _ = _build_client()
     response = client.get("/card-types/999")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Card type not found"
+    assert response.json()["message"] == "Card type not found"
 
 
 def test_create_card_type_returns_201() -> None:
@@ -114,7 +114,7 @@ def test_create_duplicate_card_type_returns_409() -> None:
     client, _ = _build_client()
     response = client.post("/card-types", json={"type_name": "debit", "vendor": "visa"})
     assert response.status_code == 409
-    assert response.json()["detail"] == "Card type/vendor combination already exists"
+    assert response.json()["message"] == "Card type/vendor combination already exists"
 
 
 def test_patch_card_type_returns_200() -> None:
@@ -128,14 +128,14 @@ def test_patch_missing_card_type_returns_404() -> None:
     client, _ = _build_client()
     response = client.patch("/card-types/999", json={"vendor": "amex"})
     assert response.status_code == 404
-    assert response.json()["detail"] == "Card type not found"
+    assert response.json()["message"] == "Card type not found"
 
 
 def test_patch_duplicate_combo_returns_409() -> None:
     client, _ = _build_client()
     response = client.patch("/card-types/1", json={"type_name": "credit", "vendor": "mastercard"})
     assert response.status_code == 409
-    assert response.json()["detail"] == "Card type/vendor combination already exists"
+    assert response.json()["message"] == "Card type/vendor combination already exists"
 
 
 def test_delete_unused_card_type_returns_204() -> None:
@@ -148,7 +148,7 @@ def test_delete_missing_card_type_returns_404() -> None:
     client, _ = _build_client()
     response = client.delete("/card-types/999")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Card type not found"
+    assert response.json()["message"] == "Card type not found"
 
 
 def test_delete_in_use_card_type_returns_409() -> None:
@@ -156,4 +156,4 @@ def test_delete_in_use_card_type_returns_409() -> None:
     fake_service.mark_in_use(1)
     response = client.delete("/card-types/1")
     assert response.status_code == 409
-    assert response.json()["detail"] == "Card type is in use and cannot be deleted"
+    assert response.json()["message"] == "Card type is in use and cannot be deleted"

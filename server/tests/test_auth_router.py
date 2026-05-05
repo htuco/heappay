@@ -1,0 +1,234 @@
+"""
+Tests for /auth endpoints.
+
+Focus: role fields (user_role_id, role_name) appear in every auth response
+that contains a user object — register, login, refresh, and /me.
+"""
+from datetime import datetime, timezone
+import os
+
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+os.environ.setdefault("ALGORITHM", "HS256")
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from main import create_app  # noqa: E402
+from routers.user import get_auth_service  # noqa: E402
+from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
+
+
+_NOW = datetime.now(timezone.utc)
+
+
+def _user_response(role_id: int = 2, role_name: str = "user") -> UserResponse:
+    return UserResponse(
+        id=42,
+        email="test@example.com",
+        first_name="Test",
+        last_name="User",
+        created_at=_NOW,
+        user_role_id=role_id,
+        role_name=role_name,
+    )
+
+
+def _token_response(role_id: int = 2, role_name: str = "user") -> TokenResponse:
+    return TokenResponse(
+        access_token="access.token.here",
+        refresh_token="refresh.token.here",
+        token_type="bearer",
+        user=_user_response(role_id, role_name),
+    )
+
+
+class _FakeAuthService:
+    def register(self, _payload):
+        return _token_response()
+
+    def login(self, _payload):
+        return _token_response()
+
+    def refresh(self, _token):
+        return _token_response()
+
+    def logout(self, _token):
+        return True
+
+    def get_me(self, _token):
+        return _token_response()
+
+
+class _FakeAuthServiceAdmin:
+    def login(self, _payload):
+        return _token_response(role_id=1, role_name="admin")
+
+    def get_me(self, _token):
+        return _token_response(role_id=1, role_name="admin")
+
+    def register(self, _payload):  # pragma: no cover
+        return _token_response(role_id=1, role_name="admin")
+
+    def refresh(self, _token):  # pragma: no cover
+        return _token_response(role_id=1, role_name="admin")
+
+    def logout(self, _token):  # pragma: no cover
+        return True
+
+
+def _build_client(fake_service=None) -> TestClient:
+    app = create_app()
+    svc = fake_service or _FakeAuthService()
+    app.dependency_overrides[get_auth_service] = lambda: svc
+    return TestClient(app)
+
+
+# ---------------------------------------------------------------------------
+# register
+# ---------------------------------------------------------------------------
+
+def test_register_returns_201_with_role_fields() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "password123",
+        },
+    )
+    assert resp.status_code == 201
+    user = resp.json()["data"]["user"]
+    assert user["user_role_id"] == 2
+    assert user["role_name"] == "user"
+
+
+def test_register_response_has_tokens() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "password123",
+        },
+    )
+    data = resp.json()["data"]
+    assert "access_token" in data
+    assert "refresh_token" in data
+
+
+# ---------------------------------------------------------------------------
+# login
+# ---------------------------------------------------------------------------
+
+def test_login_returns_200_with_role_fields() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/login",
+        json={"email": "test@example.com", "password": "password123"},
+    )
+    assert resp.status_code == 200
+    user = resp.json()["data"]["user"]
+    assert user["user_role_id"] == 2
+    assert user["role_name"] == "user"
+
+
+def test_login_admin_returns_admin_role() -> None:
+    client = _build_client(_FakeAuthServiceAdmin())
+    resp = client.post(
+        "/auth/login",
+        json={"email": "admin@example.com", "password": "password123"},
+    )
+    assert resp.status_code == 200
+    user = resp.json()["data"]["user"]
+    assert user["user_role_id"] == 1
+    assert user["role_name"] == "admin"
+
+
+def test_login_invalid_credentials_returns_401() -> None:
+    class _FailService(_FakeAuthService):
+        def login(self, _payload):
+            raise ValueError("Invalid email or password")
+
+    client = _build_client(_FailService())
+    resp = client.post(
+        "/auth/login",
+        json={"email": "bad@example.com", "password": "wrongpassword"},
+    )
+    assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# /me
+# ---------------------------------------------------------------------------
+
+def test_me_returns_200_with_role_fields() -> None:
+    client = _build_client()
+    resp = client.get(
+        "/auth/me",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    user = resp.json()["data"]["user"]
+    assert "user_role_id" in user
+    assert "role_name" in user
+
+
+def test_me_admin_returns_admin_role() -> None:
+    client = _build_client(_FakeAuthServiceAdmin())
+    resp = client.get(
+        "/auth/me",
+        headers={"Authorization": "Bearer admin.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["data"]["user"]["role_name"] == "admin"
+
+
+def test_me_without_token_returns_401() -> None:
+    client = _build_client()
+    resp = client.get("/auth/me")
+    assert resp.status_code == 401
+
+
+def test_me_invalid_token_returns_401() -> None:
+    class _NoUserService(_FakeAuthService):
+        def get_me(self, _token):
+            return None
+
+    client = _build_client(_NoUserService())
+    resp = client.get(
+        "/auth/me",
+        headers={"Authorization": "Bearer expired.or.invalid"},
+    )
+    assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# refresh
+# ---------------------------------------------------------------------------
+
+def test_refresh_returns_200_with_role_fields() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/refresh",
+        json={"refresh_token": "refresh.token.here"},
+    )
+    assert resp.status_code == 200
+    user = resp.json()["data"]["user"]
+    assert "user_role_id" in user
+    assert "role_name" in user
+
+
+def test_refresh_invalid_token_returns_401() -> None:
+    class _BadRefreshService(_FakeAuthService):
+        def refresh(self, _token):
+            return None
+
+    client = _build_client(_BadRefreshService())
+    resp = client.post(
+        "/auth/refresh",
+        json={"refresh_token": "invalid.refresh"},
+    )
+    assert resp.status_code == 401

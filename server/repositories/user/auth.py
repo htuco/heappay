@@ -61,6 +61,12 @@ class UserAuthRepository:
         stmt = select(User).where(User.user_id == user_id)
         return self._db.scalars(stmt).first()
 
+    def get_role_name_for_user(self, user_role_id: int) -> str:
+        role_name = self._db.execute(
+            select(UserRole.role_name).where(UserRole.role_id == user_role_id)
+        ).scalar_one_or_none()
+        return role_name or "user"
+
     def get_user_by_refresh_token(self, refresh_token: str) -> User | None:
         stmt = select(User).where(User.refresh_token == refresh_token)
         return self._db.scalars(stmt).first()
