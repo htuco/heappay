@@ -48,7 +48,7 @@ function isFutureExpiry(value) {
   return expiryDate > today
 }
 
-const emptyForm = { number: "", name: "", expiry: "", cvv: "" }
+const emptyForm = { number: "", expiry: "", cvv: "" }
 
 export default function AddCardModal({ onSubmit, isSubmitting = false, submitError = null }) {
   const [open, setOpen] = React.useState(false)
@@ -68,7 +68,6 @@ export default function AddCardModal({ onSubmit, isSubmitting = false, submitErr
   function validate() {
     const e = {}
     if (form.number.replace(/\s/g, "").length < 16) e.number = "Enter a valid 16-digit card number."
-    if (!form.name.trim()) e.name = "Cardholder name is required."
     if (!isFutureExpiry(form.expiry)) e.expiry = "Enter a future expiry in MM/YY format."
     if (form.cvv.length !== 3) e.cvv = "CVV must be exactly 3 digits."
     return e
@@ -85,7 +84,6 @@ export default function AddCardModal({ onSubmit, isSubmitting = false, submitErr
     try {
       await onSubmit?.({
         number: form.number,
-        name: form.name,
         expiry: form.expiry,
         cvv: form.cvv,
         type: cardType ?? "Unknown",
@@ -147,20 +145,6 @@ export default function AddCardModal({ onSubmit, isSubmitting = false, submitErr
             </div>
             {errors.number && <p className="text-xs text-destructive">{errors.number}</p>}
           </div>
-
-          {/* Cardholder name */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="card-name">Cardholder Name</Label>
-            <Input
-              id="card-name"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="John Doe"
-              className={errors.name ? "border-destructive" : ""}
-            />
-            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-          </div>
-
           {/* Expiry + CVV */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
