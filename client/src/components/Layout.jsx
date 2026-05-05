@@ -1,11 +1,8 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link } from 'react-router-dom'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
 
 export default function Layout() {
-  const location = useLocation()
-  const isLanding = location.pathname === '/'
-
   return (
     <div className="w-screen h-screen bg-background flex flex-col gap-5 p-5">
       
@@ -32,12 +29,9 @@ export default function Layout() {
       {/* Body */}
       <div className="flex flex-1 gap-5 overflow-hidden">
         
-        {/* Sidebar – hidden on landing page */}
-        {!isLanding && (
-          <aside className="w-64 text-sidebar-foreground rounded-sm px-5 py-7 border bg-card">
-            <Navbar />
-          </aside>
-        )}
+        <aside className="w-64 text-sidebar-foreground rounded-sm px-5 py-7 border bg-card">
+          <Navbar />
+        </aside>
 
         {/* Content area */}
         <div className="flex-1 flex flex-col gap-5 overflow-hidden">
