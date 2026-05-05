@@ -3,27 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { listCards } from '@/services/cardsService'
 import cardTypesService from '@/services/cardTypesService'
 import cardStatusesService from '@/services/cardStatusesService'
-
-const DISABLED_STATUSES = new Set(['frozen', 'expired', 'cancelled'])
-
-function normalizeCards(rawCards, typesById, statusesById, holderName) {
-  return rawCards.map((card) => {
-    const statusName = statusesById[card.status_id]?.status_name ?? ''
-    const vendor = (typesById[card.card_type_id]?.vendor ?? '').toLowerCase()
-
-    return {
-      id: String(card.card_id),
-      card: {
-        cardHolderName: holderName,
-        cardNumber: card.masked_card_number,
-        expiryDate: card.expires_at,
-        brand: vendor || 'unknown',
-        isActive: statusName === 'active',
-        isDisabled: DISABLED_STATUSES.has(statusName),
-      },
-    }
-  })
-}
+import { getUserDisplayName, normalizeApiCards } from '@/utils/cardApiAdapter'
 
 export function useDashboardCards() {
   const { user, isLoading: authLoading } = useAuth()
@@ -34,32 +14,42 @@ export function useDashboardCards() {
   useEffect(() => {
     // Keep skeleton up while auth is still bootstrapping.
     if (authLoading) return
+
+    let ignore = false
+
     if (!user?.id) {
-      setIsLoading(false)
-      return
+      Promise.resolve().then(() => {
+        if (!ignore) setIsLoading(false)
+      })
+      return () => {
+        ignore = true
+      }
     }
 
-    setIsLoading(true)
-    setError(null)
+    Promise.resolve().then(() => {
+      if (ignore) return
+      setIsLoading(true)
+      setError(null)
+    })
 
     Promise.all([
       listCards({ user_id: user.id }),
       cardTypesService.list(),
       cardStatusesService.list(),
-    ])
+      ])
       .then(([rawCards, cardTypes, cardStatuses]) => {
-        const typesById = Object.fromEntries(
-          cardTypes.map((t) => [t.card_type_id, t])
-        )
-        const statusesById = Object.fromEntries(
-          cardStatuses.map((s) => [s.card_status_id, s])
-        )
-        const holderName = `${user.first_name} ${user.last_name}`
-        setCards(normalizeCards(rawCards, typesById, statusesById, holderName))
+        const holderName = getUserDisplayName(user)
+        setCards(normalizeApiCards(rawCards, cardTypes, cardStatuses, holderName))
       })
       .catch(setError)
-      .finally(() => setIsLoading(false))
-  }, [authLoading, user?.id, user?.first_name, user?.last_name])
+      .finally(() => {
+        if (!ignore) setIsLoading(false)
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [authLoading, user])
 
   return { cards, isLoading, error }
 }
