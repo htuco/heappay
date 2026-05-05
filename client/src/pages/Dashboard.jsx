@@ -16,16 +16,23 @@ const BALANCE_PLACEHOLDER = {
 
 function PaymentCardSkeleton() {
   return (
-    <div className="animate-pulse rounded-2xl bg-muted aspect-[1.586/1] w-full max-w-sm p-6 space-y-4">
-      <div className="flex justify-between">
+    <div className="animate-pulse relative aspect-[1.58/1] min-h-[210px] w-full min-w-0 overflow-hidden rounded-3xl bg-muted p-4 sm:p-5 md:p-6 flex flex-col">
+      <div className="flex items-start justify-between gap-3">
         <div className="h-3 w-20 rounded bg-muted-foreground/20" />
-        <div className="h-7 w-12 rounded bg-muted-foreground/20" />
+        <div className="h-8 w-14 rounded-lg bg-muted-foreground/20" />
       </div>
-      <div className="h-5 w-40 rounded bg-muted-foreground/20 mt-8" />
-      <div className="h-3 w-28 rounded bg-muted-foreground/20" />
-      <div className="flex justify-between mt-4">
-        <div className="h-3 w-24 rounded bg-muted-foreground/20" />
-        <div className="h-3 w-12 rounded bg-muted-foreground/20" />
+      <div className="mt-auto space-y-3 pb-2">
+        <div className="h-5 w-40 rounded bg-muted-foreground/20" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <div className="h-2 w-12 rounded bg-muted-foreground/15" />
+            <div className="h-3 w-24 rounded bg-muted-foreground/20" />
+          </div>
+          <div className="space-y-1 text-right">
+            <div className="h-2 w-10 rounded bg-muted-foreground/15 ml-auto" />
+            <div className="h-3 w-12 rounded bg-muted-foreground/20 ml-auto" />
+          </div>
+        </div>
       </div>
     </div>
   )
