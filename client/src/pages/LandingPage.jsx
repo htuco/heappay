@@ -2,7 +2,7 @@ import logo from '@/assets/logo.png'
 
 export default function LandingPage() {
   return (
-    <div className="flex h-full items-center justify-center">
+    <div className="flex min-h-screen w-full items-center justify-center bg-background">
       <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-8 text-center px-4">
         {/* Glow */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
