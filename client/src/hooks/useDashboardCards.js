@@ -34,20 +34,24 @@ export function useDashboardCards() {
   useEffect(() => {
     // Keep skeleton up while auth is still bootstrapping.
     if (authLoading) return
-    if (!user?.id) {
-      setIsLoading(false)
-      return
-    }
 
-    setIsLoading(true)
-    setError(null)
+    let cancelled = false
+    const loadCards = async () => {
+      if (!user?.id) {
+        setIsLoading(false)
+        return
+      }
 
-    Promise.all([
-      listCards({ user_id: user.id }),
-      cardTypesService.list(),
-      cardStatusesService.list(),
-    ])
-      .then(([rawCards, cardTypes, cardStatuses]) => {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const [rawCards, cardTypes, cardStatuses] = await Promise.all([
+          listCards({ user_id: user.id }),
+          cardTypesService.list(),
+          cardStatusesService.list(),
+        ])
+
         const typesById = Object.fromEntries(
           cardTypes.map((t) => [t.card_type_id, t])
         )
@@ -55,10 +59,20 @@ export function useDashboardCards() {
           cardStatuses.map((s) => [s.card_status_id, s])
         )
         const holderName = `${user.first_name} ${user.last_name}`
-        setCards(normalizeCards(rawCards, typesById, statusesById, holderName))
-      })
-      .catch(setError)
-      .finally(() => setIsLoading(false))
+        if (!cancelled) {
+          setCards(normalizeCards(rawCards, typesById, statusesById, holderName))
+        }
+      } catch (err) {
+        if (!cancelled) setError(err)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    loadCards()
+    return () => {
+      cancelled = true
+    }
   }, [authLoading, user?.id, user?.first_name, user?.last_name])
 
   return { cards, isLoading, error }

@@ -6,22 +6,20 @@ import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 
 export default function RegisterPage() {
 	// Theme state and persistence
-	const [isDark, setIsDark] = useState(true)
-
-	useEffect(() => {
+	const [isDark, setIsDark] = useState(() => {
 		const savedTheme = localStorage.getItem('theme')
 		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 		const theme = savedTheme || (prefersDark ? 'dark' : 'light')
-		
-		setIsDark(theme === 'dark')
-		document.documentElement.classList.toggle('dark', theme === 'dark')
-	}, [])
+		return theme === 'dark'
+	})
+
+	useEffect(() => {
+		document.documentElement.classList.toggle('dark', isDark)
+		localStorage.setItem('theme', isDark ? 'dark' : 'light')
+	}, [isDark])
 
 	const toggleTheme = () => {
-		const newTheme = isDark ? 'light' : 'dark'
-		setIsDark(!isDark)
-		document.documentElement.classList.toggle('dark')
-		localStorage.setItem('theme', newTheme)
+		setIsDark((current) => !current)
 	}
 	return (
 		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[35%_65%]">

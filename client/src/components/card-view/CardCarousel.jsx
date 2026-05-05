@@ -21,10 +21,6 @@ export default function CardCarousel({ items }) {
   const count = items.length
 
   useEffect(() => {
-    setActiveIndex(0)
-  }, [count])
-
-  useEffect(() => {
     return () => {
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     }
