@@ -3,7 +3,7 @@ import { Wallet } from 'lucide-react'
 import AddCardModal from '@/components/AddCardModal'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 
-export default function WalletHero({ cards, onAddCard }) {
+export default function WalletHero({ cards, onAddCard, isSaving = false, saveError = null }) {
   return (
     <header className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6 lg:flex-row lg:items-start lg:justify-between">
       <div className="space-y-3">
@@ -24,7 +24,7 @@ export default function WalletHero({ cards, onAddCard }) {
 
       <div className="flex flex-wrap items-center gap-3">
         <AllCardsModal items={cards} />
-        <AddCardModal onSubmit={onAddCard} />
+        <AddCardModal onSubmit={onAddCard} isSubmitting={isSaving} submitError={saveError} />
       </div>
     </header>
   )
