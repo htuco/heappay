@@ -75,12 +75,15 @@ class UserAuthService:
         user = self.repo.get_user_by_id(user_id)
         if not user:
             raise ValueError("User not found")
+        role_name = self.repo.get_role_name_for_user(user.user_role_id)
         user_response = UserResponse(
             id=user.user_id,
             email=user.email,
             first_name=user.first_name,
             last_name=user.last_name,
             created_at=user.created_at,
+            user_role_id=user.user_role_id,
+            role_name=role_name,
         )
         return TokenResponse(
             access_token=self.create_access_token(user_id),
@@ -141,12 +144,15 @@ class UserAuthService:
         if not user:
             return None
 
+        role_name = self.repo.get_role_name_for_user(user.user_role_id)
         user_response = UserResponse(
             id=user.user_id,
             email=user.email,
             first_name=user.first_name,
             last_name=user.last_name,
             created_at=user.created_at,
+            user_role_id=user.user_role_id,
+            role_name=role_name,
         )
         return TokenResponse(
             access_token=token,
