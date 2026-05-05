@@ -12,6 +12,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
     "@lottiefiles/dotlottie-react": "^0.18.7",
+    "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.15.2",
     "class-variance-authority": "^0.7.1",
@@ -20,6 +21,7 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-redux": "^9.2.0",
     "react-router-dom": "^7.13.1",
     "shadcn": "^4.0.8",
     "tailwind-merge": "^3.5.0",
