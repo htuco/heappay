@@ -117,11 +117,10 @@ export default function LoginForm() {
 								disabled={loading}
 								label="Remember me"
 							/>
-							<button 
+							<button
 								type="button"
 								onClick={() => navigate('/forgot-password')}
-								className="text-[15px] font-normal" 
-								style={{ color: 'var(--accent)' }}
+								className="text-[15px] font-medium text-primary hover:underline"
 							>
 								Forgot password
 							</button>

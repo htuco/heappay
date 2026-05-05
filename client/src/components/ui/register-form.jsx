@@ -202,8 +202,8 @@ export default function RegisterForm() {
 									<button
 										type="button"
 										onClick={() => navigate('/terms-of-service')}
-										className="font-semibold hover:opacity-80 transition-opacity"
-										style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+										className="font-semibold text-primary hover:underline"
+										style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
 									>
 										Terms of Service
 									</button>
