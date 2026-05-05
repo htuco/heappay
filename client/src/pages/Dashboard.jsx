@@ -14,11 +14,29 @@ const BALANCE_PLACEHOLDER = {
   monthlyAmount: '—',
 }
 
-function CardsSkeleton() {
+function PaymentCardSkeleton() {
   return (
-    <div className="animate-pulse space-y-3">
-      <div className="h-48 rounded-2xl bg-muted" />
-      <div className="h-4 w-1/2 rounded bg-muted" />
+    <div className="animate-pulse rounded-2xl bg-muted aspect-[1.586/1] w-full max-w-sm p-6 space-y-4">
+      <div className="flex justify-between">
+        <div className="h-3 w-20 rounded bg-muted-foreground/20" />
+        <div className="h-7 w-12 rounded bg-muted-foreground/20" />
+      </div>
+      <div className="h-5 w-40 rounded bg-muted-foreground/20 mt-8" />
+      <div className="h-3 w-28 rounded bg-muted-foreground/20" />
+      <div className="flex justify-between mt-4">
+        <div className="h-3 w-24 rounded bg-muted-foreground/20" />
+        <div className="h-3 w-12 rounded bg-muted-foreground/20" />
+      </div>
+    </div>
+  )
+}
+
+function CardStatusSkeleton() {
+  return (
+    <div className="animate-pulse grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-28 rounded-2xl bg-muted" />
+      ))}
     </div>
   )
 }
@@ -48,7 +66,7 @@ export default function DashboardPage() {
           />
           <MoneyFlowPlaceholder />
           {isLoading ? (
-            <CardsSkeleton />
+            <CardStatusSkeleton />
           ) : error ? (
             <p className="text-sm text-destructive">
               Could not load card data. Please refresh.
@@ -69,7 +87,7 @@ export default function DashboardPage() {
               </h2>
             </header>
             {isLoading ? (
-              <div className="animate-pulse h-48 rounded-2xl bg-muted" />
+              <PaymentCardSkeleton />
             ) : primaryCard ? (
               <PaymentCard card={primaryCard.card} />
             ) : (

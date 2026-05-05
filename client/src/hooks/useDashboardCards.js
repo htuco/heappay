@@ -26,12 +26,14 @@ function normalizeCards(rawCards, typesById, statusesById, holderName) {
 }
 
 export function useDashboardCards() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const [cards, setCards] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    // Keep skeleton up while auth is still bootstrapping.
+    if (authLoading) return
     if (!user?.id) {
       setIsLoading(false)
       return
@@ -57,7 +59,7 @@ export function useDashboardCards() {
       })
       .catch(setError)
       .finally(() => setIsLoading(false))
-  }, [user?.id, user?.first_name, user?.last_name])
+  }, [authLoading, user?.id, user?.first_name, user?.last_name])
 
   return { cards, isLoading, error }
 }
