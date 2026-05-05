@@ -27,6 +27,12 @@ export async function getMe() {
 	return data.data.user
 }
 
-export function logout() {
-	clearAuthSession()
+export async function logout() {
+	try {
+		await api.post('/auth/logout')
+	} catch {
+		// Session cleanup must still happen even if server logout fails.
+	} finally {
+		clearAuthSession()
+	}
 }
