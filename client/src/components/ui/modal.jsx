@@ -25,12 +25,11 @@ const Modal = forwardRef(
       if (e.target === e.currentTarget) onClose()
     }
 
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose()
-    }
-
     useEffect(() => {
       if (!isOpen) return
+      const handleKeyDown = (e) => {
+        if (e.key === "Escape") onClose()
+      }
       document.addEventListener("keydown", handleKeyDown)
       return () => document.removeEventListener("keydown", handleKeyDown)
     }, [isOpen, onClose])
