@@ -2,6 +2,7 @@ import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import DashboardPlaceholder from '@/components/dashboard/DashboardPlaceholder'
 import MoneyFlowPlaceholder from '@/components/dashboard/MoneyFlowPlaceholder'
+import QuickActions from '@/components/dashboard/QuickActions'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import PaymentCard from '@/components/payment-card/PaymentCard'
 import {
@@ -12,46 +13,37 @@ import {
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Welcome back! Here&apos;s your account overview.
-        </p>
-      </header>
-
-      <section className="grid gap-4 xl:grid-cols-12 xl:gap-5">
-        <div className="space-y-4 xl:col-span-8">
+      {/* Row 1: Balance (2/3) + Payment Card (1/3) */}
+      <section className="grid items-stretch gap-5 xl:grid-cols-3">
+        <div className="xl:col-span-2">
           <TotalBalanceWidget
             totalBalance={dashboardMockData.balance.totalBalance}
-            currency={dashboardMockData.balance.currency}
-            monthlyGrowth={dashboardMockData.balance.monthlyGrowth}
-            monthlyAmount={dashboardMockData.balance.monthlyAmount}
+            todaysChange={dashboardMockData.balance.todaysChange}
           />
-          <MoneyFlowPlaceholder />
-          <CardStatusOverview {...buildCardStatusOverviewProps(paymentCardMockData)} />
         </div>
+        <div className="flex h-full items-center justify-center">
+          <PaymentCard card={paymentCardMockData[0]?.card} />
+        </div>
+      </section>
 
-        <div className="space-y-4 xl:col-span-4">
-          <section className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm sm:p-5">
-            <header className="mb-4 space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Main Card
-              </p>
-              <h2 className="text-base font-semibold text-card-foreground sm:text-lg">
-                Primary payment method
-              </h2>
-            </header>
-            <PaymentCard card={paymentCardMockData[0]?.card} />
-          </section>
-
-          <DashboardPlaceholder
-            title="Quick Actions"
-            description="Transfer, pay bills, and card controls will be placed here in the next ticket."
+      {/* Row 2: Money Flow (2/3) + Quick Actions (1/3) */}
+      <section className="grid items-stretch gap-5 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <MoneyFlowPlaceholder
+            points={dashboardMockData.moneyFlow.points}
+            labels={dashboardMockData.moneyFlow.labels}
           />
+        </div>
+        <QuickActions />
+      </section>
 
+      {/* Row 3: Card Status (1/3) + Recent Activity (2/3) */}
+      <section className="grid items-stretch gap-5 xl:grid-cols-3">
+        <CardStatusOverview {...buildCardStatusOverviewProps(paymentCardMockData)} />
+        <div className="xl:col-span-2">
           <DashboardPlaceholder
             title="Recent Activity"
-            description="Latest transactions and alerts placeholder to preserve final dashboard balance."
+            items={dashboardMockData.recentActivity}
           />
         </div>
       </section>
