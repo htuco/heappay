@@ -7,17 +7,19 @@ import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
-import { getAuthToken } from './utils/authStorage'
+import { getAuthRefreshToken, getAuthToken } from './utils/authStorage'
 
 function ProtectedRoute({ children }) {
-  if (!getAuthToken()) {
+  const hasAccessToken = Boolean(getAuthToken())
+  const hasRefreshToken = Boolean(getAuthRefreshToken())
+  if (!hasAccessToken && !hasRefreshToken) {
     return <Navigate to="/login" replace />
   }
   return children
 }
 
 function PublicOnlyRoute({ children }) {
-  if (getAuthToken()) {
+  if (getAuthToken() || getAuthRefreshToken()) {
     return <Navigate to="/dashboard" replace />
   }
   return children
