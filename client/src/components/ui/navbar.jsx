@@ -19,7 +19,7 @@ function NavLinkItem({ item }) {
       to={item.path}
       end
       className={({ isActive }) =>
-        `nav-pill flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${
+        `nav-pill flex items-center gap-3 px-3 py-2.5 rounded-[15px] text-sm font-medium ${
           isActive
             ? 'bg-accent text-accent-foreground'
             : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
