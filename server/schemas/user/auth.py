@@ -31,6 +31,8 @@ class UserResponse(BaseModel):
     first_name: str
     last_name: str
     created_at: datetime
+    user_role_id: int
+    role_name: str
 
 
 class TokenResponse(BaseModel):

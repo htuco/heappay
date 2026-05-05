@@ -8,7 +8,7 @@ import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
-import { getAuthRefreshToken, getAuthToken } from './utils/authStorage'
+import { getAuthRefreshToken, getAuthToken, getAuthUser } from './utils/authStorage'
 import { useAppDispatch } from './store/hooks'
 import { fetchReferenceDataOnce } from './store/slices/referenceDataSlice'
 
@@ -17,6 +17,19 @@ function ProtectedRoute({ children }) {
   const hasRefreshToken = Boolean(getAuthRefreshToken())
   if (!hasAccessToken && !hasRefreshToken) {
     return <Navigate to="/login" replace />
+  }
+  return children
+}
+
+function AdminRoute({ children }) {
+  const hasAccessToken = Boolean(getAuthToken())
+  const hasRefreshToken = Boolean(getAuthRefreshToken())
+  if (!hasAccessToken && !hasRefreshToken) {
+    return <Navigate to="/login" replace />
+  }
+  const user = getAuthUser()
+  if (!user || user.role_name !== 'admin') {
+    return <Navigate to="/dashboard" replace />
   }
   return children
 }
@@ -37,12 +50,21 @@ export default function App() {
 
   return (
     <Routes>
+      {/* Standalone full-screen pages — no app shell */}
+      <Route
+        path="/"
+        element={
+          getAuthToken() || getAuthRefreshToken()
+            ? <Navigate to="/dashboard" replace />
+            : <LandingPage />
+        }
+      />
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
 
+      {/* App shell routes */}
       <Route element={<Layout />}>
-        <Route index element={<LandingPage />} />
-        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

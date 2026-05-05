@@ -157,7 +157,7 @@ def test_get_missing_user_returns_404() -> None:
     client, _ = _build_client()
     response = client.get("/users/999")
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.json()["message"] == "User not found"
 
 
 def test_create_user_returns_201() -> None:
@@ -192,7 +192,7 @@ def test_create_duplicate_email_returns_409() -> None:
         },
     )
     assert response.status_code == 409
-    assert response.json()["detail"] == "Email already exists"
+    assert response.json()["message"] == "Email already exists"
 
 
 def test_create_invalid_user_role_returns_400() -> None:
@@ -209,7 +209,7 @@ def test_create_invalid_user_role_returns_400() -> None:
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid user_role_id"
+    assert response.json()["message"] == "Invalid user_role_id"
 
 
 def test_create_invalid_status_returns_400() -> None:
@@ -226,7 +226,7 @@ def test_create_invalid_status_returns_400() -> None:
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid status_id"
+    assert response.json()["message"] == "Invalid status_id"
 
 
 def test_update_user_returns_200() -> None:
@@ -240,21 +240,21 @@ def test_update_duplicate_email_returns_409() -> None:
     client, _ = _build_client()
     response = client.patch("/users/1", json={"email": "ana@example.com"})
     assert response.status_code == 409
-    assert response.json()["detail"] == "Email already exists"
+    assert response.json()["message"] == "Email already exists"
 
 
 def test_update_invalid_fk_returns_400() -> None:
     client, _ = _build_client()
     response = client.patch("/users/1", json={"status_id": 999})
     assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid status_id"
+    assert response.json()["message"] == "Invalid status_id"
 
 
 def test_update_missing_user_returns_404() -> None:
     client, _ = _build_client()
     response = client.patch("/users/999", json={"first_name": "Ghost"})
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.json()["message"] == "User not found"
 
 
 def test_delete_user_soft_deletes_and_returns_204() -> None:
@@ -268,4 +268,4 @@ def test_delete_missing_user_returns_404() -> None:
     client, _ = _build_client()
     response = client.delete("/users/999")
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.json()["message"] == "User not found"

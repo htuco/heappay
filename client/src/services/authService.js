@@ -1,5 +1,5 @@
 import api from '@/utils/api'
-import { clearAuthSession, setAuthUser, writeAuthTokens } from '@/utils/authStorage'
+import { clearAuthSession, getAuthRememberPreference, setAuthUser, writeAuthTokens } from '@/utils/authStorage'
 
 export async function register({ firstName, lastName, email, password }) {
 	const { data } = await api.post('/auth/register', {
@@ -24,7 +24,9 @@ export async function login({ email, password, remember = true }) {
 
 export async function getMe() {
 	const { data } = await api.get('/auth/me')
-	return data.data.user
+	const user = data.data.user
+	setAuthUser(user, { remember: getAuthRememberPreference() })
+	return user
 }
 
 export async function logout() {

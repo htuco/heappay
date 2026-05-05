@@ -31,5 +31,8 @@ export function useAuth() {
 
 	const logout = useCallback(() => dispatch(logoutUser()).unwrap(), [dispatch])
 
-	return { user, isLoading, error, login, register, logout }
+	const isAdmin = user?.role_name === 'admin'
+	const hasRole = (roleName) => user?.role_name === roleName
+
+	return { user, isLoading, error, login, register, logout, isAdmin, hasRole }
 }
