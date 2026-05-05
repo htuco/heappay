@@ -1,5 +1,4 @@
 import LoginForm from '@/components/ui/login-form'
-import heroImage from '@/assets/hero.png'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
@@ -46,37 +45,25 @@ export default function LoginPage() {
 					className="absolute inset-0"
 					style={{
 						backgroundImage: isDark
-							? 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 74%, #000 26%), color-mix(in oklab, var(--accent) 88%, #000 12%), color-mix(in oklab, var(--accent) 68%, #000 32%))'
-							: 'linear-gradient(130deg, color-mix(in oklab, var(--accent) 50%, #fff 50%), color-mix(in oklab, var(--accent) 60%, #fff 40%), color-mix(in oklab, var(--accent) 45%, #fff 55%))',
+							? 'linear-gradient(130deg, color-mix(in oklab, var(--primary) 78%, #000 22%), color-mix(in oklab, var(--primary) 92%, #000 8%), color-mix(in oklab, var(--primary) 70%, #000 30%))'
+							: 'linear-gradient(130deg, color-mix(in oklab, var(--primary) 88%, #fff 12%), color-mix(in oklab, var(--primary) 100%, #fff 0%), color-mix(in oklab, var(--primary) 82%, #fff 18%))',
 					}}
 				/>
-				<div className="absolute inset-0 z-10 bg-linear-to-b from-transparent via-transparent to-black/20 dark:to-black/20 to-white/10" />
-				<div className="relative z-10 flex h-full min-h-80 items-center justify-center p-4 md:p-6 xl:p-8">
-					<div className="w-full max-w-xs md:max-w-none md:aspect-4/5">
-						<div className="relative h-full w-full">
-							<img
-								src={heroImage}
-								alt=""
-								aria-hidden="true"
-								className="h-full w-full object-contain opacity-80 blur-[1px] saturate-110"
-								draggable={false}
-							/>
-							<div className="absolute inset-0 rounded-none bg-background/0 backdrop-blur-md" />
-						</div>
-					</div>
-				</div>
+				<div className="auth-orb auth-orb-a" style={{ top: '-5%', left: '-5%', width: '560px', height: '560px', background: 'rgba(125, 211, 252, 0.95)' }} />
+				<div className="auth-orb auth-orb-b" style={{ bottom: '-8%', right: '-8%', width: '640px', height: '640px', background: 'rgba(129, 140, 248, 0.85)' }} />
+				<div className="auth-orb auth-orb-c" style={{ top: '35%', right: '20%', width: '440px', height: '440px', background: 'rgba(255, 255, 255, 0.7)' }} />
 
 				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 text-center text-white dark:text-white md:px-6 xl:px-8">
 					<div className="max-w-85">
 						<div className="mb-6 md:mb-8 flex justify-center gap-4 md:gap-6">
-							<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
-								<CreditCard className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
+							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border bg-white/25 border-white/40">
+								<CreditCard className="h-5 w-5 md:h-6 md:w-6 text-white" />
 							</div>
-							<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
-								<Send className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
+							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border bg-white/25 border-white/40">
+								<Send className="h-5 w-5 md:h-6 md:w-6 text-white" />
 							</div>
-							<div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border ${isDark ? 'bg-white/30 border-white/40' : 'bg-white/60 border-white/70'}`}>
-								<Shield className={`h-5 w-5 md:h-6 md:w-6 ${isDark ? 'text-white' : 'text-accent'}`} />
+							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border bg-white/25 border-white/40">
+								<Shield className="h-5 w-5 md:h-6 md:w-6 text-white" />
 							</div>
 						</div>
 						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight text-white dark:text-white">

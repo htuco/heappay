@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUpRight, Eye, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, Eye, EyeOff, TrendingUp } from 'lucide-react'
 
 export default function TotalBalanceWidget({
   totalBalance = '$12,450.00',
@@ -11,16 +11,16 @@ export default function TotalBalanceWidget({
   const visibleBalance = isBalanceVisible ? totalBalance : '••••••••'
 
   return (
-    <section className="relative w-full max-w-full min-w-0 overflow-hidden rounded-3xl border border-white/20 bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-700 p-6 text-white shadow-xl sm:p-8">
-      <div className="pointer-events-none absolute -top-20 right-0 h-56 w-56 rounded-full bg-white/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+    <section className="balance-shine relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600 p-7 text-white shadow-lg">
+      <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -left-12 h-40 w-40 rounded-full bg-cyan-300/20 blur-3xl" />
 
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="relative z-10 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
           <span className="shrink-0 rounded-xl border border-white/20 bg-white/10 p-2.5 backdrop-blur">
-            <TrendingUp className="h-4 w-4" />
+            <TrendingUp className="h-4 w-4" strokeWidth={2} />
           </span>
-          <p className="truncate text-sm font-medium text-white/90">Total Balance</p>
+          <p className="text-sm font-medium text-white/90">Total Balance</p>
         </div>
         <button
           type="button"
@@ -29,31 +29,34 @@ export default function TotalBalanceWidget({
           aria-label="Toggle balance visibility"
           aria-pressed={!isBalanceVisible}
         >
-          <Eye className="h-4 w-4" />
+          {isBalanceVisible ? (
+            <Eye className="h-4 w-4" strokeWidth={2} />
+          ) : (
+            <EyeOff className="h-4 w-4" strokeWidth={2} />
+          )}
         </button>
       </div>
 
-      <h2 className="relative z-10 mt-8 mb-7 break-words text-4xl font-bold tracking-tight sm:text-5xl md:text-[3.35rem]">
-        {visibleBalance}
-      </h2>
-      <p className="relative z-10 -mt-4 mb-6 text-sm font-medium text-white/80">{currency}</p>
+      <div className="relative z-10 mt-6">
+        <p className="tabular text-4xl font-bold tracking-tight leading-none text-white sm:text-5xl md:text-[3.35rem]">
+          {visibleBalance}
+        </p>
+        <p className="mt-3 text-sm font-medium text-white/80">{currency}</p>
+      </div>
 
-      <hr className="mb-6 border-white/25" />
+      <hr className="relative z-10 mt-6 mb-5 border-white/25" />
 
       <div className="relative z-10 flex flex-wrap items-center gap-4 sm:gap-6">
         <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur">
-          <ArrowUpRight className="h-4 w-4 text-green-300" />
-          <span className="font-semibold text-green-300">{monthlyGrowth}</span>
+          <ArrowUpRight className="h-4 w-4 text-green-300" strokeWidth={2.5} />
+          <span className="tabular font-semibold text-green-300">{monthlyGrowth}</span>
         </div>
 
-        <span
-          className="hidden h-8 w-px shrink-0 bg-white/25 sm:block"
-          aria-hidden
-        />
+        <span className="hidden h-8 w-px shrink-0 bg-white/25 sm:block" aria-hidden />
 
         <div className="min-w-0">
           <p className="text-xs text-white/80">This month</p>
-          <p className="font-semibold tracking-tight">{monthlyAmount}</p>
+          <p className="tabular font-semibold tracking-tight">{monthlyAmount}</p>
         </div>
       </div>
     </section>

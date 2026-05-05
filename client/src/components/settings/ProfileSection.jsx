@@ -3,17 +3,9 @@ import { Camera, UserRound } from 'lucide-react'
 
 import SettingsCard from '@/components/settings/SettingsCard'
 import ProfileField from '@/components/settings/ProfileField'
+import UserAvatar from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { initialProfile } from '@/lib/mockData'
-
-function getInitials(name) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 export default function ProfileSection() {
   const [profile, setProfile] = useState(initialProfile)
@@ -37,9 +29,14 @@ export default function ProfileSection() {
         <div className="rounded-[24px] border border-border bg-[linear-gradient(135deg,rgba(167,76,255,0.08),transparent_80%)] p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-primary text-lg font-semibold text-primary-foreground">
-                {getInitials(profile.fullName)}
-              </div>
+              <UserAvatar
+                user={{
+                  first_name: profile.fullName?.split(' ')[0],
+                  last_name: profile.fullName?.split(' ').slice(1).join(' '),
+                }}
+                className="h-16 w-16 rounded-3xl text-lg"
+              />
+
               <div>
                 <p className="text-sm font-semibold text-card-foreground">{profile.fullName}</p>
                 <p className="text-xs text-muted-foreground">@{profile.username}</p>

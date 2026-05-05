@@ -13,8 +13,7 @@ export default function AuthLinkLabel({
 			<button
 				type="button"
 				onClick={onAction}
-				style={{ color: 'var(--accent)' }}
-				className="font-semibold hover:opacity-80 transition-opacity"
+				className="font-semibold text-primary hover:underline"
 			>
 				{actionText}
 			</button>

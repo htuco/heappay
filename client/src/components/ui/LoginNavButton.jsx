@@ -1,6 +1,7 @@
-import { LogOut, User } from 'lucide-react'
+import { LogOut, ShieldCheck, User } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import UserAvatar from '@/components/ui/UserAvatar'
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -9,15 +10,9 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 
-function getInitials(user) {
-  const first = user?.first_name?.[0] ?? ''
-  const last = user?.last_name?.[0] ?? ''
-  return (first + last).toUpperCase() || '?'
-}
-
 export default function LoginNavButton() {
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
 
   const handleLogout = async () => {
     await logout()
@@ -31,23 +26,74 @@ export default function LoginNavButton() {
           <button
             type="button"
             aria-label="Open profile menu"
-            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted text-sm font-semibold text-foreground transition hover:bg-muted/80"
+            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full shadow-md shadow-primary/25 ring-2 ring-background transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 focus-visible:outline-none"
           >
-            {getInitials(user)}
+            <UserAvatar user={user} className="h-10 w-10 text-sm" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <div className="px-2 py-2">
-            <p className="text-sm font-semibold text-foreground">
-              {user.first_name} {user.last_name}
-            </p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+
+        <DropdownMenuContent align="end" sideOffset={10} className="w-90 overflow-hidden rounded-3xl bg-card p-0">
+          {/* Brand cover gradient with decorative glow */}
+          <div className="relative h-18 overflow-hidden bg-linear-to-br from-primary/20 via-sky-500/15 to-indigo-500/20">
+            <div className="pointer-events-none absolute -top-16 left-8 h-40 w-48 rounded-full bg-primary/25 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-16 right-2 h-36 w-40 rounded-full bg-sky-400/25 blur-3xl" />
+            <div className="pointer-events-none absolute top-2 right-12 h-20 w-20 rounded-full bg-indigo-400/15 blur-2xl" />
           </div>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem destructive onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Log out
+
+          {/* Centered profile section, avatar overlapping banner */}
+          <div className="flex flex-col items-center px-6 pb-6 text-center">
+            <div className="relative -mt-9">
+              {/* Decorative ring + avatar */}
+              <span className="absolute inset-0 -m-1 rounded-full bg-linear-to-br from-primary/30 via-sky-400/20 to-indigo-500/30 blur-md" />
+              <UserAvatar
+                user={user}
+                className="relative h-18 w-18 text-2xl ring-4 ring-card"
+              />
+              {isAdmin ? (
+                <span className="absolute -bottom-0.5 -right-0.5 inline-flex items-center justify-center rounded-full bg-card p-0.5">
+                  <span className="inline-flex items-center justify-center rounded-full bg-linear-to-br from-primary to-sky-500 p-1 text-primary-foreground">
+                    <ShieldCheck className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                </span>
+              ) : null}
+            </div>
+
+            <p className="mt-3 text-xl font-semibold text-foreground">
+              Hi, {user.first_name}!
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p>
+
+            <DropdownMenuItem asChild className="mt-5 p-0 focus:bg-transparent">
+              <Link
+                to="/settings"
+                className="group inline-flex cursor-pointer items-center gap-2 rounded-full bg-linear-to-r from-primary/10 to-sky-500/10 px-5 py-2 text-sm font-medium text-primary ring-1 ring-primary/20 transition-all duration-200 hover:from-primary/15 hover:to-sky-500/15 hover:ring-primary/40"
+              >
+                Manage your account
+                <span className="text-primary/60 transition-transform duration-200 group-hover:translate-x-0.5">
+                  →
+                </span>
+              </Link>
+            </DropdownMenuItem>
+          </div>
+
+          <DropdownMenuSeparator className="my-0" />
+
+          {/* Sign out row */}
+          <DropdownMenuItem
+            onClick={handleLogout}
+            className="mx-2 my-2 flex cursor-pointer items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-destructive/5 hover:text-destructive focus:bg-destructive/5 focus:text-destructive"
+          >
+            <LogOut className="h-4 w-4" strokeWidth={2} />
+            Sign out
           </DropdownMenuItem>
+
+          <div className="border-t border-border/60 px-5 py-3 text-center">
+            <p className="text-[11px] text-muted-foreground">
+              <span className="cursor-pointer hover:text-foreground transition-colors">Privacy policy</span>
+              <span className="mx-1.5 text-border">•</span>
+              <span className="cursor-pointer hover:text-foreground transition-colors">Terms of service</span>
+            </p>
+          </div>
         </DropdownMenuContent>
       </DropdownMenuRoot>
     )
