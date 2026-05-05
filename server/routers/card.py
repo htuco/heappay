@@ -43,7 +43,7 @@ def list_cards(
     user_id: int | None = Query(default=None, gt=0),
     status_id: int | None = Query(default=None, gt=0),
     card_type_id: int | None = Query(default=None, gt=0),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     service: CardService = Depends(get_card_service),
 ) -> list[CardResponse]:
@@ -62,7 +62,7 @@ def list_deleted_cards(
     user_id: int | None = Query(default=None, gt=0),
     status_id: int | None = Query(default=None, gt=0),
     card_type_id: int | None = Query(default=None, gt=0),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     service: CardService = Depends(get_card_service),
 ) -> list[CardResponse]:
