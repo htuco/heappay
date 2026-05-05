@@ -50,18 +50,22 @@ export function useAdminData() {
   useEffect(() => {
     if (authLoading) return
 
-    setIsLoading(true)
-    setError(null)
+    let cancelled = false
 
-    Promise.all([
-      usersService.list({ limit: 1000 }),
-      listCards({ limit: 1000 }),
-      cardTypesService.list(),
-      cardStatusesService.list(),
-      userRolesService.list(),
-      api.get('/user-statuses').then((r) => r.data),
-    ])
-      .then(([rawUsers, rawCards, cardTypes, cardStatuses, userRoles, userStatuses]) => {
+    const loadAdminData = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const [rawUsers, rawCards, cardTypes, cardStatuses, userRoles, userStatuses] = await Promise.all([
+          usersService.list({ limit: 1000 }),
+          listCards({ limit: 1000 }),
+          cardTypesService.list(),
+          cardStatusesService.list(),
+          userRolesService.list(),
+          api.get('/user-statuses').then((r) => r.data),
+        ])
+
         const rolesById = Object.fromEntries(
           userRoles.map((r) => [r.role_id, r])
         )
@@ -87,11 +91,21 @@ export function useAdminData() {
         )
 
         const result = buildCardAssignments(normalizedUsers, normalizedCards)
-        setUsersWithCards(result.usersWithCards)
-        setUnmatchedCards(result.unmatchedCards)
-      })
-      .catch(setError)
-      .finally(() => setIsLoading(false))
+        if (!cancelled) {
+          setUsersWithCards(result.usersWithCards)
+          setUnmatchedCards(result.unmatchedCards)
+        }
+      } catch (err) {
+        if (!cancelled) setError(err)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    loadAdminData()
+    return () => {
+      cancelled = true
+    }
   }, [authLoading])
 
   return { usersWithCards, unmatchedCards, isLoading, error }

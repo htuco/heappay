@@ -1,7 +1,7 @@
 import {
   cardStatusOverviewStatuses,
   cardStatusOverviewTitle,
-} from '@/mock-data/paymentCardMockData'
+} from '@/utils/cardStatusOverview'
 
 const dotClassMap = {
   active: 'bg-emerald-500',
