@@ -1,10 +1,34 @@
 import { AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react'
 import DashboardWidgetShell from '@/components/dashboard/DashboardWidgetShell'
-import {
-  cardStatusOverviewStatuses,
-  cardStatusOverviewThemeMap,
-  cardStatusOverviewTitle,
-} from '@/mock-data/paymentCardMockData'
+
+const cardStatusOverviewTitle = 'Card Status Overview'
+
+const cardStatusOverviewStatuses = [
+  { id: 'active', label: 'Active', icon: 'checkCircle' },
+  { id: 'disabled', label: 'Disabled', icon: 'alertTriangle' },
+  { id: 'inactive', label: 'Inactive', icon: 'shieldAlert' },
+]
+
+const cardStatusOverviewThemeMap = {
+  active: {
+    iconWrapperClass: 'bg-primary/10 text-primary',
+    chipClass: 'border-primary/25 bg-primary/10 text-primary',
+    progressTrackClass: 'bg-primary/15',
+    progressBarClass: 'bg-primary',
+  },
+  disabled: {
+    iconWrapperClass: 'bg-destructive/10 text-destructive',
+    chipClass: 'border-destructive/25 bg-destructive/10 text-destructive',
+    progressTrackClass: 'bg-destructive/15',
+    progressBarClass: 'bg-destructive',
+  },
+  inactive: {
+    iconWrapperClass: 'bg-secondary/20 text-secondary-foreground',
+    chipClass: 'border-secondary/30 bg-secondary/30 text-secondary-foreground',
+    progressTrackClass: 'bg-secondary/30',
+    progressBarClass: 'bg-secondary-foreground/70',
+  },
+}
 
 const iconMap = {
   checkCircle: CheckCircle2,
