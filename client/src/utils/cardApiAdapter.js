@@ -1,0 +1,94 @@
+const DISABLED_STATUSES = new Set(['frozen', 'expired', 'cancelled'])
+const ACTIVE_STATUS_NAME = 'active'
+const DEFAULT_CARD_TYPE_NAME = 'debit'
+
+function normalizeLookupName(value) {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+export function buildLookupById(rows, idKey) {
+  return Object.fromEntries(rows.map((row) => [row[idKey], row]))
+}
+
+export function getUserDisplayName(user) {
+  return [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim()
+}
+
+export function normalizeApiCard(card, typesById, statusesById, holderName) {
+  const statusName = normalizeLookupName(statusesById[card.status_id]?.status_name)
+  const vendor = normalizeLookupName(typesById[card.card_type_id]?.vendor)
+
+  return {
+    id: String(card.card_id),
+    source: card,
+    card: {
+      cardHolderName: holderName || 'Card holder',
+      cardNumber: card.masked_card_number,
+      expiryDate: card.expires_at,
+      brand: vendor || 'unknown',
+      isActive: statusName === ACTIVE_STATUS_NAME,
+      isDisabled: DISABLED_STATUSES.has(statusName),
+    },
+  }
+}
+
+export function normalizeApiCards(rawCards, cardTypes, cardStatuses, holderName) {
+  const typesById = buildLookupById(cardTypes, 'card_type_id')
+  const statusesById = buildLookupById(cardStatuses, 'card_status_id')
+
+  return rawCards.map((card) =>
+    normalizeApiCard(card, typesById, statusesById, holderName)
+  )
+}
+
+export function findCardStatusId(cardStatuses, statusName) {
+  return cardStatuses.find(
+    (status) => normalizeLookupName(status.status_name) === normalizeLookupName(statusName)
+  )?.card_status_id
+}
+
+export function findCardTypeId(cardTypes, vendor, typeName = DEFAULT_CARD_TYPE_NAME) {
+  const normalizedVendor = normalizeLookupName(vendor)
+  const normalizedTypeName = normalizeLookupName(typeName)
+
+  return cardTypes.find(
+    (cardType) =>
+      normalizeLookupName(cardType.vendor) === normalizedVendor &&
+      normalizeLookupName(cardType.type_name) === normalizedTypeName
+  )?.card_type_id
+}
+
+export function expiryInputToApiDate(expiry) {
+  const match = String(expiry ?? '').match(/^(\d{2})\/(\d{2})$/)
+  if (!match) return ''
+
+  const month = Number(match[1])
+  if (month < 1 || month > 12) return ''
+
+  const year = 2000 + Number(match[2])
+  const lastDay = new Date(year, month, 0).getDate()
+
+  return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+}
+
+export function buildCreateCardPayload({ cardInput, userId, cardTypes, cardStatuses }) {
+  const statusId = findCardStatusId(cardStatuses, ACTIVE_STATUS_NAME)
+  const cardTypeId = findCardTypeId(cardTypes, cardInput.type)
+
+  if (!statusId) {
+    throw new Error('Active card status is unavailable.')
+  }
+
+  if (!cardTypeId) {
+    throw new Error(`${cardInput.type} debit cards are unavailable.`)
+  }
+
+  return {
+    user_id: userId,
+    status_id: statusId,
+    card_type_id: cardTypeId,
+    card_numb: cardInput.number.replace(/\D/g, ''),
+    cvc: cardInput.cvv,
+    expires_at: expiryInputToApiDate(cardInput.expiry),
+  }
+}
