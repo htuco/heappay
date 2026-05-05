@@ -16,6 +16,7 @@ export const USER_STATUS_API_ERROR_CODES = Object.freeze({
  */
 
 /**
+ * Matches backend `UserStatusRead`.
  * @typedef {Object} UserStatus
  * @property {UserStatusId} id
  * @property {string} status_name

@@ -11,29 +11,33 @@ const ERROR_MESSAGE_BY_DETAIL = {
 }
 
 /**
+ * @param {import('axios').AxiosResponse | undefined} response
+ */
+function httpErrorText(response) {
+  const data = response?.data
+  if (typeof data?.message === 'string') return data.message
+  if (typeof data?.detail === 'string') return data.detail
+  return ''
+}
+
+/**
  * @param {unknown} rawError
  * @returns {import('../types/userStatus').UserStatusServiceError}
  */
 function mapUserStatusApiError(rawError) {
-  const error = /** @type {{ response?: { status?: number, data?: { detail?: unknown } }, message?: string }} */ (
+  const error = /** @type {{ response?: { status?: number, data?: unknown }, message?: string }} */ (
     rawError
   )
   const status = error?.response?.status
   const data = error?.response?.data
-  const detail = data?.detail ?? data?.details
-  const detailText =
-    typeof data?.message === 'string'
-      ? data.message
-      : typeof data?.detail === 'string'
-        ? data.detail
-        : ''
+  const msg = httpErrorText(error?.response)
 
-  if (detailText && ERROR_MESSAGE_BY_DETAIL[detailText]) {
+  if (msg && ERROR_MESSAGE_BY_DETAIL[msg]) {
     return {
-      code: ERROR_MESSAGE_BY_DETAIL[detailText],
+      code: ERROR_MESSAGE_BY_DETAIL[msg],
       status,
-      message: detailText,
-      details: detail,
+      message: msg,
+      details: data,
     }
   }
 
@@ -41,8 +45,8 @@ function mapUserStatusApiError(rawError) {
     return {
       code: USER_STATUS_API_ERROR_CODES.VALIDATION_ERROR,
       status,
-      message: getApiErrorMessage(error, 'Validation failed'),
-      details: detail,
+      message: msg || getApiErrorMessage(error, 'Validation failed'),
+      details: data,
     }
   }
 
@@ -50,17 +54,33 @@ function mapUserStatusApiError(rawError) {
     return {
       code: USER_STATUS_API_ERROR_CODES.NOT_FOUND,
       status,
-      message: getApiErrorMessage(error, 'User status not found'),
-      details: detail,
+      message: msg || 'User status not found.',
+      details: data,
     }
   }
 
   if (status === 409) {
+    if (msg.includes('already exists')) {
+      return {
+        code: USER_STATUS_API_ERROR_CODES.DUPLICATE_STATUS_NAME,
+        status,
+        message: msg || 'A user status with this name already exists.',
+        details: data,
+      }
+    }
+    if (msg.includes('assigned')) {
+      return {
+        code: USER_STATUS_API_ERROR_CODES.IN_USE,
+        status,
+        message: msg || 'User status is in use.',
+        details: data,
+      }
+    }
     return {
       code: USER_STATUS_API_ERROR_CODES.UNKNOWN_ERROR,
       status,
-      message: getApiErrorMessage(error, 'User status conflict'),
-      details: detail,
+      message: msg || getApiErrorMessage(error, 'User status conflict'),
+      details: data,
     }
   }
 
@@ -75,71 +95,80 @@ function mapUserStatusApiError(rawError) {
     code: USER_STATUS_API_ERROR_CODES.UNKNOWN_ERROR,
     status,
     message: getApiErrorMessage(error, 'User status request failed'),
-    details: detail,
+    details: data,
   }
 }
 
 export const userStatusesService = {
   /**
+   * GET /user-statuses — no query parameters.
    * @returns {Promise<import('../types/userStatus').UserStatus[]>}
    */
   async list() {
     try {
-      const response = await api.get('/user-statuses')
-      return response.data
+      const { data } = await api.get('/user-statuses')
+      return data
     } catch (error) {
       throw mapUserStatusApiError(error)
     }
   },
 
   /**
+   * GET /user-statuses/{statusId}
    * @param {number} statusId
    * @returns {Promise<import('../types/userStatus').UserStatus>}
    */
   async getById(statusId) {
     try {
-      const response = await api.get(`/user-statuses/${statusId}`)
-      return response.data
+      const { data } = await api.get(`/user-statuses/${statusId}`)
+      return data
     } catch (error) {
       throw mapUserStatusApiError(error)
     }
   },
 
   /**
+   * POST /user-statuses
    * @param {import('../types/userStatus').CreateUserStatusPayload} payload
    * @returns {Promise<import('../types/userStatus').UserStatus>}
    */
   async create(payload) {
     try {
-      const response = await api.post('/user-statuses', payload)
-      return response.data
+      const { data } = await api.post('/user-statuses', {
+        status_name: payload.status_name,
+      })
+      return data
     } catch (error) {
       throw mapUserStatusApiError(error)
     }
   },
 
   /**
+   * PATCH /user-statuses/{statusId}
    * @param {number} statusId
    * @param {import('../types/userStatus').UpdateUserStatusPayload} payload
    * @returns {Promise<import('../types/userStatus').UserStatus>}
    */
   async update(statusId, payload) {
     try {
-      const response = await api.patch(`/user-statuses/${statusId}`, payload)
-      return response.data
+      const { data } = await api.patch(`/user-statuses/${statusId}`, {
+        status_name: payload.status_name,
+      })
+      return data
     } catch (error) {
       throw mapUserStatusApiError(error)
     }
   },
 
   /**
+   * DELETE /user-statuses/{statusId}
    * @param {number} statusId
    * @returns {Promise<import('../types/userStatus').DeleteUserStatusResponse>}
    */
   async delete(statusId) {
     try {
-      const response = await api.delete(`/user-statuses/${statusId}`)
-      return response.data
+      const { data } = await api.delete(`/user-statuses/${statusId}`)
+      return data
     } catch (error) {
       throw mapUserStatusApiError(error)
     }
