@@ -41,18 +41,20 @@ function PublicOnlyRoute({ children }) {
 export default function App() {
   return (
     <Routes>
+      {/* Standalone full-screen pages — no app shell */}
+      <Route
+        path="/"
+        element={
+          getAuthToken() || getAuthRefreshToken()
+            ? <Navigate to="/dashboard" replace />
+            : <LandingPage />
+        }
+      />
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
 
+      {/* App shell routes */}
       <Route element={<Layout />}>
-        <Route
-          index
-          element={
-            getAuthToken() || getAuthRefreshToken()
-              ? <Navigate to="/dashboard" replace />
-              : <LandingPage />
-          }
-        />
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
