@@ -6,7 +6,7 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from schemas.user.auth import ChangePasswordRequest, LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from settings import get_settings
 
 
@@ -134,6 +134,15 @@ class UserAuthService:
             return False
         self.repo.clear_refresh_token(user_id)
         return True
+
+    def change_password(self, user_id: int, payload: ChangePasswordRequest) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if not user:
+            raise ValueError("USER_NOT_FOUND")
+        if not self.verify_password(payload.current_password, user.password_hash):
+            raise ValueError("WRONG_CURRENT_PASSWORD")
+        new_hash = self.hash_password(payload.new_password)
+        self.repo.update_password(user_id, new_hash)
 
     def get_me(self, token: str) -> TokenResponse | None:
         user_id = self.verify_access_token(token)

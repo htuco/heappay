@@ -86,3 +86,11 @@ class UserAuthRepository:
             .values(refresh_token=None)
         )
         self._db.commit()
+
+    def update_password(self, user_id: int, hashed_password: str) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(password_hash=hashed_password)
+        )
+        self._db.commit()

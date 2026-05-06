@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import AuthResponse, LoginRequest, RefreshRequest, RegisterRequest
+from schemas.user.auth import AuthResponse, ChangePasswordRequest, LoginRequest, RefreshRequest, RegisterRequest
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -70,6 +70,29 @@ def logout(
         raise Unauthorized("Invalid or expired token.")
 
     return AuthResponse(success=True, message="Logged out successfully", data=None)
+
+
+@router.post("/change-password", response_model=AuthResponse)
+def change_password(
+    payload: ChangePasswordRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.verify_access_token(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        service.change_password(user_id, payload)
+    except ValueError as exc:
+        if str(exc) == "WRONG_CURRENT_PASSWORD":
+            raise InvalidInput("Current password is incorrect.") from None
+        raise InvalidInput("Could not update password.") from None
+
+    return AuthResponse(success=True, message="Password updated successfully.", data=None)
 
 
 @router.get("/me", response_model=AuthResponse)
