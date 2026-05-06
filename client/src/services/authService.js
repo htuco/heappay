@@ -47,3 +47,10 @@ export async function changePassword({ currentPassword, newPassword }) {
 	})
 	return data
 }
+
+export async function deactivateAccount({ currentPassword }) {
+	const { data } = await api.post('/auth/deactivate', {
+		current_password: currentPassword,
+	})
+	return data
+}
