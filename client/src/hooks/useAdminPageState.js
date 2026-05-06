@@ -214,6 +214,7 @@ export default function useAdminPageState() {
     await usersService.update(userId, payload)
     refresh()
     setFeedbackToast('User updated successfully.')
+    setSelectedUserId(null)
   }
 
   async function handleCardUpdate(cardId, payload) {
