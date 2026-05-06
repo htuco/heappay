@@ -5,7 +5,7 @@ import { listCards } from '@/services/cardsService'
 import cardTypesService from '@/services/cardTypesService'
 import cardStatusesService from '@/services/cardStatusesService'
 import userRolesService from '@/services/userRolesService'
-import api from '@/utils/api'
+import userStatusesService from '@/services/userStatusesService'
 import { buildCardAssignments } from '@/utils/admin.utils'
 
 const DISABLED_CARD_STATUSES = new Set(['frozen', 'expired', 'cancelled'])
@@ -17,6 +17,8 @@ function normalizeUsers(rawUsers, rolesById, userStatusesById) {
     email: user.email,
     role: rolesById[user.user_role_id]?.role_name ?? 'user',
     status: userStatusesById[user.status_id]?.status_name ?? 'active',
+    roleId: user.user_role_id,
+    statusId: user.status_id,
     created_at: user.created_at,
   }))
 }
@@ -27,12 +29,15 @@ function normalizeCards(rawCards, cardTypesById, cardStatusesById, usersByNumeri
     const owner = usersByNumericId[card.user_id]
     return {
       id: String(card.card_id),
+      rawId: card.card_id,
+      statusId: card.status_id,
       userId: card.user_id,
       card: {
         cardHolderName: owner?.fullName ?? 'Unknown',
         cardNumber: card.masked_card_number,
         expiryDate: card.expires_at,
         brand: (cardTypesById[card.card_type_id]?.vendor ?? '').toLowerCase(),
+        statusName,
         isActive: statusName === 'active',
         isDisabled: DISABLED_CARD_STATUSES.has(statusName),
       },
@@ -44,8 +49,14 @@ export function useAdminData() {
   const { isLoading: authLoading } = useAuth()
   const [usersWithCards, setUsersWithCards] = useState([])
   const [unmatchedCards, setUnmatchedCards] = useState([])
+  const [userRoles, setUserRoles] = useState([])
+  const [userStatuses, setUserStatuses] = useState([])
+  const [cardStatuses, setCardStatuses] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const refresh = () => setRefreshKey((k) => k + 1)
 
   useEffect(() => {
     if (authLoading) return
@@ -57,26 +68,26 @@ export function useAdminData() {
       setError(null)
 
       try {
-        const [rawUsers, rawCards, cardTypes, cardStatuses, userRoles, userStatuses] = await Promise.all([
+        const [rawUsers, rawCards, cardTypes, cardStatusesList, userRolesList, userStatusesList] = await Promise.all([
           usersService.list({ limit: 1000 }),
           listCards({ limit: 1000 }),
           cardTypesService.list(),
           cardStatusesService.list(),
           userRolesService.list(),
-          api.get('/user-statuses').then((r) => r.data),
+          userStatusesService.list(),
         ])
 
         const rolesById = Object.fromEntries(
-          userRoles.map((r) => [r.role_id, r])
+          userRolesList.map((r) => [r.role_id, r])
         )
         const userStatusesById = Object.fromEntries(
-          userStatuses.map((s) => [s.id, s])
+          userStatusesList.map((s) => [s.id, s])
         )
         const cardTypesById = Object.fromEntries(
           cardTypes.map((t) => [t.card_type_id, t])
         )
         const cardStatusesById = Object.fromEntries(
-          cardStatuses.map((s) => [s.card_status_id, s])
+          cardStatusesList.map((s) => [s.card_status_id, s])
         )
 
         const normalizedUsers = normalizeUsers(rawUsers, rolesById, userStatusesById)
@@ -94,6 +105,9 @@ export function useAdminData() {
         if (!cancelled) {
           setUsersWithCards(result.usersWithCards)
           setUnmatchedCards(result.unmatchedCards)
+          setUserRoles(userRolesList)
+          setUserStatuses(userStatusesList)
+          setCardStatuses(cardStatusesList)
         }
       } catch (err) {
         if (!cancelled) setError(err)
@@ -106,7 +120,7 @@ export function useAdminData() {
     return () => {
       cancelled = true
     }
-  }, [authLoading])
+  }, [authLoading, refreshKey])
 
-  return { usersWithCards, unmatchedCards, isLoading, error }
+  return { usersWithCards, unmatchedCards, userRoles, userStatuses, cardStatuses, isLoading, error, refresh }
 }

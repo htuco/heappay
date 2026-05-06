@@ -1,21 +1,57 @@
+import { useState, useEffect } from 'react'
 import {
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogRoot,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
 import { getRoleBadgeVariant } from '@/utils/admin.utils'
 
-export default function UserDetailsDialog({ selectedUser, setSelectedUser }) {
+export default function UserDetailsDialog({ selectedUser, setSelectedUser, userRoles, userStatuses, onSave, isAdmin }) {
+  const [selectedRoleId, setSelectedRoleId] = useState('')
+  const [selectedStatusId, setSelectedStatusId] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (selectedUser) {
+      setSelectedRoleId(String(selectedUser.roleId ?? ''))
+      setSelectedStatusId(String(selectedUser.statusId ?? ''))
+      setError('')
+    }
+  }, [selectedUser])
+
+  async function handleSave() {
+    setIsSaving(true)
+    setError('')
+    try {
+      await onSave(selectedUser.id, {
+        user_role_id: Number(selectedRoleId),
+        status_id: Number(selectedStatusId),
+      })
+    } catch (err) {
+      setError(err?.message || 'Failed to update user.')
+      setIsSaving(false)
+      return
+    }
+    setIsSaving(false)
+  }
+
+  const roleOptions = userRoles.map((r) => ({ value: String(r.role_id), label: r.role_name }))
+  const statusOptions = userStatuses.map((s) => ({ value: String(s.id), label: s.status_name }))
+
   return (
     <DialogRoot open={Boolean(selectedUser)} onOpenChange={(open) => !open && setSelectedUser(null)}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>User Details</DialogTitle>
           <DialogDescription>
-            Preview mock user information and assigned cards for admin review.
+            View and manage user information.
           </DialogDescription>
         </DialogHeader>
 
@@ -60,6 +96,31 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser }) {
               </div>
             </div>
 
+            <div className="rounded-2xl border border-border bg-background p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Edit User</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Role</label>
+                  <Select
+                    value={selectedRoleId}
+                    onChange={(e) => setSelectedRoleId(e.target.value)}
+                    options={roleOptions}
+                    disabled={!isAdmin || isSaving}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Status</label>
+                  <Select
+                    value={selectedStatusId}
+                    onChange={(e) => setSelectedStatusId(e.target.value)}
+                    options={statusOptions}
+                    disabled={!isAdmin || isSaving}
+                  />
+                </div>
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+            </div>
+
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 User Cards (Miniature)
@@ -81,6 +142,15 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser }) {
             </div>
           </div>
         )}
+
+        <DialogFooter>
+          <Button
+            onClick={handleSave}
+            disabled={!isAdmin || isSaving}
+          >
+            {isSaving ? 'Saving…' : 'Save changes'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </DialogRoot>
   )

@@ -34,7 +34,7 @@ export default function AdminUsersPanel({
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-card-foreground">Admin Users</h2>
-          <p className="text-xs text-muted-foreground">Search and filter users (mock data)</p>
+          <p className="text-xs text-muted-foreground">Search and filter users</p>
         </div>
 
         <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">

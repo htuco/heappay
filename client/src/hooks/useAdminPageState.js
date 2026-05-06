@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom'
 import { CARD_PAGE_SIZE, USER_PAGE_SIZE } from '@/utils/admin.constants'
 import { useAdminData } from '@/hooks/useAdminData'
 import { getCardStatus } from '@/utils/admin.utils'
+import usersService from '@/services/usersService'
+import { updateCard, deleteCard } from '@/services/cardsService'
 
 function userMatchesChip(user, chip) {
   if (chip === 'all') return true
@@ -22,13 +24,14 @@ export default function useAdminPageState() {
   const [cardStatusFilter, setCardStatusFilterState] = useState('all')
   const [cardSort, setCardSortState] = useState('status-asc')
   const [selectedUserId, setSelectedUserId] = useState(null)
+  const [managedCard, setManagedCard] = useState(null)
   const [manualFocusedUserId, setManualFocusedUserId] = useState(null)
   const [showAllCards, setShowAllCards] = useState(false)
   const [userPage, setUserPageState] = useState(1)
   const [cardPage, setCardPageState] = useState(1)
   const [feedbackToast, setFeedbackToast] = useState('')
 
-  const { usersWithCards, unmatchedCards, isLoading, error } = useAdminData()
+  const { usersWithCards, unmatchedCards, userRoles, userStatuses, cardStatuses, isLoading, error, refresh } = useAdminData()
   const normalizedUserSearch = useMemo(() => userSearch.trim().toLowerCase(), [userSearch])
 
   const filteredUsersWithCards = useMemo(() => {
@@ -199,6 +202,35 @@ export default function useAdminPageState() {
     setSelectedUserId(user?.id ?? null)
   }
 
+  function openManageCard(cardItem) {
+    setManagedCard(cardItem)
+  }
+
+  function closeManageCard() {
+    setManagedCard(null)
+  }
+
+  async function handleUserSave(userId, payload) {
+    await usersService.update(userId, payload)
+    refresh()
+    setFeedbackToast('User updated successfully.')
+    setSelectedUserId(null)
+  }
+
+  async function handleCardUpdate(cardId, payload) {
+    await updateCard(cardId, payload)
+    refresh()
+    setFeedbackToast('Card updated successfully.')
+    closeManageCard()
+  }
+
+  async function handleCardDelete(cardId) {
+    await deleteCard(cardId)
+    refresh()
+    setFeedbackToast('Card deleted successfully.')
+    closeManageCard()
+  }
+
   function setUserPage(nextValueOrUpdater) {
     setUserPageState((currentPage) => {
       const requestedPage =
@@ -258,5 +290,14 @@ export default function useAdminPageState() {
     resetAllFilters,
     isLoading,
     error,
+    managedCard,
+    openManageCard,
+    closeManageCard,
+    handleUserSave,
+    handleCardUpdate,
+    handleCardDelete,
+    userRoles,
+    userStatuses,
+    cardStatuses,
   }
 }
