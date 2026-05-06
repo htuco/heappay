@@ -38,3 +38,12 @@ export async function logout() {
 		clearAuthSession()
 	}
 }
+
+export async function changePassword({ currentPassword, newPassword }) {
+	const { data } = await api.post('/auth/change-password', {
+		current_password: currentPassword,
+		new_password: newPassword,
+		confirm_password: newPassword,
+	})
+	return data
+}
