@@ -4,6 +4,7 @@ import { Bell, Eye, KeyRound, Paintbrush, ShieldCheck } from 'lucide-react'
 
 import ActionRow from '@/components/settings/ActionRow'
 import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
+import DeactivateAccountModal from '@/components/settings/DeactivateAccountModal'
 import ControlRow from '@/components/settings/ControlRow'
 import OptionGroup from '@/components/settings/OptionGroup'
 import SettingRow from '@/components/settings/SettingRow'
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button'
 export default function SettingsPage() {
   const navigate = useNavigate()
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
+  const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
   const [billingRemindersEnabled, setBillingRemindersEnabled] = useState(true)
   const [loginAlertsEnabled, setLoginAlertsEnabled] = useState(true)
   const [securityAlertChannel, setSecurityAlertChannel] = useState('Email')
@@ -66,6 +68,11 @@ export default function SettingsPage() {
         <ChangePasswordModal
           isOpen={isChangePasswordOpen}
           onClose={() => setIsChangePasswordOpen(false)}
+        />
+
+        <DeactivateAccountModal
+          isOpen={isDeactivateOpen}
+          onClose={() => setIsDeactivateOpen(false)}
         />
 
         <SettingsCard
@@ -197,11 +204,15 @@ export default function SettingsPage() {
             />
             <ActionRow
               label="Deactivate account"
-              value="Manual review"
-              hint="High-impact account actions should require confirmation and recovery steps."
+              value="Permanent"
+              hint="Sets deleted_at on your account. You will be signed out and cannot log back in."
               tone="danger"
               action={
-                <Button variant="destructive" className="w-full sm:w-auto">
+                <Button
+                  variant="destructive"
+                  className="w-full sm:w-auto"
+                  onClick={() => setIsDeactivateOpen(true)}
+                >
                   Deactivate
                 </Button>
               }
