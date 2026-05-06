@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, Eye, KeyRound, Paintbrush, ShieldCheck } from 'lucide-react'
 
 import ActionRow from '@/components/settings/ActionRow'
+import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
 import ControlRow from '@/components/settings/ControlRow'
 import OptionGroup from '@/components/settings/OptionGroup'
 import SettingRow from '@/components/settings/SettingRow'
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/button'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [billingRemindersEnabled, setBillingRemindersEnabled] = useState(true)
   const [loginAlertsEnabled, setLoginAlertsEnabled] = useState(true)
   const [securityAlertChannel, setSecurityAlertChannel] = useState('Email')
@@ -35,7 +37,11 @@ export default function SettingsPage() {
           title="Change Password"
           icon={KeyRound}
           description="Keep access secure with clear password hygiene and recovery controls."
-          action={<Button className="w-full sm:w-auto">Change Password</Button>}
+          action={
+            <Button className="w-full sm:w-auto" onClick={() => setIsChangePasswordOpen(true)}>
+              Change Password
+            </Button>
+          }
         >
           <div className="space-y-3">
             <SettingRow
@@ -50,12 +56,17 @@ export default function SettingsPage() {
               hint="Reset links go to your primary account email."
             />
             <SettingRow
-              label="Password requirements"
-              value="Enabled"
-              hint="Minimum length, complexity, and password reuse protection."
+              label="Password rules"
+              value="Min 8 · Max 255"
+              hint="No complexity requirements are enforced beyond minimum length."
             />
           </div>
         </SettingsCard>
+
+        <ChangePasswordModal
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
+        />
 
         <SettingsCard
           title="Notification Preferences"
