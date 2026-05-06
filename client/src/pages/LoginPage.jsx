@@ -3,6 +3,25 @@ import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 
+function DeactivatedNotice() {
+	const isDeactivated = new URLSearchParams(window.location.search).get('deactivated') === '1'
+	const [visible, setVisible] = useState(isDeactivated)
+	if (!visible) return null
+	return (
+		<div className="mx-6 mt-6 flex items-start justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+			<p>Your account has been deactivated. If this was a mistake, contact support.</p>
+			<button
+				type="button"
+				onClick={() => setVisible(false)}
+				className="shrink-0 font-semibold hover:underline"
+				aria-label="Dismiss"
+			>
+				Dismiss
+			</button>
+		</div>
+	)
+}
+
 export default function LoginPage() {
 	// Theme state and persistence TO:DO USE GLOBAL THEME SERVICE
 	const [isDark, setIsDark] = useState(() => {
@@ -38,6 +57,7 @@ export default function LoginPage() {
 			</button>
 
 			<div>
+				<DeactivatedNotice />
 				<LoginForm />
 			</div>
 			<div className="relative overflow-hidden bg-gradient-to-br from-background to-background">

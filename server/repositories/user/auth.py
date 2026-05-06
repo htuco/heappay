@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -92,5 +94,13 @@ class UserAuthRepository:
             update(User)
             .where(User.user_id == user_id)
             .values(password_hash=hashed_password)
+        )
+        self._db.commit()
+
+    def soft_delete_user(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(deleted_at=datetime.now(timezone.utc), refresh_token=None)
         )
         self._db.commit()

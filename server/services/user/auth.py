@@ -6,7 +6,7 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import ChangePasswordRequest, LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from schemas.user.auth import ChangePasswordRequest, DeactivateAccountRequest, LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from settings import get_settings
 
 
@@ -105,7 +105,7 @@ class UserAuthService:
 
     def login(self, login_data: LoginRequest) -> TokenResponse:
         user = self.repo.get_user_by_email(str(login_data.email))
-        if not user:
+        if not user or user.deleted_at is not None:
             raise ValueError("Invalid email or password")
 
         if not self.verify_password(login_data.password, user.password_hash):
@@ -143,6 +143,16 @@ class UserAuthService:
             raise ValueError("WRONG_CURRENT_PASSWORD")
         new_hash = self.hash_password(payload.new_password)
         self.repo.update_password(user_id, new_hash)
+
+    def deactivate_account(self, user_id: int, payload: DeactivateAccountRequest) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if not user:
+            raise ValueError("USER_NOT_FOUND")
+        if user.deleted_at is not None:
+            raise ValueError("ALREADY_DEACTIVATED")
+        if not self.verify_password(payload.current_password, user.password_hash):
+            raise ValueError("WRONG_CURRENT_PASSWORD")
+        self.repo.soft_delete_user(user_id)
 
     def get_me(self, token: str) -> TokenResponse | None:
         user_id = self.verify_access_token(token)

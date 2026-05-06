@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import AuthResponse, ChangePasswordRequest, LoginRequest, RefreshRequest, RegisterRequest
+from schemas.user.auth import AuthResponse, ChangePasswordRequest, DeactivateAccountRequest, LoginRequest, RefreshRequest, RegisterRequest
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -93,6 +93,32 @@ def change_password(
         raise InvalidInput("Could not update password.") from None
 
     return AuthResponse(success=True, message="Password updated successfully.", data=None)
+
+
+@router.post("/deactivate", response_model=AuthResponse)
+def deactivate(
+    payload: DeactivateAccountRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.verify_access_token(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        service.deactivate_account(user_id, payload)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "WRONG_CURRENT_PASSWORD":
+            raise InvalidInput("Current password is incorrect.") from None
+        if msg == "ALREADY_DEACTIVATED":
+            raise InvalidInput("Account is already deactivated.") from None
+        raise InvalidInput("Could not deactivate account.") from None
+
+    return AuthResponse(success=True, message="Account deactivated.", data=None)
 
 
 @router.get("/me", response_model=AuthResponse)
