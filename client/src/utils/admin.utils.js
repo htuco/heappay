@@ -23,6 +23,7 @@ export function deriveUsers(mockUsers) {
 }
 
 export function getCardStatus(card) {
+  if (card.statusName) return card.statusName
   if (card.isDisabled) return 'disabled'
   if (card.isActive) return 'active'
   return 'inactive'
@@ -36,7 +37,7 @@ export function getRoleBadgeVariant(role) {
 
 export function getStatusBadgeVariant(status) {
   if (status === 'active') return 'success'
-  if (status === 'disabled') return 'error'
+  if (status === 'expired' || status === 'cancelled' || status === 'frozen' || status === 'disabled') return 'error'
   if (status === 'inactive') return 'warning'
   return 'outline'
 }

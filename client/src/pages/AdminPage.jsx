@@ -2,10 +2,13 @@ import AdminCardsManagementPanel from '@/components/admin/AdminCardsManagementPa
 import AdminDemoToast from '@/components/admin/AdminDemoToast'
 import AdminKpiRow from '@/components/admin/AdminKpiRow'
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel'
+import ManageCardDialog from '@/components/admin/ManageCardDialog'
 import UserDetailsDialog from '@/components/admin/UserDetailsDialog'
 import useAdminPageState from '@/hooks/useAdminPageState'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function AdminPage() {
+  const { isAdmin } = useAuth()
   const {
     activeSection,
     usersPanel,
@@ -19,6 +22,15 @@ export default function AdminPage() {
     resetAllFilters,
     isLoading,
     error,
+    managedCard,
+    openManageCard,
+    closeManageCard,
+    handleUserSave,
+    handleCardUpdate,
+    handleCardDelete,
+    userRoles,
+    userStatuses,
+    cardStatuses,
   } = useAdminPageState()
 
   if (isLoading) {
@@ -53,7 +65,7 @@ export default function AdminPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold sm:text-3xl">Admin Dashboard</h1>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Manage users and cards with mock controls for the initial admin experience.
+          Manage users and cards.
         </p>
       </header>
 
@@ -92,14 +104,30 @@ export default function AdminPage() {
           unmatchedCards={cardsPanel.unmatchedCards}
           paginatedCards={cardsPanel.paginatedCards}
           resetAllFilters={resetAllFilters}
-          setFeedbackToast={setFeedbackToast}
+          onManageCard={openManageCard}
           cardPage={cardsPanel.cardPage}
           totalCardPages={cardsPanel.totalCardPages}
           setCardPage={cardsPanel.setCardPage}
         />
       </section>
 
-      <UserDetailsDialog selectedUser={selectedUser} setSelectedUser={setSelectedUser} />
+      <UserDetailsDialog
+        selectedUser={selectedUser}
+        setSelectedUser={setSelectedUser}
+        userRoles={userRoles}
+        userStatuses={userStatuses}
+        onSave={handleUserSave}
+        isAdmin={isAdmin}
+      />
+
+      <ManageCardDialog
+        card={managedCard}
+        onClose={closeManageCard}
+        onUpdate={handleCardUpdate}
+        onDelete={handleCardDelete}
+        isAdmin={isAdmin}
+        cardStatuses={cardStatuses}
+      />
 
       <AdminDemoToast message={feedbackToast} />
     </div>

@@ -17,7 +17,7 @@ export default function AdminCardsManagementPanel({
   unmatchedCards,
   paginatedCards,
   resetAllFilters,
-  setFeedbackToast,
+  onManageCard,
   cardPage,
   totalCardPages,
   setCardPage,
@@ -31,7 +31,7 @@ export default function AdminCardsManagementPanel({
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-card-foreground">Cards Management</h2>
-          <p className="text-xs text-muted-foreground">Filter card states and review mock actions</p>
+          <p className="text-xs text-muted-foreground">Filter and manage card states</p>
           {activeUserForCards && !showAllCards && (
             <p className="mt-1 text-xs text-muted-foreground">
               Cards for: <span className="font-medium text-card-foreground">{activeUserForCards.fullName}</span>
@@ -66,8 +66,7 @@ export default function AdminCardsManagementPanel({
 
       {showAllCards && unmatchedCards.length > 0 && (
         <div className="mb-3 rounded-2xl border border-dashed border-border bg-background/50 p-4 text-xs text-muted-foreground">
-          {unmatchedCards.length} card{unmatchedCards.length === 1 ? '' : 's'} from mock data could not be
-          matched to any user and are hidden.
+          {unmatchedCards.length} card{unmatchedCards.length === 1 ? '' : 's'} could not be matched to any user and are hidden.
         </div>
       )}
 
@@ -83,7 +82,7 @@ export default function AdminCardsManagementPanel({
           <p className="font-medium text-card-foreground">No cards found</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {!showAllCards && focusedUserId
-              ? 'This selected user currently has no matched cards in mock card data.'
+              ? 'This selected user currently has no cards.'
               : 'Update user or status filters to see card results.'}
           </p>
           <Button className="mt-4" variant="outline" onClick={resetAllFilters}>
@@ -113,7 +112,7 @@ export default function AdminCardsManagementPanel({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setFeedbackToast('Action disabled in demo mode')}
+                      onClick={() => onManageCard(item)}
                     >
                       Manage
                     </Button>
