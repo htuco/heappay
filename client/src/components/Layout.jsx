@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Bell, Moon, Sun } from 'lucide-react'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
+import ToastStack from './ui/ToastStack'
 import { useTheme } from '@/hooks/useTheme'
 
 const PAGE_META = {
@@ -86,6 +87,7 @@ export default function Layout() {
           Heap. All rights reserved.
         </footer>
       </div>
+      <ToastStack />
     </div>
   )
 }
