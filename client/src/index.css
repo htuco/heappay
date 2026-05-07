@@ -28,6 +28,7 @@
   --auth-orb-1: 125 211 252;
   --auth-orb-2: 129 140 248;
   --auth-orb-3: 255 255 255;
+  --accent-soft: 29 161 242;
   --border: oklch(0.9317 0.0118 231.6594);
   --input: oklch(0.9809 0.0025 228.7836);
   --ring: oklch(0.6818 0.1584 243.3540);
@@ -92,6 +93,7 @@
   --auth-orb-1: 56 137 200;
   --auth-orb-2: 79 95 200;
   --auth-orb-3: 200 220 255;
+  --accent-soft: 80 165 230;
   --border: oklch(0.3300 0.0050 240.0000);
   --input: oklch(0.3400 0.0050 240.0000);
   --ring: oklch(0.6818 0.1584 243.3540);
@@ -207,6 +209,22 @@
 }
 
 @layer utilities {
+  .bg-emphasis {
+    background-image: linear-gradient(
+      135deg,
+      rgb(var(--accent-soft) / 0.08),
+      transparent 75%
+    );
+  }
+  .bg-emphasis-strong {
+    background-image: linear-gradient(
+      135deg,
+      rgb(var(--accent-soft) / 0.12),
+      rgb(var(--accent-soft) / 0.02) 55%,
+      transparent
+    );
+  }
+
   .card-hover {
     transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out;
   }

@@ -11,7 +11,7 @@ const quickStats = [
 export default function SettingsHero({ onBack }) {
   return (
     <section className="overflow-hidden rounded-[28px] border border-border bg-card shadow-xs">
-      <div className="border-b border-border/70 bg-[linear-gradient(135deg,rgba(167,76,255,0.12),rgba(167,76,255,0.02)_55%,transparent)] p-4 sm:p-6">
+      <div className="bg-emphasis-strong border-b border-border/70 p-4 sm:p-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="outline" className="w-full sm:w-auto" onClick={onBack}>
