@@ -4,9 +4,9 @@ import { useNotifications } from '@/context/NotificationContext'
 import { cn } from '@/lib/utils'
 
 const TYPE_ICON = {
-	success: <CheckCircle className="size-3.5 text-green-400 shrink-0 mt-0.5" />,
-	error:   <XCircle    className="size-3.5 text-red-400 shrink-0 mt-0.5" />,
-	warning: <AlertTriangle className="size-3.5 text-yellow-400 shrink-0 mt-0.5" />,
+	success: <CheckCircle className="size-3.5 text-success shrink-0 mt-0.5" />,
+	error:   <XCircle    className="size-3.5 text-destructive shrink-0 mt-0.5" />,
+	warning: <AlertTriangle className="size-3.5 text-warning shrink-0 mt-0.5" />,
 	info:    <Info       className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />,
 }
 
@@ -48,9 +48,9 @@ export default function NotificationPanel() {
 				className="nav-pill relative p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
 				aria-label="Notifications"
 			>
-				<Bell className="h-[18px] w-[18px]" strokeWidth={2} />
+				<Bell className="h-4.5 w-4.5" strokeWidth={2} />
 				{unseen > 0 && (
-					<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-card" />
+					<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
 				)}
 			</button>
 

@@ -4,16 +4,16 @@ import { cn } from '@/lib/utils'
 
 const STYLES = {
 	success: {
-		container: 'border-green-500/40 bg-green-950/80 text-green-200',
-		icon: <CheckCircle className="size-4 shrink-0 text-green-400" />,
+		container: 'border-success/40 bg-success/15 text-success',
+		icon: <CheckCircle className="size-4 shrink-0 text-success" />,
 	},
 	error: {
-		container: 'border-red-500/40 bg-red-950/80 text-red-200',
-		icon: <XCircle className="size-4 shrink-0 text-red-400" />,
+		container: 'border-destructive/40 bg-destructive/15 text-destructive',
+		icon: <XCircle className="size-4 shrink-0 text-destructive" />,
 	},
 	warning: {
-		container: 'border-yellow-500/40 bg-yellow-950/80 text-yellow-200',
-		icon: <AlertTriangle className="size-4 shrink-0 text-yellow-400" />,
+		container: 'border-warning/40 bg-warning/15 text-warning',
+		icon: <AlertTriangle className="size-4 shrink-0 text-warning" />,
 	},
 	info: {
 		container: 'border-border bg-card text-card-foreground',
