@@ -1,9 +1,9 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Bell, Moon, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
 import logo from '@/assets/logo.png'
+import { useTheme } from '@/hooks/useTheme'
 
 const PAGE_META = {
   '/dashboard': {
@@ -19,22 +19,7 @@ export default function Layout() {
   const location = useLocation()
   const isLanding = location.pathname === '/'
   const pageMeta = PAGE_META[location.pathname]
-  const [isDark, setIsDark] = useState(true)
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const theme = savedTheme || (prefersDark ? 'dark' : 'light')
-    setIsDark(theme === 'dark')
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [])
-
-  const toggleTheme = () => {
-    const next = isDark ? 'light' : 'dark'
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle('dark')
-    localStorage.setItem('theme', next)
-  }
+  const { isDark, toggle } = useTheme()
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -76,7 +61,7 @@ export default function Layout() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={toggleTheme}
+                onClick={toggle}
                 className="nav-pill p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 aria-label="Toggle theme"
               >

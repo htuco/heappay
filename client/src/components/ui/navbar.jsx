@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { CreditCard, LayoutDashboard, Settings, Shield } from 'lucide-react'
-import { getAuthUser } from '@/utils/authStorage'
+import { useAppSelector } from '@/store/hooks'
+import { selectAuthUser } from '@/store/slices/authSlice'
 
 const mainLinks = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -33,7 +34,7 @@ function NavLinkItem({ item }) {
 }
 
 export default function Navbar() {
-  const user = getAuthUser()
+  const user = useAppSelector(selectAuthUser)
   const isAdmin = user?.role_name === 'admin'
 
   return (

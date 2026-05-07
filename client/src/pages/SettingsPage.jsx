@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Eye, KeyRound, Paintbrush, ShieldCheck } from 'lucide-react'
+import { Bell, Eye, KeyRound, Paintbrush } from 'lucide-react'
+import { useTheme } from '@/hooks/useTheme'
 
 import ActionRow from '@/components/settings/ActionRow'
 import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
@@ -19,12 +20,9 @@ export default function SettingsPage() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
   const [billingRemindersEnabled, setBillingRemindersEnabled] = useState(true)
-  const [loginAlertsEnabled, setLoginAlertsEnabled] = useState(true)
   const [securityAlertChannel, setSecurityAlertChannel] = useState('Email')
   const [productUpdatesFrequency, setProductUpdatesFrequency] = useState('Weekly')
-  const [themePreference, setThemePreference] = useState('System')
-  const [densityPreference, setDensityPreference] = useState('Comfortable')
-  const [startPagePreference, setStartPagePreference] = useState('Dashboard')
+  const { preference: themePreference, setTheme } = useTheme()
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
@@ -32,7 +30,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="xl:col-span-2">
-          <ProfileSection />    
+          <ProfileSection />
         </div>
 
         <SettingsCard
@@ -116,36 +114,6 @@ export default function SettingsPage() {
         </SettingsCard>
 
         <SettingsCard
-          title="Security Settings"
-          icon={ShieldCheck}
-          description="Review sign-in protection, session visibility, and account safety controls."
-        >
-          <div className="space-y-3">
-            <SettingRow
-              label="Two-factor authentication"
-              value="Not enabled"
-              hint="Add a second step to strengthen account access."
-              emphasize
-            />
-            <ControlRow
-              label="Login alerts"
-              hint="Get notified when a new device signs in to your account."
-            >
-              <Toggle
-                enabled={loginAlertsEnabled}
-                label={loginAlertsEnabled ? 'Enabled' : 'Disabled'}
-                onToggle={() => setLoginAlertsEnabled((current) => !current)}
-              />
-            </ControlRow>
-            <SettingRow
-              label="Active sessions"
-              value="4 devices"
-              hint="Review current signed-in devices and remove anything suspicious."
-            />
-          </div>
-        </SettingsCard>
-
-        <SettingsCard
           title="Theme & Preferences"
           icon={Paintbrush}
           description="Control how the workspace looks and how the app behaves day to day."
@@ -158,28 +126,8 @@ export default function SettingsPage() {
             >
               <OptionGroup
                 options={['Light', 'Dark', 'System']}
-                active={themePreference}
-                onSelect={setThemePreference}
-              />
-            </ControlRow>
-            <ControlRow
-              label="Density"
-              hint="Balanced spacing for tables, cards, and page layouts."
-            >
-              <OptionGroup
-                options={['Compact', 'Comfortable']}
-                active={densityPreference}
-                onSelect={setDensityPreference}
-              />
-            </ControlRow>
-            <ControlRow
-              label="Start page"
-              hint="Choose which area opens first after sign-in."
-            >
-              <OptionGroup
-                options={['Dashboard', 'Activity', 'Settings']}
-                active={startPagePreference}
-                onSelect={setStartPagePreference}
+                active={themePreference.charAt(0).toUpperCase() + themePreference.slice(1)}
+                onSelect={(label) => setTheme(label.toLowerCase())}
               />
             </ControlRow>
           </div>

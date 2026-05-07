@@ -1,8 +1,9 @@
 import LoginForm from '@/components/ui/login-form'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 import AuthOrbs from '@/components/auth-ui/AuthOrbs'
+import { useTheme } from '@/hooks/useTheme'
 
 function DeactivatedNotice() {
 	const isDeactivated = new URLSearchParams(window.location.search).get('deactivated') === '1'
@@ -24,29 +25,15 @@ function DeactivatedNotice() {
 }
 
 export default function LoginPage() {
-	// Theme state and persistence TO:DO USE GLOBAL THEME SERVICE
-	const [isDark, setIsDark] = useState(() => {
-		const savedTheme = localStorage.getItem('theme')
-		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-		const theme = savedTheme || (prefersDark ? 'dark' : 'light')
-		return theme === 'dark'
-	})
+	const { isDark, toggle } = useTheme()
 
-	useEffect(() => {
-		document.documentElement.classList.toggle('dark', isDark)
-		localStorage.setItem('theme', isDark ? 'dark' : 'light')
-	}, [isDark])
-
-	const toggleTheme = () => {
-		setIsDark((current) => !current)
-	}
 	return (
 		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[65%_35%]">
 			<AuthCloseButton />
 
-			{/* Theme Switch Temp Button */}
+			{/* Theme toggle */}
 			<button
-				onClick={toggleTheme}
+				onClick={toggle}
 				className="absolute top-4 right-4 z-50 p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition-colors"
 				aria-label="Toggle theme"
 			>
@@ -61,7 +48,7 @@ export default function LoginPage() {
 				<DeactivatedNotice />
 				<LoginForm />
 			</div>
-			<div className="relative overflow-hidden bg-gradient-to-br from-background to-background">
+			<div className="relative overflow-hidden bg-linear-to-br from-background to-background">
 				<div
 					className="absolute inset-0"
 					style={{
