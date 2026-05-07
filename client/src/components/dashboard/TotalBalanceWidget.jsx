@@ -38,7 +38,7 @@ export default function TotalBalanceWidget({
       </div>
 
       <div className="relative z-10 mt-6">
-        <p className="tabular text-4xl font-bold tracking-tight leading-none text-white sm:text-5xl md:text-[3.35rem]">
+        <p className="tabular text-4xl font-bold tracking-tight leading-none text-white sm:text-5xl md:text-6xl">
           {visibleBalance}
         </p>
         <p className="mt-3 text-sm font-medium text-white/80">{currency}</p>

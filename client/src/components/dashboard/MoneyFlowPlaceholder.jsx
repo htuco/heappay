@@ -15,7 +15,7 @@ function ChartTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null
   return (
     <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-lg">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
       <p className="tabular text-sm font-semibold text-card-foreground">

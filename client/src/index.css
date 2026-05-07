@@ -226,6 +226,14 @@
     animation: progress-fill 600ms ease-out;
   }
 
+  @keyframes auth-banner-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-auth-banner-in {
+    animation: auth-banner-in 220ms ease-out;
+  }
+
   @keyframes shine-sweep {
     0% { transform: translateX(-100%) skewX(-20deg); }
     100% { transform: translateX(250%) skewX(-20deg); }

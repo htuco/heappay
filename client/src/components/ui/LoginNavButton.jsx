@@ -88,7 +88,7 @@ export default function LoginNavButton() {
           </DropdownMenuItem>
 
           <div className="border-t border-border/60 px-5 py-3 text-center">
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               <span className="cursor-pointer hover:text-foreground transition-colors">Privacy policy</span>
               <span className="mx-1.5 text-border">•</span>
               <span className="cursor-pointer hover:text-foreground transition-colors">Terms of service</span>

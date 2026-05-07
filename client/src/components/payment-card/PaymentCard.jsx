@@ -62,7 +62,7 @@ export default function PaymentCard({
       <div className="payment-card-content">
         <div className="payment-card-header">
           <div className="min-w-0 space-y-1">
-            <p className="text-[0.68rem] uppercase tracking-[0.2em] text-white/75">
+            <p className="text-xs uppercase tracking-widest text-white/75">
               Payment Card
             </p>
             <p className="text-sm font-semibold tracking-wide text-white/90">
@@ -82,7 +82,7 @@ export default function PaymentCard({
           <div className="payment-card-meta">
             <div className="min-w-0">
               <p className="payment-card-label">Card holder</p>
-              <p className="truncate text-sm font-semibold sm:text-[0.95rem] md:text-base">
+              <p className="truncate text-sm font-semibold md:text-base">
                 {cardHolderName}
               </p>
             </div>

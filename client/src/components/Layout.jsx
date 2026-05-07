@@ -69,7 +69,7 @@ export default function Layout() {
                     {pageMeta.title}
                   </h1>
                   {pageMeta.subtitle && (
-                    <p className="text-[15px] text-muted-foreground">{pageMeta.subtitle}</p>
+                    <p className="text-sm text-muted-foreground">{pageMeta.subtitle}</p>
                   )}
                 </>
               ) : null}
@@ -80,14 +80,14 @@ export default function Layout() {
                 className="nav-pill p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 aria-label="Toggle theme"
               >
-                {isDark ? <Sun className="h-[18px] w-[18px]" strokeWidth={2} /> : <Moon className="h-[18px] w-[18px]" strokeWidth={2} />}
+                {isDark ? <Sun className="h-4.5 w-4.5" strokeWidth={2} /> : <Moon className="h-4.5 w-4.5" strokeWidth={2} />}
               </button>
               <button
                 type="button"
                 className="nav-pill relative p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 aria-label="Notifications"
               >
-                <Bell className="h-[18px] w-[18px]" strokeWidth={2} />
+                <Bell className="h-4.5 w-4.5" strokeWidth={2} />
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-card" />
               </button>
               <LoginNavButton />

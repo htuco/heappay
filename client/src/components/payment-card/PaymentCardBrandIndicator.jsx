@@ -13,7 +13,7 @@ export default function PaymentCardBrandIndicator({ brand, icon }) {
   }
 
   return (
-    <span className="text-xs font-semibold tracking-[0.12em] uppercase text-white/90">
+    <span className="text-xs font-semibold tracking-widest uppercase text-white/90">
       {formatBrandLabel(brand)}
     </span>
   )

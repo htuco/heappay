@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
+import AuthFormBanner from '@/components/auth-ui/AuthFormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
@@ -106,15 +107,9 @@ export default function RegisterForm() {
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
-						{error && (
-							<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-								{error}
-							</div>
-						)}
+						<AuthFormBanner variant="error" message={error} />
 						{success && (
-							<div className="rounded-xl bg-green-950/30 border border-green-500/50 px-4 py-3 text-sm text-green-200">
-								Account created successfully!
-							</div>
+							<AuthFormBanner variant="success" message="Account created successfully!" />
 						)}
 
 						<div className="grid grid-cols-2 gap-4">
@@ -210,10 +205,10 @@ export default function RegisterForm() {
 									</button>
 								</span>
 							)}
-							className="text-[14px]"
+							className="text-sm"
 						/>
 						{errors.agreedToTerms && (
-							<p className="mt-1 text-sm text-red-400">{errors.agreedToTerms}</p>
+							<p className="mt-1 text-sm text-destructive">{errors.agreedToTerms}</p>
 						)}
 
 						<AuthButton

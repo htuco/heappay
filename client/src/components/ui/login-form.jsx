@@ -7,6 +7,7 @@ import { getApiErrorMessage } from '@/utils/api'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
+import AuthFormBanner from '@/components/auth-ui/AuthFormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
@@ -59,7 +60,7 @@ export default function LoginForm() {
 			})
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
-			navigate('/dashboard', { replace: true })
+			setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
 		} catch (err) {
 			setError(getApiErrorMessage(err, 'Invalid email or password'))
 		}
@@ -76,15 +77,9 @@ export default function LoginForm() {
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
-						{error && (
-							<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-								{error}
-							</div>
-						)}
+						<AuthFormBanner variant="error" message={error} />
 						{success && (
-							<div className="rounded-xl bg-green-950/30 border border-green-500/50 px-4 py-3 text-sm text-green-200">
-								Login successful!
-							</div>
+							<AuthFormBanner variant="success" message="Login successful!" />
 						)}
 						<AuthTextInput
 							id="email"
@@ -121,7 +116,7 @@ export default function LoginForm() {
 							<button
 								type="button"
 								onClick={() => navigate('/forgot-password')}
-								className="text-[15px] font-medium text-primary hover:underline"
+								className="text-sm font-medium text-primary hover:underline"
 							>
 								Forgot password
 							</button>

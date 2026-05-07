@@ -88,7 +88,7 @@ export default function LoginPage() {
 						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight text-white dark:text-white">
 						"Your cards, finally connected."
 						</h2>
-						<p className="mx-auto mt-2 md:mt-4 text-sm md:text-[15px] leading-relaxed text-white/85 dark:text-white/85">
+						<p className="mx-auto mt-2 md:mt-4 text-sm md:text-base leading-relaxed text-white/85 dark:text-white/85">
 						Manage all your cards and track every transaction in one place, with clear insights that help you understand and control your spending.
 						</p>
 					</div>

@@ -59,21 +59,21 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
           <div className="space-y-5">
             <div className="grid gap-3 rounded-2xl border border-border bg-background p-4 sm:grid-cols-2">
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Name</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Name</p>
                 <p className="mt-1 font-medium text-card-foreground">{selectedUser.fullName}</p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Email</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Email</p>
                 <p className="mt-1 font-medium text-card-foreground">{selectedUser.email}</p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Role</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Role</p>
                 <div className="mt-1">
                   <Badge variant={getRoleBadgeVariant(selectedUser.role)}>{selectedUser.role}</Badge>
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Status</p>
                 <div className="mt-1">
                   <Badge variant={selectedUser.status === 'active' ? 'success' : 'warning'}>
                     {selectedUser.status}
@@ -81,26 +81,26 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Cards</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Cards</p>
                 <p className="mt-1 font-medium text-card-foreground">{selectedUser.cards.length}</p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Active Cards</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Active Cards</p>
                 <p className="mt-1 font-medium text-card-foreground">
                   {selectedUser.cards.filter((item) => item.card.isActive && !item.card.isDisabled).length}
                 </p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Last Login</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Last Login</p>
                 <p className="mt-1 font-medium text-card-foreground">{selectedUser.lastLogin}</p>
               </div>
             </div>
 
             <div className="rounded-2xl border border-border bg-background p-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Edit User</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Edit User</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Role</label>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Role</label>
                   <Select
                     value={selectedRoleId}
                     onChange={(e) => setSelectedRoleId(e.target.value)}
@@ -109,7 +109,7 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Status</label>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Status</label>
                   <Select
                     value={selectedStatusId}
                     onChange={(e) => setSelectedStatusId(e.target.value)}
@@ -122,7 +122,7 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 User Cards (Miniature)
               </p>
               <div className="grid gap-3 sm:grid-cols-2">

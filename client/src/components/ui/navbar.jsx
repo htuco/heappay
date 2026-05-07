@@ -46,7 +46,7 @@ export default function Navbar() {
         {isAdmin && (
           <>
             <div className="my-3 border-t border-border" />
-            <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Admin Features
             </p>
             {adminLinks.map((item) => (
