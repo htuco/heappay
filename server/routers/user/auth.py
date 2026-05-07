@@ -5,7 +5,15 @@ from sqlalchemy.orm import Session
 from database import get_db
 from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import AuthResponse, ChangePasswordRequest, DeactivateAccountRequest, LoginRequest, RefreshRequest, RegisterRequest
+from schemas.user.auth import (
+    AuthResponse,
+    ChangePasswordRequest,
+    DeactivateAccountRequest,
+    LoginRequest,
+    ProfileUpdateRequest,
+    RefreshRequest,
+    RegisterRequest,
+)
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -134,3 +142,25 @@ def me(
         raise Unauthorized("Invalid or expired token.")
 
     return AuthResponse(success=True, message="User profile retrieved", data=token_data)
+
+
+@router.patch("/me", response_model=AuthResponse)
+def update_me(
+    payload: ProfileUpdateRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    try:
+        token_data = service.update_profile(credentials.credentials, payload)
+    except ValueError as exc:
+        if str(exc) == "EMAIL_NOT_AVAILABLE":
+            raise InvalidInput("An account with this email already exists.") from None
+        raise InvalidInput("Could not update profile.") from None
+
+    if token_data is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    return AuthResponse(success=True, message="Profile updated successfully.", data=token_data)

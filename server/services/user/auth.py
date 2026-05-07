@@ -6,7 +6,15 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 
 from repositories.user.auth import UserAuthRepository
-from schemas.user.auth import ChangePasswordRequest, DeactivateAccountRequest, LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from schemas.user.auth import (
+    ChangePasswordRequest,
+    DeactivateAccountRequest,
+    LoginRequest,
+    ProfileUpdateRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserResponse,
+)
 from settings import get_settings
 
 
@@ -75,6 +83,14 @@ class UserAuthService:
         user = self.repo.get_user_by_id(user_id)
         if not user:
             raise ValueError("User not found")
+        return self._build_token_response_for_user(user, refresh_token)
+
+    def _build_token_response_for_user(
+        self,
+        user,
+        refresh_token: str,
+        access_token: str | None = None,
+    ) -> TokenResponse:
         role_name = self.repo.get_role_name_for_user(user.user_role_id)
         user_response = UserResponse(
             id=user.user_id,
@@ -86,7 +102,7 @@ class UserAuthService:
             role_name=role_name,
         )
         return TokenResponse(
-            access_token=self.create_access_token(user_id),
+            access_token=access_token or self.create_access_token(user.user_id),
             refresh_token=refresh_token,
             token_type="bearer",
             user=user_response,
@@ -154,6 +170,30 @@ class UserAuthService:
             raise ValueError("WRONG_CURRENT_PASSWORD")
         self.repo.soft_delete_user(user_id)
 
+    def update_profile(self, token: str, payload: ProfileUpdateRequest) -> TokenResponse | None:
+        user_id = self.verify_access_token(token)
+        if user_id is None:
+            return None
+
+        current_user = self.repo.get_user_by_id(user_id)
+        if not current_user:
+            return None
+
+        if payload.email is not None:
+            existing_user = self.repo.get_user_by_email(str(payload.email))
+            if existing_user and existing_user.user_id != user_id:
+                raise ValueError("EMAIL_NOT_AVAILABLE")
+
+        updated_user = self.repo.update_profile(user_id, payload)
+        if not updated_user:
+            return None
+
+        return self._build_token_response_for_user(
+            updated_user,
+            updated_user.refresh_token or "",
+            access_token=token,
+        )
+
     def get_me(self, token: str) -> TokenResponse | None:
         user_id = self.verify_access_token(token)
         if user_id is None:
@@ -163,19 +203,8 @@ class UserAuthService:
         if not user:
             return None
 
-        role_name = self.repo.get_role_name_for_user(user.user_role_id)
-        user_response = UserResponse(
-            id=user.user_id,
-            email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            created_at=user.created_at,
-            user_role_id=user.user_role_id,
-            role_name=role_name,
-        )
-        return TokenResponse(
+        return self._build_token_response_for_user(
+            user,
+            user.refresh_token or "",
             access_token=token,
-            refresh_token=user.refresh_token or "",
-            token_type="bearer",
-            user=user_response,
         )

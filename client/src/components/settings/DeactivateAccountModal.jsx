@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
-import FormBanner from '@/components/ui/FormBanner'
 import { deactivateAccount } from '@/services/authService'
 import { clearAuthSession } from '@/utils/authStorage'
 import { getApiErrorMessage } from '@/utils/api'
+import { useNotifications } from '@/context/NotificationContext'
 
 const EMPTY = { currentPassword: '' }
 
 export default function DeactivateAccountModal({ isOpen, onClose }) {
+	const { notify } = useNotifications()
 	const [form, setForm] = useState(EMPTY)
 	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
@@ -38,7 +39,7 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 			if (lower.includes('current password')) {
 				setErrors({ currentPassword: message })
 			} else {
-				setErrors({ _banner: message })
+				notify({ type: 'error', message, duration: 0 })
 			}
 		} finally {
 			setLoading(false)
@@ -55,8 +56,6 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 						This cannot be undone without contacting support.
 					</p>
 				</div>
-
-				<FormBanner variant="error" message={errors._banner} />
 
 				<AuthTextInput
 					id="currentPassword"

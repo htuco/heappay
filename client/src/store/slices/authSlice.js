@@ -53,6 +53,18 @@ export const registerUser = createAsyncThunk(
   },
 )
 
+export const updateProfileUser = createAsyncThunk(
+  'auth/updateProfileUser',
+  async ({ firstName, lastName, email }, { rejectWithValue }) => {
+    try {
+      const user = await authService.updateProfile({ firstName, lastName, email })
+      return user
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Profile update failed.'))
+    }
+  },
+)
+
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   await authService.logout()
 })
@@ -108,6 +120,14 @@ const authSlice = createSlice({
         state.user = null
         state.status = 'unauthenticated'
         state.error = action.payload ?? 'Registration failed.'
+      })
+      .addCase(updateProfileUser.fulfilled, (state, action) => {
+        state.user = action.payload
+        state.status = 'authenticated'
+        state.error = null
+      })
+      .addCase(updateProfileUser.rejected, (state, action) => {
+        state.error = action.payload ?? 'Profile update failed.'
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null

@@ -57,12 +57,18 @@ class _FakeAuthService:
     def get_me(self, _token):
         return _token_response()
 
+    def update_profile(self, _token, _payload):
+        return _token_response()
+
 
 class _FakeAuthServiceAdmin:
     def login(self, _payload):
         return _token_response(role_id=1, role_name="admin")
 
     def get_me(self, _token):
+        return _token_response(role_id=1, role_name="admin")
+
+    def update_profile(self, _token, _payload):
         return _token_response(role_id=1, role_name="admin")
 
     def register(self, _payload):  # pragma: no cover
@@ -203,6 +209,68 @@ def test_me_invalid_token_returns_401() -> None:
         headers={"Authorization": "Bearer expired.or.invalid"},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# PATCH /me
+# ---------------------------------------------------------------------------
+
+def test_update_me_patches_current_user_profile() -> None:
+    class _UpdateService(_FakeAuthService):
+        payload = None
+
+        def update_profile(self, _token, payload):
+            self.payload = payload
+            return _token_response()
+
+    service = _UpdateService()
+    client = _build_client(service)
+    resp = client.patch(
+        "/auth/me",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "first_name": "Updated",
+            "last_name": "Person",
+            "email": "updated@example.com",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["message"] == "Profile updated successfully."
+    assert service.payload.first_name == "Updated"
+    assert service.payload.last_name == "Person"
+    assert service.payload.email == "updated@example.com"
+
+
+def test_update_me_without_token_returns_401() -> None:
+    client = _build_client()
+    resp = client.patch(
+        "/auth/me",
+        json={
+            "first_name": "Updated",
+            "last_name": "Person",
+            "email": "updated@example.com",
+        },
+    )
+    assert resp.status_code == 401
+
+
+def test_update_me_duplicate_email_returns_400() -> None:
+    class _DuplicateEmailService(_FakeAuthService):
+        def update_profile(self, _token, _payload):
+            raise ValueError("EMAIL_NOT_AVAILABLE")
+
+    client = _build_client(_DuplicateEmailService())
+    resp = client.patch(
+        "/auth/me",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "first_name": "Updated",
+            "last_name": "Person",
+            "email": "taken@example.com",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "An account with this email already exists."
 
 
 # ---------------------------------------------------------------------------

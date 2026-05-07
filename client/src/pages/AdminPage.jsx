@@ -1,5 +1,4 @@
 import AdminCardsManagementPanel from '@/components/admin/AdminCardsManagementPanel'
-import AdminDemoToast from '@/components/admin/AdminDemoToast'
 import AdminKpiRow from '@/components/admin/AdminKpiRow'
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel'
 import ManageCardDialog from '@/components/admin/ManageCardDialog'
@@ -16,8 +15,6 @@ export default function AdminPage() {
     selectedUser,
     setSelectedUser,
     showAllCards,
-    feedbackToast,
-    setFeedbackToast,
     kpiTotals,
     resetAllFilters,
     isLoading,
@@ -122,7 +119,6 @@ export default function AdminPage() {
         cardStatuses={cardStatuses}
       />
 
-      <AdminDemoToast message={feedbackToast} />
     </div>
   )
 }

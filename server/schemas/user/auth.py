@@ -1,7 +1,15 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
@@ -37,6 +45,28 @@ class ChangePasswordRequest(BaseModel):
 
 class DeactivateAccountRequest(BaseModel):
     current_password: str = Field(min_length=1)
+
+
+class ProfileUpdateRequest(BaseModel):
+    email: EmailStr | None = None
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def strip_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("value cannot be empty or whitespace only")
+        return stripped
+
+    @model_validator(mode="after")
+    def require_at_least_one_field(self) -> "ProfileUpdateRequest":
+        if self.email is None and self.first_name is None and self.last_name is None:
+            raise ValueError("At least one field must be provided for update")
+        return self
 
 
 class UserResponse(BaseModel):

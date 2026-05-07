@@ -1,22 +1,90 @@
-import { useState } from 'react'
-import { Camera, UserRound } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { UserRound } from 'lucide-react'
 
 import SettingsCard from '@/components/settings/SettingsCard'
 import ProfileField from '@/components/settings/ProfileField'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
-import { initialProfile } from '@/lib/mockData'
+import { useAuth } from '@/hooks/useAuth'
+
+const emptyProfile = {
+  firstName: '',
+  lastName: '',
+  email: '',
+}
 
 export default function ProfileSection() {
-  const [profile, setProfile] = useState(initialProfile)
+  const { user, updateProfile } = useAuth()
+  const [profile, setProfile] = useState(emptyProfile)
+  const [isSaving, setIsSaving] = useState(false)
+  const [feedback, setFeedback] = useState(null)
+
+  useEffect(() => {
+    if (!user) {
+      setProfile(emptyProfile)
+      return
+    }
+
+    setProfile({
+      firstName: user.first_name ?? '',
+      lastName: user.last_name ?? '',
+      email: user.email ?? '',
+    })
+  }, [user])
+
+  const isDirty =
+    Boolean(user) &&
+    (profile.firstName !== (user.first_name ?? '') ||
+      profile.lastName !== (user.last_name ?? '') ||
+      profile.email !== (user.email ?? ''))
+
+  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim()
 
   function handleFieldChange(event) {
     const { name, value } = event.target
     setProfile((current) => ({ ...current, [name]: value }))
+    setFeedback(null)
   }
 
   function handleReset() {
-    setProfile(initialProfile)
+    if (!user) {
+      setProfile(emptyProfile)
+      return
+    }
+
+    setProfile({
+      firstName: user.first_name ?? '',
+      lastName: user.last_name ?? '',
+      email: user.email ?? '',
+    })
+    setFeedback(null)
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+
+    if (!user || !isDirty || isSaving) {
+      return
+    }
+
+    setIsSaving(true)
+    setFeedback(null)
+
+    try {
+      await updateProfile({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+      })
+      setFeedback({ tone: 'success', message: 'Profile updated successfully.' })
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: typeof error === 'string' ? error : 'Could not update profile.',
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -25,49 +93,51 @@ export default function ProfileSection() {
       icon={UserRound}
       description="Manage the personal information shown across your account and keep your profile details current."
     >
-      <div className="space-y-4">
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="bg-emphasis rounded-2xl border border-border p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <UserAvatar
                 user={{
-                  first_name: profile.fullName?.split(' ')[0],
-                  last_name: profile.fullName?.split(' ').slice(1).join(' '),
+                  first_name: profile.firstName,
+                  last_name: profile.lastName,
                 }}
                 className="h-16 w-16 rounded-3xl text-lg"
               />
 
               <div>
-                <p className="text-sm font-semibold text-card-foreground">{profile.fullName}</p>
-                <p className="text-xs text-muted-foreground">@{profile.username}</p>
+                <p className="text-sm font-semibold text-card-foreground">
+                  {displayName || 'Your profile'}
+                </p>
+                <p className="text-xs text-muted-foreground">{profile.email || 'No email loaded'}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Personal details appear in your account settings and workspace profile.
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="w-full sm:w-auto">
-              <Camera className="mr-1" />
-              Update Photo
-            </Button>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <ProfileField
-            label="Full name"
-            hint="Used for your account identity and team-facing profile."
-            name="fullName"
-            value={profile.fullName}
+            label="First name"
+            hint="Used for your account identity."
+            name="firstName"
+            value={profile.firstName}
             onChange={handleFieldChange}
-            placeholder="Enter your full name"
+            placeholder="Enter your first name"
+            required
+            disabled={!user || isSaving}
           />
           <ProfileField
-            label="Username"
-            hint="Short handle used in mentions and profile links."
-            name="username"
-            value={profile.username}
+            label="Last name"
+            hint="Used alongside your first name across the workspace."
+            name="lastName"
+            value={profile.lastName}
             onChange={handleFieldChange}
-            placeholder="Enter your username"
+            placeholder="Enter your last name"
+            required
+            disabled={!user || isSaving}
           />
           <ProfileField
             label="Email address"
@@ -77,25 +147,36 @@ export default function ProfileSection() {
             value={profile.email}
             onChange={handleFieldChange}
             placeholder="Enter your email address"
-          />
-          <ProfileField
-            label="Location"
-            hint="Optional location shown for account context."
-            name="location"
-            value={profile.location}
-            onChange={handleFieldChange}
-            placeholder="Enter your location"
+            required
+            disabled={!user || isSaving}
           />
         </div>
+        {feedback ? (
+          <p
+            className={
+              feedback.tone === 'success'
+                ? 'text-sm font-medium text-success'
+                : 'text-sm font-medium text-destructive'
+            }
+          >
+            {feedback.message}
+          </p>
+        ) : null}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={handleReset}>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={handleReset}
+            disabled={!user || isSaving || !isDirty}
+          >
             Reset
           </Button>
-          <Button type="button" className="w-full sm:w-auto">
-            Save Profile
+          <Button type="submit" className="w-full sm:w-auto" disabled={!user || isSaving || !isDirty}>
+            {isSaving ? 'Saving...' : 'Save changes'}
           </Button>
         </div>
-      </div>
+      </form>
     </SettingsCard>
   )
 }
