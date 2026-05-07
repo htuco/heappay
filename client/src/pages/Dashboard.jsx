@@ -84,7 +84,7 @@ function PaymentCardError() {
   )
 }
 
-const MIN_LOADER_MS = 2500
+const MIN_LOADER_MS = 1500
 
 export default function DashboardPage() {
   const { cards, isLoading, error } = useDashboardCards()

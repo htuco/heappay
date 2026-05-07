@@ -12,6 +12,7 @@ export default function DashboardLoadingOverlay() {
         src={lottieSrc}
         loop
         autoplay
+        speed={2.5}
         className="h-48 w-48 sm:h-56 sm:w-56"
       />
       <div className="space-y-1 text-center">
