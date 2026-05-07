@@ -1,8 +1,9 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { Bell, Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
 import ToastStack from './ui/ToastStack'
+import NotificationPanel from './ui/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
 
 const PAGE_META = {
@@ -66,14 +67,7 @@ export default function Layout() {
               >
                 {isDark ? <Sun className="h-[18px] w-[18px]" strokeWidth={2} /> : <Moon className="h-[18px] w-[18px]" strokeWidth={2} />}
               </button>
-              <button
-                type="button"
-                className="nav-pill relative p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                aria-label="Notifications"
-              >
-                <Bell className="h-[18px] w-[18px]" strokeWidth={2} />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-card" />
-              </button>
+              <NotificationPanel />
               <LoginNavButton />
             </div>
           </div>
