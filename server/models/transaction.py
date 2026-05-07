@@ -24,6 +24,9 @@ class Transaction(Base):
     transaction_type_id: Mapped[int] = mapped_column(
         ForeignKey("transaction_types.transaction_type_id"), nullable=False
     )
+    status_id: Mapped[int] = mapped_column(
+        ForeignKey("transaction_statuses.transaction_status_id"), nullable=False
+    )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -33,3 +36,4 @@ class Transaction(Base):
     sender_card = relationship("Card", foreign_keys=[sender_card_id])
     recipient_card = relationship("Card", foreign_keys=[recipient_card_id])
     transaction_type = relationship("TransactionType", back_populates="transactions")
+    status = relationship("TransactionStatus", back_populates="transactions")
