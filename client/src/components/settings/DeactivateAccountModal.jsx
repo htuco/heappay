@@ -5,10 +5,12 @@ import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 import { deactivateAccount } from '@/services/authService'
 import { clearAuthSession } from '@/utils/authStorage'
 import { getApiErrorMessage } from '@/utils/api'
+import { useNotifications } from '@/context/NotificationContext'
 
 const EMPTY = { currentPassword: '' }
 
 export default function DeactivateAccountModal({ isOpen, onClose }) {
+	const { notify } = useNotifications()
 	const [form, setForm] = useState(EMPTY)
 	const [errors, setErrors] = useState({})
 	const [loading, setLoading] = useState(false)
@@ -37,7 +39,7 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 			if (lower.includes('current password')) {
 				setErrors({ currentPassword: message })
 			} else {
-				setErrors({ _banner: message })
+				notify({ type: 'error', message, duration: 0 })
 			}
 		} finally {
 			setLoading(false)
@@ -55,13 +57,7 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 					</p>
 				</div>
 
-				{errors._banner && (
-					<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-						{errors._banner}
-					</div>
-				)}
-
-				<AuthTextInput
+			<AuthTextInput
 					id="currentPassword"
 					name="currentPassword"
 					type="password"

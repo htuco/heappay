@@ -5,10 +5,10 @@ import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 import { changePasswordSchema } from '@/schemas/changePasswordSchema'
 import { changePassword } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
+import { useNotifications } from '@/context/NotificationContext'
 
 const INITIAL_FORM = { currentPassword: '', newPassword: '', confirmPassword: '' }
 
-// Maps a server error message to the field it belongs to, if any.
 function mapApiError(message) {
 	if (!message) return { field: null, message: 'Something went wrong. Please try again.' }
 	const lower = message.toLowerCase()
@@ -18,10 +18,10 @@ function mapApiError(message) {
 }
 
 export default function ChangePasswordModal({ isOpen, onClose }) {
+	const { notify } = useNotifications()
 	const [form, setForm] = useState(INITIAL_FORM)
 	const [fieldErrors, setFieldErrors] = useState({})
 	const [bannerError, setBannerError] = useState('')
-	const [success, setSuccess] = useState(false)
 	const [loading, setLoading] = useState(false)
 
 	const handleChange = (e) => {
@@ -33,7 +33,6 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 		setForm(INITIAL_FORM)
 		setFieldErrors({})
 		setBannerError('')
-		setSuccess(false)
 		onClose()
 	}
 
@@ -58,8 +57,8 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 				currentPassword: form.currentPassword,
 				newPassword: form.newPassword,
 			})
-			setSuccess(true)
-			setForm(INITIAL_FORM)
+			notify({ type: 'success', message: 'Password updated successfully.' })
+			handleClose()
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Failed to update password.')
 			const { field, message: mapped } = mapApiError(message)
@@ -75,73 +74,62 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 
 	return (
 		<Modal isOpen={isOpen} onClose={handleClose} title="Change Password">
-			{success ? (
-				<div className="space-y-4">
-					<div className="rounded-xl bg-green-950/30 border border-green-500/50 px-4 py-3 text-sm text-green-200">
-						Password updated successfully.
+			<form className="space-y-4" onSubmit={handleSubmit}>
+				{bannerError && (
+					<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
+						{bannerError}
 					</div>
-					<div className="flex justify-end">
-						<Button onClick={handleClose}>Done</Button>
-					</div>
+				)}
+
+				<AuthTextInput
+					id="currentPassword"
+					name="currentPassword"
+					type="password"
+					label="Current Password"
+					placeholder="Enter your current password"
+					value={form.currentPassword}
+					onChange={handleChange}
+					disabled={loading}
+					error={fieldErrors.currentPassword}
+				/>
+
+				<AuthTextInput
+					id="newPassword"
+					name="newPassword"
+					type="password"
+					label="New Password"
+					placeholder="Minimum 8 characters"
+					value={form.newPassword}
+					onChange={handleChange}
+					disabled={loading}
+					error={fieldErrors.newPassword}
+				/>
+
+				<AuthTextInput
+					id="confirmPassword"
+					name="confirmPassword"
+					type="password"
+					label="Confirm New Password"
+					placeholder="Repeat your new password"
+					value={form.confirmPassword}
+					onChange={handleChange}
+					disabled={loading}
+					error={fieldErrors.confirmPassword}
+				/>
+
+				<p className="text-xs text-muted-foreground pt-1">
+					Password must be between 8 and 255 characters.
+				</p>
+
+				<div className="flex justify-end gap-2 pt-2">
+					<Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+						Cancel
+					</Button>
+					<Button type="submit" disabled={loading}>
+						{loading ? 'Updating…' : 'Update Password'}
+					</Button>
 				</div>
-			) : (
-				<form className="space-y-4" onSubmit={handleSubmit}>
-					{bannerError && (
-						<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-							{bannerError}
-						</div>
-					)}
-
-					<AuthTextInput
-						id="currentPassword"
-						name="currentPassword"
-						type="password"
-						label="Current Password"
-						placeholder="Enter your current password"
-						value={form.currentPassword}
-						onChange={handleChange}
-						disabled={loading}
-						error={fieldErrors.currentPassword}
-					/>
-
-					<AuthTextInput
-						id="newPassword"
-						name="newPassword"
-						type="password"
-						label="New Password"
-						placeholder="Minimum 8 characters"
-						value={form.newPassword}
-						onChange={handleChange}
-						disabled={loading}
-						error={fieldErrors.newPassword}
-					/>
-
-					<AuthTextInput
-						id="confirmPassword"
-						name="confirmPassword"
-						type="password"
-						label="Confirm New Password"
-						placeholder="Repeat your new password"
-						value={form.confirmPassword}
-						onChange={handleChange}
-						disabled={loading}
-						error={fieldErrors.confirmPassword}
-					/>
-
-					<p className="text-xs text-muted-foreground pt-1">
-						Password must be between 8 and 255 characters.
-					</p>
-
-					<div className="flex justify-end gap-2 pt-2">
-						<Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
-							Cancel
-						</Button>
-						<Button type="submit" disabled={loading}>
-							{loading ? 'Updating…' : 'Update Password'}
-						</Button>
-					</div>
-				</form>
-			)}
+			</form>
 		</Modal>
 	)
 }
