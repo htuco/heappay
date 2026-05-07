@@ -2,6 +2,7 @@ import LoginForm from '@/components/ui/login-form'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
+import AuthOrbs from '@/components/auth-ui/AuthOrbs'
 
 function DeactivatedNotice() {
 	const isDeactivated = new URLSearchParams(window.location.search).get('deactivated') === '1'
@@ -69,9 +70,7 @@ export default function LoginPage() {
 							: 'linear-gradient(130deg, color-mix(in oklab, var(--primary) 88%, #fff 12%), color-mix(in oklab, var(--primary) 100%, #fff 0%), color-mix(in oklab, var(--primary) 82%, #fff 18%))',
 					}}
 				/>
-				<div className="auth-orb auth-orb-a" style={{ top: '-5%', left: '-5%', width: '560px', height: '560px', background: 'rgba(125, 211, 252, 0.95)' }} />
-				<div className="auth-orb auth-orb-b" style={{ bottom: '-8%', right: '-8%', width: '640px', height: '640px', background: 'rgba(129, 140, 248, 0.85)' }} />
-				<div className="auth-orb auth-orb-c" style={{ top: '35%', right: '20%', width: '440px', height: '440px', background: 'rgba(255, 255, 255, 0.7)' }} />
+				<AuthOrbs />
 
 				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 text-center text-white dark:text-white md:px-6 xl:px-8">
 					<div className="max-w-85">

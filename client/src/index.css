@@ -25,6 +25,9 @@
   --warning-foreground: oklch(0.2000 0.0500 60.0000);
   --info: oklch(0.6500 0.1700 245.0000);
   --info-foreground: oklch(1.0000 0 0);
+  --auth-orb-1: 125 211 252;
+  --auth-orb-2: 129 140 248;
+  --auth-orb-3: 255 255 255;
   --border: oklch(0.9317 0.0118 231.6594);
   --input: oklch(0.9809 0.0025 228.7836);
   --ring: oklch(0.6818 0.1584 243.3540);
@@ -86,6 +89,9 @@
   --warning-foreground: oklch(0.1500 0.0500 60.0000);
   --info: oklch(0.7200 0.1500 240.0000);
   --info-foreground: oklch(0.1500 0.0500 240.0000);
+  --auth-orb-1: 56 137 200;
+  --auth-orb-2: 79 95 200;
+  --auth-orb-3: 200 220 255;
   --border: oklch(0.3300 0.0050 240.0000);
   --input: oklch(0.3400 0.0050 240.0000);
   --ring: oklch(0.6818 0.1584 243.3540);
