@@ -7,7 +7,7 @@ import { getApiErrorMessage } from '@/utils/api'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
-import AuthFormBanner from '@/components/auth-ui/AuthFormBanner'
+import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
@@ -77,9 +77,9 @@ export default function LoginForm() {
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
-						<AuthFormBanner variant="error" message={error} />
+						<FormBanner variant="error" message={error} />
 						{success && (
-							<AuthFormBanner variant="success" message="Login successful!" />
+							<FormBanner variant="success" message="Login successful!" />
 						)}
 						<AuthTextInput
 							id="email"

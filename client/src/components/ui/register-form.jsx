@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
-import AuthFormBanner from '@/components/auth-ui/AuthFormBanner'
+import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
@@ -107,9 +107,9 @@ export default function RegisterForm() {
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
-						<AuthFormBanner variant="error" message={error} />
+						<FormBanner variant="error" message={error} />
 						{success && (
-							<AuthFormBanner variant="success" message="Account created successfully!" />
+							<FormBanner variant="success" message="Account created successfully!" />
 						)}
 
 						<div className="grid grid-cols-2 gap-4">

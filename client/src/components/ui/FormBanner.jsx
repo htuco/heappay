@@ -18,7 +18,7 @@ const VARIANTS = {
   },
 }
 
-export default function AuthFormBanner({ variant = 'error', message }) {
+export default function FormBanner({ variant = 'error', message }) {
   if (!message) return null
 
   const config = VARIANTS[variant] ?? VARIANTS.error

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import FormBanner from '@/components/ui/FormBanner'
 import { deactivateAccount } from '@/services/authService'
 import { clearAuthSession } from '@/utils/authStorage'
 import { getApiErrorMessage } from '@/utils/api'
@@ -55,11 +56,7 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 					</p>
 				</div>
 
-				{errors._banner && (
-					<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-						{errors._banner}
-					</div>
-				)}
+				<FormBanner variant="error" message={errors._banner} />
 
 				<AuthTextInput
 					id="currentPassword"

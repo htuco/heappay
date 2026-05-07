@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import FormBanner from '@/components/ui/FormBanner'
 import { changePasswordSchema } from '@/schemas/changePasswordSchema'
 import { changePassword } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
@@ -77,20 +78,14 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 		<Modal isOpen={isOpen} onClose={handleClose} title="Change Password">
 			{success ? (
 				<div className="space-y-4">
-					<div className="rounded-xl bg-green-950/30 border border-green-500/50 px-4 py-3 text-sm text-green-200">
-						Password updated successfully.
-					</div>
+					<FormBanner variant="success" message="Password updated successfully." />
 					<div className="flex justify-end">
 						<Button onClick={handleClose}>Done</Button>
 					</div>
 				</div>
 			) : (
 				<form className="space-y-4" onSubmit={handleSubmit}>
-					{bannerError && (
-						<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-							{bannerError}
-						</div>
-					)}
+					<FormBanner variant="error" message={bannerError} />
 
 					<AuthTextInput
 						id="currentPassword"
