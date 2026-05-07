@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -106,5 +107,6 @@ class CardResponse(BaseModel):
     last_four: str
     masked_card_number: str
     expires_at: date
+    balance: Decimal
     created_at: datetime
     deleted_at: datetime | None = None

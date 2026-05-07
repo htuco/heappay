@@ -33,6 +33,7 @@ def _to_response(row) -> CardResponse:
         last_four=row.last_four,
         masked_card_number=f"{'*' * 12}{row.last_four}",
         expires_at=row.expires_at,
+        balance=row.balance,
         created_at=row.created_at,
         deleted_at=row.deleted_at,
     )
