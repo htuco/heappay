@@ -221,7 +221,7 @@ export default function SettingsPage() {
         </SettingsCard>
       </div>
 
-      <div className="sticky bottom-0 z-10 rounded-[24px] border border-border bg-card/95 p-3 shadow-xs backdrop-blur sm:p-4">
+      <div className="sticky bottom-0 z-10 rounded-2xl border border-border bg-card/95 p-3 shadow-xs backdrop-blur sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-card-foreground">Unsaved preferences</p>

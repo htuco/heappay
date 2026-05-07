@@ -10,7 +10,7 @@ const quickStats = [
 
 export default function SettingsHero({ onBack }) {
   return (
-    <section className="overflow-hidden rounded-[28px] border border-border bg-card shadow-xs">
+    <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-xs">
       <div className="bg-emphasis-strong border-b border-border/70 p-4 sm:p-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -88,7 +88,7 @@ export default function Layout() {
                 aria-label="Notifications"
               >
                 <Bell className="h-4.5 w-4.5" strokeWidth={2} />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-card" />
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
               </button>
               <LoginNavButton />
             </div>
