@@ -6,6 +6,7 @@ import { useAdminData } from '@/hooks/useAdminData'
 import { getCardStatus } from '@/utils/admin.utils'
 import usersService from '@/services/usersService'
 import { updateCard, deleteCard } from '@/services/cardsService'
+import { useNotifications } from '@/context/NotificationContext'
 
 function userMatchesChip(user, chip) {
   if (chip === 'all') return true
@@ -29,7 +30,7 @@ export default function useAdminPageState() {
   const [showAllCards, setShowAllCards] = useState(false)
   const [userPage, setUserPageState] = useState(1)
   const [cardPage, setCardPageState] = useState(1)
-  const [feedbackToast, setFeedbackToast] = useState('')
+  const { notify } = useNotifications()
 
   const { usersWithCards, unmatchedCards, userRoles, userStatuses, cardStatuses, isLoading, error, refresh } = useAdminData()
   const normalizedUserSearch = useMemo(() => userSearch.trim().toLowerCase(), [userSearch])
@@ -134,11 +135,6 @@ export default function useAdminPageState() {
     }
   }, [usersWithCards])
 
-  useEffect(() => {
-    if (!feedbackToast) return
-    const timeout = setTimeout(() => setFeedbackToast(''), 1800)
-    return () => clearTimeout(timeout)
-  }, [feedbackToast])
 
   function setUserSearch(nextValue) {
     setUserSearchState(nextValue)
@@ -213,21 +209,21 @@ export default function useAdminPageState() {
   async function handleUserSave(userId, payload) {
     await usersService.update(userId, payload)
     refresh()
-    setFeedbackToast('User updated successfully.')
+    notify({ type: 'success', message: 'User updated successfully.' })
     setSelectedUserId(null)
   }
 
   async function handleCardUpdate(cardId, payload) {
     await updateCard(cardId, payload)
     refresh()
-    setFeedbackToast('Card updated successfully.')
+    notify({ type: 'success', message: 'Card updated successfully.' })
     closeManageCard()
   }
 
   async function handleCardDelete(cardId) {
     await deleteCard(cardId)
     refresh()
-    setFeedbackToast('Card deleted successfully.')
+    notify({ type: 'success', message: 'Card deleted successfully.' })
     closeManageCard()
   }
 
@@ -284,8 +280,6 @@ export default function useAdminPageState() {
     selectedUser,
     setSelectedUser,
     showAllCards,
-    feedbackToast,
-    setFeedbackToast,
     kpiTotals,
     resetAllFilters,
     isLoading,
