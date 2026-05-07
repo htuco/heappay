@@ -46,11 +46,9 @@ export default function DashboardPlaceholder({
           const isIn = item.direction === 'in'
           const Icon = isIn ? ArrowDownLeft : ArrowUpRight
           const iconWrap = isIn
-            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-          const amountColor = isIn
-            ? 'text-emerald-600 dark:text-emerald-400'
-            : 'text-rose-600 dark:text-rose-400'
+            ? 'bg-success/10 text-success'
+            : 'bg-destructive/10 text-destructive'
+          const amountColor = isIn ? 'text-success' : 'text-destructive'
           return (
             <li key={item.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
               <div className="flex min-w-0 items-center gap-3">

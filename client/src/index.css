@@ -25,6 +25,8 @@
   --warning-foreground: oklch(0.2000 0.0500 60.0000);
   --info: oklch(0.6500 0.1700 245.0000);
   --info-foreground: oklch(1.0000 0 0);
+  --primary-light: oklch(0.7600 0.1500 220.0000);
+  --primary-dark: oklch(0.4500 0.1700 265.0000);
   --auth-orb-1: 125 211 252;
   --auth-orb-2: 129 140 248;
   --auth-orb-3: 255 255 255;
@@ -90,6 +92,8 @@
   --warning-foreground: oklch(0.1500 0.0500 60.0000);
   --info: oklch(0.7200 0.1500 240.0000);
   --info-foreground: oklch(0.1500 0.0500 240.0000);
+  --primary-light: oklch(0.4800 0.1500 235.0000);
+  --primary-dark: oklch(0.2000 0.1200 265.0000);
   --auth-orb-1: 56 137 200;
   --auth-orb-2: 79 95 200;
   --auth-orb-3: 200 220 255;
@@ -153,6 +157,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

@@ -4,14 +4,14 @@ import {
 } from '@/utils/cardStatusOverview'
 
 const dotClassMap = {
-  active: 'bg-emerald-500',
-  disabled: 'bg-rose-500',
+  active: 'bg-success',
+  disabled: 'bg-destructive',
   inactive: 'bg-muted-foreground/50',
 }
 
 const chipClassMap = {
-  active: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  disabled: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+  active: 'bg-success/10 text-success',
+  disabled: 'bg-destructive/10 text-destructive',
   inactive: 'bg-muted text-muted-foreground',
 }
 

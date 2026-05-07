@@ -40,7 +40,7 @@ function PaymentCardEmpty() {
   return (
     <div className="group relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-3xl border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 via-card to-primary/10 p-5 sm:p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5">
       <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl transition-opacity duration-300 group-hover:opacity-70" />
-      <div className="pointer-events-none absolute -bottom-20 -left-12 h-36 w-36 rounded-full bg-sky-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -left-12 h-36 w-36 rounded-full bg-primary-light/15 blur-3xl" />
 
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.04]"
@@ -53,7 +53,7 @@ function PaymentCardEmpty() {
       <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
         <span className="relative flex items-center justify-center">
           <span className="absolute inset-0 animate-ping rounded-2xl bg-primary/20 opacity-75" />
-          <span className="relative rounded-2xl bg-linear-to-br from-primary to-sky-500 p-3.5 text-primary-foreground shadow-lg shadow-primary/30">
+          <span className="relative rounded-2xl bg-linear-to-br from-primary to-primary-light p-3.5 text-primary-foreground shadow-lg shadow-primary/30">
             <CreditCard className="h-6 w-6" strokeWidth={2} />
           </span>
         </span>
@@ -65,7 +65,7 @@ function PaymentCardEmpty() {
 
         <Link
           to="/wallet"
-          className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-linear-to-r from-primary to-sky-500 px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-linear-to-r from-primary to-primary-light px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
           Add Card

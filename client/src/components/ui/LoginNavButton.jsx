@@ -34,24 +34,24 @@ export default function LoginNavButton() {
 
         <DropdownMenuContent align="end" sideOffset={10} className="w-90 overflow-hidden rounded-3xl bg-card p-0">
           {/* Brand cover gradient with decorative glow */}
-          <div className="relative h-18 overflow-hidden bg-linear-to-br from-primary/20 via-sky-500/15 to-indigo-500/20">
+          <div className="relative h-18 overflow-hidden bg-linear-to-br from-primary-light/20 via-primary/15 to-primary-dark/20">
             <div className="pointer-events-none absolute -top-16 left-8 h-40 w-48 rounded-full bg-primary/25 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-16 right-2 h-36 w-40 rounded-full bg-sky-400/25 blur-3xl" />
-            <div className="pointer-events-none absolute top-2 right-12 h-20 w-20 rounded-full bg-indigo-400/15 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-16 right-2 h-36 w-40 rounded-full bg-primary-light/25 blur-3xl" />
+            <div className="pointer-events-none absolute top-2 right-12 h-20 w-20 rounded-full bg-primary-dark/15 blur-2xl" />
           </div>
 
           {/* Centered profile section, avatar overlapping banner */}
           <div className="flex flex-col items-center px-6 pb-6 text-center">
             <div className="relative -mt-9">
               {/* Decorative ring + avatar */}
-              <span className="absolute inset-0 -m-1 rounded-full bg-linear-to-br from-primary/30 via-sky-400/20 to-indigo-500/30 blur-md" />
+              <span className="absolute inset-0 -m-1 rounded-full bg-linear-to-br from-primary-light/30 via-primary/20 to-primary-dark/30 blur-md" />
               <UserAvatar
                 user={user}
                 className="relative h-18 w-18 text-2xl ring-4 ring-card"
               />
               {isAdmin ? (
                 <span className="absolute -bottom-0.5 -right-0.5 inline-flex items-center justify-center rounded-full bg-card p-0.5">
-                  <span className="inline-flex items-center justify-center rounded-full bg-linear-to-br from-primary to-sky-500 p-1 text-primary-foreground">
+                  <span className="inline-flex items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-light p-1 text-primary-foreground">
                     <ShieldCheck className="h-3 w-3" strokeWidth={2.5} />
                   </span>
                 </span>
@@ -66,7 +66,7 @@ export default function LoginNavButton() {
             <DropdownMenuItem asChild className="mt-5 p-0 focus:bg-transparent">
               <Link
                 to="/settings"
-                className="group inline-flex cursor-pointer items-center gap-2 rounded-full bg-linear-to-r from-primary/10 to-sky-500/10 px-5 py-2 text-sm font-medium text-primary ring-1 ring-primary/20 transition-all duration-200 hover:from-primary/15 hover:to-sky-500/15 hover:ring-primary/40"
+                className="group inline-flex cursor-pointer items-center gap-2 rounded-full bg-linear-to-r from-primary/10 to-primary-light/10 px-5 py-2 text-sm font-medium text-primary ring-1 ring-primary/20 transition-all duration-200 hover:from-primary/15 hover:to-primary-light/15 hover:ring-primary/40"
               >
                 Manage your account
                 <span className="text-primary/60 transition-transform duration-200 group-hover:translate-x-0.5">
