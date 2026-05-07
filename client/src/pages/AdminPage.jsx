@@ -59,13 +59,6 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold sm:text-3xl">Admin Dashboard</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Manage users and cards.
-        </p>
-      </header>
-
       <AdminKpiRow kpiTotals={kpiTotals} />
 
       <section className="grid gap-4 xl:grid-cols-12">

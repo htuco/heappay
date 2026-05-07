@@ -7,7 +7,7 @@ export default function AuthCheckbox({
 	className = '',
 }) {
 	return (
-		<label className={`inline-flex items-center gap-3 text-[15px] font-normal text-foreground/90 cursor-pointer ${className}`}>
+		<label className={`inline-flex items-center gap-3 text-sm font-normal text-foreground/90 cursor-pointer ${className}`}>
 			<input
 				type="checkbox"
 				name={name}

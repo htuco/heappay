@@ -73,7 +73,7 @@ export default function AllCardsModal({ items = [] }) {
           >
             <div className="flex items-start justify-between border-b px-5 py-4 sm:px-6">
               <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-primary">
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
                   <CreditCard className="h-3.5 w-3.5" />
                   Wallet Cards
                 </div>
@@ -105,7 +105,7 @@ export default function AllCardsModal({ items = [] }) {
               className="space-y-4 px-5 py-5 sm:px-6"
             >
               <div className="flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="inline-flex items-center rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
                   {modalItems.length} {modalItems.length === 1 ? 'Card' : 'Cards'}
                 </div>
               </div>

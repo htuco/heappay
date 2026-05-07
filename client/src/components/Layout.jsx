@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Moon, Sun } from 'lucide-react'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
+import logo from '@/assets/logo.png'
 import ToastStack from './ui/ToastStack'
 import NotificationPanel from './ui/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
@@ -30,9 +31,10 @@ export default function Layout() {
           <div className="px-6 py-6">
             <Link
               to="/"
-              className="text-2xl font-bold tracking-tight text-primary"
+              className="flex items-center gap-2 text-2xl font-bold tracking-tight text-primary"
               style={{ letterSpacing: '-0.02em' }}
             >
+              <img src={logo} alt="Heap logo" className="h-7 w-auto shrink-0" />
               Heap
             </Link>
           </div>
@@ -54,7 +56,7 @@ export default function Layout() {
                     {pageMeta.title}
                   </h1>
                   {pageMeta.subtitle && (
-                    <p className="text-[15px] text-muted-foreground">{pageMeta.subtitle}</p>
+                    <p className="text-sm text-muted-foreground">{pageMeta.subtitle}</p>
                   )}
                 </>
               ) : null}
@@ -65,7 +67,7 @@ export default function Layout() {
                 className="nav-pill p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 aria-label="Toggle theme"
               >
-                {isDark ? <Sun className="h-[18px] w-[18px]" strokeWidth={2} /> : <Moon className="h-[18px] w-[18px]" strokeWidth={2} />}
+                {isDark ? <Sun className="h-4.5 w-4.5" strokeWidth={2} /> : <Moon className="h-4.5 w-4.5" strokeWidth={2} />}
               </button>
               <NotificationPanel />
               <LoginNavButton />

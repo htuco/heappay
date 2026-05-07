@@ -8,7 +8,7 @@ export default function AuthLinkLabel({
 	const alignmentClass = align === 'left' ? 'text-left' : align === 'right' ? 'text-right' : 'text-center'
 
 	return (
-		<p className={`pt-6 text-[17px] font-normal text-foreground/85 ${alignmentClass} ${className}`}>
+		<p className={`pt-6 text-base font-normal text-foreground/85 ${alignmentClass} ${className}`}>
 			{label}{' '}
 			<button
 				type="button"

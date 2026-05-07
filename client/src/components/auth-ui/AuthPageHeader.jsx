@@ -18,7 +18,7 @@ export default function AuthPageHeader({
 			</h1>
 
 			{subtitle && (
-				<p className="text-[16px] text-foreground/70">
+				<p className="text-base text-foreground/70">
 					{subtitle}
 				</p>
 			)}

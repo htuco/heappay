@@ -94,7 +94,7 @@ export default function ProfileSection() {
       description="Manage the personal information shown across your account and keep your profile details current."
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="rounded-[24px] border border-border bg-[linear-gradient(135deg,rgba(167,76,255,0.08),transparent_80%)] p-4">
+        <div className="bg-emphasis rounded-2xl border border-border p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <UserAvatar
@@ -155,7 +155,7 @@ export default function ProfileSection() {
           <p
             className={
               feedback.tone === 'success'
-                ? 'text-sm font-medium text-emerald-600'
+                ? 'text-sm font-medium text-success'
                 : 'text-sm font-medium text-destructive'
             }
           >

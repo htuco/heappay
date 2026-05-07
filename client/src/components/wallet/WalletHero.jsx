@@ -10,7 +10,7 @@ export default function WalletHero({ cards, onAddCard, isSaving = false, saveErr
   return (
     <header className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
       <div className="flex items-center gap-3">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/15 to-sky-500/15 text-primary">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/15 to-primary-light/15 text-primary">
           <CreditCard className="h-5 w-5" strokeWidth={2} />
         </span>
         <div className="min-w-0">

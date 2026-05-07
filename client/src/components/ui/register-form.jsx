@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react'
+import logo from '@/assets/logo.png'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { registerSchema } from '@/schemas/registerSchema'
@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCheckbox from '@/components/auth-ui/AuthCheckbox'
 import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
+import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
@@ -87,11 +88,11 @@ export default function RegisterForm() {
 	}
 
 	const getPasswordStrengthColor = () => {
-		if (passwordStrength === 0) return 'bg-gray-500'
-		if (passwordStrength === 1) return 'bg-red-500'
-		if (passwordStrength === 2) return 'bg-yellow-500'
-		if (passwordStrength === 3) return 'bg-blue-500'
-		return 'bg-green-500'
+		if (passwordStrength === 0) return 'bg-muted-foreground'
+		if (passwordStrength === 1) return 'bg-destructive'
+		if (passwordStrength === 2) return 'bg-warning'
+		if (passwordStrength === 3) return 'bg-info'
+		return 'bg-success'
 	}
 
 	return (
@@ -101,19 +102,14 @@ export default function RegisterForm() {
 					<AuthPageHeader
 						title="Create An Account"
 						subtitle="Sign up to get started with your cards"
-						icon={<ShieldCheck className="h-6 w-6" strokeWidth={2.2} />}
+						icon={<img src={logo} alt="Heap logo" className="h-9 w-auto" />}
+						iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-14 w-14"
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
-						{error && (
-							<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-								{error}
-							</div>
-						)}
+						<FormBanner variant="error" message={error} />
 						{success && (
-							<div className="rounded-xl bg-green-950/30 border border-green-500/50 px-4 py-3 text-sm text-green-200">
-								Account created successfully!
-							</div>
+							<FormBanner variant="success" message="Account created successfully!" />
 						)}
 
 						<div className="grid grid-cols-2 gap-4">
@@ -209,10 +205,10 @@ export default function RegisterForm() {
 									</button>
 								</span>
 							)}
-							className="text-[14px]"
+							className="text-sm"
 						/>
 						{errors.agreedToTerms && (
-							<p className="mt-1 text-sm text-red-400">{errors.agreedToTerms}</p>
+							<p className="mt-1 text-sm text-destructive">{errors.agreedToTerms}</p>
 						)}
 
 						<AuthButton

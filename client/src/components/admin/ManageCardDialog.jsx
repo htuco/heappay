@@ -70,7 +70,7 @@ export default function ManageCardDialog({ card, onClose, onUpdate, onDelete, is
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Status</label>
+              <label className="text-xs uppercase tracking-widest text-muted-foreground">Status</label>
               <Select
                 value={selectedStatusId}
                 onChange={(e) => setSelectedStatusId(e.target.value)}

@@ -2,9 +2,7 @@ export default function ControlRow({ label, hint, children, emphasize = false })
   return (
     <div
       className={`rounded-2xl border border-border px-4 py-4 ${
-        emphasize
-          ? 'bg-[linear-gradient(135deg,rgba(167,76,255,0.08),transparent_75%)]'
-          : 'bg-background'
+        emphasize ? 'bg-emphasis' : 'bg-background'
       }`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

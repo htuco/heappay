@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom'
 import logo from '@/assets/logo.png'
+import { Button } from '@/components/ui/button'
 
 export default function LandingPage() {
   return (
@@ -33,20 +35,13 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Buttons (all next to each other) */}
           <div className="mt-4 flex flex-wrap justify-center gap-3">
-            <a
-              href="/login"
-              className="rounded-full bg-primary px-10 py-3.5 text-sm font-semibold text-primary-foreground shadow-md hover:shadow-lg hover:opacity-95 transition"
-            >
-              Log in
-            </a>
-            <a
-              href="/register"
-              className="rounded-full border border-border bg-card px-10 py-3.5 text-sm font-semibold text-card-foreground hover:bg-muted transition"
-            >
-              Create account
-            </a>
+            <Button asChild size="lg" className="h-11 min-w-45 rounded-full px-8 text-sm font-semibold shadow-md hover:shadow-lg">
+              <Link to="/login">Log in</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-11 min-w-45 rounded-full px-8 text-sm font-semibold">
+              <Link to="/register">Create account</Link>
+            </Button>
           </div>
         </div>
       </div>

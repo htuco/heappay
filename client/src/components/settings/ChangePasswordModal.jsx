@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import FormBanner from '@/components/ui/FormBanner'
 import { changePasswordSchema } from '@/schemas/changePasswordSchema'
 import { changePassword } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
@@ -75,11 +76,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 	return (
 		<Modal isOpen={isOpen} onClose={handleClose} title="Change Password">
 			<form className="space-y-4" onSubmit={handleSubmit}>
-				{bannerError && (
-					<div className="rounded-xl bg-red-950/30 border border-red-500/50 px-4 py-3 text-sm text-red-200">
-						{bannerError}
-					</div>
-				)}
+				<FormBanner variant="error" message={bannerError} />
 
 				<AuthTextInput
 					id="currentPassword"

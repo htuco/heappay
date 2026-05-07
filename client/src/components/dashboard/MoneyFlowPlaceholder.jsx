@@ -15,7 +15,7 @@ function ChartTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null
   return (
     <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-lg">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
       <p className="tabular text-sm font-semibold text-card-foreground">
@@ -50,8 +50,8 @@ export default function MoneyFlowPlaceholder({
         </button>
       </header>
 
-      <div className="h-64 w-full flex-1">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="moneyFlowFill" x1="0" y1="0" x2="0" y2="1">

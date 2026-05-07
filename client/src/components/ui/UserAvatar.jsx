@@ -21,7 +21,7 @@ export default function UserAvatar({
 
   return (
     <span
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-primary to-sky-500 font-semibold text-primary-foreground ${className}`}
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-primary to-primary-light font-semibold text-primary-foreground ${className}`}
     >
       {!imageFailed && imageSrc ? (
         <img

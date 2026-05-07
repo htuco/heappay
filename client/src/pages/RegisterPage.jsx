@@ -1,6 +1,7 @@
 import RegisterForm from '@/components/ui/register-form'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
+import AuthOrbs from '@/components/auth-ui/AuthOrbs'
 import { useTheme } from '@/hooks/useTheme'
 
 export default function RegisterPage() {
@@ -23,7 +24,7 @@ export default function RegisterPage() {
 				)}
 			</button>
 
-			<div className="relative overflow-hidden bg-gradient-to-br from-background to-background">
+			<div className="relative overflow-hidden bg-linear-to-br from-background to-background">
 				<div
 					className="absolute inset-0"
 					style={{
@@ -32,9 +33,7 @@ export default function RegisterPage() {
 							: 'linear-gradient(130deg, color-mix(in oklab, var(--primary) 88%, #fff 12%), color-mix(in oklab, var(--primary) 100%, #fff 0%), color-mix(in oklab, var(--primary) 82%, #fff 18%))',
 					}}
 				/>
-				<div className="auth-orb auth-orb-a" style={{ top: '-5%', left: '-5%', width: '560px', height: '560px', background: 'rgba(125, 211, 252, 0.95)' }} />
-				<div className="auth-orb auth-orb-b" style={{ bottom: '-8%', right: '-8%', width: '640px', height: '640px', background: 'rgba(129, 140, 248, 0.85)' }} />
-				<div className="auth-orb auth-orb-c" style={{ top: '35%', right: '20%', width: '440px', height: '440px', background: 'rgba(255, 255, 255, 0.7)' }} />
+				<AuthOrbs />
 
 				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 text-center text-white dark:text-white md:px-6 xl:px-8">
 					<div className="max-w-85">
@@ -52,7 +51,7 @@ export default function RegisterPage() {
 						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight text-white dark:text-white">
 						Your money shouldn’t be a mystery
 					</h2>
-					<p className="mx-auto mt-2 md:mt-4 text-sm md:text-[15px] leading-relaxed text-white/85 dark:text-white/85">
+					<p className="mx-auto mt-2 md:mt-4 text-sm md:text-base leading-relaxed text-white/85 dark:text-white/85">
 							Create your account and get a clear view of every payment you make.
 						</p>
 					</div>

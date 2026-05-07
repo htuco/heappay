@@ -79,7 +79,7 @@ export default function AdminUsersPanel({
         <>
           <div className="hidden overflow-x-auto rounded-2xl border border-border md:block">
             <table className="w-full min-w-[620px] table-fixed text-left text-sm">
-              <thead className="bg-muted/40 text-xs uppercase tracking-[0.12em] text-muted-foreground">
+              <thead className="bg-muted/40 text-xs uppercase tracking-widest text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Email</th>

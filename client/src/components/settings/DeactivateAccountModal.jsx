@@ -57,7 +57,7 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 					</p>
 				</div>
 
-			<AuthTextInput
+				<AuthTextInput
 					id="currentPassword"
 					name="currentPassword"
 					type="password"

@@ -20,7 +20,7 @@ function NavLinkItem({ item }) {
       to={item.path}
       end
       className={({ isActive }) =>
-        `nav-pill flex items-center gap-3 px-3 py-2.5 rounded-[15px] text-sm font-medium ${
+        `nav-pill flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium ${
           isActive
             ? 'bg-accent text-accent-foreground'
             : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
@@ -47,7 +47,7 @@ export default function Navbar() {
         {isAdmin && (
           <>
             <div className="my-3 border-t border-border" />
-            <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Admin Features
             </p>
             {adminLinks.map((item) => (

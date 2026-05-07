@@ -10,15 +10,15 @@ const quickStats = [
 
 export default function SettingsHero({ onBack }) {
   return (
-    <section className="overflow-hidden rounded-[28px] border border-border bg-card shadow-xs">
-      <div className="border-b border-border/70 bg-[linear-gradient(135deg,rgba(167,76,255,0.12),rgba(167,76,255,0.02)_55%,transparent)] p-4 sm:p-6">
+    <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-xs">
+      <div className="bg-emphasis-strong border-b border-border/70 p-4 sm:p-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="outline" className="w-full sm:w-auto" onClick={onBack}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               Back
             </Button>
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary sm:text-xs">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
               <Sparkles className="h-3.5 w-3.5" />
               Settings
             </div>
@@ -42,7 +42,7 @@ export default function SettingsHero({ onBack }) {
             key={stat.label}
             className={`p-4 sm:p-5 ${index < quickStats.length - 1 ? 'border-b border-border/70 sm:border-r sm:border-b-0' : ''}`}
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               {stat.label}
             </p>
             <p className="mt-2 text-2xl font-bold text-card-foreground">{stat.value}</p>
