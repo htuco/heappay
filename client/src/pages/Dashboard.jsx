@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { CreditCard, Plus } from 'lucide-react'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import DashboardPlaceholder from '@/components/dashboard/DashboardPlaceholder'
 import MoneyFlowPlaceholder from '@/components/dashboard/MoneyFlowPlaceholder'
 import QuickActions from '@/components/dashboard/QuickActions'
+import DashboardLoadingOverlay from '@/components/dashboard/DashboardLoadingOverlay'
 import PaymentCard from '@/components/payment-card/PaymentCard'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
@@ -82,13 +84,24 @@ function PaymentCardError() {
   )
 }
 
+const MIN_LOADER_MS = 2500
+
 export default function DashboardPage() {
   const { cards, isLoading, error } = useDashboardCards()
+  const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const primaryCard = cards[0] ?? null
   const cardStatusProps = buildCardStatusOverviewProps(cards)
 
+  useEffect(() => {
+    const t = setTimeout(() => setMinDelayElapsed(true), MIN_LOADER_MS)
+    return () => clearTimeout(t)
+  }, [])
+
+  const showLoader = isLoading || !minDelayElapsed
+
   return (
     <div className="space-y-6">
+      {showLoader && <DashboardLoadingOverlay />}
       {/* Row 1: Balance (2/3) + Payment Card (1/3) */}
       <section className="grid items-stretch gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
