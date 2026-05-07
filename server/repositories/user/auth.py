@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from models.user_role import UserRole
 from models.user_status import UserStatus
 from models.user import User
-from schemas.user.auth import RegisterRequest
+from schemas.user.auth import ProfileUpdateRequest, RegisterRequest
 
 _ACTIVE_STATUS_NAME = "active"
 _DEFAULT_USER_ROLE_NAME = "user"
@@ -88,6 +88,26 @@ class UserAuthRepository:
             .values(refresh_token=None)
         )
         self._db.commit()
+
+    def update_profile(self, user_id: int, payload: ProfileUpdateRequest) -> User | None:
+        values = payload.model_dump(exclude_unset=True)
+        if not values:
+            return self.get_user_by_id(user_id)
+
+        values["modified_at"] = datetime.now(timezone.utc)
+
+        try:
+            self._db.execute(
+                update(User)
+                .where(User.user_id == user_id)
+                .values(**values)
+            )
+            self._db.commit()
+        except IntegrityError:
+            self._db.rollback()
+            raise
+
+        return self.get_user_by_id(user_id)
 
     def update_password(self, user_id: int, hashed_password: str) -> None:
         self._db.execute(

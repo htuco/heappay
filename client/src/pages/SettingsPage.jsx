@@ -139,17 +139,6 @@ export default function SettingsPage() {
           description="Review account visibility, data access, and high-impact account actions."
         >
           <div className="space-y-3">
-            <SettingRow
-              label="Profile visibility"
-              value="Private"
-              hint="Only you and workspace admins can see personal account metadata."
-              emphasize
-            />
-            <SettingRow
-              label="Data export"
-              value="Available"
-              hint="Generate a downloadable copy of personal settings and account activity."
-            />
             <ActionRow
               label="Deactivate account"
               value="Permanent"
