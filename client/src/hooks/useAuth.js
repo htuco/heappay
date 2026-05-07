@@ -8,6 +8,7 @@ import {
 	selectAuthError,
 	selectAuthStatus,
 	selectAuthUser,
+	updateProfileUser,
 } from '@/store/slices/authSlice'
 
 export function useAuth() {
@@ -29,10 +30,14 @@ export function useAuth() {
 		return dispatch(registerUser({ firstName, lastName, email, password })).unwrap()
 	}, [dispatch])
 
+	const updateProfile = useCallback(async ({ firstName, lastName, email }) => {
+		return dispatch(updateProfileUser({ firstName, lastName, email })).unwrap()
+	}, [dispatch])
+
 	const logout = useCallback(() => dispatch(logoutUser()).unwrap(), [dispatch])
 
 	const isAdmin = user?.role_name === 'admin'
 	const hasRole = (roleName) => user?.role_name === roleName
 
-	return { user, isLoading, error, login, register, logout, isAdmin, hasRole }
+	return { user, isLoading, error, login, register, updateProfile, logout, isAdmin, hasRole }
 }
