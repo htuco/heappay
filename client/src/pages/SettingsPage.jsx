@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, Eye, KeyRound, Paintbrush } from 'lucide-react'
+import { useTheme } from '@/hooks/useTheme'
 
 import ActionRow from '@/components/settings/ActionRow'
 import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
@@ -21,7 +22,7 @@ export default function SettingsPage() {
   const [billingRemindersEnabled, setBillingRemindersEnabled] = useState(true)
   const [securityAlertChannel, setSecurityAlertChannel] = useState('Email')
   const [productUpdatesFrequency, setProductUpdatesFrequency] = useState('Weekly')
-  const [themePreference, setThemePreference] = useState('System')
+  const { preference: themePreference, setTheme } = useTheme()
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
@@ -125,8 +126,8 @@ export default function SettingsPage() {
             >
               <OptionGroup
                 options={['Light', 'Dark', 'System']}
-                active={themePreference}
-                onSelect={setThemePreference}
+                active={themePreference.charAt(0).toUpperCase() + themePreference.slice(1)}
+                onSelect={(label) => setTheme(label.toLowerCase())}
               />
             </ControlRow>
           </div>

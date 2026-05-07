@@ -1,32 +1,18 @@
 import RegisterForm from '@/components/ui/register-form'
 import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
-import { useState, useEffect } from 'react'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
+import { useTheme } from '@/hooks/useTheme'
 
 export default function RegisterPage() {
-	// Theme state and persistence
-	const [isDark, setIsDark] = useState(() => {
-		const savedTheme = localStorage.getItem('theme')
-		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-		const theme = savedTheme || (prefersDark ? 'dark' : 'light')
-		return theme === 'dark'
-	})
+	const { isDark, toggle } = useTheme()
 
-	useEffect(() => {
-		document.documentElement.classList.toggle('dark', isDark)
-		localStorage.setItem('theme', isDark ? 'dark' : 'light')
-	}, [isDark])
-
-	const toggleTheme = () => {
-		setIsDark((current) => !current)
-	}
 	return (
 		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[35%_65%]">
 			<AuthCloseButton />
 
-			{/* Theme Switch Button */}
+			{/* Theme toggle */}
 			<button
-				onClick={toggleTheme}
+				onClick={toggle}
 				className="absolute top-4 right-4 z-50 p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition-colors"
 				aria-label="Toggle theme"
 			>
