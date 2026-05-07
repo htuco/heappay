@@ -3,6 +3,7 @@ import { Bell, Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
+import logo from '@/assets/logo.png'
 
 const PAGE_META = {
   '/dashboard': {
@@ -43,9 +44,10 @@ export default function Layout() {
           <div className="px-6 py-6">
             <Link
               to="/"
-              className="text-2xl font-bold tracking-tight text-primary"
+              className="flex items-center gap-2 text-2xl font-bold tracking-tight text-primary"
               style={{ letterSpacing: '-0.02em' }}
             >
+              <img src={logo} alt="Heap logo" className="h-7 w-auto shrink-0" />
               Heap
             </Link>
           </div>

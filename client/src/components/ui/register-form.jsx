@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react'
+import logo from '@/assets/logo.png'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { registerSchema } from '@/schemas/registerSchema'
@@ -101,7 +101,8 @@ export default function RegisterForm() {
 					<AuthPageHeader
 						title="Create An Account"
 						subtitle="Sign up to get started with your cards"
-						icon={<ShieldCheck className="h-6 w-6" strokeWidth={2.2} />}
+						icon={<img src={logo} alt="Heap logo" className="h-9 w-auto" />}
+						iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-14 w-14"
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
