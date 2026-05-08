@@ -54,6 +54,32 @@ class TransactionService:
         total = self._repo.count_all()
         return items, total
 
+    def get_summary_for_user(
+        self,
+        *,
+        user_id: int,
+        months: int = 6,
+    ) -> list[dict]:
+        return self._repo.get_summary_for_user(user_id=user_id, months=months)
+
+    def list_for_card(
+        self,
+        card_id: int,
+        *,
+        user_id: int,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[Transaction], int]:
+        """Return transactions for a specific card, after verifying the user owns it."""
+        owner_id = self._repo.card_owner_id(card_id)
+        if owner_id is None:
+            raise CardNotFoundError()
+        if owner_id != user_id:
+            raise ForbiddenError()
+        items = self._repo.list_for_card(card_id=card_id, limit=limit, offset=offset)
+        total = self._repo.count_for_card(card_id=card_id)
+        return items, total
+
     def get_by_id_for_user(
         self, transaction_id: int, *, user_id: int
     ) -> Transaction | None:
