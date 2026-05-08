@@ -10,6 +10,8 @@ from schemas.transaction import (
     TransactionCreate,
     TransactionPatch,
     TransactionResponse,
+    TransactionSummaryPoint,
+    TransactionSummaryResponse,
 )
 from services.transaction import (
     CardNotFoundError,
@@ -84,6 +86,28 @@ def list_all_transactions(
     )
     return ApiResponse[Page[TransactionResponse]](
         success=True, message=message, data=page_data
+    )
+
+
+@router.get("/summary", response_model=ApiResponse[TransactionSummaryResponse])
+def get_transaction_summary(
+    months: int = Query(default=6, ge=1, le=24),
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[TransactionSummaryResponse]:
+    raw = service.get_summary_for_user(user_id=user_id, months=months)
+    points = [
+        TransactionSummaryPoint(
+            period=r["period"],
+            income=r["income"],
+            expense=r["expense"],
+        )
+        for r in raw
+    ]
+    return ApiResponse[TransactionSummaryResponse](
+        success=True,
+        message=f"Transaction summary for the last {months} month(s).",
+        data=TransactionSummaryResponse(points=points, months=months),
     )
 
 

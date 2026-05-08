@@ -54,6 +54,14 @@ class TransactionService:
         total = self._repo.count_all()
         return items, total
 
+    def get_summary_for_user(
+        self,
+        *,
+        user_id: int,
+        months: int = 6,
+    ) -> list[dict]:
+        return self._repo.get_summary_for_user(user_id=user_id, months=months)
+
     def list_for_card(
         self,
         card_id: int,

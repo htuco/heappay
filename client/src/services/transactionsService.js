@@ -86,6 +86,23 @@ function buildPageParams(params = {}) {
 
 export const transactionsService = {
 	/**
+	 * Aggregate income / expense per calendar month for the current user.
+	 * Returns newest month first.
+	 * @param {import('@/types/transaction').GetSummaryParams} [params]
+	 * @returns {Promise<import('@/types/transaction').TransactionSummary>}
+	 */
+	async getSummary(params = {}) {
+		try {
+			const query = {}
+			if (typeof params.months === 'number') query.months = params.months
+			const { data } = await api.get('/transactions/summary', { params: query })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * List the current user's transactions (paginated).
 	 * @param {import('@/types/transaction').ListTransactionsParams} [params]
 	 * @returns {Promise<import('@/types/transaction').TransactionPage>}

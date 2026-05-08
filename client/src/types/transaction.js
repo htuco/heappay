@@ -67,6 +67,26 @@ export const TRANSACTION_API_ERROR_CODES = Object.freeze({
  */
 
 /**
+ * One bucket in the money-flow summary.
+ * @typedef {Object} TransactionSummaryPoint
+ * @property {string} period  - "YYYY-MM" e.g. "2026-01"
+ * @property {string} income  - Decimal string, total credited to user's cards
+ * @property {string} expense - Decimal string, total debited from user's cards
+ * @property {string} net     - Decimal string (income − expense)
+ */
+
+/**
+ * @typedef {Object} TransactionSummary
+ * @property {TransactionSummaryPoint[]} points - Newest month first
+ * @property {number} months
+ */
+
+/**
+ * @typedef {Object} GetSummaryParams
+ * @property {number=} months - Lookback window in months, 1–24 (default: 6)
+ */
+
+/**
  * @typedef {Object} TransactionServiceError
  * @property {TransactionApiErrorCode | string} code
  * @property {string} message
