@@ -144,10 +144,10 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
         )}
 
         <DialogFooter>
-          <Button
-            onClick={handleSave}
-            disabled={!isAdmin || isSaving}
-          >
+          <Button variant="outline" onClick={() => setSelectedUser(null)} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button variant="default" onClick={handleSave} disabled={!isAdmin || isSaving}>
             {isSaving ? 'Saving…' : 'Save changes'}
           </Button>
         </DialogFooter>

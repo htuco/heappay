@@ -20,7 +20,7 @@ function Badge({ variant = "default", size = "md", className, children, ...props
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md border-2 font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,0.8)] dark:shadow-none transition-all",
+        "inline-flex items-center rounded-md border-2 font-bold transition-all",
         badgeClasses[variant],
         badgeSizes[size],
         className
