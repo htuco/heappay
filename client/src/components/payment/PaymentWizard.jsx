@@ -301,7 +301,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack }) {
             onChange={(e) => onChange('amount', formatAmount(e.target.value))}
             placeholder="0.00"
             inputMode="decimal"
-            className={`w-40 bg-transparent text-center text-5xl font-bold outline-none placeholder:text-muted-foreground/30 ${
+            className={`w-40 bg-transparent text-center text-5xl font-bold caret-transparent outline-none placeholder:text-muted-foreground/30 ${
               amountExceedsBalance ? 'text-destructive' : 'text-card-foreground'
             }`}
           />
