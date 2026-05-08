@@ -36,10 +36,10 @@ export default function MoneyFlowPlaceholder({
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-card-foreground sm:text-lg">
-            Money Flow (Placeholder)
+            Money Flow
           </h2>
           <p className="text-xs text-muted-foreground">
-            Placeholder chart for incoming/outgoing money and transactions
+            Last 6 months
           </p>
         </div>
         <button

@@ -10,11 +10,11 @@ import { useTheme } from '@/hooks/useTheme'
 const PAGE_META = {
   '/dashboard': {
     title: 'Dashboard',
-    subtitle: "Welcome back! Here's your financial overview.",
+    subtitle: 'Your financial overview.',
   },
   '/wallet': { title: 'Wallet', subtitle: 'Manage your cards and balances.' },
   '/admin': { title: 'Users', subtitle: 'Manage user accounts and roles.' },
-  '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
+  '/settings': { title: 'Settings', subtitle: 'Manage account preferences.' },
 }
 
 export default function Layout() {
