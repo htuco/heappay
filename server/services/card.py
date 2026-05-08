@@ -1,4 +1,5 @@
 from models.card import Card
+from models.user import User
 from repositories.card import CardRepository
 from schemas.card import CardCreate, CardPatch
 
@@ -84,6 +85,9 @@ class CardService:
         if row is None:
             raise CardNotFoundError()
         self._repo.soft_delete(row)
+
+    def lookup_by_card_number(self, card_numb: str) -> tuple[Card, User] | None:
+        return self._repo.lookup_by_card_number(card_numb)
 
     def restore(self, card_id: int) -> Card:
         row = self._repo.get_by_id(card_id, include_deleted=True)
