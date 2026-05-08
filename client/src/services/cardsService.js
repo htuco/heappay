@@ -18,6 +18,10 @@ function normalizeError(error) {
   const response = error?.response
   const msg = httpErrorText(response)
 
+  if (response?.status === 409) {
+    throw new CardFkError('card_numb', msg ?? 'A card with this number is already registered.')
+  }
+
   if (response?.status === 404 && msg) {
     const field = FK_ERROR_MAP[msg]
     if (field) {

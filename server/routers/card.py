@@ -10,6 +10,7 @@ from services.card import (
     CardService,
     CardStatusNotFoundError,
     CardTypeNotFoundError,
+    DuplicateCardNumberError,
     UserNotFoundError,
 )
 
@@ -19,6 +20,7 @@ _CARD_NOT_FOUND = "Card not found."
 _USER_NOT_FOUND = "User not found."
 _STATUS_NOT_FOUND = "Card status not found."
 _CARD_TYPE_NOT_FOUND = "Card type not found."
+_DUPLICATE_CARD_NUMBER = "A card with this number is already registered."
 
 
 def get_card_service(db: Session = Depends(get_db)) -> CardService:
@@ -118,6 +120,10 @@ def create_card(
 ) -> CardResponse:
     try:
         row = service.create(payload)
+    except DuplicateCardNumberError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_CARD_NUMBER
+        ) from None
     except UserNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_USER_NOT_FOUND) from None
     except CardStatusNotFoundError:
