@@ -8,6 +8,9 @@ from models.card_status import CardStatus
 from models.card_type import CardType
 from models.user import User
 
+# (Card, User) result tuple alias
+CardWithOwner = tuple[Card, User]
+
 
 class CardRepository:
     def __init__(self, db: Session) -> None:
@@ -82,6 +85,15 @@ class CardRepository:
         self._db.commit()
         self._db.refresh(row)
         return row
+
+    def lookup_by_card_number(self, card_numb: str) -> "CardWithOwner | None":
+        """Return (Card, User) for a non-deleted card matching card_numb, or None."""
+        stmt = (
+            select(Card, User)
+            .join(User, Card.user_id == User.user_id)
+            .where(Card.card_numb == card_numb, Card.deleted_at.is_(None))
+        )
+        return self._db.execute(stmt).first()
 
     def user_exists(self, user_id: int) -> bool:
         stmt = select(User.user_id).where(User.user_id == user_id)

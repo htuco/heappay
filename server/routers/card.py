@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.card import CardRepository
-from schemas.card import CardCreate, CardPatch, CardResponse
+from routers.dependencies import get_current_user_id
+from schemas.card import CardCreate, CardLookupResponse, CardPatch, CardResponse
 from services.card import (
     CardNotFoundError,
     CardService,
@@ -36,6 +37,27 @@ def _to_response(row) -> CardResponse:
         balance=row.balance,
         created_at=row.created_at,
         deleted_at=row.deleted_at,
+    )
+
+
+@router.get("/lookup", response_model=CardLookupResponse)
+def lookup_card(
+    card_number: str = Query(min_length=13, max_length=19),
+    _: int = Depends(get_current_user_id),
+    service: CardService = Depends(get_card_service),
+) -> CardLookupResponse:
+    normalized = card_number.replace(" ", "").replace("-", "")
+    result = service.lookup_by_card_number(normalized)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
+    card, user = result
+    return CardLookupResponse(
+        card_id=card.card_id,
+        last_four=card.last_four,
+        masked_card_number=f"{'*' * 12}{card.last_four}",
+        owner_name=f"{user.first_name} {user.last_name}".strip(),
+        owner_email=user.email,
+        user_id=user.user_id,
     )
 
 

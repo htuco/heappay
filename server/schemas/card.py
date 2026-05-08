@@ -97,6 +97,15 @@ class CardPatch(BaseModel):
         return _validate_future_expiry(value)
 
 
+class CardLookupResponse(BaseModel):
+    card_id: int
+    last_four: str
+    masked_card_number: str
+    owner_name: str
+    owner_email: str
+    user_id: int
+
+
 class CardResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
