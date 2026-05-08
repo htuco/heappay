@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 
 class TransactionCreate(BaseModel):
@@ -24,6 +24,22 @@ class TransactionCreate(BaseModel):
 class TransactionPatch(BaseModel):
     status_id: int | None = Field(default=None, gt=0)
     note: str | None = Field(default=None, max_length=255)
+
+
+class TransactionSummaryPoint(BaseModel):
+    period: str  # "YYYY-MM"
+    income: Decimal
+    expense: Decimal
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def net(self) -> Decimal:
+        return self.income - self.expense
+
+
+class TransactionSummaryResponse(BaseModel):
+    points: list[TransactionSummaryPoint]
+    months: int
 
 
 class TransactionResponse(BaseModel):

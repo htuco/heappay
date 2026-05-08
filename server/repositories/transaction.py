@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select, text
 from sqlalchemy.orm import Session
 
 from models.card import Card
@@ -54,6 +54,97 @@ class TransactionRepository:
             or_(
                 Transaction.sender_card_id.in_(user_card_ids),
                 Transaction.recipient_card_id.in_(user_card_ids),
+            )
+        )
+
+    def get_summary_for_user(
+        self,
+        *,
+        user_id: int,
+        months: int = 6,
+    ) -> list[dict]:
+        """
+        Aggregate income and expense per calendar month for the given user.
+
+        Income  = amount credited to a card the user owns (recipient).
+        Expense = amount debited from a card the user owns (sender).
+        Transfers between the user's own cards count as both, so they cancel
+        out in the net — which is the correct accounting view.
+        """
+        user_card_ids = select(Card.card_id).where(Card.user_id == user_id).scalar_subquery()
+
+        since = func.now() - text(f"INTERVAL '{int(months)} months'")
+
+        period_col = func.to_char(
+            func.date_trunc("month", Transaction.created_at), "YYYY-MM"
+        )
+
+        income_expr = func.coalesce(
+            func.sum(
+                case(
+                    (Transaction.recipient_card_id.in_(user_card_ids), Transaction.amount),
+                    else_=Decimal("0"),
+                )
+            ),
+            Decimal("0"),
+        )
+
+        expense_expr = func.coalesce(
+            func.sum(
+                case(
+                    (Transaction.sender_card_id.in_(user_card_ids), Transaction.amount),
+                    else_=Decimal("0"),
+                )
+            ),
+            Decimal("0"),
+        )
+
+        stmt = (
+            select(
+                period_col.label("period"),
+                income_expr.label("income"),
+                expense_expr.label("expense"),
+            )
+            .where(
+                Transaction.created_at >= since,
+                or_(
+                    Transaction.recipient_card_id.in_(user_card_ids),
+                    Transaction.sender_card_id.in_(user_card_ids),
+                ),
+            )
+            .group_by(period_col)
+            .order_by(period_col.desc())
+        )
+
+        return [dict(r) for r in self._db.execute(stmt).mappings().all()]
+
+    def list_for_card(
+        self,
+        *,
+        card_id: int,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Transaction]:
+        """List transactions where card_id appears as sender or recipient."""
+        stmt = (
+            self._card_transactions_stmt(card_id)
+            .order_by(Transaction.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def count_for_card(self, *, card_id: int) -> int:
+        stmt = select(func.count()).select_from(
+            self._card_transactions_stmt(card_id).subquery()
+        )
+        return int(self._db.execute(stmt).scalar_one())
+
+    def _card_transactions_stmt(self, card_id: int):
+        return select(Transaction).where(
+            or_(
+                Transaction.sender_card_id == card_id,
+                Transaction.recipient_card_id == card_id,
             )
         )
 

@@ -115,7 +115,7 @@ export default function AdminUsersPanel({
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={(event) => {
                           event.stopPropagation()
@@ -157,7 +157,7 @@ export default function AdminUsersPanel({
                 </div>
                 <Button
                   className="mt-3"
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={(event) => {
                     event.stopPropagation()

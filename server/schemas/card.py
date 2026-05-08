@@ -64,6 +64,7 @@ class CardPatch(BaseModel):
     card_numb: str | None = Field(default=None, min_length=13, max_length=19)
     cvc: str | None = Field(default=None, min_length=3, max_length=3)
     expires_at: date | None = None
+    balance: Decimal | None = Field(default=None, ge=0)
 
     @field_validator("card_numb")
     @classmethod
@@ -95,6 +96,15 @@ class CardPatch(BaseModel):
         if value is None:
             return value
         return _validate_future_expiry(value)
+
+
+class CardLookupResponse(BaseModel):
+    card_id: int
+    last_four: str
+    masked_card_number: str
+    owner_name: str
+    owner_email: str
+    user_id: int
 
 
 class CardResponse(BaseModel):
