@@ -28,6 +28,19 @@ function normalizeError(error) {
   throw error
 }
 
+/**
+ * Look up a card by its full card number.
+ * Returns card_id, masked number, owner name, owner email, and user_id.
+ * Throws if no active card with that number exists.
+ * @param {string} cardNumber - Raw digits (spaces/dashes are stripped server-side)
+ */
+export async function lookupCardByNumber(cardNumber) {
+  const { data } = await api.get('/cards/lookup', {
+    params: { card_number: cardNumber.replace(/\D/g, '') },
+  })
+  return data
+}
+
 export async function listCards(params) {
   const { data } = await api.get('/cards', { params })
   return data
