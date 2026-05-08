@@ -16,12 +16,15 @@ export default function WalletPage() {
         saveError={saveError}
       />
       {error ? (
-        <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div
+          role="alert"
+          className="rounded-3xl border border-destructive/30 bg-destructive/10 px-5 py-4 text-sm text-destructive shadow-sm"
+        >
           {error}
         </div>
       ) : null}
       {isLoading ? (
-        <div className="rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
+        <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
           Loading cards...
         </div>
       ) : null}

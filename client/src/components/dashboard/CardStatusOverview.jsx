@@ -1,3 +1,4 @@
+import WalletSection from '@/components/wallet/WalletSection'
 import {
   cardStatusOverviewStatuses,
   cardStatusOverviewTitle,
@@ -22,12 +23,11 @@ export default function CardStatusOverview({
   statusCounts = {},
 }) {
   return (
-    <section className="flex h-full flex-col rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
-      <header className="mb-4">
-        <h2 className="text-base font-semibold text-card-foreground sm:text-lg">{title}</h2>
-        <p className="mt-1 text-xs text-muted-foreground">Total Cards: {totalCards}</p>
-      </header>
-
+    <WalletSection
+      title={title}
+      subtitle={`Total Cards: ${totalCards}`}
+      className="h-full"
+    >
       <ul className="space-y-3">
         {statuses.map((status) => {
           const count = statusCounts[status.id] ?? 0
@@ -57,6 +57,6 @@ export default function CardStatusOverview({
           )
         })}
       </ul>
-    </section>
+    </WalletSection>
   )
 }
