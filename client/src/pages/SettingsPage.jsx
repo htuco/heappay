@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 import { Bell, Eye, KeyRound, Paintbrush } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 
 import ActionRow from '@/components/settings/ActionRow'
@@ -15,18 +15,53 @@ import SettingsHero from '@/components/settings/SettingsHero'
 import Toggle from '@/components/settings/Toggle'
 import { Button } from '@/components/ui/button'
 
+const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
+
 export default function SettingsPage() {
-  const navigate = useNavigate()
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
-  const [billingRemindersEnabled, setBillingRemindersEnabled] = useState(true)
-  const [securityAlertChannel, setSecurityAlertChannel] = useState('Email')
-  const [productUpdatesFrequency, setProductUpdatesFrequency] = useState('Weekly')
-  const { preference: themePreference, setTheme } = useTheme()
+  const { user } = useAuth()
+  const { preference: themePreference, isDark, setTheme } = useTheme()
+  const [savedPreferences, setSavedPreferences] = useState({
+    billingRemindersEnabled: true,
+    theme: themePreference,
+  })
+  const [draftPreferences, setDraftPreferences] = useState(savedPreferences)
+
+  useEffect(() => {
+    setSavedPreferences((current) => ({ ...current, theme: themePreference }))
+  }, [themePreference])
+
+  useEffect(() => {
+    setDraftPreferences(savedPreferences)
+  }, [savedPreferences])
+
+  const isDirty = useMemo(
+    () =>
+      draftPreferences.billingRemindersEnabled !== savedPreferences.billingRemindersEnabled ||
+      draftPreferences.theme !== savedPreferences.theme,
+    [draftPreferences, savedPreferences],
+  )
+
+  function handleSavePreferences() {
+    setSavedPreferences(draftPreferences)
+
+    if (draftPreferences.theme !== themePreference) {
+      setTheme(draftPreferences.theme)
+    }
+  }
+
+  function handleDiscardPreferences() {
+    setDraftPreferences(savedPreferences)
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
-      <SettingsHero onBack={() => navigate('/dashboard')} />
+      <SettingsHero
+        accessLevel={user?.role_name}
+        themePreference={themePreference}
+        isDark={isDark}
+      />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="xl:col-span-2">
@@ -36,7 +71,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Change Password"
           icon={KeyRound}
-          description="Keep access secure with clear password hygiene and recovery controls."
+          description="Update your password and keep account recovery routed to the right place."
           action={
             <Button className="w-full sm:w-auto" onClick={() => setIsChangePasswordOpen(true)}>
               Change Password
@@ -45,20 +80,9 @@ export default function SettingsPage() {
         >
           <div className="space-y-3">
             <SettingRow
-              label="Password status"
-              value="Healthy"
-              hint="Password hash exists and was last rotated on 18 Feb 2026."
-              emphasize
-            />
-            <SettingRow
               label="Recovery method"
               value="Email link"
               hint="Reset links go to your primary account email."
-            />
-            <SettingRow
-              label="Password rules"
-              value="Min 8 · Max 255"
-              hint="No complexity requirements are enforced beyond minimum length."
             />
           </div>
         </SettingsCard>
@@ -80,34 +104,19 @@ export default function SettingsPage() {
         >
           <div className="space-y-3">
             <ControlRow
-              label="Security alerts"
-              hint="Recommended for password resets, new logins, and suspicious activity."
-              emphasize
-            >
-              <OptionGroup
-                options={['Email', 'In-app', 'SMS']}
-                active={securityAlertChannel}
-                onSelect={setSecurityAlertChannel}
-              />
-            </ControlRow>
-            <ControlRow
               label="Billing reminders"
               hint="Renewal reminders and payment confirmations."
+              emphasize
             >
               <Toggle
-                enabled={billingRemindersEnabled}
-                label={billingRemindersEnabled ? 'Enabled' : 'Disabled'}
-                onToggle={() => setBillingRemindersEnabled((current) => !current)}
-              />
-            </ControlRow>
-            <ControlRow
-              label="Product updates"
-              hint="Low-frequency product announcements and release notes."
-            >
-              <OptionGroup
-                options={['Off', 'Weekly', 'Monthly']}
-                active={productUpdatesFrequency}
-                onSelect={setProductUpdatesFrequency}
+                enabled={draftPreferences.billingRemindersEnabled}
+                label={draftPreferences.billingRemindersEnabled ? 'Enabled' : 'Disabled'}
+                onToggle={() =>
+                  setDraftPreferences((current) => ({
+                    ...current,
+                    billingRemindersEnabled: !current.billingRemindersEnabled,
+                  }))
+                }
               />
             </ControlRow>
           </div>
@@ -121,13 +130,20 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <ControlRow
               label="Theme"
-              hint="Follow the light or dark mode set by your device."
+              hint={`Currently using ${formatPreference(themePreference)} mode. ${
+                themePreference === 'system' ? `Resolved to ${isDark ? 'Dark' : 'Light'}.` : ''
+              }`}
               emphasize
             >
               <OptionGroup
                 options={['Light', 'Dark', 'System']}
-                active={themePreference.charAt(0).toUpperCase() + themePreference.slice(1)}
-                onSelect={(label) => setTheme(label.toLowerCase())}
+                active={formatPreference(draftPreferences.theme)}
+                onSelect={(label) =>
+                  setDraftPreferences((current) => ({
+                    ...current,
+                    theme: label.toLowerCase(),
+                  }))
+                }
               />
             </ControlRow>
           </div>
@@ -167,10 +183,21 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={handleDiscardPreferences}
+              disabled={!isDirty}
+            >
               Discard
             </Button>
-            <Button className="w-full px-5 sm:w-auto">Save Changes</Button>
+            <Button
+              className="w-full px-5 sm:w-auto"
+              onClick={handleSavePreferences}
+              disabled={!isDirty}
+            >
+              Save Changes
+            </Button>
           </div>
         </div>
       </div>
