@@ -13,6 +13,8 @@ import {
   normalizeApiCards,
 } from '@/utils/cardApiAdapter'
 
+const MIN_LOADING_MS = 2000
+
 export function useWalletCards() {
   const { user, isLoading: authLoading } = useAuth()
   const [cards, setCards] = useState([])
@@ -57,6 +59,8 @@ export function useWalletCards() {
       setError(null)
     })
 
+    const startedAt = Date.now()
+
     Promise.all([
       listCards({ user_id: userId }),
       cardTypesService.list(),
@@ -73,7 +77,12 @@ export function useWalletCards() {
         if (!ignore) setError(getApiErrorMessage(err, 'Unable to load cards.'))
       })
       .finally(() => {
-        if (!ignore) setIsLoading(false)
+        if (ignore) return
+        const elapsed = Date.now() - startedAt
+        const remaining = Math.max(MIN_LOADING_MS - elapsed, 0)
+        setTimeout(() => {
+          if (!ignore) setIsLoading(false)
+        }, remaining)
       })
 
     return () => {

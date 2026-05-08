@@ -21,6 +21,7 @@ export function normalizeApiCard(card, typesById, statusesById, holderName) {
   return {
     id: String(card.card_id),
     source: card,
+    balance: card.balance ?? '0.00',
     card: {
       cardHolderName: holderName || 'Card holder',
       cardNumber: card.masked_card_number,
