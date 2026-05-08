@@ -87,6 +87,40 @@ def list_all_transactions(
     )
 
 
+@router.get("/card/{card_id}", response_model=ApiResponse[Page[TransactionResponse]])
+def list_transactions_for_card(
+    card_id: int,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[Page[TransactionResponse]]:
+    try:
+        rows, total = service.list_for_card(
+            card_id, user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+        )
+    except CardNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND
+        ) from None
+    except ForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
+    items = [TransactionResponse.model_validate(r) for r in rows]
+    page_data = Page[TransactionResponse].build(
+        items=items, total=total, page=page, page_size=page_size
+    )
+    message = (
+        "No transactions found for this card."
+        if total == 0
+        else f"Retrieved {len(items)} of {total} transactions."
+    )
+    return ApiResponse[Page[TransactionResponse]](
+        success=True, message=message, data=page_data
+    )
+
+
 @router.get("/{transaction_id}", response_model=ApiResponse[TransactionResponse])
 def get_transaction(
     transaction_id: int,

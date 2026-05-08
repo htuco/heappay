@@ -57,6 +57,36 @@ class TransactionRepository:
             )
         )
 
+    def list_for_card(
+        self,
+        *,
+        card_id: int,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Transaction]:
+        """List transactions where card_id appears as sender or recipient."""
+        stmt = (
+            self._card_transactions_stmt(card_id)
+            .order_by(Transaction.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def count_for_card(self, *, card_id: int) -> int:
+        stmt = select(func.count()).select_from(
+            self._card_transactions_stmt(card_id).subquery()
+        )
+        return int(self._db.execute(stmt).scalar_one())
+
+    def _card_transactions_stmt(self, card_id: int):
+        return select(Transaction).where(
+            or_(
+                Transaction.sender_card_id == card_id,
+                Transaction.recipient_card_id == card_id,
+            )
+        )
+
     def get_by_id(self, transaction_id: int) -> Transaction | None:
         stmt = select(Transaction).where(Transaction.transaction_id == transaction_id)
         return self._db.scalars(stmt).first()

@@ -44,6 +44,12 @@ export const TRANSACTION_API_ERROR_CODES = Object.freeze({
  */
 
 /**
+ * @typedef {Object} ListByCardParams
+ * @property {number=} page
+ * @property {number=} pageSize
+ */
+
+/**
  * Matches backend `TransactionCreate`.
  * @typedef {Object} CreateTransactionPayload
  * @property {number | null} sender_card_id   - Null for deposits / incoming transfers

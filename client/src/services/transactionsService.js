@@ -129,6 +129,24 @@ export const transactionsService = {
 	},
 
 	/**
+	 * List paginated transactions where the given card appears as sender or recipient.
+	 * The card must belong to the current user.
+	 * @param {number} cardId
+	 * @param {import('@/types/transaction').ListByCardParams} [params]
+	 * @returns {Promise<import('@/types/transaction').TransactionPage>}
+	 */
+	async listByCard(cardId, params = {}) {
+		try {
+			const { data } = await api.get(`/transactions/card/${cardId}`, {
+				params: buildPageParams(params),
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * Create a new transaction.
 	 * The sender card must belong to the current user.
 	 * @param {import('@/types/transaction').CreateTransactionPayload} payload
