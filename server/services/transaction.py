@@ -44,6 +44,16 @@ class TransactionService:
         total = self._repo.count_for_user(user_id=user_id)
         return items, total
 
+    def list_all(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[Transaction], int]:
+        items = self._repo.list_all(limit=limit, offset=offset)
+        total = self._repo.count_all()
+        return items, total
+
     def get_by_id_for_user(
         self, transaction_id: int, *, user_id: int
     ) -> Transaction | None:

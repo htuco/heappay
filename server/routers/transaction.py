@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.transaction import TransactionRepository
-from routers.dependencies import get_current_user_id
+from routers.dependencies import get_current_user_id, require_admin
 from schemas.pagination import Page
 from schemas.response import ApiResponse
 from schemas.transaction import (
@@ -52,6 +52,33 @@ def list_transactions(
     )
     message = (
         "No transactions found."
+        if total == 0
+        else f"Retrieved {len(items)} of {total} transactions."
+    )
+    return ApiResponse[Page[TransactionResponse]](
+        success=True, message=message, data=page_data
+    )
+
+
+@router.get(
+    "/all",
+    response_model=ApiResponse[Page[TransactionResponse]],
+    summary="(Admin) List every transaction in the system.",
+)
+def list_all_transactions(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    _: int = Depends(require_admin),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[Page[TransactionResponse]]:
+    offset = (page - 1) * page_size
+    rows, total = service.list_all(limit=page_size, offset=offset)
+    items = [TransactionResponse.model_validate(r) for r in rows]
+    page_data = Page[TransactionResponse].build(
+        items=items, total=total, page=page, page_size=page_size
+    )
+    message = (
+        "No transactions in the system."
         if total == 0
         else f"Retrieved {len(items)} of {total} transactions."
     )

@@ -1,13 +1,18 @@
-from fastapi import Depends, Security
+from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_db
 from exceptions import Unauthorized
+from models.user import User
+from models.user_role import UserRole
 from repositories.user.auth import UserAuthRepository
 from services.user.auth import UserAuthService
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+ADMIN_ROLE_NAME = "admin"
 
 
 def get_current_user_id(
@@ -22,4 +27,23 @@ def get_current_user_id(
     user_id = service.verify_access_token(credentials.credentials)
     if user_id is None:
         raise Unauthorized("Invalid or expired token.")
+    return user_id
+
+
+def require_admin(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> int:
+    """Authorize current user as admin. Returns user_id; raises 403 otherwise."""
+    stmt = (
+        select(UserRole.role_name)
+        .join(User, User.user_role_id == UserRole.role_id)
+        .where(User.user_id == user_id)
+    )
+    role_name = db.execute(stmt).scalar_one_or_none()
+    if role_name != ADMIN_ROLE_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required.",
+        )
     return user_id

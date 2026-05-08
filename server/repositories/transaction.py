@@ -35,6 +35,19 @@ class TransactionRepository:
         )
         return int(self._db.execute(stmt).scalar_one())
 
+    def list_all(self, *, limit: int = 50, offset: int = 0) -> list[Transaction]:
+        stmt = (
+            select(Transaction)
+            .order_by(Transaction.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def count_all(self) -> int:
+        stmt = select(func.count()).select_from(Transaction)
+        return int(self._db.execute(stmt).scalar_one())
+
     def _user_transactions_stmt(self, user_id: int):
         user_card_ids = select(Card.card_id).where(Card.user_id == user_id)
         return select(Transaction).where(
