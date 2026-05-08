@@ -9,6 +9,7 @@ import QuickActions from '@/components/dashboard/QuickActions'
 import DashboardLoadingOverlay from '@/components/dashboard/DashboardLoadingOverlay'
 import PaymentCard from '@/components/payment-card/PaymentCard'
 import PaymentWizard from '@/components/payment/PaymentWizard'
+import TopUpModal from '@/components/payment/TopUpModal'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
@@ -91,6 +92,7 @@ export default function DashboardPage() {
   const { cards, isLoading, error } = useDashboardCards()
   const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
+  const [topUpOpen, setTopUpOpen] = useState(false)
   const primaryCard = cards[0] ?? null
   const cardStatusProps = buildCardStatusOverviewProps(cards)
 
@@ -133,7 +135,10 @@ export default function DashboardPage() {
             labels={dashboardMockData.moneyFlow.labels}
           />
         </div>
-        <QuickActions onSend={() => setPaymentWizardOpen(true)} />
+        <QuickActions
+          onSend={() => setPaymentWizardOpen(true)}
+          onTopUp={() => setTopUpOpen(true)}
+        />
       </section>
 
       {/* Row 3: Card Status (1/3) + Recent Activity (2/3) */}
@@ -158,6 +163,10 @@ export default function DashboardPage() {
       <PaymentWizard
         isOpen={paymentWizardOpen}
         onClose={() => setPaymentWizardOpen(false)}
+      />
+      <TopUpModal
+        isOpen={topUpOpen}
+        onClose={() => setTopUpOpen(false)}
       />
     </div>
   )

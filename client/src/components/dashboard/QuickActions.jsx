@@ -8,9 +8,10 @@ const ACTIONS = [
   { label: 'Top Up', icon: Wallet, key: 'topup' },
 ]
 
-export default function QuickActions({ onSend }) {
+export default function QuickActions({ onSend, onTopUp }) {
   function handleClick(key) {
     if (key === 'send') onSend?.()
+    if (key === 'topup') onTopUp?.()
   }
 
   return (
