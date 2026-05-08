@@ -1,4 +1,7 @@
+from sqlalchemy.exc import IntegrityError
+
 from models.card import Card
+from models.user import User
 from repositories.card import CardRepository
 from schemas.card import CardCreate, CardPatch
 
@@ -17,6 +20,10 @@ class CardStatusNotFoundError(Exception):
 
 class CardTypeNotFoundError(Exception):
     """Card type does not exist."""
+
+
+class DuplicateCardNumberError(Exception):
+    """A card with this number is already registered."""
 
 
 class CardService:
@@ -51,15 +58,20 @@ class CardService:
             status_id=payload.status_id,
             card_type_id=payload.card_type_id,
         )
-        return self._repo.create(
-            user_id=payload.user_id,
-            status_id=payload.status_id,
-            card_type_id=payload.card_type_id,
-            card_numb=payload.card_numb,
-            last_four=payload.card_numb[-4:],
-            cvc=payload.cvc,
-            expires_at=payload.expires_at,
-        )
+        try:
+            return self._repo.create(
+                user_id=payload.user_id,
+                status_id=payload.status_id,
+                card_type_id=payload.card_type_id,
+                card_numb=payload.card_numb,
+                last_four=payload.card_numb[-4:],
+                cvc=payload.cvc,
+                expires_at=payload.expires_at,
+            )
+        except IntegrityError as exc:
+            if "uq_cards_card_numb" in str(exc.orig).lower() or "card_numb" in str(exc.orig).lower():
+                raise DuplicateCardNumberError() from exc
+            raise
 
     def patch(self, card_id: int, payload: CardPatch) -> Card:
         row = self._repo.get_by_id(card_id, include_deleted=False)
@@ -84,6 +96,9 @@ class CardService:
         if row is None:
             raise CardNotFoundError()
         self._repo.soft_delete(row)
+
+    def lookup_by_card_number(self, card_numb: str) -> tuple[Card, User] | None:
+        return self._repo.lookup_by_card_number(card_numb)
 
     def restore(self, card_id: int) -> Card:
         row = self._repo.get_by_id(card_id, include_deleted=True)

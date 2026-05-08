@@ -13,6 +13,7 @@ from routers import (
     health,
     system,
     transaction,
+    transaction_type,
     user_roles,
     user_statuses,
 )
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     app.include_router(card_status.router)
     app.include_router(card_type.router)
     app.include_router(transaction.router)
+    app.include_router(transaction_type.router)
     app.include_router(auth_router)
     app.include_router(users_router)
     app.include_router(user_statuses.router)
