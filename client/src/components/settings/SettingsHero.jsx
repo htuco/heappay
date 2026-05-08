@@ -34,11 +34,10 @@ export default function SettingsHero({ accessLevel, themePreference, isDark }) {
 
           <div className="max-w-4xl">
             <h1 className="text-2xl font-bold tracking-tight text-card-foreground sm:text-4xl">
-              Account settings that feel like a control center
+              Account Settings
             </h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-              Password, notifications, theme preferences, and account privacy all live here in one
-              focused space without an extra sidebar.
+              Manage password, notifications, theme, and privacy.
             </p>
           </div>
         </div>
