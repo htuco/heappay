@@ -50,7 +50,14 @@ function isFutureExpiry(value) {
 
 const emptyForm = { number: "", expiry: "", cvv: "" }
 
-export default function AddCardModal({ onSubmit, isSubmitting = false, submitError = null }) {
+export default function AddCardModal({
+  onSubmit,
+  isSubmitting = false,
+  submitError = null,
+  triggerLabel = "Add New Card",
+  triggerClassName,
+  triggerVariant,
+}) {
   const [open, setOpen] = React.useState(false)
   const [form, setForm] = React.useState(emptyForm)
   const [errors, setErrors] = React.useState({})
@@ -107,9 +114,9 @@ export default function AddCardModal({ onSubmit, isSubmitting = false, submitErr
   return (
     <DialogRoot open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>
+        <Button variant={triggerVariant} className={triggerClassName}>
           <Plus />
-          Add New Card
+          {triggerLabel}
         </Button>
       </DialogTrigger>
 
