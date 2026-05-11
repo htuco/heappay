@@ -89,7 +89,7 @@ def change_password(
     if credentials is None:
         raise Unauthorized("Authorization header is required.")
 
-    user_id = service.verify_access_token(credentials.credentials)
+    user_id = service.resolve_active_user_id(credentials.credentials)
     if user_id is None:
         raise Unauthorized("Invalid or expired token.")
 
@@ -112,7 +112,7 @@ def deactivate(
     if credentials is None:
         raise Unauthorized("Authorization header is required.")
 
-    user_id = service.verify_access_token(credentials.credentials)
+    user_id = service.resolve_active_user_id(credentials.credentials)
     if user_id is None:
         raise Unauthorized("Invalid or expired token.")
 

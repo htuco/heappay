@@ -70,7 +70,10 @@ class UserAuthRepository:
         return role_name or "user"
 
     def get_user_by_refresh_token(self, refresh_token: str) -> User | None:
-        stmt = select(User).where(User.refresh_token == refresh_token)
+        stmt = select(User).where(
+            User.refresh_token == refresh_token,
+            User.deleted_at.is_(None),
+        )
         return self._db.scalars(stmt).first()
 
     def save_refresh_token(self, user_id: int, refresh_token: str) -> None:
