@@ -24,7 +24,7 @@ def get_current_user_id(
         raise Unauthorized("Authorization header is required.")
 
     service = UserAuthService(UserAuthRepository(db))
-    user_id = service.verify_access_token(credentials.credentials)
+    user_id = service.resolve_active_user_id(credentials.credentials)
     if user_id is None:
         raise Unauthorized("Invalid or expired token.")
     return user_id

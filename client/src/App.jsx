@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import { getAuthRefreshToken, getAuthToken, getAuthUser } from './utils/authStorage'
 import { useAppDispatch } from './store/hooks'
+import { clearAuthState } from './store/slices/authSlice'
 import { fetchReferenceDataOnce } from './store/slices/referenceDataSlice'
 
 function ProtectedRoute({ children }) {
@@ -47,6 +48,14 @@ export default function App() {
 
   useEffect(() => {
     dispatch(fetchReferenceDataOnce())
+  }, [dispatch])
+
+  useEffect(() => {
+    const onUnauthorized = () => {
+      dispatch(clearAuthState())
+    }
+    window.addEventListener('heap:unauthorized', onUnauthorized)
+    return () => window.removeEventListener('heap:unauthorized', onUnauthorized)
   }, [dispatch])
 
   return (

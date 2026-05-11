@@ -79,6 +79,16 @@ class UserAuthService:
         except InvalidTokenError:
             return None
 
+    def resolve_active_user_id(self, access_token: str) -> int | None:
+        """Valid access JWT + existing user + not soft-deleted (deactivated)."""
+        user_id = self.verify_access_token(access_token)
+        if user_id is None:
+            return None
+        user = self.repo.get_user_by_id(user_id)
+        if user is None or user.deleted_at is not None:
+            return None
+        return user_id
+
     def _build_token_response(self, user_id: int, refresh_token: str) -> TokenResponse:
         user = self.repo.get_user_by_id(user_id)
         if not user:
@@ -145,7 +155,7 @@ class UserAuthService:
         return self._build_token_response(user_id, new_refresh_token)
 
     def logout(self, token: str) -> bool:
-        user_id = self.verify_access_token(token)
+        user_id = self.resolve_active_user_id(token)
         if user_id is None:
             return False
         self.repo.clear_refresh_token(user_id)
@@ -154,6 +164,8 @@ class UserAuthService:
     def change_password(self, user_id: int, payload: ChangePasswordRequest) -> None:
         user = self.repo.get_user_by_id(user_id)
         if not user:
+            raise ValueError("USER_NOT_FOUND")
+        if user.deleted_at is not None:
             raise ValueError("USER_NOT_FOUND")
         if not self.verify_password(payload.current_password, user.password_hash):
             raise ValueError("WRONG_CURRENT_PASSWORD")
@@ -176,7 +188,7 @@ class UserAuthService:
             return None
 
         current_user = self.repo.get_user_by_id(user_id)
-        if not current_user:
+        if not current_user or current_user.deleted_at is not None:
             return None
 
         if payload.email is not None:
@@ -200,7 +212,7 @@ class UserAuthService:
             return None
 
         user = self.repo.get_user_by_id(user_id)
-        if not user:
+        if not user or user.deleted_at is not None:
             return None
 
         return self._build_token_response_for_user(

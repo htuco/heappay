@@ -211,6 +211,21 @@ def test_me_invalid_token_returns_401() -> None:
     assert resp.status_code == 401
 
 
+def test_me_rejects_deactivated_user_returns_401() -> None:
+    """Same contract as invalid/expired token: deactivated users get 401 on /auth/me."""
+
+    class _DeactivatedMeService(_FakeAuthService):
+        def get_me(self, _token):
+            return None
+
+    client = _build_client(_DeactivatedMeService())
+    resp = client.get(
+        "/auth/me",
+        headers={"Authorization": "Bearer stale.after.deactivate"},
+    )
+    assert resp.status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # PATCH /me
 # ---------------------------------------------------------------------------
@@ -298,5 +313,20 @@ def test_refresh_invalid_token_returns_401() -> None:
     resp = client.post(
         "/auth/refresh",
         json={"refresh_token": "invalid.refresh"},
+    )
+    assert resp.status_code == 401
+
+
+def test_refresh_rejects_deactivated_user_returns_401() -> None:
+    """Deactivated users cannot rotate tokens; service returns None → 401."""
+
+    class _DeactivatedRefreshService(_FakeAuthService):
+        def refresh(self, _token):
+            return None
+
+    client = _build_client(_DeactivatedRefreshService())
+    resp = client.post(
+        "/auth/refresh",
+        json={"refresh_token": "stale.after.deactivate"},
     )
     assert resp.status_code == 401
