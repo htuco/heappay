@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotifications } from '@/context/NotificationContext'
-import { listCards, updateCard } from '@/services/cardsService'
+import { listCards } from '@/services/cardsService'
+import transactionTypesService from '@/services/transactionTypesService'
+import transactionsService from '@/services/transactionsService'
 
 function formatAmount(value) {
   const cleaned = value.replace(/[^\d.]/g, '')
@@ -15,11 +17,12 @@ function formatAmount(value) {
   return cleaned
 }
 
-export default function TopUpModal({ isOpen, onClose }) {
+export default function TopUpModal({ isOpen, onClose, onSuccess }) {
   const { user } = useAuth()
   const { notify } = useNotifications()
 
   const [cards, setCards] = useState([])
+  const [depositTypeId, setDepositTypeId] = useState(null)
   const [selectedCardId, setSelectedCardId] = useState(null)
   const [amount, setAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -30,11 +33,16 @@ export default function TopUpModal({ isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen || !user) return
     setIsLoading(true)
-    listCards({ user_id: user.id, limit: 100 })
-      .then((raw) => {
+    Promise.all([
+      listCards({ user_id: user.id, limit: 100 }),
+      transactionTypesService.list(),
+    ])
+      .then(([raw, types]) => {
         const active = raw.filter((c) => !c.deleted_at)
         setCards(active)
         if (active.length === 1) setSelectedCardId(active[0].card_id)
+        const deposit = types.find((t) => t.name === 'deposit')
+        setDepositTypeId(deposit?.transaction_type_id ?? null)
       })
       .catch(() => {})
       .finally(() => setIsLoading(false))
@@ -50,19 +58,29 @@ export default function TopUpModal({ isOpen, onClose }) {
   async function handleSubmit() {
     const amountNum = parseFloat(amount)
     if (!selectedCardId || isNaN(amountNum) || amountNum <= 0) return
+    if (!depositTypeId) {
+      setError('Deposit is not available right now. Please try again later.')
+      return
+    }
 
     setError('')
     setIsSubmitting(true)
 
     try {
       const card = cards.find((c) => c.card_id === selectedCardId)
-      const newBalance = (Number(card.balance) + amountNum).toFixed(2)
-      await updateCard(selectedCardId, { balance: newBalance })
+      await transactionsService.create({
+        sender_card_id: null,
+        recipient_card_id: selectedCardId,
+        transaction_type_id: depositTypeId,
+        amount: amountNum.toFixed(2),
+        note: null,
+      })
 
       notify({
         type: 'success',
         message: `$${amountNum.toFixed(2)} added to card ****${card.last_four}.`,
       })
+      onSuccess?.()
       handleClose()
     } catch (err) {
       setError(err?.message || 'Top-up failed. Please try again.')
