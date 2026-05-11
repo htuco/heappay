@@ -14,7 +14,8 @@ const PAGE_META = {
   },
   '/wallet': { title: 'Wallet', subtitle: 'Manage your cards and balances.' },
   '/admin': { title: 'Users', subtitle: 'Manage user accounts and roles.' },
-  '/settings': { title: 'Settings', subtitle: 'Manage account preferences.' },
+  '/payments': { title: 'Payments', subtitle: 'View transactions and send payments.' },
+  '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
 }
 
 export default function Layout() {

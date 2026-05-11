@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import AdminPage from './pages/AdminPage'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
+import PaymentPage from './pages/PaymentPage'
 import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+        <Route path="/payments" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       </Route>
     </Routes>

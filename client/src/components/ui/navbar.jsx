@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { CreditCard, LayoutDashboard, Settings, Shield } from 'lucide-react'
+import { ArrowLeftRight, CreditCard, LayoutDashboard, Settings, Shield } from 'lucide-react'
 import { useAppSelector } from '@/store/hooks'
 import { selectAuthUser } from '@/store/slices/authSlice'
 
 const mainLinks = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
+  { name: 'Payments', path: '/payments', icon: ArrowLeftRight },
 ]
 
 const adminLinks = [{ name: 'Users', path: '/admin', icon: Shield }]
