@@ -6,10 +6,13 @@ import { deactivateAccount } from '@/services/authService'
 import { clearAuthSession } from '@/utils/authStorage'
 import { getApiErrorMessage } from '@/utils/api'
 import { useNotifications } from '@/context/NotificationContext'
+import { useAppDispatch } from '@/store/hooks'
+import { clearAuthState } from '@/store/slices/authSlice'
 
 const EMPTY = { currentPassword: '' }
 
 export default function DeactivateAccountModal({ isOpen, onClose }) {
+	const dispatch = useAppDispatch()
 	const { notify } = useNotifications()
 	const [form, setForm] = useState(EMPTY)
 	const [errors, setErrors] = useState({})
@@ -31,6 +34,7 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 		setLoading(true)
 		try {
 			await deactivateAccount({ currentPassword: form.currentPassword })
+			dispatch(clearAuthState())
 			clearAuthSession()
 			window.location.assign('/login?deactivated=1')
 		} catch (err) {
