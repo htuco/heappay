@@ -76,7 +76,17 @@ const authSlice = createSlice({
     status: 'idle',
     error: null,
   },
-  reducers: {},
+  reducers: {
+    /**
+     * Clears in-memory auth immediately (e.g. after deactivate clears storage).
+     * Dispatch before navigation so protected UI and admin controls unmount synchronously.
+     */
+    clearAuthState: (state) => {
+      state.user = null
+      state.status = 'unauthenticated'
+      state.error = null
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(hydrateSession.pending, (state) => {
@@ -141,6 +151,8 @@ const authSlice = createSlice({
       })
   },
 })
+
+export const { clearAuthState } = authSlice.actions
 
 export const selectAuthState = (state) => state.auth
 export const selectAuthUser = (state) => state.auth.user
