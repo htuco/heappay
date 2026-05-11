@@ -16,7 +16,7 @@ export default function ProfileSection() {
     <SettingsCard
       title="Profile Details"
       icon={UserRound}
-      description="Review the personal information shown across your account and workspace profile."
+      description="Personal information shown across your account."
     >
       <div className="space-y-4">
         <div className="bg-emphasis rounded-2xl border border-border p-4">
@@ -36,7 +36,7 @@ export default function ProfileSection() {
                 </p>
                 <p className="text-xs text-muted-foreground">{email || 'No email loaded'}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Personal details appear in your account settings and workspace profile.
+                  Shown across your account.
                 </p>
               </div>
             </div>
@@ -46,17 +46,15 @@ export default function ProfileSection() {
         <div className="grid gap-4 sm:grid-cols-2">
           <ProfileField
             label="First name"
-            hint="Used for your account identity."
             value={firstName}
           />
           <ProfileField
             label="Last name"
-            hint="Used alongside your first name across the workspace."
             value={lastName}
           />
           <ProfileField
             label="Email address"
-            hint="Primary address for account access and recovery updates."
+            hint="Used for sign-in and recovery."
             value={email}
           />
         </div>

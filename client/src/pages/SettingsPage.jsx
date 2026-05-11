@@ -71,7 +71,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Change Password"
           icon={KeyRound}
-          description="Update your password and keep account recovery routed to the right place."
+          description="Update your password and recovery email."
           action={
             <Button className="w-full sm:w-auto" onClick={() => setIsChangePasswordOpen(true)}>
               Change Password
@@ -82,7 +82,7 @@ export default function SettingsPage() {
             <SettingRow
               label="Recovery method"
               value="Email link"
-              hint="Reset links go to your primary account email."
+              hint="Reset links sent to your account email."
             />
           </div>
         </SettingsCard>
@@ -100,7 +100,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Notification Preferences"
           icon={Bell}
-          description="Choose which updates deserve your attention and where they should arrive."
+          description="Choose which updates you want to receive."
         >
           <div className="space-y-3">
             <ControlRow
@@ -125,7 +125,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Theme & Preferences"
           icon={Paintbrush}
-          description="Control how the workspace looks and how the app behaves day to day."
+          description="Control how the app looks and behaves."
         >
           <div className="space-y-3">
             <ControlRow
@@ -152,13 +152,13 @@ export default function SettingsPage() {
         <SettingsCard
           title="Privacy & Account"
           icon={Eye}
-          description="Review account visibility, data access, and high-impact account actions."
+          description="Review account access and destructive actions."
         >
           <div className="space-y-3">
             <ActionRow
               label="Deactivate account"
               value="Permanent"
-              hint="Sets deleted_at on your account. You will be signed out and cannot log back in."
+              hint="Permanently disables your account. You will be signed out."
               tone="danger"
               action={
                 <Button

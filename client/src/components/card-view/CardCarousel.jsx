@@ -11,14 +11,25 @@ import {
   getCarouselCyclicIndex,
 } from '@/utils/cardCarousel.utils'
 
-export default function CardCarousel({ items }) {
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [transitionId, setTransitionId] = useState(0)
-  const [cycleDir, setCycleDir] = useState(null)
+export default function CardCarousel({ items, activeIndex: controlledIndex, onChangeIndex }) {
+  const isControlled = controlledIndex != null
+  const [internalIndex, setInternalIndex] = useState(0)
+  const activeIndex = isControlled ? controlledIndex : internalIndex
+
+  const [previousIndex, setPreviousIndex] = useState(activeIndex)
+  const [animation, setAnimation] = useState({ id: 0, dir: null })
   const animatingRef = useRef(false)
   const timeoutRef = useRef(null)
 
   const count = items.length
+
+  if (previousIndex !== activeIndex) {
+    setPreviousIndex(activeIndex)
+    setAnimation((prev) => ({
+      id: prev.id + 1,
+      dir: activeIndex > previousIndex ? 'next' : 'prev',
+    }))
+  }
 
   useEffect(() => {
     return () => {
@@ -41,17 +52,19 @@ export default function CardCarousel({ items }) {
       animatingRef.current = true
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
 
-      setCycleDir(delta > 0 ? 'next' : 'prev')
-      setTransitionId((t) => t + 1)
-      setActiveIndex((current) =>
-        getCarouselCyclicIndex(current, delta, count)
-      )
+      const nextIndex = getCarouselCyclicIndex(activeIndex, delta, count)
+      if (isControlled) {
+        onChangeIndex?.(nextIndex)
+      } else {
+        setInternalIndex(nextIndex)
+        onChangeIndex?.(nextIndex)
+      }
 
       timeoutRef.current = window.setTimeout(() => {
         animatingRef.current = false
       }, CAROUSEL_CYCLE_MS)
     },
-    [count]
+    [activeIndex, count, isControlled, onChangeIndex]
   )
 
   if (count === 0) {
@@ -74,10 +87,10 @@ export default function CardCarousel({ items }) {
             aria-hidden={!isCenter}
           >
             <div
-              key={`${layout}-${transitionId}`}
+              key={`${layout}-${animation.id}`}
               className={getCarouselCycleAnimationClass(
-                transitionId,
-                cycleDir,
+                animation.id,
+                animation.dir,
                 animRole
               )}
             >

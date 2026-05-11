@@ -1,3 +1,4 @@
+import WalletSection from '@/components/wallet/WalletSection'
 import {
   cardStatusOverviewStatuses,
   cardStatusOverviewTitle,
@@ -7,6 +8,12 @@ const dotClassMap = {
   active: 'bg-success',
   disabled: 'bg-destructive',
   inactive: 'bg-muted-foreground/50',
+}
+
+const segmentClassMap = {
+  active: 'bg-success',
+  disabled: 'bg-destructive',
+  inactive: 'bg-muted-foreground/40',
 }
 
 const chipClassMap = {
@@ -21,42 +28,68 @@ export default function CardStatusOverview({
   statuses = cardStatusOverviewStatuses,
   statusCounts = {},
 }) {
-  return (
-    <section className="flex h-full flex-col rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
-      <header className="mb-4">
-        <h2 className="text-base font-semibold text-card-foreground sm:text-lg">{title}</h2>
-        <p className="mt-1 text-xs text-muted-foreground">Total Cards: {totalCards}</p>
-      </header>
+  const safeTotal = Math.max(totalCards, 1)
+  const hasCards = totalCards > 0
 
-      <ul className="space-y-3">
+  return (
+    <WalletSection
+      title={title}
+      subtitle={`Total Cards: ${totalCards}`}
+      className="h-full"
+    >
+      {hasCards ? (
+        <div
+          className="mb-5 flex h-2 w-full overflow-hidden rounded-full bg-muted"
+          role="img"
+          aria-label="Card status distribution"
+        >
+          {statuses.map((status) => {
+            const count = statusCounts[status.id] ?? 0
+            if (count === 0) return null
+            const width = (count / safeTotal) * 100
+            const segmentClass = segmentClassMap[status.id] ?? 'bg-muted-foreground/40'
+            return (
+              <span
+                key={status.id}
+                className={`h-full ${segmentClass}`}
+                style={{ width: `${width}%` }}
+              />
+            )
+          })}
+        </div>
+      ) : null}
+
+      <ul className="space-y-2.5">
         {statuses.map((status) => {
           const count = statusCounts[status.id] ?? 0
-          const percentage = Math.round((count / Math.max(totalCards, 1)) * 100)
+          const percentage = Math.round((count / safeTotal) * 100)
           const dotClass = dotClassMap[status.id] ?? 'bg-muted-foreground/50'
           const chipClass = chipClassMap[status.id] ?? 'bg-muted text-muted-foreground'
           return (
             <li
               key={status.id}
-              className="flex items-center justify-between gap-3 rounded-xl bg-muted/30 px-4 py-3"
+              className="flex items-center justify-between gap-3 rounded-xl bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex min-w-0 items-center gap-3">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-card-foreground">{status.label}</p>
-                  <p className="tabular text-lg font-semibold leading-tight text-card-foreground">
-                    {count}
-                  </p>
-                </div>
+                <p className="truncate text-sm font-medium text-card-foreground">
+                  {status.label}
+                </p>
               </div>
-              <span
-                className={`tabular shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${chipClass}`}
-              >
-                {percentage}%
-              </span>
+              <div className="flex shrink-0 items-baseline gap-3">
+                <span className="tabular text-base font-semibold leading-none text-card-foreground">
+                  {count}
+                </span>
+                <span
+                  className={`tabular rounded-full px-2.5 py-0.5 text-xs font-medium ${chipClass}`}
+                >
+                  {percentage}%
+                </span>
+              </div>
             </li>
           )
         })}
       </ul>
-    </section>
+    </WalletSection>
   )
 }
