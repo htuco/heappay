@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   ArrowDownLeft,
@@ -18,6 +18,13 @@ import useTransactionDetail from '@/hooks/useTransactionDetail'
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
 const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Failed', 4: 'Reversed' }
 const STATUS_VARIANT = { 1: 'warning', 2: 'success', 3: 'error', 4: 'secondary' }
+const CLOSE_ANIMATION_MS = 240
+const PANEL_ENTER_ANIMATION =
+  'animate-[transaction-detail-slide-in_240ms_cubic-bezier(0.16,1,0.3,1)_both]'
+const PANEL_EXIT_ANIMATION =
+  'animate-[transaction-detail-slide-out_240ms_cubic-bezier(0.7,0,0.84,0)_both]'
+const OVERLAY_ENTER_ANIMATION = 'animate-[transaction-detail-fade-in_220ms_ease-out_both]'
+const OVERLAY_EXIT_ANIMATION = 'animate-[transaction-detail-fade-out_240ms_ease-in_both]'
 
 function getTransactionId(transaction) {
   return transaction?.transaction_id ?? transaction?.id ?? transaction?.payment_id ?? null
@@ -203,11 +210,23 @@ function NotesSection({ value, onChange, placeholder = 'Add a few notes to help 
   )
 }
 
-function PanelBody({ detail, hasApiDetail, isLoading, error, onClose, onShare, onSaveNotes }) {
+function PanelBody({
+  detail,
+  hasApiDetail,
+  isLoading,
+  error,
+  isClosing,
+  onClose,
+  onShare,
+  onSaveNotes,
+}) {
   const [notes, setNotes] = useState(detail?.note ?? detail?.notes ?? '')
+  const animationClass = isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
 
   return (
-    <aside className="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl animate-in slide-in-from-right duration-200">
+    <aside
+      className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl will-change-transform ${animationClass}`}
+    >
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <h2
           id="transaction-detail-title"
@@ -276,11 +295,21 @@ export default function TransactionDetailPanel({
   onSaveNotes,
 }) {
   const { detail, hasApiDetail, isLoading, error } = useTransactionDetail(open ? transaction : null)
+  const [isClosing, setIsClosing] = useState(false)
+
+  const requestClose = useCallback(() => {
+    if (isClosing) return
+    setIsClosing(true)
+    window.setTimeout(() => {
+      onClose?.()
+      setIsClosing(false)
+    }, CLOSE_ANIMATION_MS)
+  }, [isClosing, onClose])
 
   useEffect(() => {
     if (!open) return undefined
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape') requestClose()
     }
     document.addEventListener('keydown', handleKey)
     const previousOverflow = document.body.style.overflow
@@ -289,7 +318,7 @@ export default function TransactionDetailPanel({
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = previousOverflow
     }
-  }, [open, onClose])
+  }, [open, requestClose])
 
   if (!open) return null
 
@@ -306,8 +335,10 @@ export default function TransactionDetailPanel({
       <button
         type="button"
         aria-label="Close transaction details"
-        onClick={() => onClose?.()}
-        className="absolute inset-0 bg-foreground/30 transition-opacity animate-in fade-in"
+        onClick={requestClose}
+        className={`absolute inset-0 bg-foreground/30 transition-opacity ${
+          isClosing ? OVERLAY_EXIT_ANIMATION : OVERLAY_ENTER_ANIMATION
+        }`}
       />
 
       {hasTransaction ? (
@@ -317,12 +348,17 @@ export default function TransactionDetailPanel({
           hasApiDetail={hasApiDetail}
           isLoading={isLoading}
           error={error}
-          onClose={onClose}
+          isClosing={isClosing}
+          onClose={requestClose}
           onShare={onShare}
           onSaveNotes={onSaveNotes}
         />
       ) : (
-        <aside className="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl animate-in slide-in-from-right duration-200">
+        <aside
+          className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl will-change-transform ${
+            isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
+          }`}
+        >
           <header className="flex items-center justify-between border-b border-border px-6 py-4">
             <h2
               id="transaction-detail-title"
@@ -332,7 +368,7 @@ export default function TransactionDetailPanel({
             </h2>
             <button
               type="button"
-              onClick={() => onClose?.()}
+              onClick={requestClose}
               aria-label="Close"
               className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-card-foreground"
             >
