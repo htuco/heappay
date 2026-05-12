@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import transactionsService from '@/services/transactionsService'
+import { subscribeDataChange } from '@/utils/dataEvents'
 
 const DEFAULT_MONTHS = 6
 
@@ -45,6 +46,12 @@ export function useTransactionSummary({ months: initialMonths = DEFAULT_MONTHS }
   const [refreshKey, setRefreshKey] = useState(0)
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
+
+  useEffect(() => {
+    return subscribeDataChange(() => {
+      refresh()
+    })
+  }, [refresh])
 
   useEffect(() => {
     if (authLoading) return
