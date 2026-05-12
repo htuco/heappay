@@ -1,122 +1,349 @@
-import { ArrowLeftRight } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { useEffect, useState } from 'react'
 import {
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogRoot,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  AlertCircle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Info,
+  Loader2,
+  ReceiptText,
+  Save,
+  Share2,
+  X,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import UserAvatar from '@/components/ui/UserAvatar'
+import useTransactionDetail from '@/hooks/useTransactionDetail'
 
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
-const TYPE_VARIANT = { 1: 'success', 2: 'default', 3: 'info', 4: 'warning', 5: 'error' }
 const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Failed', 4: 'Reversed' }
 const STATUS_VARIANT = { 1: 'warning', 2: 'success', 3: 'error', 4: 'secondary' }
 
+function getTransactionId(transaction) {
+  return transaction?.transaction_id ?? transaction?.id ?? transaction?.payment_id ?? null
+}
+
 function formatAmount(amount) {
-  const num = parseFloat(amount ?? '0')
+  const num = Number.parseFloat(amount ?? '0')
+  if (Number.isNaN(num)) return '—'
   return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 function formatDate(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return String(iso)
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function getTypeLabel(transaction) {
+  return (
+    transaction?.transaction_type?.name ??
+    transaction?.type?.name ??
+    transaction?.type ??
+    TYPE_LABEL[transaction?.transaction_type_id] ??
+    'Transaction'
+  )
+}
+
+function getStatusLabel(transaction) {
+  return (
+    transaction?.status?.name ??
+    transaction?.status ??
+    STATUS_LABEL[transaction?.status_id] ??
+    'Unknown'
+  )
+}
+
+function getCounterparty(transaction) {
+  const name =
+    transaction?.recipient?.name ??
+    transaction?.recipient_name ??
+    transaction?.merchant_name ??
+    transaction?.payee_name ??
+    transaction?.description ??
+    (transaction?.recipient_card_id ? `Card #${transaction.recipient_card_id}` : null)
+  const user = transaction?.recipient ?? transaction?.counterparty ?? null
+  return { name: name || '—', user }
+}
+
+function isOutgoing(transaction) {
+  return [2, 4, 5].includes(Number(transaction?.transaction_type_id))
 }
 
 function DetailRow({ label, children }) {
   return (
-    <div>
-      <p className="text-xs uppercase tracking-widest text-muted-foreground">{label}</p>
-      <div className="mt-1">{children}</div>
+    <div className="flex items-center justify-between gap-4 py-3">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="text-right text-sm font-medium text-card-foreground">{children}</dd>
     </div>
   )
 }
 
-function DetailContent({ transaction }) {
+function LoadingState() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <DetailRow label="Amount">
-        <p className="text-xl font-bold text-card-foreground">{formatAmount(transaction.amount)}</p>
-      </DetailRow>
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      Loading full payment details…
+    </div>
+  )
+}
 
-      <DetailRow label="Date">
-        <p className="font-medium text-card-foreground">{formatDate(transaction.created_at)}</p>
-      </DetailRow>
-
-      <DetailRow label="Type">
-        <Badge variant={TYPE_VARIANT[transaction.transaction_type_id] ?? 'secondary'}>
-          {TYPE_LABEL[transaction.transaction_type_id] ?? `Type ${transaction.transaction_type_id}`}
-        </Badge>
-      </DetailRow>
-
-      <DetailRow label="Status">
-        <Badge variant={STATUS_VARIANT[transaction.status_id] ?? 'secondary'}>
-          {STATUS_LABEL[transaction.status_id] ?? `Status ${transaction.status_id}`}
-        </Badge>
-      </DetailRow>
-
-      <DetailRow label="From Card">
-        <p className="font-medium text-card-foreground">
-          {transaction.sender_card_id ? `Card #${transaction.sender_card_id}` : '—'}
+function ErrorState({ error }) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+      <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+      <div>
+        <p className="text-sm font-medium text-destructive">Could not load detail data</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {error?.message ?? 'The selected transaction is shown with the data currently available.'}
         </p>
-      </DetailRow>
+      </div>
+    </div>
+  )
+}
 
-      <DetailRow label="To Card">
-        <p className="font-medium text-card-foreground">Card #{transaction.recipient_card_id}</p>
-      </DetailRow>
+function MissingState() {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-center">
+      <ReceiptText className="size-7 text-muted-foreground" strokeWidth={1.5} />
+      <p className="mt-3 font-medium text-card-foreground">No transaction selected</p>
+      <p className="mt-1 text-sm text-muted-foreground">Select a transaction from history to view details.</p>
+    </div>
+  )
+}
 
-      {transaction.note && (
-        <div className="sm:col-span-2">
-          <DetailRow label="Note">
-            <p className="font-medium text-card-foreground">{transaction.note}</p>
-          </DetailRow>
+function HeaderCard({ transaction }) {
+  const outgoing = isOutgoing(transaction)
+  const DirectionIcon = outgoing ? ArrowUpRight : ArrowDownLeft
+  const counterparty = getCounterparty(transaction)
+  const verb = outgoing ? 'Sending money to' : 'Received from'
+  const subline = outgoing ? 'Sent' : 'Received'
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+              outgoing ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
+            }`}
+          >
+            <DirectionIcon className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm text-card-foreground">
+              {verb}{' '}
+              <span className="font-semibold">{counterparty.name}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">{subline}</p>
+          </div>
         </div>
+        <p className="shrink-0 text-base font-bold text-card-foreground">
+          {outgoing ? '-' : '+'} {formatAmount(transaction?.amount)}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function DetailsSection({ transaction }) {
+  const counterparty = getCounterparty(transaction)
+  const statusLabel = getStatusLabel(transaction)
+  const statusVariant = STATUS_VARIANT[transaction?.status_id] ?? 'secondary'
+
+  return (
+    <section>
+      <h3 className="text-sm font-semibold text-card-foreground">Details</h3>
+      <dl className="mt-2 divide-y divide-border/70">
+        <DetailRow label="Transaction ID">{getTransactionId(transaction) ?? '—'}</DetailRow>
+        <DetailRow label="Transaction Date">{formatDate(transaction?.created_at)}</DetailRow>
+        <DetailRow label="Recipient">
+          <span className="inline-flex items-center gap-2">
+            <UserAvatar
+              user={counterparty.user}
+              className="size-6 text-[10px]"
+              textClassName="text-[10px]"
+            />
+            <span>{counterparty.name}</span>
+          </span>
+        </DetailRow>
+        <DetailRow label="Status">
+          <Badge variant={statusVariant}>{statusLabel}</Badge>
+        </DetailRow>
+        <DetailRow label="Amount Sent">{formatAmount(transaction?.amount)}</DetailRow>
+        <DetailRow label="Fee">{formatAmount(transaction?.fee ?? 0)}</DetailRow>
+        <DetailRow label="Type">{getTypeLabel(transaction)}</DetailRow>
+      </dl>
+    </section>
+  )
+}
+
+function NotesSection({ value, onChange, placeholder = 'Add a few notes to help you later' }) {
+  return (
+    <section>
+      <div className="mb-2 flex items-center gap-1.5">
+        <h3 className="text-sm font-semibold text-card-foreground">Notes</h3>
+        <Info className="size-3.5 text-muted-foreground" />
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value.slice(0, 500))}
+        placeholder={placeholder}
+        rows={4}
+        maxLength={500}
+        className="w-full resize-none rounded-2xl border border-border bg-card p-3 text-sm text-card-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+      />
+    </section>
+  )
+}
+
+function PanelBody({ detail, hasApiDetail, isLoading, error, onClose, onShare, onSaveNotes }) {
+  const [notes, setNotes] = useState(detail?.note ?? detail?.notes ?? '')
+
+  return (
+    <aside className="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl animate-in slide-in-from-right duration-200">
+      <header className="flex items-center justify-between border-b border-border px-6 py-4">
+        <h2
+          id="transaction-detail-title"
+          className="text-base font-semibold text-card-foreground"
+        >
+          Transaction Details
+        </h2>
+        <button
+          type="button"
+          onClick={() => onClose?.()}
+          aria-label="Close"
+          className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-card-foreground"
+        >
+          <X className="size-4" />
+        </button>
+      </header>
+
+      <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+        {isLoading && <LoadingState />}
+        {error && <ErrorState error={error} />}
+
+        {detail && (
+          <>
+            <HeaderCard transaction={detail} />
+
+            {!hasApiDetail && (
+              <div className="rounded-2xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                Showing available history data until the detail API responds with the full record.
+              </div>
+            )}
+
+            <DetailsSection transaction={detail} />
+            <NotesSection value={notes} onChange={setNotes} />
+          </>
+        )}
+      </div>
+
+      <footer className="flex items-center gap-3 border-t border-border bg-card px-6 py-4">
+        <Button
+          variant="outline"
+          className="flex-1"
+          disabled={!detail}
+          onClick={() => onShare?.(detail, { notes })}
+        >
+          <Share2 className="mr-2 size-4" />
+          Share transaction
+        </Button>
+        <Button
+          className="flex-1"
+          disabled={!detail}
+          onClick={() => onSaveNotes?.(detail, notes)}
+        >
+          <Save className="mr-2 size-4" />
+          Save notes
+        </Button>
+      </footer>
+    </aside>
+  )
+}
+
+export default function TransactionDetailPanel({
+  transaction,
+  open = Boolean(transaction),
+  onClose,
+  onShare,
+  onSaveNotes,
+}) {
+  const { detail, hasApiDetail, isLoading, error } = useTransactionDetail(open ? transaction : null)
+
+  useEffect(() => {
+    if (!open) return undefined
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onClose?.()
+    }
+    document.addEventListener('keydown', handleKey)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open, onClose])
+
+  if (!open) return null
+
+  const hasTransaction = Boolean(transaction)
+  const panelKey = getTransactionId(transaction) ?? 'no-transaction'
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transaction-detail-title"
+      className="fixed inset-0 z-50 flex justify-end p-4 sm:p-6"
+    >
+      <button
+        type="button"
+        aria-label="Close transaction details"
+        onClick={() => onClose?.()}
+        className="absolute inset-0 bg-foreground/30 transition-opacity animate-in fade-in"
+      />
+
+      {hasTransaction ? (
+        <PanelBody
+          key={panelKey}
+          detail={detail}
+          hasApiDetail={hasApiDetail}
+          isLoading={isLoading}
+          error={error}
+          onClose={onClose}
+          onShare={onShare}
+          onSaveNotes={onSaveNotes}
+        />
+      ) : (
+        <aside className="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl animate-in slide-in-from-right duration-200">
+          <header className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h2
+              id="transaction-detail-title"
+              className="text-base font-semibold text-card-foreground"
+            >
+              Transaction Details
+            </h2>
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              aria-label="Close"
+              className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-card-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          </header>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <MissingState />
+          </div>
+        </aside>
       )}
-
-      <DetailRow label="Transaction ID">
-        <p className="font-mono text-xs text-muted-foreground">#{transaction.transaction_id}</p>
-      </DetailRow>
     </div>
-  )
-}
-
-function Placeholder() {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
-      <div className="rounded-2xl bg-muted/60 p-4">
-        <ArrowLeftRight className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-      </div>
-      <p className="font-medium text-card-foreground">No transaction selected</p>
-      <p className="text-sm text-muted-foreground">Click a row to view details.</p>
-    </div>
-  )
-}
-
-export default function TransactionDetailPanel({ transaction, onClose, isMobile = false }) {
-  if (isMobile) {
-    return (
-      <DialogRoot open={Boolean(transaction)} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Transaction Details</DialogTitle>
-            <DialogDescription>
-              {transaction ? formatDate(transaction.created_at) : ''}
-            </DialogDescription>
-          </DialogHeader>
-          {transaction && <DetailContent transaction={transaction} />}
-        </DialogContent>
-      </DialogRoot>
-    )
-  }
-
-  return (
-    <article className="rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5 xl:col-span-4">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-card-foreground">Transaction Details</h2>
-        <p className="text-xs text-muted-foreground">Select a transaction to view details</p>
-      </div>
-
-      {transaction ? <DetailContent transaction={transaction} /> : <Placeholder />}
-    </article>
   )
 }

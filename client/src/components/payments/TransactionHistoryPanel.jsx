@@ -49,7 +49,7 @@ export default function TransactionHistoryPanel({
           <h2 className="text-lg font-semibold text-card-foreground">Transactions</h2>
           <p className="text-xs text-muted-foreground">Your payment activity</p>
         </div>
-        <Button variant="default" size="sm">
+        <Button variant="default" size="sm" onClick={onMakePayment}>
           Make Payment
         </Button>
       </div>
