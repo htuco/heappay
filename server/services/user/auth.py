@@ -170,7 +170,7 @@ class UserAuthService:
         if not self.verify_password(payload.current_password, user.password_hash):
             raise ValueError("WRONG_CURRENT_PASSWORD")
         new_hash = self.hash_password(payload.new_password)
-        self.repo.update_password(user_id, new_hash)
+        self.repo.update_password_and_clear_refresh_token(user_id, new_hash)
 
     def deactivate_account(self, user_id: int, payload: DeactivateAccountRequest) -> None:
         user = self.repo.get_user_by_id(user_id)
