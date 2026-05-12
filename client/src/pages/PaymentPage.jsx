@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import MakePaymentDialog from '@/components/payments/MakePaymentDialog'
-import TransactionDetailPanel from '@/components/payments/TransactionDetailPanel'
+import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistoryPanel from '@/components/payments/TransactionHistoryPanel'
 import { useTransactions } from '@/hooks/useTransactions'
 
