@@ -8,6 +8,7 @@ import { useNotifications } from '@/context/NotificationContext'
 import { listCards } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
+import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 
 function formatAmount(value) {
   const cleaned = value.replace(/[^\d.]/g, '')
@@ -80,6 +81,7 @@ export default function TopUpModal({ isOpen, onClose, onSuccess }) {
         type: 'success',
         message: `$${amountNum.toFixed(2)} added to card ****${card.last_four}.`,
       })
+      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
       onSuccess?.()
       handleClose()
     } catch (err) {

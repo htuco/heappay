@@ -18,6 +18,7 @@ import { useNotifications } from '@/context/NotificationContext'
 import { listCards, lookupCardByNumber } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
+import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 
 const SEND_TYPE_NAMES = new Set(['payment', 'refund'])
 const AUTO_CLOSE_MS = 3500
@@ -561,6 +562,7 @@ export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
         })
       }
 
+      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
       onSuccess?.()
     } catch (err) {
       setSubmitError(err?.message || 'Payment failed. Please check the details and try again.')

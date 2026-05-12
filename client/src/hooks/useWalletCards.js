@@ -12,6 +12,7 @@ import {
   normalizeApiCard,
   normalizeApiCards,
 } from '@/utils/cardApiAdapter'
+import { subscribeDataChange } from '@/utils/dataEvents'
 
 const MIN_LOADING_MS = 2000
 
@@ -89,6 +90,28 @@ export function useWalletCards() {
       ignore = true
     }
   }, [authLoading, holderName, userId])
+
+  const silentRefetch = useCallback(async () => {
+    if (!userId) return
+    try {
+      const [rawCards, nextCardTypes, nextCardStatuses] = await Promise.all([
+        listCards({ user_id: userId }),
+        cardTypesService.list(),
+        cardStatusesService.list(),
+      ])
+      setCardTypes(nextCardTypes)
+      setCardStatuses(nextCardStatuses)
+      setCards(normalizeApiCards(rawCards, nextCardTypes, nextCardStatuses, holderName))
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to refresh cards.'))
+    }
+  }, [holderName, userId])
+
+  useEffect(() => {
+    return subscribeDataChange(() => {
+      silentRefetch()
+    })
+  }, [silentRefetch])
 
   const addCard = useCallback(
     async (cardInput) => {

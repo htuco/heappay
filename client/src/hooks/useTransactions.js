@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import transactionsService from '@/services/transactionsService'
+import { subscribeDataChange } from '@/utils/dataEvents'
 
 const DEFAULT_PAGE_SIZE = 20
 
@@ -27,6 +28,12 @@ export function useTransactions({ cardId, pageSize = DEFAULT_PAGE_SIZE } = {}) {
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1)
   }, [])
+
+  useEffect(() => {
+    return subscribeDataChange(() => {
+      refresh()
+    })
+  }, [refresh])
 
   const setPage = useCallback((nextPage) => {
     setPageState(nextPage)
