@@ -110,6 +110,7 @@ class UserAuthService:
             created_at=user.created_at,
             user_role_id=user.user_role_id,
             role_name=role_name,
+            billing_reminders_enabled=user.billing_reminders_enabled,
         )
         return TokenResponse(
             access_token=access_token or self.create_access_token(user.user_id),
@@ -213,6 +214,24 @@ class UserAuthService:
 
         user = self.repo.get_user_by_id(user_id)
         if not user or user.deleted_at is not None:
+            return None
+
+        return self._build_token_response_for_user(
+            user,
+            user.refresh_token or "",
+            access_token=token,
+        )
+
+    def update_notification_preferences(
+        self, token: str, billing_reminders_enabled: bool
+    ) -> TokenResponse | None:
+        user_id = self.resolve_active_user_id(token)
+        if user_id is None:
+            return None
+
+        self.repo.update_notification_preferences(user_id, billing_reminders_enabled)
+        user = self.repo.get_user_by_id(user_id)
+        if user is None:
             return None
 
         return self._build_token_response_for_user(

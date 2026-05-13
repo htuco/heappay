@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -25,6 +25,9 @@ class User(Base):
     )
     refresh_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    billing_reminders_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
 
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")

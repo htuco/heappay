@@ -127,3 +127,16 @@ class UserAuthRepository:
             .values(deleted_at=datetime.now(timezone.utc), refresh_token=None)
         )
         self._db.commit()
+
+    def update_notification_preferences(
+        self, user_id: int, billing_reminders_enabled: bool
+    ) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                billing_reminders_enabled=billing_reminders_enabled,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
