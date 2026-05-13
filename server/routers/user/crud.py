@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.user.crud import UserRepository
+from routers.dependencies import require_admin
 from schemas.user.crud import UserCreateRequest, UserResponse, UserUpdateRequest
 from services.user.crud import (
     DuplicateEmailError,
@@ -32,6 +33,7 @@ def list_users(
     include_deleted: bool = Query(default=False),
     limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> list[UserResponse]:
     rows = service.list_users(
@@ -49,6 +51,7 @@ def list_users(
 def get_user(
     user_id: int,
     include_deleted: bool = Query(default=False),
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -61,6 +64,7 @@ def get_user(
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     payload: UserCreateRequest,
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -82,6 +86,7 @@ def create_user(
 def update_user(
     user_id: int,
     payload: UserUpdateRequest,
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -104,6 +109,7 @@ def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> Response:
     try:
