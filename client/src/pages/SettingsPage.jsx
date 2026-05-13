@@ -19,6 +19,11 @@ import { Button } from '@/components/ui/button'
 
 const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 
+function savedBillingFromUser(user) {
+  if (!user) return true
+  return user.billing_reminders_enabled !== false
+}
+
 export default function SettingsPage() {
   const dispatch = useAppDispatch()
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
@@ -27,38 +32,54 @@ export default function SettingsPage() {
   const { preference: themePreference, isDark, setTheme } = useTheme()
 
   const [draftTheme, setDraftTheme] = useState(themePreference)
-  const [billingSavePending, setBillingSavePending] = useState(false)
-  const [billingSaveError, setBillingSaveError] = useState(null)
+  const [draftBillingReminders, setDraftBillingReminders] = useState(true)
+  const [savePending, setSavePending] = useState(false)
+  const [saveError, setSaveError] = useState(null)
 
   useEffect(() => {
     setDraftTheme(themePreference)
   }, [themePreference])
 
-  const billingRemindersEnabled = user?.billing_reminders_enabled !== false
+  useEffect(() => {
+    if (user) {
+      setDraftBillingReminders(savedBillingFromUser(user))
+    }
+  }, [user?.billing_reminders_enabled, user?.id])
+
+  const savedBilling = useMemo(() => savedBillingFromUser(user), [user])
 
   const isThemeDirty = useMemo(() => draftTheme !== themePreference, [draftTheme, themePreference])
+  const isBillingDirty = useMemo(
+    () => Boolean(user) && draftBillingReminders !== savedBilling,
+    [user, draftBillingReminders, savedBilling],
+  )
+  const isDirty = isThemeDirty || isBillingDirty
 
-  function handleSaveTheme() {
-    if (draftTheme !== themePreference) {
-      setTheme(draftTheme)
-    }
-  }
-
-  function handleDiscardTheme() {
+  function handleDiscard() {
     setDraftTheme(themePreference)
+    if (user) {
+      setDraftBillingReminders(savedBillingFromUser(user))
+    }
+    setSaveError(null)
   }
 
-  async function handleBillingToggle() {
-    if (!user || billingSavePending) return
-    const next = !billingRemindersEnabled
-    setBillingSavePending(true)
-    setBillingSaveError(null)
+  async function handleSaveChanges() {
+    if (!isDirty || savePending) return
+    setSavePending(true)
+    setSaveError(null)
     try {
-      await dispatch(updateNotificationPreferences({ billingRemindersEnabled: next })).unwrap()
+      if (isBillingDirty && user) {
+        await dispatch(
+          updateNotificationPreferences({ billingRemindersEnabled: draftBillingReminders }),
+        ).unwrap()
+      }
     } catch (err) {
-      setBillingSaveError(typeof err === 'string' ? err : 'Could not save notification preference.')
+      setSaveError(typeof err === 'string' ? err : 'Could not save notification preferences.')
     } finally {
-      setBillingSavePending(false)
+      setSavePending(false)
+    }
+    if (isThemeDirty) {
+      setTheme(draftTheme)
     }
   }
 
@@ -107,7 +128,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Notification Preferences"
           icon={Bell}
-          description="Email and in-app notices for billing activity. Saved to your account when you change a toggle."
+          description="Email and in-app notices for billing activity. Use Save changes below to update your account."
         >
           <div className="space-y-3">
             <ControlRow
@@ -116,24 +137,16 @@ export default function SettingsPage() {
               emphasize
             >
               <Toggle
-                enabled={billingRemindersEnabled}
-                label={
-                  billingSavePending
-                    ? 'Saving…'
-                    : billingRemindersEnabled
-                      ? 'Enabled'
-                      : 'Disabled'
+                enabled={draftBillingReminders}
+                label={draftBillingReminders ? 'Enabled' : 'Disabled'}
+                onToggle={() =>
+                  setDraftBillingReminders((current) => !current)
                 }
-                onToggle={handleBillingToggle}
-                disabled={!user || billingSavePending}
-                busy={billingSavePending}
+                disabled={!user || savePending}
               />
             </ControlRow>
             {!user ? (
               <p className="text-xs text-muted-foreground">Sign in to manage notification preferences.</p>
-            ) : null}
-            {billingSaveError ? (
-              <p className="text-xs text-destructive">{billingSaveError}</p>
             ) : null}
           </div>
         </SettingsCard>
@@ -141,7 +154,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Theme & Preferences"
           icon={Paintbrush}
-          description="Control how the app looks. Theme is stored on this device only."
+          description="Control how the app looks. Theme is stored on this device only; use Save changes below to apply."
         >
           <div className="space-y-3">
             <ControlRow
@@ -187,25 +200,37 @@ export default function SettingsPage() {
         </SettingsCard>
       </div>
 
-      {isThemeDirty ? (
+      {isDirty ? (
         <div className="sticky bottom-0 z-10 rounded-2xl border border-border bg-card/95 p-3 shadow-xs backdrop-blur sm:p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-card-foreground">Unsaved theme</p>
+              <p className="text-sm font-semibold text-card-foreground">Unsaved changes</p>
               <p className="text-xs text-muted-foreground">
-                Theme is kept on this device. Save to apply, or discard to keep the current look.
+                {isBillingDirty && isThemeDirty
+                  ? 'Billing preferences sync to your account; theme applies on this device only.'
+                  : isBillingDirty
+                    ? 'Billing preferences will sync to your account when you save.'
+                    : 'Theme is kept on this device. Save to apply, or discard.'}
               </p>
+              {saveError ? (
+                <p className="mt-2 text-xs text-destructive">{saveError}</p>
+              ) : null}
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button
                 variant="outline"
                 className="w-full sm:w-auto"
-                onClick={handleDiscardTheme}
+                onClick={handleDiscard}
+                disabled={savePending}
               >
                 Discard
               </Button>
-              <Button className="w-full px-5 sm:w-auto" onClick={handleSaveTheme}>
-                Save theme
+              <Button
+                className="w-full px-5 sm:w-auto"
+                onClick={handleSaveChanges}
+                disabled={savePending || (isBillingDirty && !user)}
+              >
+                {savePending ? 'Saving…' : 'Save changes'}
               </Button>
             </div>
           </div>
