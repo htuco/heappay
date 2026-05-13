@@ -6,6 +6,7 @@ import {
   Info,
   Loader2,
   ReceiptText,
+  RotateCcw,
   Save,
   Share2,
   X,
@@ -81,6 +82,10 @@ function getCounterparty(transaction) {
 
 function isOutgoing(transaction) {
   return [2, 4, 5].includes(Number(transaction?.transaction_type_id))
+}
+
+function isUserToUserTransaction(transaction) {
+  return transaction?.sender_card_id != null && transaction?.recipient_card_id != null
 }
 
 function DetailRow({ label, children }) {
@@ -217,11 +222,13 @@ function PanelBody({
   error,
   isClosing,
   onClose,
+  onRefund,
   onShare,
   onSaveNotes,
 }) {
   const [notes, setNotes] = useState(detail?.note ?? detail?.notes ?? '')
   const animationClass = isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
+  const canRefund = isUserToUserTransaction(detail)
 
   return (
     <aside
@@ -264,10 +271,21 @@ function PanelBody({
         )}
       </div>
 
-      <footer className="flex items-center gap-3 border-t border-border bg-card px-6 py-4">
+      <footer className="grid grid-cols-2 gap-3 border-t border-border bg-card px-6 py-4">
+        {canRefund && (
+          <Button
+            variant="outline"
+            className="col-span-2 h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
+            disabled={!detail}
+            onClick={() => onRefund?.(detail)}
+          >
+            <RotateCcw className="mr-2 size-4" />
+            Refund transaction
+          </Button>
+        )}
         <Button
           variant="outline"
-          className="flex-1"
+          className="h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
           disabled={!detail}
           onClick={() => onShare?.(detail, { notes })}
         >
@@ -275,7 +293,8 @@ function PanelBody({
           Share transaction
         </Button>
         <Button
-          className="flex-1"
+          variant="outline"
+          className="h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
           disabled={!detail}
           onClick={() => onSaveNotes?.(detail, notes)}
         >
@@ -291,6 +310,7 @@ export default function TransactionDetailPanel({
   transaction,
   open = Boolean(transaction),
   onClose,
+  onRefund,
   onShare,
   onSaveNotes,
 }) {
@@ -350,6 +370,7 @@ export default function TransactionDetailPanel({
           error={error}
           isClosing={isClosing}
           onClose={requestClose}
+          onRefund={onRefund}
           onShare={onShare}
           onSaveNotes={onSaveNotes}
         />
