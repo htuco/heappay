@@ -11,37 +11,23 @@ import { RefreshCw } from 'lucide-react'
 
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 
-function DualTooltip({ active, payload, label }) {
+function NetTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
-  const income = payload.find((p) => p.dataKey === 'income')?.value ?? 0
-  const expense = payload.find((p) => p.dataKey === 'expense')?.value ?? 0
-  const net = income - expense
-  const fmt = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const net = payload[0]?.value ?? 0
+  const fmt = (n) =>
+    `$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   return (
     <div className="rounded-xl border border-border bg-card px-3 py-2.5 shadow-lg">
-      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <div className="space-y-1 text-sm">
-        <div className="flex items-center justify-between gap-5">
-          <span className="text-muted-foreground">Income</span>
-          <span className="tabular-nums font-semibold text-success">{fmt(income)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-5">
-          <span className="text-muted-foreground">Expense</span>
-          <span className="tabular-nums font-semibold text-destructive">{fmt(expense)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-5 border-t border-border pt-1">
-          <span className="text-muted-foreground">Net</span>
-          <span
-            className={`tabular-nums font-semibold ${
-              net >= 0 ? 'text-success' : 'text-destructive'
-            }`}
-          >
-            {net < 0 ? '-' : ''}{fmt(Math.abs(net))}
-          </span>
-        </div>
-      </div>
+      <p
+        className={`tabular-nums text-sm font-semibold ${
+          net >= 0 ? 'text-success' : 'text-destructive'
+        }`}
+      >
+        {net < 0 ? '-' : ''}{fmt(net)}
+      </p>
     </div>
   )
 }
@@ -147,13 +133,9 @@ export default function MoneyFlowPlaceholder({
             {useDual ? (
               <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <defs>
-                  <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--success)" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="var(--success)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--destructive)" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="var(--destructive)" stopOpacity={0} />
+                  <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -176,26 +158,17 @@ export default function MoneyFlowPlaceholder({
                   width={42}
                 />
                 <Tooltip
-                  cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
-                  content={DualTooltip}
+                  cursor={{ stroke: 'var(--primary)', strokeOpacity: 0.4, strokeWidth: 1 }}
+                  content={NetTooltip}
                 />
                 <Area
                   type="monotone"
-                  dataKey="income"
-                  stroke="var(--success)"
-                  strokeWidth={2}
-                  fill="url(#incomeGrad)"
+                  dataKey="net"
+                  stroke="var(--primary)"
+                  strokeWidth={2.5}
+                  fill="url(#netGrad)"
                   dot={false}
-                  activeDot={{ r: 4, fill: 'var(--success)', stroke: 'var(--card)', strokeWidth: 2 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="expense"
-                  stroke="var(--destructive)"
-                  strokeWidth={2}
-                  fill="url(#expenseGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: 'var(--destructive)', stroke: 'var(--card)', strokeWidth: 2 }}
+                  activeDot={{ r: 5, fill: 'var(--primary)', stroke: 'var(--card)', strokeWidth: 2 }}
                 />
               </AreaChart>
             ) : (
