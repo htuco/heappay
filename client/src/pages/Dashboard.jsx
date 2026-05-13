@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CreditCard, Plus } from 'lucide-react'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
@@ -11,10 +11,17 @@ import PaymentCard from '@/components/payment-card/PaymentCard'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
+import { useAuth } from '@/hooks/useAuth'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
 import { useTotalBalance } from '@/hooks/useTotalBalance'
 import { useTransactionSummary } from '@/hooks/useTransactionSummary'
+import { useTransactions } from '@/hooks/useTransactions'
+import transactionTypesService from '@/services/transactionTypesService'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
+import {
+  buildCardLastFourMapFromDashboardCards,
+  buildUserCardIdSet,
+} from '@/utils/dashboardRecentActivity'
 
 function PaymentCardSkeleton() {
   return (
@@ -91,9 +98,16 @@ function PaymentCardError() {
 const MIN_LOADER_MS = 1500
 
 export default function DashboardPage() {
+  const { user } = useAuth()
   const { cards, isLoading, error } = useDashboardCards()
   const { formattedBalance, isLoading: balanceLoading } = useTotalBalance()
   const { chartData, isLoading: txLoading } = useTransactionSummary()
+  const {
+    transactions: recentTransactions,
+    isLoading: recentActivityLoading,
+    error: recentActivityError,
+  } = useTransactions({ pageSize: 3 })
+  const [typeNameById, setTypeNameById] = useState({})
   const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
@@ -118,6 +132,39 @@ export default function DashboardPage() {
     const t = setTimeout(() => setMinDelayElapsed(true), MIN_LOADER_MS)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setTypeNameById({})
+      return
+    }
+    let cancelled = false
+    transactionTypesService
+      .list()
+      .then((types) => {
+        if (cancelled || !Array.isArray(types)) return
+        const map = {}
+        for (const t of types) {
+          map[t.transaction_type_id] = t.name
+        }
+        setTypeNameById(map)
+      })
+      .catch(() => {
+        if (!cancelled) setTypeNameById({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const activityContext = useMemo(
+    () => ({
+      currentUserCardIds: buildUserCardIdSet(cards),
+      lastFourByCardId: buildCardLastFourMapFromDashboardCards(cards),
+      typeNameById,
+    }),
+    [cards, typeNameById],
+  )
 
   const showLoader = isLoading || !minDelayElapsed
 
@@ -175,7 +222,10 @@ export default function DashboardPage() {
         <div className="xl:col-span-2">
           <DashboardPlaceholder
             title="Recent Activity"
-            items={dashboardMockData.recentActivity}
+            transactions={recentTransactions}
+            activityContext={activityContext}
+            isLoading={recentActivityLoading}
+            error={recentActivityError}
           />
         </div>
       </section>
