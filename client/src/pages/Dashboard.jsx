@@ -12,6 +12,8 @@ import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
+import { useTotalBalance } from '@/hooks/useTotalBalance'
+import { useTransactionSummary } from '@/hooks/useTransactionSummary'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
 
 function PaymentCardSkeleton() {
@@ -90,11 +92,27 @@ const MIN_LOADER_MS = 1500
 
 export default function DashboardPage() {
   const { cards, isLoading, error } = useDashboardCards()
+  const { formattedBalance, isLoading: balanceLoading } = useTotalBalance()
+  const { chartData, isLoading: txLoading } = useTransactionSummary()
   const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
   const primaryCard = cards[0] ?? null
   const cardStatusProps = buildCardStatusOverviewProps(cards)
+
+  const lastEntry = chartData[chartData.length - 1]
+  const prevEntry = chartData[chartData.length - 2]
+
+  const monthlyAmount = lastEntry
+    ? '$' + Math.abs(lastEntry.net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : undefined
+
+  const monthlyGrowth = (lastEntry && prevEntry && prevEntry.net !== 0)
+    ? (() => {
+        const pct = ((lastEntry.net - prevEntry.net) / Math.abs(prevEntry.net)) * 100
+        return (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'
+      })()
+    : undefined
 
   useEffect(() => {
     const t = setTimeout(() => setMinDelayElapsed(true), MIN_LOADER_MS)
@@ -110,8 +128,10 @@ export default function DashboardPage() {
       <section className="grid items-stretch gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <TotalBalanceWidget
-            totalBalance={dashboardMockData.balance.totalBalance}
-            todaysChange={dashboardMockData.balance.todaysChange}
+            totalBalance={formattedBalance}
+            monthlyGrowth={monthlyGrowth}
+            monthlyAmount={monthlyAmount}
+            isLoading={balanceLoading || txLoading}
           />
         </div>
         <div className="flex h-full items-center justify-center">
