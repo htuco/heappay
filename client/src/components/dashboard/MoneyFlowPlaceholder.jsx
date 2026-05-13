@@ -7,29 +7,99 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { RefreshCw } from 'lucide-react'
 
-const DEFAULT_POINTS = [7800, 10200, 11400, 11000, 12600, 12300]
-const DEFAULT_LABELS = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr']
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
 
-function ChartTooltip({ active, payload, label }) {
-  if (!active || !payload || !payload.length) return null
+function DualTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const income = payload.find((p) => p.dataKey === 'income')?.value ?? 0
+  const expense = payload.find((p) => p.dataKey === 'expense')?.value ?? 0
+  const net = income - expense
+  const fmt = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   return (
-    <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-lg">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-xl border border-border bg-card px-3 py-2.5 shadow-lg">
+      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="tabular text-sm font-semibold text-card-foreground">
+      <div className="space-y-1 text-sm">
+        <div className="flex items-center justify-between gap-5">
+          <span className="text-muted-foreground">Income</span>
+          <span className="tabular-nums font-semibold text-success">{fmt(income)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-5">
+          <span className="text-muted-foreground">Expense</span>
+          <span className="tabular-nums font-semibold text-destructive">{fmt(expense)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-5 border-t border-border pt-1">
+          <span className="text-muted-foreground">Net</span>
+          <span
+            className={`tabular-nums font-semibold ${
+              net >= 0 ? 'text-success' : 'text-destructive'
+            }`}
+          >
+            {net < 0 ? '-' : ''}{fmt(Math.abs(net))}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Legacy single-series tooltip (backwards-compat fallback)
+function SingleTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-lg">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="tabular-nums text-sm font-semibold text-card-foreground">
         ${payload[0].value.toLocaleString()}
       </p>
     </div>
   )
 }
 
+// ─── Shimmer ──────────────────────────────────────────────────────────────────
+
+function ChartShimmer() {
+  return (
+    <div className="h-64 w-full animate-pulse rounded-2xl bg-muted/60" />
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+/**
+ * @param {{
+ *   chartData?: { label: string, income: number, expense: number, net: number }[],
+ *   isLoading?: boolean,
+ *   error?: unknown,
+ *   onRetry?: () => void,
+ *   points?: number[],
+ *   labels?: string[],
+ * }} props
+ */
 export default function MoneyFlowPlaceholder({
-  points = DEFAULT_POINTS,
-  labels = DEFAULT_LABELS,
+  chartData,
+  isLoading = false,
+  error = null,
+  onRetry,
+  // legacy fallback props
+  points,
+  labels,
 }) {
-  const data = labels.map((label, i) => ({ label, value: points[i] ?? 0 }))
+  // Determine which data path to use
+  const useDual = chartData !== undefined
+
+  // Build chart data
+  const data = useDual
+    ? chartData
+    : (labels ?? []).map((label, i) => ({ label, value: (points ?? [])[i] ?? 0 }))
+
+  // With padding in the hook, chartData always has `months` entries when real
+  // data is available. Only show the empty state when the array is truly empty
+  // (e.g. auth not yet resolved).
+  const isEmpty = useDual && chartData.length === 0
 
   return (
     <section className="flex h-full flex-col rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
@@ -38,62 +108,142 @@ export default function MoneyFlowPlaceholder({
           <h2 className="text-base font-semibold text-card-foreground sm:text-lg">
             Money Flow
           </h2>
-          <p className="text-xs text-muted-foreground">
-            Last 6 months
-          </p>
+          <p className="text-xs text-muted-foreground">Last 6 months</p>
         </div>
-        <button
-          type="button"
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          View more
-        </button>
+
+        {error && onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry
+          </button>
+        )}
       </header>
 
-      <div className="h-64 w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id="moneyFlowFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              vertical={false}
-              stroke="var(--border)"
-              strokeOpacity={0.5}
-              strokeDasharray="4 4"
-            />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-              dy={6}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-              width={42}
-            />
-            <Tooltip
-              cursor={{ stroke: 'var(--primary)', strokeOpacity: 0.4, strokeWidth: 1 }}
-              content={<ChartTooltip />}
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke="var(--primary)"
-              strokeWidth={2.5}
-              fill="url(#moneyFlowFill)"
-              dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: 'var(--primary)', stroke: 'var(--card)', strokeWidth: 2 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      {/* Loading */}
+      {isLoading && <ChartShimmer />}
+
+      {/* Error */}
+      {!isLoading && error && (
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-sm text-destructive">Could not load transaction data.</p>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && !error && isEmpty && (
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-sm text-muted-foreground">No transactions yet.</p>
+        </div>
+      )}
+
+      {/* Chart */}
+      {!isLoading && !error && !isEmpty && (
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            {useDual ? (
+              <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--success)" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="var(--success)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--destructive)" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="var(--destructive)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  vertical={false}
+                  stroke="var(--border)"
+                  strokeOpacity={0.5}
+                  strokeDasharray="4 4"
+                />
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                  dy={6}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                  width={42}
+                />
+                <Tooltip
+                  cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+                  content={DualTooltip}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="income"
+                  stroke="var(--success)"
+                  strokeWidth={2}
+                  fill="url(#incomeGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: 'var(--success)', stroke: 'var(--card)', strokeWidth: 2 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="expense"
+                  stroke="var(--destructive)"
+                  strokeWidth={2}
+                  fill="url(#expenseGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: 'var(--destructive)', stroke: 'var(--card)', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            ) : (
+              /* Legacy single-series fallback */
+              <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="moneyFlowFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  vertical={false}
+                  stroke="var(--border)"
+                  strokeOpacity={0.5}
+                  strokeDasharray="4 4"
+                />
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                  dy={6}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                  width={42}
+                />
+                <Tooltip
+                  cursor={{ stroke: 'var(--primary)', strokeOpacity: 0.4, strokeWidth: 1 }}
+                  content={SingleTooltip}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="var(--primary)"
+                  strokeWidth={2.5}
+                  fill="url(#moneyFlowFill)"
+                  dot={false}
+                  activeDot={{ r: 5, fill: 'var(--primary)', stroke: 'var(--card)', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      )}
     </section>
   )
 }
