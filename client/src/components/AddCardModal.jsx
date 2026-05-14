@@ -98,7 +98,11 @@ export default function AddCardModal({
 
   function validate() {
     const next = {}
-    if (!form.name.trim()) next.name = "Cardholder name is required."
+    if (!form.name.trim()) {
+      next.name = "Cardholder name is required."
+    } else if (!/^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[-' ][A-Za-zÀ-ÖØ-öø-ÿ]+)+$/.test(form.name.trim())) {
+      next.name = "Enter full name as it appears on the card (e.g. John Smith)."
+    }
     if (!brand) {
       next.number = "Enter a supported card number."
     } else if (!brand.lengths.includes(digits.length)) {
