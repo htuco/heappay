@@ -67,6 +67,7 @@ class CardService:
                 last_four=payload.card_numb[-4:],
                 cvc=payload.cvc,
                 expires_at=payload.expires_at,
+                cardholder_name=payload.cardholder_name,
             )
         except IntegrityError as exc:
             if "uq_cards_card_numb" in str(exc.orig).lower() or "card_numb" in str(exc.orig).lower():

@@ -37,6 +37,7 @@ def _to_response(row) -> CardResponse:
         masked_card_number=f"{'*' * 12}{row.last_four}",
         expires_at=row.expires_at,
         balance=row.balance,
+        cardholder_name=row.cardholder_name,
         created_at=row.created_at,
         deleted_at=row.deleted_at,
     )
@@ -60,6 +61,7 @@ def lookup_card(
         owner_name=f"{user.first_name} {user.last_name}".strip(),
         owner_email=user.email,
         user_id=user.user_id,
+        cardholder_name=card.cardholder_name,
     )
 
 

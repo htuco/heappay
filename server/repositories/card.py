@@ -54,6 +54,7 @@ class CardRepository:
         last_four: str,
         cvc: str,
         expires_at: date,
+        cardholder_name: str | None = None,
     ) -> Card:
         row = Card(
             user_id=user_id,
@@ -63,6 +64,7 @@ class CardRepository:
             last_four=last_four,
             cvc=cvc,
             expires_at=expires_at,
+            cardholder_name=cardholder_name,
         )
         self._db.add(row)
         self._db.commit()
