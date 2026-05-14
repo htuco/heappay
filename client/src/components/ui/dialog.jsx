@@ -15,7 +15,7 @@ function DialogOverlay({ className, ...props }) {
   return (
     <Dialog.Overlay
       className={cn(
-        "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[10px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
       {...props}
@@ -35,7 +35,7 @@ function DialogContent({ className, children, ...props }) {
         {...props}
       >
         {children}
-        <Dialog.Close className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
+        <Dialog.Close className="absolute right-5 top-5 inline-flex size-8.5 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200">
           <X className="size-4" />
           <span className="sr-only">Close</span>
         </Dialog.Close>
