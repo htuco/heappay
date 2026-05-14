@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowDownLeft,
   ArrowUpRight,
+  Ban,
   Info,
   Loader2,
   ReceiptText,
@@ -84,8 +85,27 @@ function isOutgoing(transaction) {
   return [2, 4, 5].includes(Number(transaction?.transaction_type_id))
 }
 
+function isPending(transaction) {
+  return Number(transaction?.status_id) === 1 || getStatusLabel(transaction).toLowerCase() === 'pending'
+}
+
+function isCompleted(transaction) {
+  return Number(transaction?.status_id) === 2 || getStatusLabel(transaction).toLowerCase() === 'completed'
+}
+
+function isSentByCurrentUser(transaction, ownedCardIds) {
+  const senderCardId = Number(transaction?.sender_card_id)
+  if (!senderCardId) return false
+  if (ownedCardIds?.size) return ownedCardIds.has(senderCardId)
+  return isOutgoing(transaction)
+}
+
 function isUserToUserTransaction(transaction) {
   return transaction?.sender_card_id != null && transaction?.recipient_card_id != null
+}
+
+function isPaymentTransaction(transaction) {
+  return Number(transaction?.transaction_type_id) === 2
 }
 
 function DetailRow({ label, children }) {
@@ -223,12 +243,19 @@ function PanelBody({
   isClosing,
   onClose,
   onRefund,
+  onCancel,
   onShare,
   onSaveNotes,
+  ownedCardIds,
+  refundRequestedTransactionIds,
+  isCancelling,
 }) {
   const [notes, setNotes] = useState(detail?.note ?? detail?.notes ?? '')
   const animationClass = isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
-  const canRefund = isUserToUserTransaction(detail)
+  const transactionId = getTransactionId(detail)
+  const canCancel = isPending(detail) && isSentByCurrentUser(detail, ownedCardIds)
+  const refundRequested = refundRequestedTransactionIds?.has(transactionId)
+  const canRefund = isUserToUserTransaction(detail) && isCompleted(detail) && isPaymentTransaction(detail)
 
   return (
     <aside
@@ -272,16 +299,38 @@ function PanelBody({
       </div>
 
       <footer className="grid grid-cols-2 gap-3 border-t border-border bg-card px-6 py-4">
-        {canRefund && (
+        {canCancel && (
           <Button
-            variant="outline"
-            className="col-span-2 h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
-            disabled={!detail}
-            onClick={() => onRefund?.(detail)}
+            variant="destructive"
+            className="col-span-2 h-11 rounded-lg border-2 border-destructive/20 px-4 text-sm font-semibold shadow-none"
+            disabled={!detail || isCancelling}
+            onClick={() => onCancel?.(detail)}
           >
-            <RotateCcw className="mr-2 size-4" />
-            Refund transaction
+            {isCancelling ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Ban className="mr-2 size-4" />
+            )}
+            {isCancelling ? 'Cancelling…' : 'Cancel transaction'}
           </Button>
+        )}
+        {canRefund && (
+          <>
+            <Button
+              variant="outline"
+              className="col-span-2 h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
+              disabled={!detail || refundRequested}
+              onClick={() => onRefund?.(detail)}
+            >
+              <RotateCcw className="mr-2 size-4" />
+              {refundRequested ? 'Refund requested' : 'Request refund'}
+            </Button>
+            {refundRequested && (
+              <p className="col-span-2 -mt-1 text-center text-xs leading-5 text-muted-foreground">
+                Refund request created. The review team will process it.
+              </p>
+            )}
+          </>
         )}
         <Button
           variant="outline"
@@ -311,8 +360,12 @@ export default function TransactionDetailPanel({
   open = Boolean(transaction),
   onClose,
   onRefund,
+  onCancel,
   onShare,
   onSaveNotes,
+  ownedCardIds,
+  refundRequestedTransactionIds,
+  isCancelling = false,
 }) {
   const { detail, hasApiDetail, isLoading, error } = useTransactionDetail(open ? transaction : null)
   const [isClosing, setIsClosing] = useState(false)
@@ -371,8 +424,12 @@ export default function TransactionDetailPanel({
           isClosing={isClosing}
           onClose={requestClose}
           onRefund={onRefund}
+          onCancel={onCancel}
           onShare={onShare}
           onSaveNotes={onSaveNotes}
+          ownedCardIds={ownedCardIds}
+          refundRequestedTransactionIds={refundRequestedTransactionIds}
+          isCancelling={isCancelling}
         />
       ) : (
         <aside
