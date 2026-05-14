@@ -184,6 +184,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-input: 10px;
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -318,44 +319,437 @@
 }
 
 @layer components {
-  .payment-card-shell {
-    @apply relative aspect-[1.58/1] min-h-[210px] w-full min-w-0 overflow-hidden rounded-3xl text-white shadow-xl transition-all duration-300;
+  .payment-card-rccs-shell {
+    @apply flex w-full min-w-0 items-center justify-center transition-all duration-300;
+    background: transparent;
   }
 
-  .payment-card-overlay {
-    @apply pointer-events-none absolute inset-0;
+  .payment-card-status-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.62);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    white-space: nowrap;
   }
 
-  .payment-card-gloss {
-    @apply pointer-events-none absolute -top-8 left-4 h-20 w-[78%] rotate-[8deg] rounded-full;
+  .payment-card-rccs-shell .rccs {
+    margin: 0 !important;
+    background: transparent !important;
+    transform: scale(1.60);
+    transform-origin: center center;
   }
 
-  .payment-card-content {
-    @apply absolute inset-0 flex flex-col p-4 sm:p-5 md:p-6;
+  /* In carousel slots, scale down so cards don't overlap adjacent positions */
+  .carousel-card-slot .payment-card-rccs-shell {
+    min-height: 0;
+    overflow: visible;
+  }
+  .carousel-card-slot .payment-card-rccs-shell .rccs {
+    transform: scale(1.5) !important;
   }
 
-  .payment-card-header {
-    @apply flex items-start justify-between gap-3;
+  .payment-card-rccs-shell .rccs__card,
+  .add-card-preview .rccs__card {
+    border-radius: 10px !important;
   }
 
-  .payment-card-brand-chip {
-    @apply rounded-lg border border-white/30 bg-white/15 px-2 py-1 backdrop-blur-sm;
+  .payment-card-rccs-shell .rccs__card--front,
+  .payment-card-rccs-shell .rccs__card--back,
+  .add-card-preview .rccs__card--front,
+  .add-card-preview .rccs__card--back {
+    box-shadow: 0 22px 44px rgba(15, 23, 42, 0.22) !important;
   }
 
-  .payment-card-label {
-    @apply text-[0.63rem] uppercase tracking-[0.16em] text-white/70;
+  .payment-card-rccs-shell.is-active .rccs__card--front,
+  .payment-card-rccs-shell.is-active .rccs__card--back {
+    box-shadow: 0 26px 50px rgba(15, 23, 42, 0.32) !important;
   }
 
-  .payment-card-number {
-    @apply text-lg font-semibold tracking-[0.18em] sm:text-xl md:text-2xl;
+  .add-card-preview {
+    @apply flex justify-center rounded-2xl border border-border bg-muted/30 px-3 py-4;
   }
 
-  .payment-card-bottom {
-    @apply mt-auto space-y-3 pb-2;
+  .add-card-preview .rccs {
+    margin: 0 !important;
+    height: 215px !important;
+    background: transparent !important;
+    transform: scale(1.18);
+    transform-origin: top center;
   }
 
-  .payment-card-meta {
-    @apply grid grid-cols-2 items-end gap-4 text-white/95;
+  /* Solid preview variant for the AddCardModal — no gradients, no patterns. */
+  .add-card-preview--solid {
+    @apply relative flex w-full items-center justify-center overflow-hidden rounded-[20px] border border-slate-200 bg-white px-0 py-4 dark:border-[#3a3a3a] dark:bg-[#262626];
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    min-height: 230px;
+  }
+  /* Center the card and keep its native size. */
+  .add-card-preview--solid .rccs {
+    height: 183px !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    position: relative;
+    z-index: 1;
+  }
+  /* Ghost stack — a second card-shaped layer sitting behind the real card */
+  .add-card-preview--solid::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 290px;
+    height: 183px;
+    border-radius: 18px;
+    background: rgba(148, 163, 184, 0.18);
+    transform: translate(-50%, calc(-50% - 10px)) scale(0.94);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .dark .add-card-preview--solid::before {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .add-card-preview--solid .rccs__card {
+    border-radius: 18px !important;
+  }
+  .add-card-preview--solid .rccs__card--front,
+  .add-card-preview--solid .rccs__card--back {
+    border-radius: 18px !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28) !important;
+  }
+  .add-card-preview--solid .rccs__issuer {
+    transition: opacity 0.3s ease, transform 0.35s ease !important;
+  }
+
+  /* Solid neutral fallback — brand gradients below take over once detected. */
+  .add-card-preview--solid .rccs__card__background {
+    background: #1e293b !important;
+  }
+  .dark .add-card-preview--solid .rccs__card__background {
+    background: #1a1a1a !important;
+  }
+  /* Refined chip — solid muted gold */
+  .add-card-preview--solid .rccs__chip {
+    background: #d6b35a !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 6px !important;
+  }
+  /* Neutral white text */
+  .add-card-preview--solid .rccs__number,
+  .add-card-preview--solid .rccs__name {
+    color: rgba(255, 255, 255, 0.92) !important;
+    text-shadow: none !important;
+  }
+  .add-card-preview--solid .rccs__expiry__valid {
+    color: rgba(255, 255, 255, 0.55) !important;
+    text-shadow: none !important;
+  }
+  .add-card-preview--solid .rccs__expiry__value {
+    color: rgba(255, 255, 255, 0.92) !important;
+    text-shadow: none !important;
+  }
+  /* Each brand gets its own decorative pattern. Patterns sit on the card face
+     (front/back), since .rccs__card__background is rotated and oversized.
+     NOTE: don't override position here — RCCS needs .__front/.__back to stay
+     position:absolute so the 3D flip works correctly. */
+  .rccs__card--front,
+  .rccs__card--back {
+    overflow: hidden !important;
+  }
+  .rccs__card--front::before,
+  .rccs__card--front::after,
+  .rccs__card--back::before,
+  .rccs__card--back::after {
+    content: '' !important;
+    position: absolute !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
+  }
+
+  /* Keep card content above all decorations */
+  .rccs__chip,
+  .rccs__issuer,
+  .rccs__number,
+  .rccs__name,
+  .rccs__expiry,
+  .rccs__cvc,
+  .rccs__signature {
+    z-index: 10 !important;
+    position: relative;
+  }
+
+  /* VISA — bold diagonal ribbon stripes */
+  .rccs__card--visa .rccs__card--front::before,
+  .rccs__card--visa-electron .rccs__card--front::before {
+    inset: 0;
+    background:
+      linear-gradient(115deg, transparent 0%, transparent 18%, rgba(255, 255, 255, 0.18) 26%, rgba(255, 255, 255, 0.18) 32%, transparent 40%),
+      linear-gradient(115deg, transparent 0%, transparent 45%, rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.1) 60%, transparent 68%);
+  }
+  .rccs__card--visa .rccs__card--front::after,
+  .rccs__card--visa-electron .rccs__card--front::after {
+    inset: 0;
+    background: radial-gradient(circle at 110% -10%, rgba(255, 255, 255, 0.22) 0%, transparent 35%);
+  }
+
+  /* MASTERCARD — concentric arcs sweeping across the card */
+  .rccs__card--mastercard .rccs__card--front::before,
+  .rccs__card--maestro .rccs__card--front::before {
+    inset: 0;
+    background:
+      radial-gradient(circle at 100% 100%, transparent 0%, transparent 38%, rgba(255, 255, 255, 0.18) 39%, rgba(255, 255, 255, 0.18) 40%, transparent 41%),
+      radial-gradient(circle at 100% 100%, transparent 0%, transparent 55%, rgba(255, 255, 255, 0.14) 56%, rgba(255, 255, 255, 0.14) 57%, transparent 58%),
+      radial-gradient(circle at 100% 100%, transparent 0%, transparent 72%, rgba(255, 255, 255, 0.1) 73%, rgba(255, 255, 255, 0.1) 74%, transparent 75%);
+  }
+  .rccs__card--mastercard .rccs__card--front::after,
+  .rccs__card--maestro .rccs__card--front::after {
+    inset: 0;
+    background: radial-gradient(circle at -10% 110%, rgba(255, 255, 255, 0.16) 0%, transparent 40%);
+  }
+
+  /* AMERICAN EXPRESS — soft horizontal beams */
+  .rccs__card--american-express .rccs__card--front::before {
+    inset: 0;
+    background: repeating-linear-gradient(180deg, transparent 0, transparent 18%, rgba(255, 255, 255, 0.07) 18%, rgba(255, 255, 255, 0.07) 19%);
+  }
+  .rccs__card--american-express .rccs__card--front::after {
+    width: 55%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    top: -25%;
+    left: -10%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
+  }
+
+  /* DISCOVER — dotted grid pattern (inline SVG; cached as raster, far cheaper than tiled radial-gradient) */
+  .rccs__card--discover .rccs__card--front::before {
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><circle cx='2' cy='2' r='1' fill='rgba(255,255,255,0.18)'/></svg>");
+    background-size: 14px 14px;
+    opacity: 0.6;
+  }
+  .rccs__card--discover .rccs__card--front::after {
+    width: 65%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    bottom: -32%;
+    right: -16%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, transparent 65%);
+  }
+
+  /* DINERS CLUB — bold diagonal split (two-tone wedge) */
+  .rccs__card--diners-club .rccs__card--front::before,
+  .rccs__card--dinersclub .rccs__card--front::before {
+    inset: 0;
+    background: linear-gradient(118deg, transparent 0%, transparent 55%, rgba(255, 255, 255, 0.14) 55%, rgba(255, 255, 255, 0.14) 100%);
+  }
+  .rccs__card--diners-club .rccs__card--front::after,
+  .rccs__card--dinersclub .rccs__card--front::after {
+    inset: 0;
+    background:
+      linear-gradient(118deg, transparent 0%, transparent 50%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.08) 52%, transparent 52%);
+  }
+
+  /* JCB — diagonal hatching */
+  .rccs__card--jcb .rccs__card--front::before {
+    inset: 0;
+    background: repeating-linear-gradient(45deg, transparent 0, transparent 14px, rgba(255, 255, 255, 0.1) 14px, rgba(255, 255, 255, 0.1) 16px);
+  }
+  .rccs__card--jcb .rccs__card--front::after {
+    inset: 0;
+    background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.18) 0%, transparent 35%);
+  }
+
+  /* UNIONPAY — radial sunburst from top-right */
+  .rccs__card--unionpay .rccs__card--front::before {
+    inset: 0;
+    background: conic-gradient(from 200deg at 88% 14%, rgba(255, 255, 255, 0) 0deg, rgba(255, 255, 255, 0.12) 8deg, rgba(255, 255, 255, 0) 16deg, rgba(255, 255, 255, 0.12) 24deg, rgba(255, 255, 255, 0) 32deg, rgba(255, 255, 255, 0.12) 40deg, rgba(255, 255, 255, 0) 48deg);
+    opacity: 0.7;
+  }
+  .rccs__card--unionpay .rccs__card--front::after {
+    width: 50%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    top: -30%;
+    right: -20%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+  }
+
+  /* HIPERCARD — angular chevron stripes */
+  .rccs__card--hipercard .rccs__card--front::before {
+    inset: 0;
+    background:
+      linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.1) 75%, transparent 75%);
+    background-size: 32px 32px;
+    opacity: 0.5;
+  }
+  .rccs__card--hipercard .rccs__card--front::after {
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.18) 100%);
+  }
+
+  /* ELO — flowing wave curve */
+  .rccs__card--elo .rccs__card--front::before {
+    inset: 0;
+    background: radial-gradient(ellipse 90% 50% at 30% 130%, rgba(255, 255, 255, 0.18) 0%, transparent 60%);
+  }
+  .rccs__card--elo .rccs__card--front::after {
+    inset: 0;
+    background: radial-gradient(ellipse 70% 40% at 80% -10%, rgba(255, 255, 255, 0.16) 0%, transparent 60%);
+  }
+
+  /* UNKNOWN — minimal soft accents */
+  .rccs__card--unknown .rccs__card--front::before {
+    width: 60%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    top: -25%;
+    right: -16%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+  }
+  .rccs__card--unknown .rccs__card--front::after {
+    width: 45%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    bottom: -28%;
+    left: -12%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  }
+
+  /* Brand gradients — light mode — colors echo each vendor's brand identity */
+  .rccs__card--visa .rccs__card__background,
+  .rccs__card--visa-electron .rccs__card__background {
+    background: linear-gradient(135deg, #1a1f71 0%, #2c53e3 50%, #418cff 100%) !important;
+  }
+  .rccs__card--mastercard .rccs__card__background {
+    background: linear-gradient(135deg, #EB001B 30%, #FF5F00 50%, #F79E1B 100%) !important;
+  }
+  .rccs__card--maestro .rccs__card__background {
+    background: linear-gradient(135deg, #d32011 0%, #6c2680 50%, #0099df 100%) !important;
+  }
+  .rccs__card--american-express .rccs__card__background {
+    background: linear-gradient(135deg, #227ec2 0%, #40b0e2 52%, #3a5fd6 100%) !important;
+  }
+  .rccs__card--discover .rccs__card__background {
+    background: linear-gradient(135deg, #3d3f6a 0%, #565ca4 52%, #eb7f48 100%) !important;
+  }
+  .rccs__card--dinersclub .rccs__card__background {
+    background: linear-gradient(135deg, #003366 0%, #0066cc 50%, #3399ff 100%) !important;
+  }
+  .rccs__card--jcb .rccs__card__background {
+    background: linear-gradient(135deg, #0033cc 0%, #0066ff 45%, #6699ff 100%) !important;
+  }
+  .rccs__card--unionpay .rccs__card--front,
+  .rccs__card--unionpay .rccs__card--back,
+  .rccs__card--unionpay > div,
+  .rccs__card--unionpay .rccs__card__background {
+    background: linear-gradient(135deg, #e21836 0%, #00447c 50%, #007b84 100%) !important;
+  }
+  .rccs__card--hipercard .rccs__card--front,
+  .rccs__card--hipercard .rccs__card--back,
+  .rccs__card--hipercard > div,
+  .rccs__card--hipercard .rccs__card__background {
+    background: linear-gradient(135deg, #8b181b 0%, #c80000 50%, #de1f27 100%) !important;
+  }
+  .rccs__card--elo .rccs__card__background {
+    background: linear-gradient(135deg, #f03c3c 0%, #ff6450 48%, #ffc864 100%) !important;
+  }
+  .rccs__card--unknown .rccs__card__background {
+    background: linear-gradient(135deg, #444e60 0%, #55647a 55%, #2c3443 100%) !important;
+  }
+
+  /* Brand gradients — dark mode (darker variants of brand identity colors) */
+  .dark .rccs__card--visa .rccs__card--front,
+  .dark .rccs__card--visa .rccs__card--back,
+  .dark .rccs__card--visa-electron .rccs__card--front,
+  .dark .rccs__card--visa-electron .rccs__card--back,
+  .dark .rccs__card--visa .rccs__card__background,
+  .dark .rccs__card--visa-electron .rccs__card__background {
+    background: linear-gradient(135deg, #0a0f3a 0%, #14217a 50%, #2c53e3 100%) !important;
+  }
+  .dark .rccs__card--mastercard .rccs__card--front,
+  .dark .rccs__card--mastercard .rccs__card--back,
+  .dark .rccs__card--mastercard > div,
+  .dark .rccs__card--mastercard .rccs__card__background {
+    background: linear-gradient(135deg, #6e0010 0%, #b32f00 50%, #c47812 100%) !important;
+  }
+  .dark .rccs__card--maestro .rccs__card--front,
+  .dark .rccs__card--maestro .rccs__card--back,
+  .dark .rccs__card--maestro > div,
+  .dark .rccs__card--maestro .rccs__card__background {
+    background: linear-gradient(135deg, #6a0c07 0%, #3a1244 50%, #00567a 100%) !important;
+  }
+  .dark .rccs__card--american-express .rccs__card--front,
+  .dark .rccs__card--american-express .rccs__card--back,
+  .dark .rccs__card--american-express .rccs__card__background {
+    background: linear-gradient(135deg, #0c3a5e 0%, #1a5478 52%, #1f3a8a 100%) !important;
+  }
+  .dark .rccs__card--discover .rccs__card--front,
+  .dark .rccs__card--discover .rccs__card--back,
+  .dark .rccs__card--discover .rccs__card__background {
+    background: linear-gradient(135deg, #1e1b2e 0%, #2a2d54 52%, #7c4628 100%) !important;
+  }
+  .dark .rccs__card--diners-club .rccs__card--front,
+  .dark .rccs__card--diners-club .rccs__card--back,
+  .dark .rccs__card--dinersclub .rccs__card--front,
+  .dark .rccs__card--dinersclub .rccs__card--back,
+  .dark .rccs__card--diners-club .rccs__card__background,
+  .dark .rccs__card--dinersclub .rccs__card__background {
+    background: linear-gradient(135deg, #001a33 0%, #003366 50%, #00518f 100%) !important;
+  }
+  .dark .rccs__card--jcb .rccs__card--front,
+  .dark .rccs__card--jcb .rccs__card--back,
+  .dark .rccs__card--jcb .rccs__card__background {
+    background: linear-gradient(135deg, #001a66 0%, #002a8a 50%, #1a4fc8 100%) !important;
+  }
+  .dark .rccs__card--unionpay .rccs__card--front,
+  .dark .rccs__card--unionpay .rccs__card--back,
+  .dark .rccs__card--unionpay > div,
+  .dark .rccs__card--unionpay .rccs__card__background {
+    background: linear-gradient(135deg, #7a0a1d 0%, #002445 50%, #004552 100%) !important;
+  }
+  .dark .rccs__card--hipercard .rccs__card--front,
+  .dark .rccs__card--hipercard .rccs__card--back,
+  .dark .rccs__card--hipercard > div,
+  .dark .rccs__card--hipercard .rccs__card__background {
+    background: linear-gradient(135deg, #420609 0%, #6e0010 50%, #8a0e13 100%) !important;
+  }
+  .dark .rccs__card--elo .rccs__card--front,
+  .dark .rccs__card--elo .rccs__card--back,
+  .dark .rccs__card--elo .rccs__card__background {
+    background: linear-gradient(135deg, #4a1212 0%, #7a2615 50%, #8a5614 100%) !important;
+  }
+  .dark .rccs__card--unknown .rccs__card--front,
+  .dark .rccs__card--unknown .rccs__card--back,
+  .dark .rccs__card--unknown > div,
+  .dark .rccs__card--unknown .rccs__card__background {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #020617 100%) !important;
+  }
+
+  /* Text legibility on coloured backgrounds */
+  .rccs__number,
+  .rccs__name,
+  .rccs__expiry__valid,
+  .rccs__expiry__value,
+  .rccs__cvc {
+    color: rgba(255, 255, 255, 0.96) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22) !important;
+  }
+
+  /* CVV on card back sits on a white signature strip — must be dark */
+  .rccs__card--back .rccs__cvc {
+    color: #1a1a1a !important;
+    text-shadow: none !important;
   }
 
   @keyframes carousel-cycle-next-main {
