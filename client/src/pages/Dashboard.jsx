@@ -93,7 +93,12 @@ const MIN_LOADER_MS = 1500
 export default function DashboardPage() {
   const { cards, isLoading, error } = useDashboardCards()
   const { formattedBalance, isLoading: balanceLoading } = useTotalBalance()
-  const { chartData, isLoading: txLoading } = useTransactionSummary()
+  const {
+    chartData,
+    isLoading: summaryLoading,
+    error: summaryError,
+    refresh: refreshSummary,
+  } = useTransactionSummary({ months: 6 })
   const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
@@ -131,7 +136,7 @@ export default function DashboardPage() {
             totalBalance={formattedBalance}
             monthlyGrowth={monthlyGrowth}
             monthlyAmount={monthlyAmount}
-            isLoading={balanceLoading || txLoading}
+            isLoading={balanceLoading || summaryLoading}
           />
         </div>
         <div className="flex h-full items-center justify-center">
@@ -151,8 +156,10 @@ export default function DashboardPage() {
       <section className="grid items-stretch gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <MoneyFlowPlaceholder
-            points={dashboardMockData.moneyFlow.points}
-            labels={dashboardMockData.moneyFlow.labels}
+            chartData={chartData}
+            isLoading={summaryLoading}
+            error={summaryError}
+            onRetry={refreshSummary}
           />
         </div>
         <QuickActions

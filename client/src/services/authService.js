@@ -45,6 +45,19 @@ export async function updateProfile({ firstName, lastName, email }) {
 	return user
 }
 
+export async function updateNotificationPreferences({ billingRemindersEnabled }) {
+	const { data } = await api.patch('/auth/notification-preferences', {
+		billing_reminders_enabled: billingRemindersEnabled,
+	})
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token)
+	}
+	const user = td.user
+	setAuthUser(user, { remember: getAuthRememberPreference() })
+	return user
+}
+
 export async function logout() {
 	try {
 		await api.post('/auth/logout')

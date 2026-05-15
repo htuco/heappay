@@ -1,10 +1,12 @@
-export default function Toggle({ enabled = false, label, onToggle }) {
+export default function Toggle({ enabled = false, label, onToggle, disabled = false, busy = false }) {
   return (
     <button
       type="button"
       onClick={onToggle}
+      disabled={disabled}
       aria-pressed={enabled}
-      className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-auto sm:min-w-[11rem]"
+      aria-busy={busy}
+      className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 enabled:cursor-pointer disabled:pointer-events-none disabled:opacity-60 sm:w-auto sm:min-w-[11rem]"
     >
       {label ? (
         <span className="min-w-0 text-left text-sm font-medium text-card-foreground">{label}</span>

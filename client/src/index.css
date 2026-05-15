@@ -796,6 +796,46 @@
     }
   }
 
+  @keyframes transaction-detail-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(6rem) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  @keyframes transaction-detail-slide-out {
+    from {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(6rem) scale(0.97);
+    }
+  }
+
+  @keyframes transaction-detail-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes transaction-detail-fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
   .animate-carousel-cycle-next-main {
     animation: carousel-cycle-next-main 320ms ease-out forwards;
   }
