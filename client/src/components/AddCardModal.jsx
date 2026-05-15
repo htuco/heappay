@@ -72,8 +72,12 @@ export default function AddCardModal({
   triggerLabel = "Add New Card",
   triggerClassName,
   triggerVariant,
+  open: controlledOpen,
+  onOpenChange: onControlledChange,
 }) {
-  const [open, setOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
   const [form, setForm] = React.useState(emptyForm)
   const [errors, setErrors] = React.useState({})
   const [focused, setFocused] = React.useState("")
@@ -137,15 +141,15 @@ export default function AddCardModal({
       })
       setForm(emptyForm)
       setErrors({})
-      setFocused("")
-      setOpen(false)
+      handleOpenChange(false)
     } catch {
       // Parent renders the API error and keeps the dialog open for correction.
     }
   }
 
   function handleOpenChange(val) {
-    setOpen(val)
+    if (!isControlled) setInternalOpen(val)
+    onControlledChange?.(val)
     if (!val) {
       setForm(emptyForm)
       setErrors({})
@@ -155,12 +159,14 @@ export default function AddCardModal({
 
   return (
     <DialogRoot open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant={triggerVariant} className={triggerClassName}>
-          <Plus />
-          {triggerLabel}
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant={triggerVariant} className={triggerClassName}>
+            <Plus />
+            {triggerLabel}
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent
         className={cn(

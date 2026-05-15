@@ -10,6 +10,8 @@ import DashboardLoadingOverlay from '@/components/dashboard/DashboardLoadingOver
 import PaymentCard from '@/components/payment-card/PaymentCard'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
+import AddCardModal from '@/components/AddCardModal'
+import { useWalletCards } from '@/hooks/useWalletCards'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
@@ -99,7 +101,7 @@ const MIN_LOADER_MS = 1500
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const { cards, isLoading, error } = useDashboardCards()
+  const { cards, isLoading, error, refetch } = useDashboardCards()
   const { formattedBalance, isLoading: balanceLoading } = useTotalBalance()
   const {
     chartData,
@@ -116,6 +118,8 @@ export default function DashboardPage() {
   const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
+  const [addCardOpen, setAddCardOpen] = useState(false)
+  const { addCard, isSaving, saveError } = useWalletCards()
   const primaryCard = cards[0] ?? null
   const cardStatusProps = buildCardStatusOverviewProps(cards)
 
@@ -212,6 +216,7 @@ export default function DashboardPage() {
         <QuickActions
           onSend={() => setPaymentWizardOpen(true)}
           onTopUp={() => setTopUpOpen(true)}
+          onAddNew={() => setAddCardOpen(true)}
         />
       </section>
 
@@ -244,6 +249,16 @@ export default function DashboardPage() {
       <TopUpModal
         isOpen={topUpOpen}
         onClose={() => setTopUpOpen(false)}
+      />
+      <AddCardModal
+        open={addCardOpen}
+        onOpenChange={setAddCardOpen}
+        onSubmit={async (cardInput) => {
+          await addCard(cardInput)
+          refetch({ showLoader: false })
+        }}
+        isSubmitting={isSaving}
+        submitError={saveError}
       />
     </div>
   )
