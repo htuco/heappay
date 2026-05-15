@@ -28,8 +28,9 @@ class CardCreate(BaseModel):
     status_id: int = Field(gt=0)
     card_type_id: int = Field(gt=0)
     card_numb: str = Field(min_length=13, max_length=19)
-    cvc: str = Field(min_length=3, max_length=3)
+    cvc: str = Field(min_length=3, max_length=4)
     expires_at: date
+    cardholder_name: str | None = Field(default=None, max_length=100)
 
     @field_validator("card_numb")
     @classmethod
@@ -47,8 +48,8 @@ class CardCreate(BaseModel):
         cvc = value.strip()
         if not cvc.isdigit():
             raise ValueError("cvc must contain digits only")
-        if len(cvc) != 3:
-            raise ValueError("cvc must be exactly 3 digits")
+        if len(cvc) not in (3, 4):
+            raise ValueError("cvc must be 3 or 4 digits")
         return cvc
 
     @field_validator("expires_at")
@@ -62,8 +63,9 @@ class CardPatch(BaseModel):
     status_id: int | None = Field(default=None, gt=0)
     card_type_id: int | None = Field(default=None, gt=0)
     card_numb: str | None = Field(default=None, min_length=13, max_length=19)
-    cvc: str | None = Field(default=None, min_length=3, max_length=3)
+    cvc: str | None = Field(default=None, min_length=3, max_length=4)
     expires_at: date | None = None
+    cardholder_name: str | None = Field(default=None, max_length=100)
 
     @field_validator("card_numb")
     @classmethod
@@ -85,8 +87,8 @@ class CardPatch(BaseModel):
         cvc = value.strip()
         if not cvc.isdigit():
             raise ValueError("cvc must contain digits only")
-        if len(cvc) != 3:
-            raise ValueError("cvc must be exactly 3 digits")
+        if len(cvc) not in (3, 4):
+            raise ValueError("cvc must be 3 or 4 digits")
         return cvc
 
     @field_validator("expires_at")
@@ -104,6 +106,7 @@ class CardLookupResponse(BaseModel):
     owner_name: str
     owner_email: str
     user_id: int
+    cardholder_name: str | None = None
 
 
 class CardResponse(BaseModel):
@@ -117,5 +120,6 @@ class CardResponse(BaseModel):
     masked_card_number: str
     expires_at: date
     balance: Decimal
+    cardholder_name: str | None = None
     created_at: datetime
     deleted_at: datetime | None = None

@@ -5,8 +5,11 @@ import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 import FormBanner from '@/components/ui/FormBanner'
 import { changePasswordSchema } from '@/schemas/changePasswordSchema'
 import { changePassword } from '@/services/authService'
+import { clearAuthSession } from '@/utils/authStorage'
 import { getApiErrorMessage } from '@/utils/api'
 import { useNotifications } from '@/context/NotificationContext'
+import { useAppDispatch } from '@/store/hooks'
+import { clearAuthState } from '@/store/slices/authSlice'
 
 const INITIAL_FORM = { currentPassword: '', newPassword: '', confirmPassword: '' }
 
@@ -19,6 +22,7 @@ function mapApiError(message) {
 }
 
 export default function ChangePasswordModal({ isOpen, onClose }) {
+	const dispatch = useAppDispatch()
 	const { notify } = useNotifications()
 	const [form, setForm] = useState(INITIAL_FORM)
 	const [fieldErrors, setFieldErrors] = useState({})
@@ -58,8 +62,11 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 				currentPassword: form.currentPassword,
 				newPassword: form.newPassword,
 			})
-			notify({ type: 'success', message: 'Password updated successfully.' })
+			dispatch(clearAuthState())
+			clearAuthSession()
+			notify({ type: 'success', message: 'Password updated successfully. Please sign in again.' })
 			handleClose()
+			window.location.assign('/login?passwordChanged=1')
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Failed to update password.')
 			const { field, message: mapped } = mapApiError(message)

@@ -2,6 +2,11 @@ const DISABLED_STATUSES = new Set(['frozen', 'expired', 'cancelled'])
 const ACTIVE_STATUS_NAME = 'active'
 const DEFAULT_CARD_TYPE_NAME = 'debit'
 
+// Maps frontend brand keys (from paymentCard.utils CARD_BRANDS) to DB vendor values.
+const BRAND_KEY_TO_DB_VENDOR = {
+  amex: 'american-express',
+}
+
 function normalizeLookupName(value) {
   return String(value ?? '').trim().toLowerCase()
 }
@@ -23,12 +28,13 @@ export function normalizeApiCard(card, typesById, statusesById, holderName) {
     source: card,
     balance: card.balance ?? '0.00',
     card: {
-      cardHolderName: holderName || 'Card holder',
+      cardHolderName: card.cardholder_name || holderName || 'Card holder',
       cardNumber: card.masked_card_number,
       expiryDate: card.expires_at,
       brand: vendor || 'unknown',
       isActive: statusName === ACTIVE_STATUS_NAME,
       isDisabled: DISABLED_STATUSES.has(statusName),
+      status: statusName || 'unknown',
     },
   }
 }
@@ -74,14 +80,16 @@ export function expiryInputToApiDate(expiry) {
 
 export function buildCreateCardPayload({ cardInput, userId, cardTypes, cardStatuses }) {
   const statusId = findCardStatusId(cardStatuses, ACTIVE_STATUS_NAME)
-  const cardTypeId = findCardTypeId(cardTypes, cardInput.type)
+  const dbVendor = BRAND_KEY_TO_DB_VENDOR[cardInput.type] ?? cardInput.type
+  const typeName = cardInput.cardType || DEFAULT_CARD_TYPE_NAME
+  const cardTypeId = findCardTypeId(cardTypes, dbVendor, typeName)
 
   if (!statusId) {
     throw new Error('Active card status is unavailable.')
   }
 
   if (!cardTypeId) {
-    throw new Error(`${cardInput.type} debit cards are unavailable.`)
+    throw new Error(`${cardInput.type} ${typeName} cards are unavailable.`)
   }
 
   return {
@@ -91,5 +99,6 @@ export function buildCreateCardPayload({ cardInput, userId, cardTypes, cardStatu
     card_numb: cardInput.number.replace(/\D/g, ''),
     cvc: cardInput.cvv,
     expires_at: expiryInputToApiDate(cardInput.expiry),
+    cardholder_name: cardInput.name?.trim() || null,
   }
 }
