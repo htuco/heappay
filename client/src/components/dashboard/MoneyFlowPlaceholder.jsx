@@ -88,7 +88,7 @@ export default function MoneyFlowPlaceholder({
   const isEmpty = useDual && chartData.length === 0
 
   return (
-    <section className="flex h-full flex-col rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <section className="flex h-full min-w-0 flex-col rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-card-foreground sm:text-lg">
@@ -128,8 +128,8 @@ export default function MoneyFlowPlaceholder({
 
       {/* Chart */}
       {!isLoading && !error && !isEmpty && (
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 w-full min-w-0">
+          <ResponsiveContainer width="100%" height={256} minWidth={0}>
             {useDual ? (
               <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <defs>
