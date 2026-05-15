@@ -21,6 +21,7 @@ class Card(Base):
     card_numb: Mapped[str] = mapped_column(String(32), nullable=False)
     last_four: Mapped[str] = mapped_column(String(4), nullable=False)
     cvc: Mapped[str] = mapped_column(String(4), nullable=False)
+    cardholder_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     expires_at: Mapped[date] = mapped_column(Date, nullable=False)
     balance: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
     created_at: Mapped[datetime] = mapped_column(

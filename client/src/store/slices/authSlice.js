@@ -65,6 +65,19 @@ export const updateProfileUser = createAsyncThunk(
   },
 )
 
+export const updateNotificationPreferences = createAsyncThunk(
+  'auth/updateNotificationPreferences',
+  async ({ billingRemindersEnabled }, { rejectWithValue }) => {
+    try {
+      return await authService.updateNotificationPreferences({ billingRemindersEnabled })
+    } catch (error) {
+      return rejectWithValue(
+        getApiErrorMessage(error, 'Could not save notification preferences.'),
+      )
+    }
+  },
+)
+
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   await authService.logout()
 })
@@ -134,6 +147,10 @@ const authSlice = createSlice({
       .addCase(updateProfileUser.fulfilled, (state, action) => {
         state.user = action.payload
         state.status = 'authenticated'
+        state.error = null
+      })
+      .addCase(updateNotificationPreferences.fulfilled, (state, action) => {
+        state.user = action.payload
         state.error = null
       })
       .addCase(updateProfileUser.rejected, (state, action) => {

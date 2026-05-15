@@ -61,6 +61,10 @@ export const getApiErrorMessage = (error, fallback = 'Something went wrong') => 
 		return data.detail
 	}
 
+	if (Array.isArray(data?.details) && data.details[0]?.msg) {
+		return data.details[0].msg
+	}
+
 	if (Array.isArray(data?.detail) && data.detail[0]?.msg) {
 		return data.detail[0].msg
 	}

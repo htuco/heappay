@@ -10,6 +10,7 @@ from schemas.user.auth import (
     ChangePasswordRequest,
     DeactivateAccountRequest,
     LoginRequest,
+    NotificationPreferencesUpdate,
     ProfileUpdateRequest,
     RefreshRequest,
     RegisterRequest,
@@ -164,3 +165,26 @@ def update_me(
         raise Unauthorized("Invalid or expired token.")
 
     return AuthResponse(success=True, message="Profile updated successfully.", data=token_data)
+
+
+@router.patch("/notification-preferences", response_model=AuthResponse)
+def update_notification_preferences(
+    payload: NotificationPreferencesUpdate,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    token_data = service.update_notification_preferences(
+        credentials.credentials,
+        payload.billing_reminders_enabled,
+    )
+    if token_data is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    return AuthResponse(
+        success=True,
+        message="Notification preferences updated.",
+        data=token_data,
+    )

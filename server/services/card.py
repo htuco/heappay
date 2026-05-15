@@ -52,6 +52,9 @@ class CardService:
     def get_by_id(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=False)
 
+    def get_by_id_including_deleted(self, card_id: int) -> Card | None:
+        return self._repo.get_by_id(card_id, include_deleted=True)
+
     def create(self, payload: CardCreate) -> Card:
         self._validate_fk(
             user_id=payload.user_id,
@@ -67,6 +70,7 @@ class CardService:
                 last_four=payload.card_numb[-4:],
                 cvc=payload.cvc,
                 expires_at=payload.expires_at,
+                cardholder_name=payload.cardholder_name,
             )
         except IntegrityError as exc:
             if "uq_cards_card_numb" in str(exc.orig).lower() or "card_numb" in str(exc.orig).lower():
