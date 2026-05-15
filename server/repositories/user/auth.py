@@ -120,6 +120,18 @@ class UserAuthRepository:
         )
         self._db.commit()
 
+    def update_password_and_clear_refresh_token(
+        self,
+        user_id: int,
+        hashed_password: str,
+    ) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(password_hash=hashed_password, refresh_token=None)
+        )
+        self._db.commit()
+
     def soft_delete_user(self, user_id: int) -> None:
         self._db.execute(
             update(User)
