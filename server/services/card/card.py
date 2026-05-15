@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 
 from models.card import Card
 from models.user import User
-from repositories.card import CardRepository
+from repositories.card.card import CardRepository
 from schemas.card import CardCreate, CardPatch
 
 

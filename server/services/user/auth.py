@@ -5,7 +5,7 @@ import bcrypt
 import jwt
 from jwt.exceptions import InvalidTokenError
 
-from repositories.auth import UserAuthRepository
+from repositories.user.auth import UserAuthRepository
 from schemas.user.auth import (
     ChangePasswordRequest,
     DeactivateAccountRequest,

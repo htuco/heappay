@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from repositories.transaction import TransactionRepository
+from repositories.transaction.transaction import TransactionRepository
 from routes.dependencies import get_current_user_id, require_admin
 from schemas.pagination import Page
 from schemas.response import ApiResponse
@@ -13,7 +13,7 @@ from schemas.transaction import (
     TransactionSummaryPoint,
     TransactionSummaryResponse,
 )
-from services.transaction import (
+from services.transaction.transaction import (
     CardNotFoundError,
     ForbiddenError,
     InsufficientBalanceError,

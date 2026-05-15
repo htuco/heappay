@@ -7,18 +7,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from exceptions import AppException
 from routes import (
-    card,
     card_status,
     card_type,
     health,
     system,
-    transaction,
     transaction_type,
     user_role,
     user_status,
 )
-from routes.auth import router as auth_router
-from routes.user import router as users_router
+from routes.card.card import router as card_router
+from routes.transaction.transaction import router as transaction_router
+from routes.user.auth import router as auth_router
+from routes.user.user import router as users_router
 from settings import get_settings
 
 
@@ -63,10 +63,10 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(system.router)
     app.include_router(user_role.router)
-    app.include_router(card.router)
+    app.include_router(card_router)
     app.include_router(card_status.router)
     app.include_router(card_type.router)
-    app.include_router(transaction.router)
+    app.include_router(transaction_router)
     app.include_router(transaction_type.router)
     app.include_router(auth_router)
     app.include_router(users_router)

@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from repositories.user import UserRepository
+from repositories.user.user import UserRepository
 from routes.dependencies import get_current_user_id, require_admin
 from schemas.response import ApiResponse
 from schemas.user.crud import UserCreateRequest, UserResponse, UserSearchResponse, UserUpdateRequest
-from services.user import (
+from services.user.user import (
     DuplicateEmailError,
     InvalidUserRoleError,
     InvalidUserStatusError,

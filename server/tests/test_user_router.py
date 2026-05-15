@@ -3,8 +3,8 @@ import os
 
 from fastapi.testclient import TestClient
 
-from routes.user import get_user_service
-from services.user import (
+from routes.user.user import get_user_service
+from services.user.user import (
     DuplicateEmailError,
     InvalidUserRoleError,
     InvalidUserStatusError,

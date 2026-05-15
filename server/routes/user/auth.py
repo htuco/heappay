@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from exceptions import InvalidInput, Unauthorized
-from repositories.auth import UserAuthRepository
+from repositories.user.auth import UserAuthRepository
 from schemas.user.auth import (
     AuthResponse,
     ChangePasswordRequest,
@@ -15,7 +15,7 @@ from schemas.user.auth import (
     RefreshRequest,
     RegisterRequest,
 )
-from services.auth import UserAuthService
+from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

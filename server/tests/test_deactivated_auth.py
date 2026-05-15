@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from database import get_db  # noqa: E402
 from main import create_app  # noqa: E402
-from services.auth import UserAuthService  # noqa: E402
+from services.user.auth import UserAuthService  # noqa: E402
 
 
 def test_resolve_active_user_id_returns_none_when_user_deleted() -> None:
@@ -46,7 +46,7 @@ def test_cards_lookup_returns_401_when_session_not_active(monkeypatch) -> None:
     app = create_app()
     app.dependency_overrides[get_db] = fake_db
     monkeypatch.setattr(
-        "services.auth.UserAuthService.resolve_active_user_id",
+        "services.user.auth.UserAuthService.resolve_active_user_id",
         lambda self, token: None,
     )
     try:
