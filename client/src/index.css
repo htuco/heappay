@@ -367,12 +367,12 @@
   .payment-card-rccs-shell .rccs__card--back,
   .add-card-preview .rccs__card--front,
   .add-card-preview .rccs__card--back {
-    box-shadow: 0 22px 44px rgba(15, 23, 42, 0.22) !important;
+    box-shadow: none !important;
   }
 
   .payment-card-rccs-shell.is-active .rccs__card--front,
   .payment-card-rccs-shell.is-active .rccs__card--back {
-    box-shadow: 0 26px 50px rgba(15, 23, 42, 0.32) !important;
+    box-shadow: none !important;
   }
 
   .add-card-preview {
