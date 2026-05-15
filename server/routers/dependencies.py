@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -15,6 +17,12 @@ bearer_scheme = HTTPBearer(auto_error=False)
 ADMIN_ROLE_NAME = "admin"
 
 
+@dataclass
+class UserContext:
+    user_id: int
+    is_admin: bool
+
+
 def get_current_user_id(
     credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
     db: Session = Depends(get_db),
@@ -28,6 +36,20 @@ def get_current_user_id(
     if user_id is None:
         raise Unauthorized("Invalid or expired token.")
     return user_id
+
+
+def get_user_context(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> UserContext:
+    """Return the current user's id and whether they hold the admin role."""
+    stmt = (
+        select(UserRole.role_name)
+        .join(User, User.user_role_id == UserRole.role_id)
+        .where(User.user_id == user_id)
+    )
+    role_name = db.execute(stmt).scalar_one_or_none()
+    return UserContext(user_id=user_id, is_admin=(role_name == ADMIN_ROLE_NAME))
 
 
 def require_admin(

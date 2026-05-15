@@ -1,9 +1,231 @@
+import { useState } from 'react'
+
+import { AlertTriangle, MessageSquareText } from 'lucide-react'
+
+import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
+import { Button } from '@/components/ui/button'
+import {
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+
+const REFUND_REASONS = [
+  'Duplicate payment',
+  'Wrong recipient',
+  'Incorrect amount',
+  'Service or item was not delivered',
+  'Other',
+]
+const REFUND_REASON_OPTIONS = REFUND_REASONS.map((reason) => ({
+  value: reason,
+  label: reason,
+}))
+
+function getTransactionId(transaction) {
+  return transaction?.transaction_id ?? transaction?.id ?? null
+}
 
 export default function PaymentPage() {
+  const [selectedTransaction, setSelectedTransaction] = useState(null)
+  const [transactionToCancel, setTransactionToCancel] = useState(null)
+  const [transactionToRefund, setTransactionToRefund] = useState(null)
+  const [cancelConfirmationId, setCancelConfirmationId] = useState('')
+  const [refundReason, setRefundReason] = useState(REFUND_REASONS[0])
+  const [refundOtherReason, setRefundOtherReason] = useState('')
+  const cancelTransactionId = getTransactionId(transactionToCancel)
+  const refundTransactionId = getTransactionId(transactionToRefund)
+  const isCancelConfirmed =
+    Boolean(cancelTransactionId) && cancelConfirmationId.trim() === String(cancelTransactionId)
+  const resolvedRefundReason = refundReason === 'Other' ? refundOtherReason.trim() : refundReason
+  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason)
+
+  function closeCancelPreview() {
+    setTransactionToCancel(null)
+    setCancelConfirmationId('')
+  }
+
+  function closeRefundPreview() {
+    setTransactionToRefund(null)
+    setRefundReason(REFUND_REASONS[0])
+    setRefundOtherReason('')
+  }
+
   return (
     <div className="space-y-6">
-      <TransactionHistory />
+      <TransactionHistory onTransactionSelect={setSelectedTransaction} />
+      <TransactionDetailPanel
+        open={Boolean(selectedTransaction)}
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+        onCancel={setTransactionToCancel}
+        onRefund={setTransactionToRefund}
+      />
+      <DialogRoot
+        open={Boolean(transactionToCancel)}
+        onOpenChange={(open) => {
+          if (!open) closeCancelPreview()
+        }}
+      >
+        <DialogContent
+          overlayClassName="bg-slate-950/35 backdrop-blur-[10px]"
+          className="max-w-[27rem] rounded-[20px] border border-slate-200/80 bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] [&>button]:right-5 [&>button]:top-5 [&>button]:flex [&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:p-0 [&>button]:opacity-60 [&>button]:hover:bg-slate-100 [&>button]:hover:opacity-100 dark:[&>button]:hover:bg-white/10"
+        >
+          <div className="p-6 sm:p-7">
+            <DialogHeader className="mb-0 gap-0 pr-8">
+              <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-8 ring-amber-100/50 dark:bg-amber-400/15 dark:text-amber-300 dark:ring-amber-400/10">
+                <AlertTriangle className="size-5" />
+              </span>
+              <DialogTitle className="text-[1.35rem] font-semibold leading-7 tracking-normal text-card-foreground">
+                Cancel payment?
+              </DialogTitle>
+              <DialogDescription className="mt-2 max-w-[22rem] text-sm leading-6 text-slate-600 dark:text-slate-300">
+                The pending amount will be released back to your available balance.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-[18px] rounded-[14px] border border-slate-200/80 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-card-foreground">
+                  Transaction #{cancelTransactionId ?? '—'}
+                </p>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium leading-none text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                  Pending payment
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-[22px]">
+              <label htmlFor="cancel-transaction-id" className="text-sm font-medium text-card-foreground">
+                Type transaction ID to confirm
+              </label>
+              <Input
+                id="cancel-transaction-id"
+                inputMode="numeric"
+                value={cancelConfirmationId}
+                onChange={(event) => setCancelConfirmationId(event.target.value)}
+                placeholder={cancelTransactionId ? String(cancelTransactionId) : 'Transaction ID'}
+                className="mt-2.5 h-11 rounded-xl border border-slate-200 bg-background px-3.5 font-semibold tabular-nums shadow-none focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 dark:border-white/10"
+              />
+              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                Enter <span className="font-semibold text-card-foreground">{cancelTransactionId ?? 'the ID'}</span> to enable cancellation.
+              </p>
+            </div>
+
+            <DialogFooter className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DialogClose asChild>
+                <Button
+                  className="h-11 rounded-xl bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
+                >
+                  Keep payment
+                </Button>
+              </DialogClose>
+              <Button
+                variant="outline"
+                className="h-11 rounded-xl border-red-200 bg-white px-4 font-semibold text-red-600 shadow-none hover:border-red-300 hover:bg-red-50 hover:text-red-600 focus-visible:border-red-300 focus-visible:ring-red-500/15 disabled:border-red-100 disabled:bg-red-50/40 disabled:text-red-300 dark:border-red-400/30 dark:bg-transparent dark:text-red-300 dark:hover:border-red-400/50 dark:hover:bg-red-400/10"
+                disabled={!isCancelConfirmed}
+                onClick={closeCancelPreview}
+              >
+                Cancel payment
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </DialogRoot>
+      <DialogRoot
+        open={Boolean(transactionToRefund)}
+        onOpenChange={(open) => {
+          if (!open) closeRefundPreview()
+        }}
+      >
+        <DialogContent
+          overlayClassName="bg-slate-950/35 backdrop-blur-[10px]"
+          className="max-w-[30rem] rounded-[20px] border border-slate-200/80 bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] [&>button]:right-5 [&>button]:top-5 [&>button]:flex [&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:p-0 [&>button]:opacity-60 [&>button]:hover:bg-slate-100 [&>button]:hover:opacity-100 dark:[&>button]:hover:bg-white/10"
+        >
+          <div className="p-6 sm:p-7">
+            <DialogHeader className="mb-0 gap-0 pr-8">
+              <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-8 ring-blue-100/50 dark:bg-blue-400/15 dark:text-blue-300 dark:ring-blue-400/10">
+                <MessageSquareText className="size-5" />
+              </span>
+              <DialogTitle className="text-[1.35rem] font-semibold leading-7 tracking-normal text-card-foreground">
+                Request refund
+              </DialogTitle>
+              <DialogDescription className="mt-2 max-w-[24rem] text-sm leading-6 text-slate-600 dark:text-slate-300">
+                The other user will be notified. Our system will review the refund request, and the final decision depends on our employees.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-[18px] rounded-[14px] border border-slate-200/80 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-card-foreground">
+                  Transaction #{refundTransactionId ?? '—'}
+                </p>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium leading-none text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                  Completed payment
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-[22px]">
+              <label htmlFor="refund-reason" className="text-sm font-medium text-card-foreground">
+                Refund reason
+              </label>
+              <Select
+                id="refund-reason"
+                value={refundReason}
+                onChange={(event) => setRefundReason(event.target.value)}
+                options={REFUND_REASON_OPTIONS}
+                className="mt-2.5 h-11 rounded-xl border border-slate-200 bg-background px-3.5 shadow-none focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 dark:border-white/10"
+              />
+            </div>
+
+            {refundReason === 'Other' && (
+              <div className="mt-4">
+                <label htmlFor="refund-other-reason" className="text-sm font-medium text-card-foreground">
+                  Describe refund status
+                </label>
+                <textarea
+                  id="refund-other-reason"
+                  value={refundOtherReason}
+                  onChange={(event) => setRefundOtherReason(event.target.value.slice(0, 180))}
+                  placeholder="Tell us why this payment should be refunded."
+                  rows={4}
+                  className="mt-2.5 w-full resize-none rounded-[10px] border border-slate-200 bg-background px-3.5 py-3 text-sm font-medium text-card-foreground shadow-none outline-none transition focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 disabled:pointer-events-none disabled:opacity-50 dark:border-white/10"
+                />
+              </div>
+            )}
+
+            <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+              Your reason will be added to the transaction notes and used by the review team.
+            </p>
+
+            <DialogFooter className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DialogClose asChild>
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-xl border-slate-200 bg-white px-4 font-semibold text-slate-700 shadow-none hover:bg-slate-50 dark:border-white/10 dark:bg-transparent dark:text-slate-200 dark:hover:bg-white/5"
+                >
+                  Keep payment
+                </Button>
+              </DialogClose>
+              <Button
+                className="h-11 rounded-xl bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 disabled:bg-slate-200 disabled:text-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
+                disabled={!canSubmitRefundRequest}
+                onClick={closeRefundPreview}
+              >
+                Submit request
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </DialogRoot>
     </div>
   )
 }
