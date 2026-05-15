@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.user.crud import UserRepository
-from routers.dependencies import require_admin
-from schemas.user.crud import UserCreateRequest, UserResponse, UserUpdateRequest
+from routers.dependencies import get_current_user_id, require_admin
+from schemas.response import ApiResponse
+from schemas.user.crud import UserCreateRequest, UserResponse, UserSearchResponse, UserUpdateRequest
 from services.user.crud import (
     DuplicateEmailError,
     InvalidUserRoleError,
@@ -45,6 +46,27 @@ def list_users(
         offset=offset,
     )
     return [UserResponse.model_validate(row) for row in rows]
+
+
+@router.get("/search", response_model=ApiResponse[list[UserSearchResponse]])
+def search_users(
+    q: str = Query(),
+    current_user_id: int = Depends(get_current_user_id),
+    service: UserService = Depends(get_user_service),
+) -> ApiResponse[list[UserSearchResponse]]:
+    # TODO: rate limit this endpoint during the future hardening pass.
+    query = q.strip()
+    if len(query) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query must be at least 3 characters.",
+        )
+    rows = service.search(query, exclude_user_id=current_user_id, limit=10)
+    return ApiResponse[list[UserSearchResponse]](
+        success=True,
+        message="User search completed.",
+        data=rows,
+    )
 
 
 @router.get("/{user_id}", response_model=UserResponse)

@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from models.user import User
 from repositories.user.crud import UserRepository
-from schemas.user.crud import UserCreateRequest, UserUpdateRequest
+from schemas.user.crud import UserCreateRequest, UserSearchDefaultCard, UserSearchResponse, UserUpdateRequest
 
 
 class UserNotFoundError(Exception):
@@ -55,6 +55,29 @@ class UserService:
         if row is None or (row.deleted_at is not None and not include_deleted):
             raise UserNotFoundError()
         return row
+
+    def search(self, q: str, *, exclude_user_id: int, limit: int = 10) -> list[UserSearchResponse]:
+        rows = self._repo.search(q.strip(), exclude_user_id=exclude_user_id, limit=limit)
+        results: list[UserSearchResponse] = []
+        for user, card, vendor in rows:
+            default_card = None
+            if card is not None:
+                default_card = UserSearchDefaultCard(
+                    card_id=card.card_id,
+                    last_four=card.last_four,
+                    vendor=vendor or "unknown",
+                )
+            results.append(
+                UserSearchResponse(
+                    user_id=user.user_id,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    email=user.email,
+                    avatar_url=getattr(user, "avatar_url", None),
+                    default_card=default_card,
+                )
+            )
+        return results
 
     def create_user(self, payload: UserCreateRequest) -> User:
         if not self._repo.user_role_exists(payload.user_role_id):
