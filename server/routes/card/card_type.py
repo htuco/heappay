@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from repositories.card_type import CardTypeRepository
+from repositories.card.card_type import CardTypeRepository
 from schemas.card_type import CardTypeCreate, CardTypeResponse, CardTypeUpdate
-from services.card_type import (
+from services.card.card_type import (
     CardTypeInUseError,
     CardTypeService,
     DuplicateCardTypeError,

@@ -7,7 +7,7 @@ from schemas.user_roles import (
     UserRoleResponse,
     UserRoleUpdateRequest,
 )
-from services import user_role as user_role_service
+from services.user import user_role as user_role_service
 
 router = APIRouter(prefix="/user-roles", tags=["user_roles"])
 

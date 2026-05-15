@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 
 from models.card_type import CardType
-from repositories.card_type import CardTypeRepository
+from repositories.card.card_type import CardTypeRepository
 
 
 class DuplicateCardTypeError(Exception):

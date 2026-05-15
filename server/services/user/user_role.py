@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models.user_role import UserRole
-from repositories import user_role as user_role_repository
+from repositories.user import user_role as user_role_repository
 
 
 class UserRoleNotFoundError(Exception):

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from schemas.user_statuses import MessageResponse, UserStatusCreate, UserStatusRead, UserStatusUpdate
-from services import user_status as user_status_service
+from services.user import user_status as user_status_service
 
 router = APIRouter(prefix="/user-statuses", tags=["user-statuses"])
 
