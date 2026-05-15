@@ -52,6 +52,9 @@ class CardService:
     def get_by_id(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=False)
 
+    def get_by_id_including_deleted(self, card_id: int) -> Card | None:
+        return self._repo.get_by_id(card_id, include_deleted=True)
+
     def create(self, payload: CardCreate) -> Card:
         self._validate_fk(
             user_id=payload.user_id,
