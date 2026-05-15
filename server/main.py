@@ -25,13 +25,15 @@ from settings import get_settings
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI()
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origin_list,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    cors_kwargs: dict = {
+        "allow_origins": settings.cors_origin_list,
+        "allow_credentials": True,
+        "allow_methods": ["*"],
+        "allow_headers": ["*"],
+    }
+    # Vite may use 5173, 5174, etc. — regex covers local ports without listing each one.
+    cors_kwargs["allow_origin_regex"] = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

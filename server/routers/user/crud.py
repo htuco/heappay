@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.user.crud import UserRepository
-from schemas.user.crud import UserCreateRequest, UserResponse, UserUpdateRequest
+from routers.dependencies import get_current_user_id, require_admin
+from schemas.response import ApiResponse
+from schemas.user.crud import UserCreateRequest, UserResponse, UserSearchResponse, UserUpdateRequest
 from services.user.crud import (
     DuplicateEmailError,
     InvalidUserRoleError,
@@ -32,6 +34,7 @@ def list_users(
     include_deleted: bool = Query(default=False),
     limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> list[UserResponse]:
     rows = service.list_users(
@@ -45,10 +48,32 @@ def list_users(
     return [UserResponse.model_validate(row) for row in rows]
 
 
+@router.get("/search", response_model=ApiResponse[list[UserSearchResponse]])
+def search_users(
+    q: str = Query(),
+    current_user_id: int = Depends(get_current_user_id),
+    service: UserService = Depends(get_user_service),
+) -> ApiResponse[list[UserSearchResponse]]:
+    # TODO: rate limit this endpoint during the future hardening pass.
+    query = q.strip()
+    if len(query) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query must be at least 3 characters.",
+        )
+    rows = service.search(query, exclude_user_id=current_user_id, limit=10)
+    return ApiResponse[list[UserSearchResponse]](
+        success=True,
+        message="User search completed.",
+        data=rows,
+    )
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: int,
     include_deleted: bool = Query(default=False),
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -61,6 +86,7 @@ def get_user(
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     payload: UserCreateRequest,
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -82,6 +108,7 @@ def create_user(
 def update_user(
     user_id: int,
     payload: UserUpdateRequest,
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -104,6 +131,7 @@ def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> Response:
     try:

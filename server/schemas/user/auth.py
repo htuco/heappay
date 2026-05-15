@@ -69,6 +69,10 @@ class ProfileUpdateRequest(BaseModel):
         return self
 
 
+class NotificationPreferencesUpdate(BaseModel):
+    billing_reminders_enabled: bool
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -79,6 +83,7 @@ class UserResponse(BaseModel):
     created_at: datetime
     user_role_id: int
     role_name: str
+    billing_reminders_enabled: bool = True
 
 
 class TokenResponse(BaseModel):

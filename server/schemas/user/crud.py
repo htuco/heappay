@@ -73,3 +73,18 @@ class UserResponse(BaseModel):
     created_at: datetime
     modified_at: datetime
     deleted_at: datetime | None
+
+
+class UserSearchDefaultCard(BaseModel):
+    card_id: int
+    last_four: str
+    vendor: str
+
+
+class UserSearchResponse(BaseModel):
+    user_id: int
+    first_name: str
+    last_name: str
+    email: EmailStr
+    avatar_url: str | None = None
+    default_card: UserSearchDefaultCard | None = None

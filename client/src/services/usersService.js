@@ -95,6 +95,21 @@ function buildListUsersQuery(params = {}) {
 
 export const usersService = {
   /**
+   * @param {string} q
+   * @returns {Promise<Array>}
+   */
+  async search(q) {
+    try {
+      const response = await api.get('/users/search', {
+        params: { q },
+      })
+      return response.data?.data ?? []
+    } catch (error) {
+      throw mapUserApiError(error)
+    }
+  },
+
+  /**
    * @param {import('../types/user').ListUsersParams} [params]
    * @returns {Promise<import('../types/user').User[]>}
    */

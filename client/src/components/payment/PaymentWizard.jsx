@@ -13,6 +13,8 @@ import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormBanner from '@/components/ui/FormBanner'
+import UserAvatar from '@/components/ui/UserAvatar'
+import RecipientPicker from '@/components/payment/RecipientPicker'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotifications } from '@/context/NotificationContext'
 import { listCards, lookupCardByNumber } from '@/services/cardsService'
@@ -194,10 +196,11 @@ function StepFrom({ state, onChange, cards, txTypes, onNext }) {
 
 // ─── Step 2: Recipient + amount + note ────────────────────────────────────────
 
-function StepTo({ state, onChange, fromCard, onNext, onBack }) {
+function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
   const [lookupState, setLookupState] = useState(
     state.recipientInfo ? { status: 'found', info: state.recipientInfo } : { status: 'idle' }
   )
+  const [recipientError, setRecipientError] = useState('')
   const debounceRef = useRef(null)
 
   const balance = fromCard ? Number(fromCard.balance) : null
@@ -210,6 +213,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack }) {
     const digits = formatted.replace(/\D/g, '')
     onChange('recipientCardNumber', formatted)
     onChange('recipientInfo', null)
+    setRecipientError('')
     clearTimeout(debounceRef.current)
 
     if (digits.length === 16) {
@@ -217,6 +221,11 @@ function StepTo({ state, onChange, fromCard, onNext, onBack }) {
       debounceRef.current = setTimeout(async () => {
         try {
           const info = await lookupCardByNumber(digits)
+          if (info.user_id === currentUserId) {
+            setLookupState({ status: 'idle' })
+            setRecipientError("You can't send money to yourself.")
+            return
+          }
           setLookupState({ status: 'found', info })
           onChange('recipientInfo', info)
         } catch {
@@ -228,8 +237,37 @@ function StepTo({ state, onChange, fromCard, onNext, onBack }) {
     }
   }
 
+  function handleRecipientModeChange(mode) {
+    onChange('recipientMode', mode)
+    onChange('recipientInfo', null)
+    onChange('recipientCardNumber', '')
+    onChange('recipientEmailQuery', '')
+    setLookupState({ status: 'idle' })
+    setRecipientError('')
+    clearTimeout(debounceRef.current)
+  }
+
+  function handleEmailQueryChange(value) {
+    onChange('recipientEmailQuery', value)
+    onChange('recipientInfo', null)
+    setLookupState({ status: 'idle' })
+    setRecipientError('')
+  }
+
+  function handleEmailRecipientSelect(info) {
+    if (info.user_id === currentUserId) {
+      setRecipientError("You can't send money to yourself.")
+      return
+    }
+    onChange('recipientInfo', info)
+    onChange('recipientCardNumber', info.masked_card_number)
+    setLookupState({ status: 'found', info })
+    setRecipientError('')
+  }
+
   const canProceed =
-    lookupState.status === 'found' &&
+    state.recipientInfo &&
+    !recipientError &&
     state.amount !== '' &&
     !isNaN(amountNum) &&
     amountNum > 0 &&
@@ -240,53 +278,91 @@ function StepTo({ state, onChange, fromCard, onNext, onBack }) {
       <StepProgress current={1} />
 
       {/* Recipient */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-card-foreground">Recipient card number</p>
-        <div className="relative">
-          <Input
-            value={state.recipientCardNumber}
-            onChange={handleCardNumberChange}
-            placeholder="0000 0000 0000 0000"
-            inputMode="numeric"
-            maxLength={19}
-            className={`pr-10 font-mono ${
-              lookupState.status === 'not_found' ? 'border-destructive' : ''
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 rounded-2xl border border-border bg-muted/20 p-1">
+          <button
+            type="button"
+            onClick={() => handleRecipientModeChange('card')}
+            className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+              state.recipientMode === 'card'
+                ? 'bg-card text-card-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-card-foreground'
             }`}
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-            {lookupState.status === 'loading' && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            )}
-            {lookupState.status === 'found' && (
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            )}
-            {lookupState.status === 'not_found' && (
-              <XCircle className="h-4 w-4 text-destructive" />
-            )}
-            {lookupState.status === 'idle' && (
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            )}
-          </span>
+          >
+            By card number
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRecipientModeChange('email')}
+            className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+              state.recipientMode === 'email'
+                ? 'bg-card text-card-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-card-foreground'
+            }`}
+          >
+            By email
+          </button>
         </div>
 
-        {lookupState.status === 'found' && lookupState.info && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-success/30 bg-success/8 px-3 py-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15">
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-card-foreground">
-                {lookupState.info.owner_name}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {lookupState.info.owner_email}
-              </p>
+        {state.recipientMode === 'email' ? (
+          <RecipientPicker
+            query={state.recipientEmailQuery}
+            onQueryChange={handleEmailQueryChange}
+            selectedRecipient={state.recipientInfo}
+            onSelect={handleEmailRecipientSelect}
+            currentUserId={currentUserId}
+          />
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-card-foreground">Recipient card number</p>
+            <div className="relative">
+              <Input
+                value={state.recipientCardNumber}
+                onChange={handleCardNumberChange}
+                placeholder="0000 0000 0000 0000"
+                inputMode="numeric"
+                maxLength={19}
+                className={`pr-10 font-mono ${
+                  lookupState.status === 'not_found' ? 'border-destructive' : ''
+                }`}
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                {lookupState.status === 'loading' && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                {lookupState.status === 'found' && (
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                )}
+                {lookupState.status === 'not_found' && (
+                  <XCircle className="h-4 w-4 text-destructive" />
+                )}
+                {lookupState.status === 'idle' && (
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                )}
+              </span>
             </div>
+
+            {lookupState.status === 'found' && lookupState.info && (
+              <div className="flex items-center gap-2.5 rounded-xl border border-success/30 bg-success/8 px-3 py-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-card-foreground">
+                    {lookupState.info.owner_name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {lookupState.info.owner_email}
+                  </p>
+                </div>
+              </div>
+            )}
+            {lookupState.status === 'not_found' && (
+              <p className="text-xs text-destructive">No active card found with that number.</p>
+            )}
           </div>
         )}
-        {lookupState.status === 'not_found' && (
-          <p className="text-xs text-destructive">No active card found with that number.</p>
-        )}
+        {recipientError && <p className="text-xs text-destructive">{recipientError}</p>}
       </div>
 
       {/* Amount — large centered display */}
@@ -352,6 +428,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack }) {
 
 function StepReview({ state, fromCard, txTypes, onSubmit, onBack, isSubmitting, error }) {
   const txType = txTypes.find((t) => t.transaction_type_id === state.txTypeId)
+  const recipientNameParts = state.recipientInfo?.owner_name?.split(' ') ?? []
 
   return (
     <div className="space-y-5">
@@ -390,6 +467,27 @@ function StepReview({ state, fromCard, txTypes, onSubmit, onBack, isSubmitting, 
           </p>
         </div>
       </div>
+
+      {state.recipientInfo && (
+        <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+          <UserAvatar
+            user={{
+              first_name: recipientNameParts[0],
+              last_name: recipientNameParts.slice(1).join(' '),
+              avatar_url: state.recipientInfo.avatar_url,
+            }}
+            className="h-12 w-12 text-sm"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-card-foreground">
+              Confirm recipient: {state.recipientInfo.owner_name}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {state.recipientInfo.owner_email} · card ****{state.recipientInfo.last_four}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Receipt rows */}
       <div className="divide-y divide-border rounded-2xl border border-border bg-card text-sm">
@@ -487,7 +585,9 @@ function StepResult({ amount, recipientName, onClose }) {
 const INITIAL_FORM = {
   fromCardId: null,
   txTypeId: null,
+  recipientMode: 'card',
   recipientCardNumber: '',
+  recipientEmailQuery: '',
   recipientInfo: null,
   amount: '',
   note: '',
@@ -498,6 +598,7 @@ const STEP_TITLES = ['Send Payment', 'Send Payment', 'Send Payment', 'Payment Se
 export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
   const { user } = useAuth()
   const { notify } = useNotifications()
+  const currentUserId = user?.user_id ?? user?.id
 
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(INITIAL_FORM)
@@ -506,7 +607,6 @@ export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
   const [isLoadingRef, setIsLoadingRef] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [succeeded, setSucceeded] = useState(false)
 
   useEffect(() => {
     if (!isOpen || !user) return
@@ -525,7 +625,6 @@ export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
     setStep(0)
     setForm(INITIAL_FORM)
     setSubmitError('')
-    setSucceeded(false)
     onClose()
   }
 
@@ -546,7 +645,6 @@ export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
         note: form.note || null,
       })
 
-      setSucceeded(true)
       setStep(3)
 
       notify({
@@ -594,6 +692,7 @@ export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
           fromCard={fromCard}
           onNext={() => setStep(2)}
           onBack={() => setStep(0)}
+          currentUserId={currentUserId}
         />
       ) : step === 2 ? (
         <StepReview

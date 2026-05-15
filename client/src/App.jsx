@@ -9,7 +9,8 @@ import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
-import { getAuthRefreshToken, getAuthToken, getAuthUser } from './utils/authStorage'
+import { getAuthRefreshToken, getAuthToken } from './utils/authStorage'
+import { useAuth } from './hooks/useAuth'
 import { useAppDispatch } from './store/hooks'
 import { clearAuthState } from './store/slices/authSlice'
 import { fetchReferenceDataOnce } from './store/slices/referenceDataSlice'
@@ -24,15 +25,19 @@ function ProtectedRoute({ children }) {
 }
 
 function AdminRoute({ children }) {
-  const hasAccessToken = Boolean(getAuthToken())
-  const hasRefreshToken = Boolean(getAuthRefreshToken())
-  if (!hasAccessToken && !hasRefreshToken) {
-    return <Navigate to="/login" replace />
+  const { isHydrated, isAuthenticated, isAdmin } = useAuth()
+
+  if (!isHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
   }
-  const user = getAuthUser()
-  if (!user || user.role_name !== 'admin') {
-    return <Navigate to="/dashboard" replace />
-  }
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
+
   return children
 }
 

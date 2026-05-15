@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CreditCard, Plus } from 'lucide-react'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
@@ -10,11 +10,20 @@ import DashboardLoadingOverlay from '@/components/dashboard/DashboardLoadingOver
 import PaymentCard from '@/components/payment-card/PaymentCard'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
+import AddCardModal from '@/components/AddCardModal'
+import { useWalletCards } from '@/hooks/useWalletCards'
 import { dashboardMockData } from '@/mock-data/dashboardMockData'
+import { useAuth } from '@/hooks/useAuth'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
 import { useTotalBalance } from '@/hooks/useTotalBalance'
 import { useTransactionSummary } from '@/hooks/useTransactionSummary'
+import { useTransactions } from '@/hooks/useTransactions'
+import transactionTypesService from '@/services/transactionTypesService'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
+import {
+  buildCardLastFourMapFromDashboardCards,
+  buildUserCardIdSet,
+} from '@/utils/dashboardRecentActivity'
 
 function PaymentCardSkeleton() {
   return (
@@ -91,12 +100,26 @@ function PaymentCardError() {
 const MIN_LOADER_MS = 1500
 
 export default function DashboardPage() {
-  const { cards, isLoading, error } = useDashboardCards()
+  const { user } = useAuth()
+  const { cards, isLoading, error, refetch } = useDashboardCards()
   const { formattedBalance, isLoading: balanceLoading } = useTotalBalance()
-  const { chartData, isLoading: txLoading } = useTransactionSummary()
+  const {
+    chartData,
+    isLoading: summaryLoading,
+    error: summaryError,
+    refresh: refreshSummary,
+  } = useTransactionSummary({ months: 6 })
+  const {
+    transactions: recentTransactions,
+    isLoading: recentActivityLoading,
+    error: recentActivityError,
+  } = useTransactions({ pageSize: 3 })
+  const [typeNameById, setTypeNameById] = useState({})
   const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
+  const [addCardOpen, setAddCardOpen] = useState(false)
+  const { addCard, isSaving, saveError } = useWalletCards()
   const primaryCard = cards[0] ?? null
   const cardStatusProps = buildCardStatusOverviewProps(cards)
 
@@ -119,6 +142,39 @@ export default function DashboardPage() {
     return () => clearTimeout(t)
   }, [])
 
+  useEffect(() => {
+    if (!user) {
+      setTypeNameById({})
+      return
+    }
+    let cancelled = false
+    transactionTypesService
+      .list()
+      .then((types) => {
+        if (cancelled || !Array.isArray(types)) return
+        const map = {}
+        for (const t of types) {
+          map[t.transaction_type_id] = t.name
+        }
+        setTypeNameById(map)
+      })
+      .catch(() => {
+        if (!cancelled) setTypeNameById({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const activityContext = useMemo(
+    () => ({
+      currentUserCardIds: buildUserCardIdSet(cards),
+      lastFourByCardId: buildCardLastFourMapFromDashboardCards(cards),
+      typeNameById,
+    }),
+    [cards, typeNameById],
+  )
+
   const showLoader = isLoading || !minDelayElapsed
 
   return (
@@ -131,7 +187,7 @@ export default function DashboardPage() {
             totalBalance={formattedBalance}
             monthlyGrowth={monthlyGrowth}
             monthlyAmount={monthlyAmount}
-            isLoading={balanceLoading || txLoading}
+            isLoading={balanceLoading || summaryLoading}
           />
         </div>
         <div className="flex h-full items-center justify-center">
@@ -151,13 +207,16 @@ export default function DashboardPage() {
       <section className="grid items-stretch gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <MoneyFlowPlaceholder
-            points={dashboardMockData.moneyFlow.points}
-            labels={dashboardMockData.moneyFlow.labels}
+            chartData={chartData}
+            isLoading={summaryLoading}
+            error={summaryError}
+            onRetry={refreshSummary}
           />
         </div>
         <QuickActions
           onSend={() => setPaymentWizardOpen(true)}
           onTopUp={() => setTopUpOpen(true)}
+          onAddNew={() => setAddCardOpen(true)}
         />
       </section>
 
@@ -175,7 +234,10 @@ export default function DashboardPage() {
         <div className="xl:col-span-2">
           <DashboardPlaceholder
             title="Recent Activity"
-            items={dashboardMockData.recentActivity}
+            transactions={recentTransactions}
+            activityContext={activityContext}
+            isLoading={recentActivityLoading}
+            error={recentActivityError}
           />
         </div>
       </section>
@@ -187,6 +249,16 @@ export default function DashboardPage() {
       <TopUpModal
         isOpen={topUpOpen}
         onClose={() => setTopUpOpen(false)}
+      />
+      <AddCardModal
+        open={addCardOpen}
+        onOpenChange={setAddCardOpen}
+        onSubmit={async (cardInput) => {
+          await addCard(cardInput)
+          refetch({ showLoader: false })
+        }}
+        isSubmitting={isSaving}
+        submitError={saveError}
       />
     </div>
   )
