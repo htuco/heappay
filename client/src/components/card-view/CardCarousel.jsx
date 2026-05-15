@@ -81,7 +81,7 @@ export default function CardCarousel({ items, activeIndex: controlledIndex, onCh
         {cardSlots.map(({ key, item, layout, isCenter, animRole }) => (
           <div
             key={key}
-            className={[CAROUSEL_SLOT_SHELL, CAROUSEL_LAYOUT_CLASS[layout]].join(
+            className={['carousel-card-slot', CAROUSEL_SLOT_SHELL, CAROUSEL_LAYOUT_CLASS[layout]].join(
               ' '
             )}
             aria-hidden={!isCenter}
