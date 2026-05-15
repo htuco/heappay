@@ -18,6 +18,23 @@ function periodToShortLabel(period) {
 }
 
 /**
+ * Return the last `n` calendar months as "YYYY-MM" strings, oldest first.
+ * @param {number} n
+ * @returns {string[]}
+ */
+function getLastNMonths(n) {
+  const now = new Date()
+  const result = []
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    result.push(`${year}-${month}`)
+  }
+  return result
+}
+
+/**
  * Fetch and transform the money-flow summary for the current user.
  *
  * Drop-in compatible with `MoneyFlowPlaceholder` via `chartPoints` / `chartLabels`.
@@ -82,15 +99,23 @@ export function useTransactionSummary({ months: initialMonths = DEFAULT_MONTHS }
     }
   }, [authLoading, user, months, refreshKey])
 
-  // API returns newest month first → reverse so the chart reads oldest → newest (left → right).
-  const chartData = summary
-    ? [...summary.points].reverse().map((p) => ({
-        label: periodToShortLabel(p.period),
-        income: parseFloat(p.income),
-        expense: parseFloat(p.expense),
-        net: parseFloat(p.net),
-      }))
-    : []
+  // Always emit exactly `months` data points (oldest → newest), padding months
+  // that have no transactions with zeros so the chart always has full lines.
+  const chartData = (() => {
+    const periods = getLastNMonths(months)
+    const byPeriod = Object.fromEntries(
+      (summary?.points ?? []).map((p) => [p.period, p])
+    )
+    return periods.map((period) => {
+      const p = byPeriod[period]
+      return {
+        label: periodToShortLabel(period),
+        income: p ? parseFloat(p.income) : 0,
+        expense: p ? parseFloat(p.expense) : 0,
+        net: p ? parseFloat(p.net) : 0,
+      }
+    })
+  })()
 
   return {
     summary,
