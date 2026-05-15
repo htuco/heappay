@@ -5,7 +5,8 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { store } from './store'
 import { NotificationProvider } from './context/NotificationContext'
-import 'react-credit-cards-2/dist/es/styles-compiled.css'
+// Vendored from react-credit-cards-2@1.2.0 — avoids deep node_modules path issues in some environments
+import './styles/react-credit-cards.css'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
