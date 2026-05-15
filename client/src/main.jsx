@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { store } from './store'
 import { NotificationProvider } from './context/NotificationContext'
+import 'react-credit-cards-2/dist/es/styles-compiled.css'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(

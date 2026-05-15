@@ -36,8 +36,10 @@ export function useAuth() {
 
 	const logout = useCallback(() => dispatch(logoutUser()).unwrap(), [dispatch])
 
+	const isHydrated = status !== 'idle' && status !== 'loading'
+	const isAuthenticated = status === 'authenticated'
 	const isAdmin = user?.role_name === 'admin'
 	const hasRole = (roleName) => user?.role_name === roleName
 
-	return { user, isLoading, error, login, register, updateProfile, logout, isAdmin, hasRole }
+	return { user, isLoading, isHydrated, isAuthenticated, error, login, register, updateProfile, logout, isAdmin, hasRole }
 }
