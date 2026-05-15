@@ -6,7 +6,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
 
 from schemas.user.auth import ChangePasswordRequest  # noqa: E402
-from services.user.auth import UserAuthService  # noqa: E402
+from services.auth import UserAuthService  # noqa: E402
 
 
 class _UserRow:

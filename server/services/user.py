@@ -2,7 +2,7 @@ import bcrypt
 from sqlalchemy.exc import IntegrityError
 
 from models.user import User
-from repositories.user.crud import UserRepository
+from repositories.user import UserRepository
 from schemas.user.crud import UserCreateRequest, UserSearchDefaultCard, UserSearchResponse, UserUpdateRequest
 
 

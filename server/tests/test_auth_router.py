@@ -13,7 +13,7 @@ os.environ.setdefault("ALGORITHM", "HS256")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from main import create_app  # noqa: E402
-from routers.user import get_auth_service  # noqa: E402
+from routes.auth import get_auth_service  # noqa: E402
 from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
 
 

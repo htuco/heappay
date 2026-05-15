@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from schemas import MessageResponse, UserStatusCreate, UserStatusRead, UserStatusUpdate
-from services import user_statuses as user_status_service
+from schemas.user_statuses import MessageResponse, UserStatusCreate, UserStatusRead, UserStatusUpdate
+from services import user_status as user_status_service
 
 router = APIRouter(prefix="/user-statuses", tags=["user-statuses"])
 

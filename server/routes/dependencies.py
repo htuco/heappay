@@ -9,8 +9,8 @@ from database import get_db
 from exceptions import Unauthorized
 from models.user import User
 from models.user_role import UserRole
-from repositories.user.auth import UserAuthRepository
-from services.user.auth import UserAuthService
+from repositories.auth import UserAuthRepository
+from services.auth import UserAuthService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

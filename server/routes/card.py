@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.card import CardRepository
-from routers.dependencies import UserContext, get_user_context
+from routes.dependencies import UserContext, get_user_context
 from schemas.card import CardCreate, CardLookupResponse, CardPatch, CardResponse
 from services.card import (
     CardNotFoundError,
