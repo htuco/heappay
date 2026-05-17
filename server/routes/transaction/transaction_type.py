@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from repositories.transaction_type import TransactionTypeRepository
+from repositories.transaction.transaction_type import TransactionTypeRepository
 from schemas.transaction_type import TransactionTypeResponse
 
 router = APIRouter(prefix="/transaction-types", tags=["transaction-types"])

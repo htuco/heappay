@@ -1,5 +1,5 @@
 from models.transaction import Transaction
-from repositories.transaction import TransactionRepository
+from repositories.transaction.transaction import TransactionRepository
 from schemas.transaction import TransactionCreate, TransactionPatch
 
 

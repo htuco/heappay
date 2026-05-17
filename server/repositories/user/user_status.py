@@ -15,7 +15,6 @@ def get_status_by_name(db: Session, status_name: str) -> UserStatus | None:
     return db.scalar(statement)
 
 
-
 def list_statuses(db: Session) -> list[UserStatus]:
     statement = select(UserStatus).order_by(UserStatus.id)
     return list(db.scalars(statement).all())

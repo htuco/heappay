@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models.user_status import UserStatus
-from repositories import user_statuses as user_status_repository
+from repositories.user import user_status as user_status_repository
 
 
 class UserStatusNotFoundError(Exception):

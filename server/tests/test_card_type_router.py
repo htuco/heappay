@@ -3,8 +3,8 @@ import os
 
 from fastapi.testclient import TestClient
 
-from routers.card_type import get_card_type_service
-from services.card_type import CardTypeInUseError, DuplicateCardTypeError
+from routes.card.card_type import get_card_type_service
+from services.card.card_type import CardTypeInUseError, DuplicateCardTypeError
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")

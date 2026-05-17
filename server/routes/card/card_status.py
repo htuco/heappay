@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from repositories.card_status import CardStatusRepository
+from repositories.card.card_status import CardStatusRepository
 from schemas.card_status import CardStatusCreate, CardStatusResponse, CardStatusUpdate
-from services.card_status import CardStatusService
+from services.card.card_status import CardStatusService
 
 router = APIRouter(prefix="/card-statuses", tags=["card-statuses"])
 

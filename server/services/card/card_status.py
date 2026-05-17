@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 
 from exceptions import CardStatusDuplicate, CardStatusInUse, CardStatusNotFound
 from models.card_status import CardStatus
-from repositories.card_status import CardStatusRepository
+from repositories.card.card_status import CardStatusRepository
 
 
 class CardStatusService:
