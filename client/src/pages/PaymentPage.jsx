@@ -49,7 +49,8 @@ export default function PaymentPage() {
   const isCancelConfirmed =
     Boolean(cancelTransactionId) && cancelConfirmationId.trim() === String(cancelTransactionId)
   const resolvedRefundReason = refundReason === 'Other' ? refundOtherReason.trim() : refundReason
-  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason) && !isSubmittingRefund
+  const refundAlreadyPending = refundTransactionId !== null && refundedTransactionIds.has(refundTransactionId)
+  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason) && !isSubmittingRefund && !refundAlreadyPending
 
   function closeCancelPreview() {
     setTransactionToCancel(null)
@@ -79,7 +80,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <TransactionHistory onTransactionSelect={setSelectedTransaction} />
       <TransactionDetailPanel
         open={Boolean(selectedTransaction)}
@@ -236,6 +237,11 @@ export default function PaymentPage() {
                   Keep payment
                 </Button>
               </DialogClose>
+              {refundAlreadyPending && (
+                <p className="col-span-2 -mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  A refund request for this transaction is already pending review.
+                </p>
+              )}
               {refundError && (
                 <p className="col-span-2 -mt-1 text-xs text-destructive">{refundError}</p>
               )}

@@ -4,6 +4,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Ban,
+  MoveRight,
   Info,
   Loader2,
   ReceiptText,
@@ -14,7 +15,6 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import UserAvatar from '@/components/ui/UserAvatar'
 import useTransactionDetail from '@/hooks/useTransactionDetail'
 
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
@@ -184,8 +184,53 @@ function HeaderCard({ transaction }) {
   )
 }
 
+function PartyCard({ label, name, email, lastFour }) {
+  const initials = name
+    ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?'
+  return (
+    <div className="flex flex-1 flex-col items-center gap-2 text-center">
+      <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+        {initials}
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-card-foreground leading-tight">{name ?? '—'}</p>
+        {email && <p className="mt-0.5 text-xs text-muted-foreground">{email}</p>}
+        {lastFour && <p className="mt-0.5 text-xs text-muted-foreground">•••• {lastFour}</p>}
+      </div>
+      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{label}</span>
+    </div>
+  )
+}
+
+function TransferFlow({ transaction }) {
+  const sender = transaction?.sender
+  const recipient = transaction?.recipient
+  if (!sender && !recipient) return null
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-4">
+      <PartyCard
+        label="Sender"
+        name={sender?.full_name ?? sender?.cardholder_name}
+        email={sender?.email}
+        lastFour={sender?.last_four}
+      />
+      <div className="flex shrink-0 flex-col items-center gap-1">
+        <MoveRight className="size-5 text-muted-foreground" />
+        <span className="text-xs font-semibold text-card-foreground">{formatAmount(transaction?.amount)}</span>
+      </div>
+      <PartyCard
+        label="Recipient"
+        name={recipient?.full_name ?? recipient?.cardholder_name}
+        email={recipient?.email}
+        lastFour={recipient?.last_four}
+      />
+    </div>
+  )
+}
+
 function DetailsSection({ transaction }) {
-  const counterparty = getCounterparty(transaction)
   const statusLabel = getStatusLabel(transaction)
   const statusVariant = STATUS_VARIANT[transaction?.status_id] ?? 'secondary'
 
@@ -195,20 +240,10 @@ function DetailsSection({ transaction }) {
       <dl className="mt-2 divide-y divide-border/70">
         <DetailRow label="Transaction ID">{getTransactionId(transaction) ?? '—'}</DetailRow>
         <DetailRow label="Transaction Date">{formatDate(transaction?.created_at)}</DetailRow>
-        <DetailRow label="Recipient">
-          <span className="inline-flex items-center gap-2">
-            <UserAvatar
-              user={counterparty.user}
-              className="size-6 text-[10px]"
-              textClassName="text-[10px]"
-            />
-            <span>{counterparty.name}</span>
-          </span>
-        </DetailRow>
         <DetailRow label="Status">
           <Badge variant={statusVariant}>{statusLabel}</Badge>
         </DetailRow>
-        <DetailRow label="Amount Sent">{formatAmount(transaction?.amount)}</DetailRow>
+        <DetailRow label="Amount">{formatAmount(transaction?.amount)}</DetailRow>
         <DetailRow label="Fee">{formatAmount(transaction?.fee ?? 0)}</DetailRow>
         <DetailRow label="Type">{getTypeLabel(transaction)}</DetailRow>
       </dl>
@@ -254,7 +289,7 @@ function PanelBody({
   const animationClass = isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
   const transactionId = getTransactionId(detail)
   const canCancel = isPending(detail) && isSentByCurrentUser(detail, ownedCardIds)
-  const refundRequested = refundRequestedTransactionIds?.has(transactionId)
+  const refundRequested = detail?.has_pending_refund || refundRequestedTransactionIds?.has(transactionId)
   const canRefund = isUserToUserTransaction(detail) && isCompleted(detail) && isPaymentTransaction(detail)
 
   return (
@@ -285,6 +320,7 @@ function PanelBody({
         {detail && (
           <>
             <HeaderCard transaction={detail} />
+            <TransferFlow transaction={detail} />
 
             {!hasApiDetail && (
               <div className="rounded-2xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">

@@ -78,13 +78,37 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
           {/* Original transaction info */}
           <div className="rounded-[14px] border border-border bg-muted/30 px-4 py-3.5 space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Transaction ID</span>
+              <span className="text-xs text-muted-foreground">Transaction</span>
               <span className="text-sm font-semibold text-card-foreground">#{tx ?? '—'}</span>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Amount</span>
               <span className="text-sm font-semibold text-card-foreground">
-                {formatAmount(request?._tx_amount)}
+                {formatAmount(request?.refund_detail?.transaction_amount)}
+              </span>
+            </div>
+            {request?.refund_detail?.sender_name && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">From</span>
+                <span className="text-sm text-card-foreground">{request.refund_detail.sender_name}</span>
+              </div>
+            )}
+            {request?.refund_detail?.recipient_name && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">To</span>
+                <span className="text-sm text-card-foreground">{request.refund_detail.recipient_name}</span>
+              </div>
+            )}
+            {request?.refund_detail?.transaction_note && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Note</span>
+                <span className="text-sm text-card-foreground max-w-[60%] text-right">{request.refund_detail.transaction_note}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">Requested by</span>
+              <span className="text-sm text-card-foreground">
+                {request?.requester_name ?? `User #${request?.requester_user_id}`}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2">
@@ -101,7 +125,7 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
           {request?.note && (
             <div className="mt-4">
               <p className="text-xs font-medium text-muted-foreground mb-1.5">Reason</p>
-              <p className="rounded-[10px] border border-border bg-muted/20 px-3.5 py-2.5 text-sm text-card-foreground">
+              <p className="rounded-input border border-border bg-muted/20 px-3.5 py-2.5 text-sm text-card-foreground">
                 {request.note}
               </p>
             </div>
