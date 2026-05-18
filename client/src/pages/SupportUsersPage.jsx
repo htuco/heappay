@@ -210,6 +210,10 @@ export default function SupportUsersPage() {
         open={Boolean(selectedUser)}
         onOpenChange={(open) => { if (!open) setSelectedUser(null) }}
         rolesById={rolesById}
+        onUserUpdated={(updated) => {
+          setUsers((prev) => prev.map((u) => u.user_id === updated.user_id ? updated : u))
+          setSelectedUser(updated)
+        }}
       />
     </div>
   )
