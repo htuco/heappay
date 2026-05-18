@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.transaction.transaction import TransactionRepository
-from routes.dependencies import get_current_user_id, require_admin
+from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.pagination import Page
 from schemas.response import ApiResponse
 from schemas.transaction import (
     TransactionCreate,
+    TransactionPartyResponse,
     TransactionPatch,
     TransactionResponse,
     TransactionSummaryPoint,
@@ -37,6 +38,27 @@ def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService
     return TransactionService(TransactionRepository(db))
 
 
+def _card_to_party(card) -> TransactionPartyResponse | None:
+    if card is None:
+        return None
+    user = card.user
+    return TransactionPartyResponse(
+        card_id=card.card_id,
+        last_four=card.last_four,
+        cardholder_name=card.cardholder_name,
+        user_id=user.user_id if user else 0,
+        full_name=f"{user.first_name} {user.last_name}".strip() if user else None,
+        email=user.email if user else None,
+    )
+
+
+def _to_detail_response(row) -> TransactionResponse:
+    base = TransactionResponse.model_validate(row)
+    base.sender = _card_to_party(row.sender_card)
+    base.recipient = _card_to_party(row.recipient_card)
+    return base
+
+
 @router.get("", response_model=ApiResponse[Page[TransactionResponse]])
 def list_transactions(
     page: int = Query(default=1, ge=1),
@@ -48,7 +70,7 @@ def list_transactions(
     rows, total = service.list_for_user(
         user_id=user_id, limit=page_size, offset=offset
     )
-    items = [TransactionResponse.model_validate(r) for r in rows]
+    items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
     )
@@ -86,6 +108,32 @@ def list_all_transactions(
     )
     return ApiResponse[Page[TransactionResponse]](
         success=True, message=message, data=page_data
+    )
+
+
+@router.get(
+    "/user/{user_id}",
+    response_model=ApiResponse[Page[TransactionResponse]],
+    summary="(Staff) List transactions for a specific user.",
+)
+def list_transactions_for_user(
+    user_id: int,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+    _: int = Depends(require_staff),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[Page[TransactionResponse]]:
+    rows, total = service.list_for_user(
+        user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+    )
+    items = [_to_detail_response(r) for r in rows]
+    page_data = Page[TransactionResponse].build(
+        items=items, total=total, page=page, page_size=page_size
+    )
+    return ApiResponse[Page[TransactionResponse]](
+        success=True,
+        message=f"Retrieved {len(items)} of {total} transactions.",
+        data=page_data,
     )
 
 
@@ -164,7 +212,7 @@ def get_transaction(
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction retrieved successfully.",
-        data=TransactionResponse.model_validate(row),
+        data=_to_detail_response(row),
     )
 
 

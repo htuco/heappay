@@ -192,6 +192,36 @@ export const transactionsService = {
 			throw mapTransactionApiError(error)
 		}
 	},
+
+	/**
+	 * (Staff) List transactions for a specific user (paginated).
+	 * @param {number} userId
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<import('@/types/transaction').TransactionPage>}
+	 */
+	async listForUser(userId, params = {}) {
+		try {
+			const { data } = await api.get(`/transactions/user/${userId}`, { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) List refund requests for a specific user (paginated).
+	 * @param {number} userId
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listRefundsForUser(userId, params = {}) {
+		try {
+			const { data } = await api.get(`/requests/user/${userId}`, { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
 }
 
 export default transactionsService

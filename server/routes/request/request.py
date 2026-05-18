@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.request.request import RequestRepository
-from routes.dependencies import get_current_user_id, require_admin
+from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.pagination import Page
-from schemas.request import RefundRequestCreate, RequestResponse
+from schemas.request import RefundRequestCreate, RefundRequestDetailResponse, RequestResponse
 from schemas.response import ApiResponse
 from services.request.request import (
     ForbiddenError,
@@ -29,6 +29,45 @@ _INSUFFICIENT_BALANCE = "Recipient card has insufficient balance to process the 
 
 def get_request_service(db: Session = Depends(get_db)) -> RequestService:
     return RequestService(RequestRepository(db))
+
+
+def _user_name(user) -> str | None:
+    if user is None:
+        return None
+    return f"{user.first_name} {user.last_name}".strip() or None
+
+
+def _to_response(req) -> RequestResponse:
+    detail = None
+    if req.refund_detail is not None:
+        tx = req.refund_detail.transaction
+        sender_name = None
+        recipient_name = None
+        if tx is not None:
+            if tx.sender_card is not None:
+                sender_name = tx.sender_card.cardholder_name
+            if tx.recipient_card is not None:
+                recipient_name = tx.recipient_card.cardholder_name
+        detail = RefundRequestDetailResponse(
+            request_id=req.refund_detail.request_id,
+            transaction_id=req.refund_detail.transaction_id,
+            transaction_amount=tx.amount if tx is not None else None,
+            transaction_note=tx.note if tx is not None else None,
+            sender_name=sender_name,
+            recipient_name=recipient_name,
+        )
+    return RequestResponse(
+        request_id=req.request_id,
+        request_type_id=req.request_type_id,
+        request_status_id=req.request_status_id,
+        requester_user_id=req.requester_user_id,
+        requester_name=_user_name(req.requester),
+        target_user_id=req.target_user_id,
+        note=req.note,
+        created_at=req.created_at,
+        resolved_at=req.resolved_at,
+        refund_detail=detail,
+    )
 
 
 @router.post(
@@ -58,7 +97,7 @@ def create_refund_request(
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund request submitted. The review team will process it.",
-        data=RequestResponse.model_validate(req),
+        data=_to_response(req),
     )
 
 
@@ -68,7 +107,7 @@ def create_refund_request(
 )
 def approve_refund(
     request_id: int,
-    _: int = Depends(require_admin),
+    _: int = Depends(require_staff),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -84,7 +123,7 @@ def approve_refund(
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund approved. Balance reversed.",
-        data=RequestResponse.model_validate(req),
+        data=_to_response(req),
     )
 
 
@@ -94,7 +133,7 @@ def approve_refund(
 )
 def decline_refund(
     request_id: int,
-    _: int = Depends(require_admin),
+    _: int = Depends(require_staff),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -104,7 +143,35 @@ def decline_refund(
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund request declined.",
-        data=RequestResponse.model_validate(req),
+        data=_to_response(req),
+    )
+
+
+@router.get(
+    "/user/{user_id}",
+    response_model=ApiResponse[Page[RequestResponse]],
+    summary="(Staff) List refund requests for a specific user.",
+)
+def list_requests_for_user(
+    user_id: int,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[Page[RequestResponse]]:
+    items, total = service.list_for_user(
+        user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+    )
+    data = Page[RequestResponse].build(
+        items=[_to_response(r) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return ApiResponse[Page[RequestResponse]](
+        success=True,
+        message=f"{total} refund request(s) for user {user_id}.",
+        data=data,
     )
 
 
@@ -116,14 +183,14 @@ def decline_refund(
 def list_pending_refunds(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    _: int = Depends(require_admin),
+    _: int = Depends(require_staff),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[Page[RequestResponse]]:
     items, total = service.list_pending_refunds(
         limit=page_size, offset=(page - 1) * page_size
     )
     data = Page[RequestResponse].build(
-        items=[RequestResponse.model_validate(r) for r in items],
+        items=[_to_response(r) for r in items],
         total=total,
         page=page,
         page_size=page_size,
