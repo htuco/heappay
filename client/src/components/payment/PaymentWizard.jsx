@@ -595,7 +595,7 @@ const INITIAL_FORM = {
 
 const STEP_TITLES = ['Send Payment', 'Send Payment', 'Send Payment', 'Payment Sent']
 
-export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
+export default function PaymentWizard({ isOpen, onClose, onSuccess, initialCardId = null }) {
   const { user } = useAuth()
   const { notify } = useNotifications()
   const currentUserId = user?.user_id ?? user?.id
@@ -607,6 +607,13 @@ export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
   const [isLoadingRef, setIsLoadingRef] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+
+  useEffect(() => {
+    if (!isOpen) return
+    setStep(initialCardId ? 1 : 0)
+    setForm({ ...INITIAL_FORM, fromCardId: initialCardId ?? null })
+    setSubmitError('')
+  }, [isOpen, initialCardId])
 
   useEffect(() => {
     if (!isOpen || !user) return
