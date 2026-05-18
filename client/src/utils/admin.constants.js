@@ -2,7 +2,7 @@ export const USER_CHIP_OPTIONS = [
   { label: 'All', value: 'all' },
   { label: 'Admins', value: 'admin' },
   { label: 'Managers', value: 'manager' },
-  { label: 'Invited', value: 'invited' },
+  { label: 'Support', value: 'support' },
 ]
 
 export const USER_SORT_OPTIONS = [

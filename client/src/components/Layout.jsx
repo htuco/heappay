@@ -8,14 +8,13 @@ import NotificationPanel from './ui/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
 
 const PAGE_META = {
-  '/dashboard': {
-    title: 'Dashboard',
-    subtitle: 'Your financial overview.',
-  },
+  '/dashboard': { title: 'Dashboard', subtitle: 'Your financial overview.' },
   '/wallet': { title: 'Wallet', subtitle: 'Manage your cards and balances.' },
   '/admin': { title: 'Users', subtitle: 'Manage user accounts and roles.' },
-  '/payments': { title: 'Payments', subtitle: 'View transactions and send payments.' },
+  '/payments': { title: 'Transaction History', subtitle: 'All payments, transfers, and refunds on your account.' },
   '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
+  '/support/users': { title: 'Users', subtitle: 'Manage user accounts and card access.' },
+  '/support/tickets': { title: 'Refund Tickets', subtitle: 'Review and resolve pending refund requests.' },
 }
 
 export default function Layout() {

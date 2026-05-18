@@ -10,7 +10,6 @@ import { useNotifications } from '@/context/NotificationContext'
 
 function userMatchesChip(user, chip) {
   if (chip === 'all') return true
-  if (chip === 'invited') return user.status === 'invited'
   return user.role === chip
 }
 

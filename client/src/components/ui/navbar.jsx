@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { ArrowLeftRight, CreditCard, LayoutDashboard, Settings, Shield } from 'lucide-react'
+import { ArrowLeftRight, CreditCard, LayoutDashboard, Settings, Shield, Users, TicketCheck } from 'lucide-react'
 import { useAppSelector } from '@/store/hooks'
 import { selectAuthUser } from '@/store/slices/authSlice'
 
@@ -9,9 +9,15 @@ const mainLinks = [
   { name: 'Payments', path: '/payments', icon: ArrowLeftRight },
 ]
 
-const adminLinks = [{ name: 'Users', path: '/admin', icon: Shield }]
+const adminLinks = [{ name: 'Admin', path: '/admin', icon: Shield }]
+const supportLinks = [
+  { name: 'Users', path: '/support/users', icon: Users },
+  { name: 'Tickets', path: '/support/tickets', icon: TicketCheck },
+]
 
 const bottomLinks = [{ name: 'Settings', path: '/settings', icon: Settings }]
+
+const STAFF_ROLES = new Set(['admin', 'manager', 'support'])
 
 function NavLinkItem({ item }) {
   const Icon = item.icon
@@ -36,7 +42,9 @@ function NavLinkItem({ item }) {
 
 export default function Navbar() {
   const user = useAppSelector(selectAuthUser)
-  const isAdmin = user?.role_name === 'admin'
+  const role = user?.role_name
+  const isAdmin = role === 'admin'
+  const isStaff = STAFF_ROLES.has(role)
 
   return (
     <nav className="flex h-full flex-col">
@@ -45,13 +53,16 @@ export default function Navbar() {
           <NavLinkItem key={item.path} item={item} />
         ))}
 
-        {isAdmin && (
+        {isStaff && (
           <>
             <div className="my-3 border-t border-border" />
             <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Admin Features
+              Staff
             </p>
-            {adminLinks.map((item) => (
+            {!isAdmin && supportLinks.map((item) => (
+              <NavLinkItem key={item.path} item={item} />
+            ))}
+            {isAdmin && adminLinks.map((item) => (
               <NavLinkItem key={item.path} item={item} />
             ))}
           </>
