@@ -222,6 +222,63 @@ export const transactionsService = {
 			throw mapTransactionApiError(error)
 		}
 	},
+
+	/**
+	 * Submit a refund request for a completed outgoing transaction.
+	 * @param {number} transactionId
+	 * @param {string | null} [note]
+	 * @returns {Promise<object>}
+	 */
+	async requestRefund(transactionId, note = null) {
+		try {
+			const { data } = await api.post('/requests/refund', { transaction_id: transactionId, note })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) Approve a pending refund request.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async approveRefund(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/approve`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) Decline a pending refund request.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async declineRefund(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/decline`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) List all pending refund requests (paginated).
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listPendingRefunds(params = {}) {
+		try {
+			const { data } = await api.get('/requests/refunds/pending', { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
 }
 
 export default transactionsService
