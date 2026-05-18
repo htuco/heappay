@@ -10,3 +10,7 @@ from models.transaction_type import TransactionType  # noqa: F401
 from models.user import User  # noqa: F401
 from models.user_role import UserRole  # noqa: F401
 from models.user_status import UserStatus  # noqa: F401
+from models.request_type import RequestType  # noqa: F401
+from models.request_status import RequestStatus  # noqa: F401
+from models.request import Request  # noqa: F401
+from models.refund_request_detail import RefundRequestDetail  # noqa: F401
