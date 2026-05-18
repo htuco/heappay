@@ -120,7 +120,9 @@ export default function DashboardPage() {
   const [topUpOpen, setTopUpOpen] = useState(false)
   const [addCardOpen, setAddCardOpen] = useState(false)
   const { addCard, isSaving, saveError } = useWalletCards()
-  const primaryCard = cards[0] ?? null
+  const mainCard = cards.find((c) => c.isMain) ?? cards[0] ?? null
+  const mainCardId = mainCard ? Number(mainCard.id) : null
+  const primaryCard = mainCard
   const cardStatusProps = buildCardStatusOverviewProps(cards)
 
   const lastEntry = chartData[chartData.length - 1]
@@ -188,6 +190,16 @@ export default function DashboardPage() {
             monthlyGrowth={monthlyGrowth}
             monthlyAmount={monthlyAmount}
             isLoading={balanceLoading || summaryLoading}
+            noMainCardCta={
+              !isLoading && cards.length > 0 && !mainCard?.isMain ? (
+                <Link
+                  to="/wallet"
+                  className="text-xs font-medium text-white/80 underline hover:text-white"
+                >
+                  Set a main card
+                </Link>
+              ) : undefined
+            }
           />
         </div>
         <div className="flex h-full items-center justify-center">
@@ -245,10 +257,12 @@ export default function DashboardPage() {
       <PaymentWizard
         isOpen={paymentWizardOpen}
         onClose={() => setPaymentWizardOpen(false)}
+        initialCardId={mainCardId}
       />
       <TopUpModal
         isOpen={topUpOpen}
         onClose={() => setTopUpOpen(false)}
+        initialCardId={mainCardId}
       />
       <AddCardModal
         open={addCardOpen}
