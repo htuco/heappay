@@ -86,3 +86,13 @@ export async function restoreCard(cardId) {
   const { data } = await api.post(`/cards/${cardId}/restore`)
   return data
 }
+
+export async function blockCard(cardId) {
+  const { data } = await api.post(`/cards/${cardId}/block`)
+  return data
+}
+
+export async function unblockCard(cardId) {
+  const { data } = await api.post(`/cards/${cardId}/unblock`)
+  return data
+}
