@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,6 +14,10 @@ class RefundRequestDetailResponse(BaseModel):
 
     request_id: int
     transaction_id: int
+    transaction_amount: Decimal | None = None
+    transaction_note: str | None = None
+    sender_name: str | None = None
+    recipient_name: str | None = None
 
 
 class RequestResponse(BaseModel):
@@ -22,6 +27,7 @@ class RequestResponse(BaseModel):
     request_type_id: int
     request_status_id: int
     requester_user_id: int
+    requester_name: str | None = None
     target_user_id: int | None
     note: str | None
     created_at: datetime

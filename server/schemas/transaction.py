@@ -4,6 +4,15 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 
+class TransactionPartyResponse(BaseModel):
+    card_id: int
+    last_four: str
+    cardholder_name: str | None
+    user_id: int
+    full_name: str | None
+    email: str | None
+
+
 class TransactionCreate(BaseModel):
     sender_card_id: int | None = Field(default=None, gt=0)
     recipient_card_id: int = Field(gt=0)
@@ -53,3 +62,16 @@ class TransactionResponse(BaseModel):
     amount: Decimal
     note: str | None
     created_at: datetime
+    has_pending_refund: bool = False
+    sender: TransactionPartyResponse | None = None
+    recipient: TransactionPartyResponse | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_has_pending_refund(cls, values):
+        detail = getattr(values, "refund_detail", None)
+        if detail is not None:
+            request = getattr(detail, "request", None)
+            if request is not None and getattr(request, "request_status_id", None) == 1:
+                values.__dict__["has_pending_refund"] = True
+        return values
