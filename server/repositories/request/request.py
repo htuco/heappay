@@ -53,6 +53,33 @@ class RequestRepository:
         )
         return self._db.scalars(stmt).first()
 
+    def list_for_user(self, *, user_id: int, limit: int = 50, offset: int = 0) -> list[Request]:
+        refund_type_id = self.get_type_id("refund")
+        stmt = (
+            select(Request)
+            .where(
+                Request.requester_user_id == user_id,
+                Request.request_type_id == refund_type_id,
+            )
+            .order_by(Request.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def count_for_user(self, *, user_id: int) -> int:
+        from sqlalchemy import func
+        refund_type_id = self.get_type_id("refund")
+        stmt = (
+            select(func.count())
+            .select_from(Request)
+            .where(
+                Request.requester_user_id == user_id,
+                Request.request_type_id == refund_type_id,
+            )
+        )
+        return int(self._db.execute(stmt).scalar_one())
+
     def list_pending_refunds(self, *, limit: int = 50, offset: int = 0) -> list[Request]:
         pending_id = self.get_status_id("pending")
         refund_type_id = self.get_type_id("refund")

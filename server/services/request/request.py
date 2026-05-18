@@ -97,6 +97,13 @@ class RequestService:
             raise RequestNotFoundError()
         return self._repo.decline_refund(request)
 
+    def list_for_user(
+        self, *, user_id: int, limit: int = 50, offset: int = 0
+    ) -> tuple[list[Request], int]:
+        items = self._repo.list_for_user(user_id=user_id, limit=limit, offset=offset)
+        total = self._repo.count_for_user(user_id=user_id)
+        return items, total
+
     def list_pending_refunds(
         self, *, limit: int = 50, offset: int = 0
     ) -> tuple[list[Request], int]:
