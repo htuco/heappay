@@ -1,7 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-const PLACEHOLDER_AVATAR_URL =
+const STOCK_PLACEHOLDER_URL =
   'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&h=200&fit=crop&crop=faces'
+
+function pickAvatarUrl(user) {
+  if (!user) return null
+  return user.avatar_url ?? user.avatarUrl ?? null
+}
 
 function getInitials(user) {
   const first = user?.first_name?.[0] ?? ''
@@ -14,9 +19,18 @@ export default function UserAvatar({
   className = '',
   textClassName = '',
   src,
+  /** When there is no custom image URL, load a stock portrait instead of showing initials. */
+  useStockPlaceholder = true,
 }) {
   const [imageFailed, setImageFailed] = useState(false)
-  const imageSrc = src ?? user?.avatar_url ?? PLACEHOLDER_AVATAR_URL
+  const customUrl = src ?? pickAvatarUrl(user)
+  const imageSrc =
+    customUrl ?? (useStockPlaceholder ? STOCK_PLACEHOLDER_URL : null)
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [imageSrc])
+
   const initials = getInitials(user)
 
   return (
@@ -25,13 +39,18 @@ export default function UserAvatar({
     >
       {!imageFailed && imageSrc ? (
         <img
+          key={imageSrc}
           src={imageSrc}
           alt={initials}
-          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+          decoding="async"
+          className="block h-full w-full min-h-0 min-w-0 object-cover"
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <span className={textClassName}>{initials}</span>
+        <span className={textClassName} aria-hidden>
+          {initials}
+        </span>
       )}
     </span>
   )
