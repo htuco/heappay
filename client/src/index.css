@@ -349,13 +349,94 @@
     transform-origin: center center;
   }
 
-  /* In carousel slots, scale down so cards don't overlap adjacent positions */
+  /* Dual-card layout: animate position/scale/opacity when roles swap */
+  .carousel-card-slot-shell {
+    transition:
+      left 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: left, transform, opacity;
+  }
+
   .carousel-card-slot .payment-card-rccs-shell {
     min-height: 0;
     overflow: visible;
   }
+
   .carousel-card-slot .payment-card-rccs-shell .rccs {
     transform: scale(1.5) !important;
+  }
+
+  /* Swiper card carousel (3+ cards) — flat creative effect, no clip */
+  .card-carousel-swiper {
+    overflow: visible !important;
+  }
+
+  .card-carousel-swiper .swiper-wrapper {
+    align-items: center;
+  }
+
+  .card-carousel-swiper .swiper-slide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible !important;
+    backface-visibility: visible;
+    opacity: 0.5;
+    transition:
+      opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .card-carousel-swiper .swiper-slide-active {
+    opacity: 1;
+    z-index: 2;
+  }
+
+  .card-carousel-swiper .swiper-slide:not(.swiper-slide-active) {
+    filter: saturate(0.88);
+  }
+
+  .card-carousel-slide .payment-card-rccs-shell,
+  .carousel-card-slot .payment-card-rccs-shell {
+    min-height: 0;
+    overflow: visible;
+    transition:
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .card-carousel-slide .payment-card-rccs-shell .rccs {
+    transform: scale(1.5) !important;
+  }
+
+  .card-carousel-payment-card--active .payment-card-rccs-shell:hover {
+    transform: translateY(-2px);
+  }
+
+  .card-carousel-payment-card--active .payment-card-rccs-shell:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  .card-carousel-payment-card--inactive {
+    cursor: pointer;
+  }
+
+  .card-carousel-payment-card--inactive .payment-card-rccs-shell:hover {
+    filter: brightness(1.04) saturate(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-carousel-swiper .swiper-slide,
+    .card-carousel-slide .payment-card-rccs-shell,
+    .carousel-card-slot-shell,
+    .animate-carousel-cycle-next-main,
+    .animate-carousel-cycle-next-side,
+    .animate-carousel-cycle-prev-main,
+    .animate-carousel-cycle-prev-side {
+      transition-duration: 0ms;
+      animation-duration: 0ms;
+    }
   }
 
   .payment-card-rccs-shell .rccs__card,
@@ -796,6 +877,22 @@
     }
   }
 
+  .animate-carousel-cycle-next-main {
+    animation: carousel-cycle-next-main 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-carousel-cycle-next-side {
+    animation: carousel-cycle-next-side 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-carousel-cycle-prev-main {
+    animation: carousel-cycle-prev-main 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-carousel-cycle-prev-side {
+    animation: carousel-cycle-prev-side 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
   @keyframes transaction-detail-slide-in {
     from {
       opacity: 0;
@@ -836,19 +933,4 @@
     }
   }
 
-  .animate-carousel-cycle-next-main {
-    animation: carousel-cycle-next-main 320ms ease-out forwards;
-  }
-
-  .animate-carousel-cycle-next-side {
-    animation: carousel-cycle-next-side 320ms ease-out forwards;
-  }
-
-  .animate-carousel-cycle-prev-main {
-    animation: carousel-cycle-prev-main 320ms ease-out forwards;
-  }
-
-  .animate-carousel-cycle-prev-side {
-    animation: carousel-cycle-prev-side 320ms ease-out forwards;
-  }
 }

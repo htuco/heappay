@@ -19,9 +19,9 @@ export default function CarouselArrowButton({
       className={[
         'inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-card-foreground shadow-none outline-none',
         'touch-manipulation select-none',
-        'transition-colors duration-200 ease-out',
-        'hover:border-accent hover:bg-accent hover:text-accent-foreground',
-        'active:bg-accent/90 active:text-accent-foreground',
+        'transition-[colors,transform] duration-200 ease-out',
+        'hover:border-accent hover:bg-accent hover:text-accent-foreground hover:scale-105',
+        'active:scale-95 active:bg-accent/90 active:text-accent-foreground',
         'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
         'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40',
         'disabled:border-border disabled:bg-card disabled:text-muted-foreground',
