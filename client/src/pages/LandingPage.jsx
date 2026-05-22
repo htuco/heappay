@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import Cards from 'react-credit-cards-2'
 import 'react-credit-cards-2/dist/es/styles-compiled.css'
 import logo from '@/assets/logo.png'
@@ -16,7 +16,10 @@ import {
   ChevronRight,
   Star,
   Lock,
+  Moon,
+  Sun,
 } from 'lucide-react'
+import { useTheme } from '@/hooks/useTheme'
 
 // ── Count-up hook (triggers on scroll into view) ──────────────────────────────
 function useCountUp(target, duration = 1800) {
@@ -74,6 +77,69 @@ function FloatingCard({ card, style, flip = false }) {
   )
 }
 
+// ── Rotating word (CSS-driven slide+fade, no measurement, no layout jump) ───
+// Each new word remounts (via `key={index}`) which restarts a single CSS
+// keyframe animation. The wrapper is `inline-block` and resizes with the
+// content — no absolute positioning, no width measurement, no React transition
+// state machine. The animation runs entirely in CSS, which Safari handles
+// reliably even with `bg-clip-text` gradient fills.
+const WORD_INTERVAL_MS = 2800
+
+function RotatingWord({ words, className = '' }) {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    if (!words || words.length < 2) return undefined
+    const t = setTimeout(() => setIndex((i) => (i + 1) % words.length), WORD_INTERVAL_MS)
+    return () => clearTimeout(t)
+  }, [index, words])
+
+  if (!words || words.length === 0) return null
+
+  // The animated wrapper has no `bg-clip-text` — that lives on the inner span.
+  // Safari can't smoothly animate opacity/transform on a `bg-clip-text` element
+  // because the gradient has to be re-rasterised every frame, which it skips.
+  // Animating the plain wrapper instead keeps the gradient as a static paint.
+  // Padding + negative margin gives the descenders/ascenders room so the text
+  // is not clipped while it slides, without altering surrounding line metrics.
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        verticalAlign: 'baseline',
+        paddingBottom: '0.2em',
+        marginBottom: '-0.2em',
+        overflow: 'visible',
+      }}
+    >
+      <span
+        key={index}
+        style={{
+          display: 'inline-block',
+          animation: 'rotating-word-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
+          WebkitAnimation: 'rotating-word-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
+          willChange: 'transform, opacity',
+          paddingBottom: '0.15em',
+          marginBottom: '-0.15em',
+        }}
+      >
+        <span
+          className={className}
+          style={{
+            display: 'inline-block',
+            paddingRight: '0.08em',
+            paddingBottom: '0.25em',
+            marginBottom: '-0.15em',
+            lineHeight: 1.15,
+          }}
+        >
+          {words[index]}
+        </span>
+      </span>
+    </span>
+  )
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 function StatCard({ prefix = '', target, suffix = '', label, decimals = 0, duration = 1800 }) {
   const [value, ref] = useCountUp(target, duration)
@@ -82,11 +148,11 @@ function StatCard({ prefix = '', target, suffix = '', label, decimals = 0, durat
     maximumFractionDigits: decimals,
   })
   return (
-    <div ref={ref} className="flex flex-col items-center gap-1.5 text-center">
-      <span className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+    <div ref={ref} className="flex flex-col items-center gap-0.5 text-center">
+      <span className="text-2xl font-extrabold tracking-tight sm:text-3xl">
         {prefix}{formatted}{suffix}
       </span>
-      <span className="text-sm font-medium text-white/70">{label}</span>
+      <span className="text-xs font-medium text-white/70">{label}</span>
     </div>
   )
 }
@@ -114,6 +180,7 @@ const TESTIMONIALS = [
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
+  const { isDark, toggle } = useTheme()
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground antialiased">
 
@@ -130,6 +197,10 @@ export default function LandingPage() {
         @keyframes floatC {
           0%, 100% { transform: translate(-50%, -50%) rotate(-3deg) scale(1.12) translateY(0px); }
           50%       { transform: translate(-50%, -50%) rotate(-3deg) scale(1.12) translateY(-14px); }
+        }
+        @keyframes rotating-word-enter {
+          0%   { opacity: 0; transform: translateY(0.5em); }
+          100% { opacity: 1; transform: translateY(0); }
         }
         .landing-float-card { position: absolute; filter: drop-shadow(0 28px 50px rgba(15,23,42,0.32)); }
         .landing-float-card .rccs { margin: 0 !important; }
@@ -151,6 +222,14 @@ export default function LandingPage() {
             <a href="#testimonials"  className="transition hover:text-foreground">Reviews</a>
           </nav>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+            >
+              {isDark ? <Sun className="h-4 w-4" strokeWidth={2} /> : <Moon className="h-4 w-4" strokeWidth={2} />}
+            </button>
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
               <Link to="/login">Log in</Link>
             </Button>
@@ -181,9 +260,10 @@ export default function LandingPage() {
 
             <h1 className="text-5xl font-extrabold leading-[1.07] tracking-tight sm:text-6xl md:text-7xl">
               Your wallet,<br />
-              <span className="bg-gradient-to-r from-primary-light via-primary to-primary-dark bg-clip-text text-transparent">
-                reimagined.
-              </span>
+              <RotatingWord
+                words={['reimagined.', 'simplified.', 'unleashed.', 'in your pocket.']}
+                className="bg-linear-to-r from-primary-light via-primary to-primary-dark bg-clip-text text-transparent"
+              />
             </h1>
 
             <p className="mx-auto max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg lg:mx-0">
@@ -255,13 +335,95 @@ export default function LandingPage() {
 
       {/* ── STATS ── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-light via-primary to-primary-dark text-white">
-        <div className="pointer-events-none absolute -top-20 right-0 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-12 left-0 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative mx-auto grid max-w-5xl grid-cols-2 gap-10 px-5 py-16 sm:grid-cols-4">
-          <StatCard target={50000} suffix="+"  label="Active users"      duration={1600} />
-          <StatCard target={2.4}   suffix="B+" label="Volume processed"  decimals={1} prefix="$" duration={2000} />
+        <div className="pointer-events-none absolute -top-16 right-0 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 left-0 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative mx-auto grid max-w-4xl grid-cols-2 gap-6 px-5 py-8 sm:grid-cols-4 sm:gap-4">
+          <StatCard target={5000}  suffix="+"  label="Active users"      duration={1600} />
+          <StatCard target={1}     suffix="M+" label="Volume processed"  prefix="$" duration={2000} />
           <StatCard target={99.9}  suffix="%"  label="Uptime"            decimals={1} duration={1400} />
           <StatCard target={11}    suffix="+"  label="Card networks"     duration={1200} />
+        </div>
+      </section>
+
+      {/* ── APP PREVIEW ── */}
+      <section className="relative overflow-hidden border-b border-border/60 bg-muted/20">
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]" />
+        <div className="relative mx-auto w-full max-w-6xl px-5 py-24">
+          <div className="mb-14 text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">A peek inside</p>
+            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
+              Designed to be looked at
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
+              Most banking apps make you work. Heap makes you smile.
+            </p>
+          </div>
+
+          {/* Browser-style mockup */}
+          <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border/60 bg-card">
+            {/* Window chrome */}
+            <div className="flex items-center gap-2 border-b border-border/60 bg-muted/40 px-4 py-3">
+              <span className="h-3 w-3 rounded-full bg-red-400/80" />
+              <span className="h-3 w-3 rounded-full bg-yellow-400/80" />
+              <span className="h-3 w-3 rounded-full bg-green-400/80" />
+              <span className="ml-4 truncate rounded-md bg-background/80 px-3 py-1 text-xs text-muted-foreground">heap.app/dashboard</span>
+            </div>
+
+            {/* Dashboard body */}
+            <div className="grid gap-5 p-6 sm:grid-cols-3">
+              {/* Total balance card */}
+              <div className="sm:col-span-2 rounded-xl bg-gradient-to-br from-primary-light via-primary to-primary-dark p-6 text-white">
+                <p className="text-xs font-medium uppercase tracking-widest text-white/70">Total balance</p>
+                <p className="mt-2 text-4xl font-extrabold tracking-tight">$12,847.59</p>
+                <div className="mt-4 flex items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 font-semibold">
+                    <TrendingUp className="h-3 w-3" /> +8.2% this month
+                  </span>
+                  <span className="text-white/70">across 3 cards</span>
+                </div>
+              </div>
+
+              {/* Quick stat */}
+              <div className="rounded-xl border border-border/60 bg-background p-5">
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">This month</p>
+                <p className="mt-2 text-2xl font-bold">$2,341</p>
+                <p className="mt-1 text-xs text-muted-foreground">42 transactions</p>
+                <div className="mt-3 flex items-end gap-1 h-10">
+                  {[40, 65, 35, 78, 52, 88, 70].map((h, i) => (
+                    <div key={i} className="flex-1 rounded-sm bg-primary/30" style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent activity */}
+              <div className="sm:col-span-3 rounded-xl border border-border/60 bg-background">
+                <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+                  <p className="text-sm font-semibold">Recent activity</p>
+                  <span className="text-xs text-muted-foreground">Last 24h</span>
+                </div>
+                <div className="divide-y divide-border/40">
+                  {[
+                    { name: 'Sara Mitchell',  amount: '+$420.00', type: 'incoming', tag: 'Payment' },
+                    { name: 'Coffee Roastery', amount: '−$8.50',   type: 'outgoing', tag: 'Card ****1111' },
+                    { name: 'Top-up',          amount: '+$500.00', type: 'incoming', tag: 'Card ****5559' },
+                  ].map((row) => (
+                    <div key={row.name} className="flex items-center justify-between px-5 py-3 text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-8 w-8 items-center justify-center rounded-full ${row.type === 'incoming' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                          {row.type === 'incoming' ? <ArrowLeftRight className="h-3.5 w-3.5" /> : <CreditCard className="h-3.5 w-3.5" />}
+                        </span>
+                        <div>
+                          <p className="font-medium leading-tight">{row.name}</p>
+                          <p className="text-xs text-muted-foreground">{row.tag}</p>
+                        </div>
+                      </div>
+                      <span className={`font-mono text-sm font-semibold ${row.type === 'incoming' ? 'text-primary' : 'text-foreground'}`}>{row.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -316,6 +478,64 @@ export default function LandingPage() {
                 <p className="text-sm leading-relaxed text-muted-foreground">{desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── COMPARISON ── */}
+      <section className="mx-auto w-full max-w-5xl px-5 py-24">
+        <div className="mb-14 text-center">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">The difference</p>
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+            Heap vs the old way
+          </h2>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* Old way */}
+          <div className="rounded-2xl border border-border/60 bg-card p-7">
+            <div className="mb-5 flex items-center gap-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground text-sm font-bold">×</span>
+              <h3 className="font-bold text-muted-foreground">Traditional banking</h3>
+            </div>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              {[
+                'Branch visits and paperwork to open an account',
+                'Separate apps for cards, transfers, and statements',
+                'Statements arrive monthly — no real-time picture',
+                'Customer support behind 20-minute hold queues',
+                'Hidden fees buried in fine print',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2.5">
+                  <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Heap */}
+          <div className="rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 to-transparent p-7 shadow-lg">
+            <div className="mb-5 flex items-center gap-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <ShieldCheck className="h-4 w-4" />
+              </span>
+              <h3 className="font-bold">Heap</h3>
+            </div>
+            <ul className="space-y-3 text-sm">
+              {[
+                'Sign up in under a minute, fully online',
+                'One dashboard for every card, transfer, and balance',
+                'Live updates every second — see money as it moves',
+                'Self-service for everything; humans for the rest',
+                'Transparent pricing, no surprises',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2.5">
+                  <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">✓</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
