@@ -170,7 +170,7 @@ export default function AddCardModal({
 
       <DialogContent
         className={cn(
-          "w-full max-w-[800px] overflow-hidden rounded-3xl border border-slate-200 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.22)] dark:border-[#3a3a3a] dark:bg-[#262626]"
+          "w-full max-w-[800px] overflow-hidden rounded-panel border border-slate-200 bg-white p-0 shadow-[0_24px_80px_rgba(15,23,42,0.22)] dark:border-[#3a3a3a] dark:bg-[#262626]"
         )}
       >
         <div className="grid md:grid-cols-[44%_56%]">
@@ -206,8 +206,8 @@ export default function AddCardModal({
             </div>
 
             {/* Security block */}
-            <div className="flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-[#3a3a3a] dark:bg-[#262626]">
-              <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-[#333333] dark:text-slate-300">
+            <div className="flex items-start gap-2.5 rounded-surface border border-slate-200 bg-white p-3.5 dark:border-[#3a3a3a] dark:bg-[#262626]">
+              <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-input bg-slate-100 text-slate-600 dark:bg-[#333333] dark:text-slate-300">
                 <ShieldCheck className="size-4" />
               </span>
               <div className="min-w-0">
@@ -269,7 +269,7 @@ export default function AddCardModal({
                       className={cn(inputClass, "pr-20", errors.number && inputErrorClass)}
                     />
                     {brand && (
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-[#333333] dark:text-slate-300">
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-chip bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-[#333333] dark:text-slate-300">
                         {brand.label}
                       </span>
                     )}
@@ -339,7 +339,7 @@ export default function AddCardModal({
                           aria-checked={selected}
                           onClick={() => setForm((f) => ({ ...f, cardType: type }))}
                           className={cn(
-                            "rounded-[8px] text-sm capitalize transition-colors",
+                            "rounded-chip text-sm capitalize transition-colors",
                             selected
                               ? "bg-white font-semibold text-slate-900 shadow-[0_1px_4px_rgba(15,23,42,0.08)] dark:bg-[#333333] dark:text-slate-100"
                               : "font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
