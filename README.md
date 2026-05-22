@@ -1,5 +1,11 @@
 # Heap
 
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111111)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=ffffff)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.136-009688?style=for-the-badge&logo=fastapi&logoColor=ffffff)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=ffffff)
+![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=ffffff)
+
 Heap is a full-stack digital wallet app for managing cards, balances, users, and transactions. The frontend is a React/Vite app, and the backend is a FastAPI API backed by PostgreSQL, SQLAlchemy, and Alembic migrations.
 
 ## Tech Stack
