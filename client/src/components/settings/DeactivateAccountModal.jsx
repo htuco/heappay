@@ -53,7 +53,7 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 	return (
 		<Modal isOpen={isOpen} onClose={handleClose} title="Deactivate Account">
 			<form className="space-y-4" onSubmit={handleSubmit}>
-				<div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+				<div className="rounded-input border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
 					<p className="font-semibold">This action is permanent.</p>
 					<p className="mt-1 text-destructive/80">
 						Your account will be deactivated and you will be signed out immediately.

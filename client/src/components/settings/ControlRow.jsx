@@ -1,7 +1,7 @@
 export default function ControlRow({ label, hint, children, emphasize = false }) {
   return (
     <div
-      className={`rounded-2xl border border-border px-4 py-4 ${
+      className={`rounded-surface border border-border px-4 py-4 ${
         emphasize ? 'bg-emphasis' : 'bg-background'
       }`}
     >
