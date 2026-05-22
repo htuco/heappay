@@ -1,6 +1,6 @@
 export default function StatTile({ label, count, percentage, accentClass }) {
 	return (
-		<div className="group relative overflow-hidden rounded-2xl bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+		<div className="group relative overflow-hidden rounded-surface bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
 			<span className={`absolute inset-x-0 top-0 h-1 ${accentClass}`} aria-hidden="true" />
 			<div className="flex items-baseline justify-between gap-3">
 				<p className="text-sm font-medium text-muted-foreground">{label}</p>
