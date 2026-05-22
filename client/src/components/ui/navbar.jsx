@@ -6,7 +6,7 @@ import { selectAuthUser } from '@/store/slices/authSlice'
 const mainLinks = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
-  { name: 'Payments', path: '/payments', icon: ArrowLeftRight },
+  { name: 'Transactions', path: '/payments', icon: ArrowLeftRight },
 ]
 
 const adminLinks = [{ name: 'Users', path: '/admin', icon: Shield }]
