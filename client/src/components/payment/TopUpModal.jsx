@@ -18,7 +18,7 @@ function formatAmount(value) {
   return cleaned
 }
 
-export default function TopUpModal({ isOpen, onClose, onSuccess }) {
+export default function TopUpModal({ isOpen, onClose, onSuccess, initialCardId = null }) {
   const { user } = useAuth()
   const { notify } = useNotifications()
 
@@ -41,7 +41,11 @@ export default function TopUpModal({ isOpen, onClose, onSuccess }) {
       .then(([raw, types]) => {
         const active = raw.filter((c) => !c.deleted_at)
         setCards(active)
-        if (active.length === 1) setSelectedCardId(active[0].card_id)
+        if (initialCardId && active.some((c) => c.card_id === initialCardId)) {
+          setSelectedCardId(initialCardId)
+        } else if (active.length === 1) {
+          setSelectedCardId(active[0].card_id)
+        }
         const deposit = types.find((t) => t.name === 'deposit')
         setDepositTypeId(deposit?.transaction_type_id ?? null)
       })
