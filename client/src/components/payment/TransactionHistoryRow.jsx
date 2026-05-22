@@ -1,4 +1,10 @@
-import { ArrowDownLeft, ArrowUpRight, Landmark, RotateCcw, ShieldAlert } from 'lucide-react'
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Landmark,
+  RotateCcw,
+  ShieldAlert,
+} from 'lucide-react'
 
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -7,14 +13,37 @@ import {
   getTransactionStatus,
   getTransactionType,
 } from '@/components/payment/transactionHistory.utils'
+import { formatBrandLabel } from '@/utils/paymentCard.utils'
 
-// Per-type icon + subtle tinted container
-const TYPE_META = {
-  1: { Icon: ArrowDownLeft, bg: 'bg-emerald-50 dark:bg-emerald-500/10',  color: 'text-emerald-600 dark:text-emerald-400' }, // Deposit
-  2: { Icon: ArrowUpRight,  bg: 'bg-slate-100 dark:bg-slate-500/10',     color: 'text-slate-500 dark:text-slate-400' },      // Payment
-  3: { Icon: RotateCcw,     bg: 'bg-blue-50 dark:bg-blue-500/10',        color: 'text-blue-500 dark:text-blue-400' },         // Refund
-  4: { Icon: Landmark,      bg: 'bg-orange-50 dark:bg-orange-500/10',    color: 'text-orange-500 dark:text-orange-400' },     // Withdrawal
-  5: { Icon: ShieldAlert,   bg: 'bg-red-50 dark:bg-red-500/10',          color: 'text-red-500 dark:text-red-400' },           // Chargeback
+const DIRECTION_META = {
+  incoming: {
+    Icon: ArrowDownLeft,
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+    color: 'text-emerald-600 dark:text-emerald-400',
+  },
+  outgoing: {
+    Icon: ArrowUpRight,
+    bg: 'bg-slate-100 dark:bg-slate-500/10',
+    color: 'text-slate-500 dark:text-slate-400',
+  },
+}
+
+const TYPE_EXCEPTION_META = {
+  3: {
+    Icon: RotateCcw,
+    bg: 'bg-blue-50 dark:bg-blue-500/10',
+    color: 'text-blue-600 dark:text-blue-400',
+  },
+  4: {
+    Icon: Landmark,
+    bg: 'bg-orange-50 dark:bg-orange-500/10',
+    color: 'text-orange-600 dark:text-orange-400',
+  },
+  5: {
+    Icon: ShieldAlert,
+    bg: 'bg-red-50 dark:bg-red-500/10',
+    color: 'text-red-600 dark:text-red-400',
+  },
 }
 
 // Status badge — pill style, consistent sizing, neutral palette
@@ -35,18 +64,77 @@ function StatusPill({ label, variant }) {
   )
 }
 
+function isPartyCurrentUser(party, currentUserId) {
+  return party?.user_id != null && currentUserId != null && Number(party.user_id) === Number(currentUserId)
+}
+
+function isOutgoingTransaction(transaction, currentUserId) {
+  if (Number(transaction.transaction_type_id) === 1 || transaction.sender_card_id == null) return false
+  if (isPartyCurrentUser(transaction.sender, currentUserId)) return true
+  if (isPartyCurrentUser(transaction.recipient, currentUserId)) return false
+  return [2, 4, 5].includes(Number(transaction.transaction_type_id))
+}
+
+function getDirectionMeta(transaction, currentUserId) {
+  const exceptionMeta = TYPE_EXCEPTION_META[Number(transaction.transaction_type_id)]
+  if (exceptionMeta) return exceptionMeta
+
+  return isOutgoingTransaction(transaction, currentUserId)
+    ? DIRECTION_META.outgoing
+    : DIRECTION_META.incoming
+}
+
 function getCounterparty(transaction, currentUserId) {
   const { sender, recipient, sender_card_id, transaction_type_id } = transaction
   if (transaction_type_id === 1) return 'External deposit'
-  const isSender = sender?.user_id === currentUserId
-  const party = isSender ? recipient : sender
+  const isOutgoing = isOutgoingTransaction(transaction, currentUserId)
+  const party = isOutgoing ? recipient : sender
   return (
     party?.full_name ??
     party?.cardholder_name ??
-    (isSender
+    (isOutgoing
       ? `Card #${transaction.recipient_card_id}`
       : sender_card_id ? `Card #${sender_card_id}` : 'External')
   )
+}
+
+function formatPartyName(party) {
+  return party?.full_name ?? party?.cardholder_name ?? party?.email ?? null
+}
+
+function formatPartyCard(party) {
+  if (!party) return null
+  const brand = party.brand ? formatBrandLabel(party.brand) : 'Card'
+  return party.last_four ? `${brand} ${party.last_four}` : brand
+}
+
+function buildSubtitle(cardText, note) {
+  return [cardText, note].filter(Boolean).join(' · ') || null
+}
+
+function getTransactionDisplay(transaction, currentUserId) {
+  const isDeposit = transaction.transaction_type_id === 1
+  const isOutgoing = isOutgoingTransaction(transaction, currentUserId)
+  const counterparty = isOutgoing ? transaction.recipient : transaction.sender
+  const currentUserParty = isOutgoing ? transaction.sender : transaction.recipient
+
+  if (isDeposit) {
+    const cardText = formatPartyCard(transaction.recipient)
+    return {
+      title: 'External deposit',
+      directionLabel: null,
+      subtitle: buildSubtitle(cardText ? `to ${cardText}` : null, transaction.note),
+    }
+  }
+
+  const cardText = formatPartyCard(currentUserParty)
+  return {
+    title:
+      formatPartyName(counterparty) ??
+      getCounterparty(transaction, currentUserId),
+    directionLabel: isOutgoing ? 'To' : 'From',
+    subtitle: buildSubtitle(cardText ? `${isOutgoing ? 'from' : 'to'} ${cardText}` : null, transaction.note),
+  }
 }
 
 export default function TransactionHistoryRow({ transaction, onSelect }) {
@@ -55,14 +143,9 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
 
   const status = getTransactionStatus(transaction.status_id, transaction.has_pending_refund)
   const type = getTransactionType(transaction.transaction_type_id)
-  const { Icon, bg, color } = TYPE_META[transaction.transaction_type_id] ?? {
-    Icon: ArrowUpRight, bg: 'bg-muted', color: 'text-muted-foreground',
-  }
+  const { Icon, bg, color } = getDirectionMeta(transaction, currentUserId)
 
-  const counterparty = getCounterparty(transaction, currentUserId)
-  const isSender = transaction.sender?.user_id === currentUserId
-  const isDeposit = transaction.transaction_type_id === 1
-  const directionLabel = isDeposit ? null : isSender ? 'To' : 'From'
+  const display = getTransactionDisplay(transaction, currentUserId)
 
   const isSelectable = typeof onSelect === 'function'
 
@@ -86,8 +169,10 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate text-sm font-medium text-foreground">
-              {directionLabel ? <span className="font-normal text-muted-foreground">{directionLabel} </span> : null}
-              {counterparty}
+              {display.directionLabel ? (
+                <span className="font-normal text-muted-foreground">{display.directionLabel} </span>
+              ) : null}
+              {display.title}
             </span>
             <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
               {formatTransactionAmount(transaction.amount)}
@@ -97,8 +182,8 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
             <StatusPill label={status.label} variant={status.variant} />
             <span className="text-xs text-muted-foreground">{formatTransactionDate(transaction.created_at)}</span>
           </div>
-          {transaction.note ? (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground/70">{transaction.note}</p>
+          {display.subtitle ? (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground/70">{display.subtitle}</p>
           ) : null}
         </div>
       </div>
@@ -113,13 +198,13 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
         {/* Counterparty + description */}
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
-            {directionLabel ? (
-              <span className="font-normal text-muted-foreground">{directionLabel} </span>
+            {display.directionLabel ? (
+              <span className="font-normal text-muted-foreground">{display.directionLabel} </span>
             ) : null}
-            {counterparty}
+            {display.title}
           </p>
-          {transaction.note ? (
-            <p className="truncate text-xs text-muted-foreground/60">{transaction.note}</p>
+          {display.subtitle ? (
+            <p className="truncate text-xs text-muted-foreground/60">{display.subtitle}</p>
           ) : null}
         </div>
 
