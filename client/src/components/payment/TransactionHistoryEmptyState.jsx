@@ -5,8 +5,8 @@ export default function TransactionHistoryEmptyState({
   message = 'Once payments or transfers exist for your cards, they will appear here as your history.',
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-background p-8 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+    <div className="rounded-input border border-dashed border-border bg-background p-8 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-input bg-muted text-muted-foreground">
         <CalendarClock className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-card-foreground">{title}</h3>

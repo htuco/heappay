@@ -12,7 +12,6 @@ import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
 import AddCardModal from '@/components/AddCardModal'
 import { useWalletCards } from '@/hooks/useWalletCards'
-import { dashboardMockData } from '@/mock-data/dashboardMockData'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
 import { useTotalBalance } from '@/hooks/useTotalBalance'
@@ -27,10 +26,10 @@ import {
 
 function PaymentCardSkeleton() {
   return (
-    <div className="animate-pulse relative aspect-[1.58/1] min-h-[210px] w-full min-w-0 overflow-hidden rounded-3xl bg-muted p-4 sm:p-5 md:p-6 flex flex-col">
+    <div className="animate-pulse relative aspect-[1.58/1] min-h-[210px] w-full min-w-0 overflow-hidden rounded-panel bg-muted p-4 sm:p-5 md:p-6 flex flex-col xl:max-w-[464px]">
       <div className="flex items-start justify-between gap-3">
         <div className="h-3 w-20 rounded bg-muted-foreground/20" />
-        <div className="h-8 w-14 rounded-lg bg-muted-foreground/20" />
+        <div className="h-8 w-14 rounded-input bg-muted-foreground/20" />
       </div>
       <div className="mt-auto space-y-3 pb-2">
         <div className="h-5 w-40 rounded bg-muted-foreground/20" />
@@ -51,7 +50,7 @@ function PaymentCardSkeleton() {
 
 function PaymentCardEmpty() {
   return (
-    <div className="group relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-3xl border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 via-card to-primary/10 p-5 sm:p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5">
+    <div className="group relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-panel border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 via-card to-primary/10 p-5 sm:p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5 xl:max-w-[464px]">
       <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl transition-opacity duration-300 group-hover:opacity-70" />
       <div className="pointer-events-none absolute -bottom-20 -left-12 h-36 w-36 rounded-full bg-primary-light/15 blur-3xl" />
 
@@ -65,8 +64,8 @@ function PaymentCardEmpty() {
 
       <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
         <span className="relative flex items-center justify-center">
-          <span className="absolute inset-0 animate-ping rounded-2xl bg-primary/20 opacity-75" />
-          <span className="relative rounded-2xl bg-linear-to-br from-primary to-primary-light p-3.5 text-primary-foreground shadow-lg shadow-primary/30">
+          <span className="absolute inset-0 animate-ping rounded-surface bg-primary/20 opacity-75" />
+          <span className="relative rounded-surface bg-linear-to-br from-primary to-primary-light p-3.5 text-primary-foreground shadow-lg shadow-primary/30">
             <CreditCard className="h-6 w-6" strokeWidth={2} />
           </span>
         </span>
@@ -78,7 +77,7 @@ function PaymentCardEmpty() {
 
         <Link
           to="/wallet"
-          className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-linear-to-r from-primary to-primary-light px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-input bg-linear-to-r from-primary to-primary-light px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
           Add Card
@@ -90,7 +89,7 @@ function PaymentCardEmpty() {
 
 function PaymentCardError() {
   return (
-    <div className="relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-3xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5 md:p-6 flex flex-col items-center justify-center text-center">
+    <div className="relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-panel border border-destructive/30 bg-destructive/5 p-4 sm:p-5 md:p-6 flex flex-col items-center justify-center text-center xl:max-w-[464px]">
       <p className="text-sm font-medium text-destructive">Could not load card</p>
       <p className="mt-1 text-xs text-muted-foreground">Please refresh the page</p>
     </div>
@@ -113,14 +112,16 @@ export default function DashboardPage() {
     transactions: recentTransactions,
     isLoading: recentActivityLoading,
     error: recentActivityError,
-  } = useTransactions({ pageSize: 3 })
+  } = useTransactions({ pageSize: 5 })
   const [typeNameById, setTypeNameById] = useState({})
   const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
   const [addCardOpen, setAddCardOpen] = useState(false)
   const { addCard, isSaving, saveError } = useWalletCards()
-  const primaryCard = cards[0] ?? null
+  const mainCard = cards.find((c) => c.isMain) ?? cards[0] ?? null
+  const mainCardId = mainCard ? Number(mainCard.id) : null
+  const primaryCard = mainCard
   const cardStatusProps = buildCardStatusOverviewProps(cards)
 
   const lastEntry = chartData[chartData.length - 1]
@@ -144,7 +145,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) {
-      setTypeNameById({})
       return
     }
     let cancelled = false
@@ -170,9 +170,9 @@ export default function DashboardPage() {
     () => ({
       currentUserCardIds: buildUserCardIdSet(cards),
       lastFourByCardId: buildCardLastFourMapFromDashboardCards(cards),
-      typeNameById,
+      typeNameById: user ? typeNameById : {},
     }),
-    [cards, typeNameById],
+    [cards, typeNameById, user],
   )
 
   const showLoader = isLoading || !minDelayElapsed
@@ -188,15 +188,25 @@ export default function DashboardPage() {
             monthlyGrowth={monthlyGrowth}
             monthlyAmount={monthlyAmount}
             isLoading={balanceLoading || summaryLoading}
+            noMainCardCta={
+              !isLoading && cards.length > 0 && !mainCard?.isMain ? (
+                <Link
+                  to="/wallet"
+                  className="text-xs font-medium text-white/80 underline hover:text-white"
+                >
+                  Set a main card
+                </Link>
+              ) : undefined
+            }
           />
         </div>
-        <div className="flex h-full items-center justify-center">
+        <div className="flex h-full items-center justify-center xl:justify-end">
           {isLoading ? (
             <PaymentCardSkeleton />
           ) : error ? (
             <PaymentCardError />
           ) : primaryCard ? (
-            <PaymentCard card={primaryCard.card} />
+            <PaymentCard card={primaryCard.card} className="xl:max-w-[464px]" />
           ) : (
             <PaymentCardEmpty />
           )}
@@ -223,7 +233,7 @@ export default function DashboardPage() {
       {/* Row 3: Card Status (1/3) + Recent Activity (2/3) */}
       <section className="grid items-stretch gap-5 xl:grid-cols-3">
         {error ? (
-          <section className="flex h-full flex-col rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
+          <section className="flex h-full flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
             <p className="text-sm text-destructive">
               Could not load card data. Please refresh.
             </p>
@@ -245,10 +255,12 @@ export default function DashboardPage() {
       <PaymentWizard
         isOpen={paymentWizardOpen}
         onClose={() => setPaymentWizardOpen(false)}
+        initialCardId={mainCardId}
       />
       <TopUpModal
         isOpen={topUpOpen}
         onClose={() => setTopUpOpen(false)}
+        initialCardId={mainCardId}
       />
       <AddCardModal
         open={addCardOpen}

@@ -31,6 +31,7 @@ class CardCreate(BaseModel):
     cvc: str = Field(min_length=3, max_length=4)
     expires_at: date
     cardholder_name: str | None = Field(default=None, max_length=100)
+    is_main: bool = False
 
     @field_validator("card_numb")
     @classmethod
@@ -66,6 +67,7 @@ class CardPatch(BaseModel):
     cvc: str | None = Field(default=None, min_length=3, max_length=4)
     expires_at: date | None = None
     cardholder_name: str | None = Field(default=None, max_length=100)
+    is_main: bool | None = None
 
     @field_validator("card_numb")
     @classmethod
@@ -123,3 +125,4 @@ class CardResponse(BaseModel):
     cardholder_name: str | None = None
     created_at: datetime
     deleted_at: datetime | None = None
+    is_main: bool = False

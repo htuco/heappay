@@ -154,13 +154,7 @@ export function passesLuhn(value) {
   return sum % 10 === 0
 }
 
-function getLast4(cardNumber) {
-  return String(cardNumber ?? '').replace(/\D/g, '').slice(-4).padStart(4, '0')
-}
-
-export function maskCardNumber(cardNumber) {
-  return `**** **** **** ${getLast4(cardNumber)}`
-}
+export { maskCardNumber } from '@/utils/cardMask'
 
 export function formatExpiryDate(expiryDate) {
   const value = String(expiryDate ?? '').trim()

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useAuth } from '@/hooks/useAuth'
-import { createCard, listCards, updateCard } from '@/services/cardsService'
+import { createCard, listCards, setMainCard as setMainCardService, updateCard } from '@/services/cardsService'
 import cardStatusesService from '@/services/cardStatusesService'
 import cardTypesService from '@/services/cardTypesService'
 import { getApiErrorMessage } from '@/utils/api'
@@ -179,6 +179,44 @@ export function useWalletCards() {
     [holderName, statusesById, typesById]
   )
 
+  const setMainCard = useCallback(
+    async (cardId) => {
+      setIsSaving(true)
+      setSaveError(null)
+
+      let previousCards
+      setCards((current) => {
+        previousCards = current
+        return current.map((item) => ({
+          ...item,
+          isMain: item.id === String(cardId),
+          source: { ...item.source, is_main: item.id === String(cardId) },
+        }))
+      })
+
+      try {
+        const updatedCard = await setMainCardService(cardId)
+        const normalizedCard = normalizeApiCard(updatedCard, typesById, statusesById, holderName)
+        setCards((current) =>
+          current.map((item) =>
+            item.id === String(cardId)
+              ? normalizedCard
+              : { ...item, isMain: false, source: { ...item.source, is_main: false } }
+          )
+        )
+        return normalizedCard
+      } catch (err) {
+        setCards(previousCards)
+        const message = getApiErrorMessage(err, err?.message || 'Unable to set main card.')
+        setSaveError(message)
+        throw err
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [holderName, statusesById, typesById]
+  )
+
   return {
     cards,
     isLoading: authLoading || isLoading,
@@ -187,5 +225,6 @@ export function useWalletCards() {
     saveError,
     addCard,
     updateCard: updateWalletCard,
+    setMainCard,
   }
 }

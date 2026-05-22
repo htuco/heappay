@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from models.card import Card
@@ -87,6 +87,45 @@ class CardRepository:
         self._db.commit()
         self._db.refresh(row)
         return row
+
+    def get_main_card(self, user_id: int) -> Card | None:
+        stmt = (
+            select(Card)
+            .where(
+                Card.user_id == user_id,
+                Card.is_main.is_(True),
+                Card.deleted_at.is_(None),
+            )
+        )
+        return self._db.scalars(stmt).first()
+
+    def set_main_card(self, user_id: int, card_id: int) -> Card | None:
+        card = self.get_by_id(card_id, include_deleted=False)
+        if card is None or card.user_id != user_id:
+            return None
+        self._db.execute(
+            update(Card)
+            .where(Card.user_id == user_id, Card.deleted_at.is_(None))
+            .values(is_main=False)
+            .execution_options(synchronize_session=False)
+        )
+        card.is_main = True
+        self._db.commit()
+        self._db.refresh(card)
+        return card
+
+    def _promote_next_main_card(self, user_id: int) -> None:
+        """After the main card is deleted, set is_main on the next-oldest active card."""
+        stmt = (
+            select(Card)
+            .where(Card.user_id == user_id, Card.deleted_at.is_(None))
+            .order_by(Card.created_at.asc(), Card.card_id.asc())
+            .limit(1)
+        )
+        next_card = self._db.scalars(stmt).first()
+        if next_card:
+            next_card.is_main = True
+            self._db.commit()
 
     def lookup_by_card_number(self, card_numb: str) -> "CardWithOwner | None":
         """Return (Card, User) for a non-deleted card matching card_numb, or None."""

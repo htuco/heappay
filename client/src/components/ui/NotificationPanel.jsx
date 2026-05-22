@@ -45,7 +45,7 @@ export default function NotificationPanel() {
 			<button
 				type="button"
 				onClick={handleOpen}
-				className="nav-pill relative p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+				className="nav-pill relative p-2 rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground"
 				aria-label="Notifications"
 			>
 				<Bell className="h-4.5 w-4.5" strokeWidth={2} />
@@ -55,7 +55,7 @@ export default function NotificationPanel() {
 			</button>
 
 			{open && (
-				<div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden">
+				<div className="absolute right-0 top-full mt-2 w-80 rounded-surface border border-border bg-popover shadow-lg z-50 overflow-hidden">
 					<div className="flex items-center justify-between px-4 py-3 border-b border-border">
 						<p className="text-sm font-semibold text-foreground">Notifications</p>
 						{history.length > 0 && (

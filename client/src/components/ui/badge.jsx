@@ -20,7 +20,7 @@ function Badge({ variant = "default", size = "md", className, children, ...props
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md border-2 font-bold transition-all",
+        "inline-flex items-center rounded-chip border-2 font-bold transition-all",
         badgeClasses[variant],
         badgeSizes[size],
         className

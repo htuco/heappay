@@ -1,5 +1,3 @@
-import { Sparkles } from 'lucide-react'
-
 const formatValue = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 
 export default function SettingsHero({ accessLevel, themePreference, isDark }) {
@@ -24,25 +22,7 @@ export default function SettingsHero({ accessLevel, themePreference, isDark }) {
   ]
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-xs">
-      <div className="bg-emphasis-strong border-b border-border/70 p-4 sm:p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
-            Settings
-          </div>
-
-          <div className="max-w-4xl">
-            <h1 className="text-2xl font-bold tracking-tight text-card-foreground sm:text-4xl">
-              Account Settings
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-              Manage password, notifications, theme, and privacy.
-            </p>
-          </div>
-        </div>
-      </div>
-
+    <section className="overflow-hidden rounded-panel border border-border bg-card shadow-xs">
       <div className="grid gap-0 sm:grid-cols-2">
         {quickStats.map((stat, index) => (
           <div
