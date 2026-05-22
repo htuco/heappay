@@ -7,7 +7,7 @@ export default function OptionGroup({ options, active, onSelect }) {
           type="button"
           onClick={() => onSelect(option)}
           aria-pressed={option === active}
-          className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+          className={`rounded-input border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
             option === active
               ? 'border-primary bg-primary text-primary-foreground'
               : 'border-border bg-background text-card-foreground'

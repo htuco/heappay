@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
 from models.transaction import Transaction
@@ -23,6 +23,7 @@ class TransactionRepository:
         """List transactions where the user owns either the sender or recipient card."""
         stmt = (
             self._user_transactions_stmt(user_id)
+            .options(*self._party_load_options())
             .order_by(Transaction.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -38,6 +39,7 @@ class TransactionRepository:
     def list_all(self, *, limit: int = 50, offset: int = 0) -> list[Transaction]:
         stmt = (
             select(Transaction)
+            .options(*self._party_load_options())
             .order_by(Transaction.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -128,6 +130,7 @@ class TransactionRepository:
         """List transactions where card_id appears as sender or recipient."""
         stmt = (
             self._card_transactions_stmt(card_id)
+            .options(*self._party_load_options())
             .order_by(Transaction.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -149,8 +152,20 @@ class TransactionRepository:
         )
 
     def get_by_id(self, transaction_id: int) -> Transaction | None:
-        stmt = select(Transaction).where(Transaction.transaction_id == transaction_id)
+        stmt = (
+            select(Transaction)
+            .options(*self._party_load_options())
+            .where(Transaction.transaction_id == transaction_id)
+        )
         return self._db.scalars(stmt).first()
+
+    def _party_load_options(self):
+        return (
+            joinedload(Transaction.sender_card).joinedload(Card.user),
+            joinedload(Transaction.sender_card).joinedload(Card.card_type),
+            joinedload(Transaction.recipient_card).joinedload(Card.user),
+            joinedload(Transaction.recipient_card).joinedload(Card.card_type),
+        )
 
     def card_owner_id(self, card_id: int) -> int | None:
         stmt = select(Card.user_id).where(

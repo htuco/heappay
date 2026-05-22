@@ -16,6 +16,9 @@ import FormBanner from '@/components/ui/FormBanner'
 import UserAvatar from '@/components/ui/UserAvatar'
 import RecipientPicker from '@/components/payment/RecipientPicker'
 import { useAuth } from '@/hooks/useAuth'
+import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
+import { formatBrandLabel } from '@/utils/paymentCard.utils'
+import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { useNotifications } from '@/context/NotificationContext'
 import { listCards, lookupCardByNumber } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
@@ -92,6 +95,7 @@ function StepProgress({ current }) {
 // ─── Step 1: From card + transaction type ─────────────────────────────────────
 
 function StepFrom({ state, onChange, cards, txTypes, onNext }) {
+  const { maskCard, resolveBrand } = useCardBrandResolver()
   const canProceed = state.fromCardId && state.txTypeId
 
   return (
@@ -102,7 +106,7 @@ function StepFrom({ state, onChange, cards, txTypes, onNext }) {
       <div className="space-y-2">
         <p className="text-sm font-medium text-card-foreground">Pay from</p>
         {cards.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+          <div className="rounded-surface border border-dashed border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
             No active cards found.
           </div>
         ) : (
@@ -114,7 +118,7 @@ function StepFrom({ state, onChange, cards, txTypes, onNext }) {
                   key={c.card_id}
                   type="button"
                   onClick={() => onChange('fromCardId', c.card_id)}
-                  className={`group w-full rounded-2xl border p-4 text-left transition-all duration-200 ${
+                  className={`group w-full rounded-input border p-4 text-left transition-all duration-200 ${
                     selected
                       ? 'border-primary bg-primary/5 ring-1 ring-primary/25'
                       : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'
@@ -122,21 +126,21 @@ function StepFrom({ state, onChange, cards, txTypes, onNext }) {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                          selected
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-primary/10 text-primary'
-                        }`}
-                      >
-                        <CreditCard className="h-4.5 w-4.5" strokeWidth={2} />
+                      <span className="flex h-8 w-11 shrink-0 items-center justify-center overflow-hidden rounded-chip shadow-xs">
+                        <CardBrandIcon
+                          brand={resolveBrand(c.card_type_id)}
+                          width={44}
+                        />
                       </span>
                       <div className="min-w-0">
                         <p className="font-mono text-sm font-semibold text-card-foreground">
-                          {c.masked_card_number}
+                          {maskCard(c)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Balance:{' '}
+                          <span className="capitalize">
+                            {formatBrandLabel(resolveBrand(c.card_type_id))}
+                          </span>
+                          {' · Balance: '}
                           <span className="font-medium text-card-foreground">
                             ${Number(c.balance).toFixed(2)}
                           </span>
@@ -171,7 +175,7 @@ function StepFrom({ state, onChange, cards, txTypes, onNext }) {
                 key={t.transaction_type_id}
                 type="button"
                 onClick={() => onChange('txTypeId', t.transaction_type_id)}
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-all duration-200 ${
+                className={`rounded-input border px-4 py-3 text-sm font-semibold transition-all duration-200 ${
                   selected
                     ? 'border-primary bg-primary text-primary-foreground shadow-sm'
                     : 'border-border bg-card text-card-foreground hover:border-primary/30 hover:bg-primary/5'
@@ -279,11 +283,11 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
 
       {/* Recipient */}
       <div className="space-y-3">
-        <div className="grid grid-cols-2 rounded-2xl border border-border bg-muted/20 p-1">
+        <div className="grid grid-cols-2 rounded-surface border border-border bg-muted/20 p-1">
           <button
             type="button"
             onClick={() => handleRecipientModeChange('card')}
-            className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+            className={`rounded-input px-3 py-2 text-sm font-semibold transition-colors ${
               state.recipientMode === 'card'
                 ? 'bg-card text-card-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-card-foreground'
@@ -294,7 +298,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
           <button
             type="button"
             onClick={() => handleRecipientModeChange('email')}
-            className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+            className={`rounded-input px-3 py-2 text-sm font-semibold transition-colors ${
               state.recipientMode === 'email'
                 ? 'bg-card text-card-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-card-foreground'
@@ -343,7 +347,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
             </div>
 
             {lookupState.status === 'found' && lookupState.info && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-success/30 bg-success/8 px-3 py-2.5">
+              <div className="flex items-center gap-2.5 rounded-input border border-success/30 bg-success/8 px-3 py-2.5">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15">
                   <CheckCircle2 className="h-4 w-4 text-success" />
                 </span>
@@ -366,7 +370,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
       </div>
 
       {/* Amount — large centered display */}
-      <div className="flex flex-col items-center gap-1.5 rounded-3xl border border-border bg-muted/20 py-6">
+      <div className="flex flex-col items-center gap-1.5 rounded-panel border border-border bg-muted/20 py-6">
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Amount
         </p>
@@ -427,6 +431,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
 // ─── Step 3: Review (receipt style) ───────────────────────────────────────────
 
 function StepReview({ state, fromCard, txTypes, onSubmit, onBack, isSubmitting, error }) {
+  const { maskCard, resolveBrand } = useCardBrandResolver()
   const txType = txTypes.find((t) => t.transaction_type_id === state.txTypeId)
   const recipientNameParts = state.recipientInfo?.owner_name?.split(' ') ?? []
 
@@ -435,13 +440,16 @@ function StepReview({ state, fromCard, txTypes, onSubmit, onBack, isSubmitting, 
       <StepProgress current={2} />
 
       {/* From → To visual */}
-      <div className="flex items-center gap-3 rounded-3xl border border-border bg-muted/20 p-4">
+      <div className="flex items-center gap-3 rounded-panel border border-border bg-muted/20 p-4">
         <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <CreditCard className="h-4.5 w-4.5" strokeWidth={2} />
+          <span className="flex h-8 w-11 items-center justify-center overflow-hidden rounded-chip shadow-xs">
+            <CardBrandIcon
+              brand={fromCard ? resolveBrand(fromCard.card_type_id) : null}
+              width={44}
+            />
           </span>
           <p className="font-mono text-xs font-semibold text-card-foreground">
-            {fromCard?.masked_card_number ?? '—'}
+            {fromCard ? maskCard(fromCard) : '—'}
           </p>
           <p className="text-xs text-muted-foreground">You</p>
         </div>
@@ -456,11 +464,14 @@ function StepReview({ state, fromCard, txTypes, onSubmit, onBack, isSubmitting, 
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-            <CreditCard className="h-4.5 w-4.5" strokeWidth={2} />
+          <span className="flex h-8 w-11 items-center justify-center overflow-hidden rounded-chip shadow-xs">
+            <CardBrandIcon
+              brand={state.recipientInfo?.brand ?? null}
+              width={44}
+            />
           </span>
           <p className="font-mono text-xs font-semibold text-card-foreground">
-            {state.recipientInfo?.masked_card_number ?? '—'}
+            {state.recipientInfo ? maskCard(state.recipientInfo) : '—'}
           </p>
           <p className="max-w-[90px] truncate text-xs text-muted-foreground">
             {state.recipientInfo?.owner_name}
@@ -469,7 +480,7 @@ function StepReview({ state, fromCard, txTypes, onSubmit, onBack, isSubmitting, 
       </div>
 
       {state.recipientInfo && (
-        <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+        <div className="flex items-center gap-3 rounded-surface border border-primary/25 bg-primary/5 p-4">
           <UserAvatar
             user={{
               first_name: recipientNameParts[0],
@@ -490,7 +501,7 @@ function StepReview({ state, fromCard, txTypes, onSubmit, onBack, isSubmitting, 
       )}
 
       {/* Receipt rows */}
-      <div className="divide-y divide-border rounded-2xl border border-border bg-card text-sm">
+      <div className="divide-y divide-border rounded-surface border border-border bg-card text-sm">
         <ReceiptRow label="Type" value={txType?.name} capitalize />
         {state.note && <ReceiptRow label="Note" value={state.note} />}
         <div className="flex items-center justify-between px-4 py-3.5">
@@ -595,7 +606,7 @@ const INITIAL_FORM = {
 
 const STEP_TITLES = ['Send Payment', 'Send Payment', 'Send Payment', 'Payment Sent']
 
-export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
+export default function PaymentWizard({ isOpen, onClose, onSuccess, initialCardId = null }) {
   const { user } = useAuth()
   const { notify } = useNotifications()
   const currentUserId = user?.user_id ?? user?.id
@@ -609,13 +620,28 @@ export default function PaymentWizard({ isOpen, onClose, onSuccess }) {
   const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
+    if (!isOpen) return
+    setStep(initialCardId ? 1 : 0)
+    setForm({ ...INITIAL_FORM, fromCardId: initialCardId ?? null })
+    setSubmitError('')
+  }, [isOpen, initialCardId])
+
+  useEffect(() => {
     if (!isOpen || !user) return
     setIsLoadingRef(true)
 
     Promise.all([listCards({ user_id: user.id, limit: 100 }), transactionTypesService.list()])
       .then(([rawCards, rawTypes]) => {
         setCards(rawCards.filter((c) => !c.deleted_at))
-        setTxTypes(rawTypes.filter((t) => SEND_TYPE_NAMES.has(t.name)))
+        const sendableTypes = rawTypes.filter((t) => SEND_TYPE_NAMES.has(t.name))
+        setTxTypes(sendableTypes)
+        const defaultType =
+          sendableTypes.find((t) => t.name === 'payment') ?? sendableTypes[0] ?? null
+        if (defaultType) {
+          setForm((prev) =>
+            prev.txTypeId ? prev : { ...prev, txTypeId: defaultType.transaction_type_id }
+          )
+        }
       })
       .catch(() => {})
       .finally(() => setIsLoadingRef(false))

@@ -32,7 +32,7 @@ export default function LoginNavButton() {
           </button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" sideOffset={10} className="w-90 overflow-hidden rounded-3xl bg-card p-0">
+        <DropdownMenuContent align="end" sideOffset={10} className="w-90 overflow-hidden rounded-panel bg-card p-0">
           {/* Brand cover gradient with decorative glow */}
           <div className="relative h-18 overflow-hidden bg-linear-to-br from-primary-light/20 via-primary/15 to-primary-dark/20">
             <div className="pointer-events-none absolute -top-16 left-8 h-40 w-48 rounded-full bg-primary/25 blur-3xl" />
@@ -66,7 +66,7 @@ export default function LoginNavButton() {
             <DropdownMenuItem asChild className="mt-5 p-0 focus:bg-transparent">
               <Link
                 to="/settings"
-                className="group inline-flex cursor-pointer items-center gap-2 rounded-full bg-linear-to-r from-primary/10 to-primary-light/10 px-5 py-2 text-sm font-medium text-primary ring-1 ring-primary/20 transition-all duration-200 hover:from-primary/15 hover:to-primary-light/15 hover:ring-primary/40"
+                className="group inline-flex cursor-pointer items-center gap-2 rounded-input bg-linear-to-r from-primary/10 to-primary-light/10 px-5 py-2 text-sm font-medium text-primary ring-1 ring-primary/20 transition-all duration-200 hover:from-primary/15 hover:to-primary-light/15 hover:ring-primary/40"
               >
                 Manage your account
                 <span className="text-primary/60 transition-transform duration-200 group-hover:translate-x-0.5">
@@ -81,7 +81,7 @@ export default function LoginNavButton() {
           {/* Sign out row */}
           <DropdownMenuItem
             onClick={handleLogout}
-            className="mx-2 my-2 flex cursor-pointer items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-destructive/5 hover:text-destructive focus:bg-destructive/5 focus:text-destructive"
+            className="mx-2 my-2 flex cursor-pointer items-center gap-3 rounded-input px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-destructive/5 hover:text-destructive focus:bg-destructive/5 focus:text-destructive"
           >
             <LogOut className="h-4 w-4" strokeWidth={2} />
             Sign out

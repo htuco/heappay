@@ -17,7 +17,7 @@ function NetTooltip({ active, payload, label }) {
   const fmt = (n) =>
     `$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   return (
-    <div className="rounded-xl border border-border bg-card px-3 py-2.5 shadow-lg">
+    <div className="rounded-input border border-border bg-card px-3 py-2.5 shadow-lg">
       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
@@ -36,7 +36,7 @@ function NetTooltip({ active, payload, label }) {
 function SingleTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-lg">
+    <div className="rounded-input border border-border bg-card px-3 py-2 shadow-lg">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="tabular-nums text-sm font-semibold text-card-foreground">
         ${payload[0].value.toLocaleString()}
@@ -49,7 +49,7 @@ function SingleTooltip({ active, payload, label }) {
 
 function ChartShimmer() {
   return (
-    <div className="h-64 w-full animate-pulse rounded-2xl bg-muted/60" />
+    <div className="h-64 w-full animate-pulse rounded-surface bg-muted/60" />
   )
 }
 
@@ -88,7 +88,7 @@ export default function MoneyFlowPlaceholder({
   const isEmpty = useDual && chartData.length === 0
 
   return (
-    <section className="flex h-full min-w-0 flex-col rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <section className="flex h-full min-w-0 flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-card-foreground sm:text-lg">

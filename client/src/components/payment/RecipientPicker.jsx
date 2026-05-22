@@ -2,6 +2,7 @@ import { CheckCircle2, CreditCard, Loader2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import UserAvatar from '@/components/ui/UserAvatar'
 import useUserSearch from '@/hooks/useUserSearch'
+import { maskCardNumber } from '@/utils/cardMask'
 
 export default function RecipientPicker({
   query,
@@ -22,8 +23,9 @@ export default function RecipientPicker({
       owner_name: `${user.first_name} ${user.last_name}`.trim(),
       owner_email: user.email,
       avatar_url: user.avatar_url,
-      masked_card_number: `${'*'.repeat(12)}${card.last_four}`,
+      masked_card_number: maskCardNumber(card.last_four, { brand: card.vendor }),
       last_four: card.last_four,
+      brand: card.vendor,
       card_id: card.card_id,
     })
   }
@@ -51,7 +53,7 @@ export default function RecipientPicker({
       </div>
 
       {selectedRecipient ? (
-        <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/8 px-3 py-2.5">
+        <div className="flex items-center gap-3 rounded-input border border-success/30 bg-success/8 px-3 py-2.5">
           <UserAvatar
             user={{
               first_name: selectedRecipient.owner_name?.split(' ')[0],
@@ -72,7 +74,7 @@ export default function RecipientPicker({
       ) : null}
 
       {showResults ? (
-        <div className="max-h-60 overflow-y-auto rounded-2xl border border-border bg-card shadow-sm">
+        <div className="max-h-60 overflow-y-auto rounded-surface border border-border bg-card shadow-sm">
           {isLoading ? (
             <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
