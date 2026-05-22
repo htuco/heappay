@@ -10,7 +10,7 @@ function DeactivatedNotice() {
 	const [visible, setVisible] = useState(isDeactivated)
 	if (!visible) return null
 	return (
-		<div className="mx-6 mt-6 flex items-start justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+		<div className="mx-6 mt-6 flex items-start justify-between gap-3 rounded-input border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
 			<p>Your account has been deactivated. If this was a mistake, contact support.</p>
 			<button
 				type="button"
@@ -34,7 +34,7 @@ export default function LoginPage() {
 			{/* Theme toggle */}
 			<button
 				onClick={toggle}
-				className="absolute top-4 right-4 z-50 p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition-colors"
+				className="absolute top-4 right-4 z-50 p-2 rounded-input bg-primary/20 hover:bg-primary/30 transition-colors"
 				aria-label="Toggle theme"
 			>
 				{isDark ? (

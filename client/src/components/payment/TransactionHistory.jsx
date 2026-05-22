@@ -12,14 +12,39 @@ import { useTransactions } from '@/hooks/useTransactions'
 import {
   TRANSACTION_STATUS_OPTIONS,
   TRANSACTION_TYPE_OPTIONS,
+  getTransactionStatus,
   transactionMatchesFilters,
   transactionMatchesLookup,
 } from '@/components/payment/transactionHistory.utils'
+
+const STATUS_DOT_BY_VARIANT = {
+  warning: 'bg-warning',
+  success: 'bg-success',
+  error: 'bg-destructive',
+  secondary: 'bg-muted-foreground/60',
+}
 
 const DATE_SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
 ]
+
+const MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  year: 'numeric',
+})
+
+function getTransactionMonthGroup(transaction) {
+  const date = new Date(transaction.created_at)
+  if (Number.isNaN(date.getTime())) {
+    return { key: 'unknown', label: 'Unknown date' }
+  }
+
+  return {
+    key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+    label: MONTH_LABEL_FORMATTER.format(date),
+  }
+}
 
 export default function TransactionHistory({ onTransactionSelect, pageSize = 20 }) {
   const [lookupValue, setLookupValue] = useState('')
@@ -44,6 +69,38 @@ export default function TransactionHistory({ onTransactionSelect, pageSize = 20 
 
   const hasTransactions = transactions.length > 0
   const hasFiltered = filteredTransactions.length > 0
+  const statusSummary = useMemo(() => {
+    const counts = new Map()
+    filteredTransactions.forEach((transaction) => {
+      const { label, variant } = getTransactionStatus(transaction.status_id)
+      const existing = counts.get(label)
+      if (existing) {
+        existing.count += 1
+      } else {
+        counts.set(label, { label, variant, count: 1 })
+      }
+    })
+    return Array.from(counts.values()).sort((a, b) => b.count - a.count)
+  }, [filteredTransactions])
+  const groupedTransactions = useMemo(() => {
+    const groups = []
+    const groupByKey = new Map()
+
+    filteredTransactions.forEach((transaction) => {
+      const { key, label } = getTransactionMonthGroup(transaction)
+      let group = groupByKey.get(key)
+
+      if (!group) {
+        group = { key, label, items: [] }
+        groupByKey.set(key, group)
+        groups.push(group)
+      }
+
+      group.items.push(transaction)
+    })
+
+    return groups
+  }, [filteredTransactions])
   const isFilterActive =
     lookupValue.trim() || dateFilter || statusFilter !== 'all' || typeFilter !== 'all' || dateSort !== 'newest'
 
@@ -127,6 +184,24 @@ export default function TransactionHistory({ onTransactionSelect, pageSize = 20 
         </div>
       ) : null}
 
+      {/* Status summary */}
+      {!error && !isLoading && hasFiltered && statusSummary.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {statusSummary.map(({ label, variant, count }) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1.5 rounded-chip border border-border/70 bg-card px-2.5 py-1 text-xs text-muted-foreground"
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_BY_VARIANT[variant] ?? 'bg-muted-foreground/60'}`}
+              />
+              <span className="font-semibold tabular-nums text-card-foreground">{count}</span>
+              <span>{label}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {/* Table */}
       <div className="overflow-hidden rounded-input border border-border/80 bg-card shadow-sm">
         {/* Column headers */}
@@ -152,13 +227,29 @@ export default function TransactionHistory({ onTransactionSelect, pageSize = 20 
         ) : null}
 
         {!error && !isLoading && hasFiltered ? (
-          <div className="divide-y divide-border/40">
-            {filteredTransactions.map((transaction) => (
-              <TransactionHistoryRow
-                key={transaction.transaction_id}
-                transaction={transaction}
-                onSelect={onTransactionSelect}
-              />
+          <div>
+            {groupedTransactions.map((group) => (
+              <section key={group.key} aria-label={`${group.label} transactions`}>
+                <div className="border-b border-border/50 bg-muted/20 px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {group.label}
+                    </p>
+                    <span className="rounded-chip bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground ring-1 ring-border/70">
+                      {group.items.length} transaction{group.items.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+                <div className="divide-y divide-border/40">
+                  {group.items.map((transaction) => (
+                    <TransactionHistoryRow
+                      key={transaction.transaction_id}
+                      transaction={transaction}
+                      onSelect={onTransactionSelect}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         ) : null}

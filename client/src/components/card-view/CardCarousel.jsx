@@ -261,7 +261,7 @@ export default function CardCarousel({ items, activeIndex: controlledIndex, onCh
 
   if (count === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-sm text-muted-foreground">
+      <div className="rounded-surface border border-dashed border-border bg-muted/30 p-8 text-sm text-muted-foreground">
         No cards available for carousel preview.
       </div>
     )

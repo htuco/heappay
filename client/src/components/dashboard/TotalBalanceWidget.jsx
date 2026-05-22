@@ -13,20 +13,20 @@ export default function TotalBalanceWidget({
   const visibleBalance = isBalanceVisible ? totalBalance : '••••••••'
 
   return (
-    <section className="balance-shine relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl bg-linear-to-br from-primary-light via-primary to-primary-dark p-7 text-white shadow-lg">
+    <section className="balance-shine relative flex h-full w-full flex-col justify-between overflow-hidden rounded-panel bg-linear-to-br from-primary-light via-primary to-primary-dark p-7 text-white shadow-lg">
       <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-12 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
 
       <div className="relative z-10 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="shrink-0 rounded-xl border border-white/20 bg-white/10 p-2.5 backdrop-blur">
+          <span className="shrink-0 rounded-input border border-white/20 bg-white/10 p-2.5 backdrop-blur">
             <TrendingUp className="h-4 w-4" strokeWidth={2} />
           </span>
           <p className="text-sm font-medium text-white/90">Total Balance</p>
         </div>
         <button
           type="button"
-          className="cursor-pointer rounded-full border border-white/20 bg-white/10 p-2 text-white/80 transition hover:text-white"
+          className="cursor-pointer rounded-input border border-white/20 bg-white/10 p-2 text-white/80 transition hover:text-white"
           onClick={() => setIsBalanceVisible((prev) => !prev)}
           aria-label="Toggle balance visibility"
           aria-pressed={!isBalanceVisible}
@@ -43,7 +43,7 @@ export default function TotalBalanceWidget({
         {isLoading ? (
           <div className="space-y-2">
             <div className="shimmer h-3 w-24 rounded-full" />
-            <div className="shimmer h-10 w-40 rounded-lg" />
+            <div className="shimmer h-10 w-40 rounded-input" />
           </div>
         ) : (
           <>
@@ -63,9 +63,9 @@ export default function TotalBalanceWidget({
         ) : null}
 
         {isLoading ? (
-          <div className="shimmer h-8 w-20 rounded-xl" />
+          <div className="shimmer h-8 w-20 rounded-input" />
         ) : monthlyGrowth != null ? (
-          <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-3 py-2 backdrop-blur">
+          <div className="flex items-center gap-2 rounded-input border border-white/20 bg-white/15 px-3 py-2 backdrop-blur">
             <ArrowUpRight className="h-4 w-4 text-white" strokeWidth={2.5} />
             <span className="tabular font-semibold text-white">{monthlyGrowth}</span>
           </div>
