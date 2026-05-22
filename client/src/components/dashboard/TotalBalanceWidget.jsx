@@ -7,6 +7,7 @@ export default function TotalBalanceWidget({
   monthlyGrowth = null,
   monthlyAmount = null,
   isLoading = false,
+  noMainCardCta,
 }) {
   const [isBalanceVisible, setIsBalanceVisible] = useState(true)
   const visibleBalance = isBalanceVisible ? totalBalance : '••••••••'
@@ -57,6 +58,10 @@ export default function TotalBalanceWidget({
       <hr className="relative z-10 mt-6 mb-5 border-white/25" />
 
       <div className="relative z-10 flex flex-wrap items-center gap-4 sm:gap-6">
+        {!isLoading && noMainCardCta ? (
+          <div className="ml-auto">{noMainCardCta}</div>
+        ) : null}
+
         {isLoading ? (
           <div className="shimmer h-8 w-20 rounded-xl" />
         ) : monthlyGrowth != null ? (

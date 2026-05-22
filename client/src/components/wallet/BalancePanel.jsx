@@ -1,4 +1,4 @@
-import { Wallet } from 'lucide-react'
+import { Star, Wallet } from 'lucide-react'
 
 function formatBalance(value) {
 	const num = Number(value ?? 0)
@@ -34,9 +34,17 @@ export default function BalancePanel({
 					</div>
 				) : hasCard ? (
 					<>
-						<p className="mt-5 font-mono text-sm tracking-widest text-primary-foreground/80">
-							{cardNumber}
-						</p>
+						<div className="mt-5 flex items-center gap-2">
+							<p className="font-mono text-sm tracking-widest text-primary-foreground/80">
+								{cardNumber}
+							</p>
+							{activeCard?.isMain && (
+								<span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold text-primary-foreground backdrop-blur">
+									<Star className="h-3 w-3 fill-primary-foreground" />
+									Main
+								</span>
+							)}
+						</div>
 						<p className="tabular mt-1 text-4xl font-bold leading-tight sm:text-5xl">
 							${balance}
 						</p>

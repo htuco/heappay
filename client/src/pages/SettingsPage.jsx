@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bell, Eye, KeyRound, Paintbrush } from 'lucide-react'
+import { Bell, CreditCard, Eye, KeyRound, Paintbrush } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
 import { updateNotificationPreferences } from '@/store/slices/authSlice'
+
+import { useWalletCards } from '@/hooks/useWalletCards'
 
 import ActionRow from '@/components/settings/ActionRow'
 import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
@@ -29,6 +31,7 @@ export default function SettingsPage() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
   const { user } = useAuth()
+  const { cards, setMainCard } = useWalletCards()
   const { preference: themePreference, isDark, setTheme } = useTheme()
 
   const [draftTheme, setDraftTheme] = useState(themePreference)
@@ -95,6 +98,49 @@ export default function SettingsPage() {
         <div className="xl:col-span-2">
           <ProfileSection />
         </div>
+
+        <SettingsCard
+          title="Default Card"
+          icon={CreditCard}
+          description="The card pre-selected for Top Up, Pay, and Transfer actions."
+        >
+          <div className="space-y-2">
+            {cards.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No payment cards found.</p>
+            ) : (
+              cards.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => !item.isMain && setMainCard(Number(item.id))}
+                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                    item.isMain
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'
+                  }`}
+                >
+                  <span
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      item.isMain ? 'border-primary bg-primary' : 'border-border'
+                    }`}
+                  >
+                    {item.isMain && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-sm font-medium text-card-foreground">
+                      {item.card.cardNumber}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {item.card.brand} · expires {item.card.expiryDate}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </SettingsCard>
 
         <SettingsCard
           title="Change Password"
