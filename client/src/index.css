@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -184,7 +185,15 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-input: 10px;
+
+  /* Heap shape scale — use these tokens for consistency.
+     Interactive controls = rounded-input (10px).
+     Surface tiers below are semantic; do not reach for raw rounded-* in components. */
+  --radius-input: 10px;     /* inputs, selects, textareas, buttons, segmented controls, toggles */
+  --radius-chip: 8px;       /* badges, status pills, tags */
+  --radius-surface: 16px;   /* info cards, list tiles, info boxes, settings cards */
+  --radius-panel: 24px;     /* page heroes, full-width panels, modals with prominence */
+  --radius-pill: 9999px;    /* full pills, avatars, switch knobs */
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -457,7 +466,7 @@
   }
 
   .add-card-preview {
-    @apply flex justify-center rounded-2xl border border-border bg-muted/30 px-3 py-4;
+    @apply flex justify-center rounded-surface border border-border bg-muted/30 px-3 py-4;
   }
 
   .add-card-preview .rccs {
@@ -470,7 +479,7 @@
 
   /* Solid preview variant for the AddCardModal — no gradients, no patterns. */
   .add-card-preview--solid {
-    @apply relative flex w-full items-center justify-center overflow-hidden rounded-[20px] border border-slate-200 bg-white px-0 py-4 dark:border-[#3a3a3a] dark:bg-[#262626];
+    @apply relative flex w-full items-center justify-center overflow-hidden rounded-panel border border-slate-200 bg-white px-0 py-4 dark:border-[#3a3a3a] dark:bg-[#262626];
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
     min-height: 230px;
   }
