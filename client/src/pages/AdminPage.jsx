@@ -37,12 +37,12 @@ export default function AdminPage() {
         <div className="h-8 w-48 rounded bg-muted" />
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-2xl bg-muted" />
+            <div key={i} className="h-24 rounded-surface bg-muted" />
           ))}
         </div>
         <div className="grid gap-4 xl:grid-cols-12">
-          <div className="h-96 rounded-2xl bg-muted xl:col-span-7" />
-          <div className="h-96 rounded-2xl bg-muted xl:col-span-5" />
+          <div className="h-96 rounded-surface bg-muted xl:col-span-7" />
+          <div className="h-96 rounded-surface bg-muted xl:col-span-5" />
         </div>
       </div>
     )

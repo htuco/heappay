@@ -1,16 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
-
-
-class TransactionPartyResponse(BaseModel):
-    card_id: int
-    last_four: str
-    cardholder_name: str | None
-    user_id: int
-    full_name: str | None
-    email: str | None
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, model_validator
 
 
 class TransactionCreate(BaseModel):
@@ -51,6 +42,29 @@ class TransactionSummaryResponse(BaseModel):
     months: int
 
 
+class TransactionPartyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    card_id: int
+    user_id: int
+    last_four: str | None
+    brand: str | None = Field(default=None, validation_alias=AliasPath("card_type", "vendor"))
+    cardholder_name: str | None
+    email: str | None = Field(default=None, validation_alias=AliasPath("user", "email"))
+    first_name: str | None = Field(
+        default=None, validation_alias=AliasPath("user", "first_name")
+    )
+    last_name: str | None = Field(
+        default=None, validation_alias=AliasPath("user", "last_name")
+    )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def full_name(self) -> str | None:
+        value = " ".join(part for part in [self.first_name, self.last_name] if part).strip()
+        return value or self.cardholder_name or None
+
+
 class TransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -63,8 +77,10 @@ class TransactionResponse(BaseModel):
     note: str | None
     created_at: datetime
     has_pending_refund: bool = False
-    sender: TransactionPartyResponse | None = None
-    recipient: TransactionPartyResponse | None = None
+    sender: TransactionPartyResponse | None = Field(
+        default=None, validation_alias=AliasPath("sender_card")
+    )
+    recipient: TransactionPartyResponse = Field(validation_alias=AliasPath("recipient_card"))
 
     @model_validator(mode="before")
     @classmethod

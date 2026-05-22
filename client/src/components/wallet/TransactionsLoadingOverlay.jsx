@@ -72,7 +72,7 @@ export default function TransactionsLoadingOverlay() {
     <div
       role="status"
       aria-live="polite"
-      className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-background/85"
+      className="absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-background/85"
     >
       <div className="flex flex-col items-center justify-center text-center">
         <div className="flex h-44 w-56 items-center justify-center sm:h-52 sm:w-64">

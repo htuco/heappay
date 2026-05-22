@@ -18,6 +18,7 @@ export class CardFkError extends Error {
  * @property {string} expires_at
  * @property {string} created_at
  * @property {string | null} deleted_at
+ * @property {boolean} is_main
  */
 
 /**
@@ -41,6 +42,7 @@ export class CardFkError extends Error {
  * @typedef {Object} PaymentCardItem
  * @property {string} id
  * @property {Card} source
+ * @property {boolean} isMain
  * @property {Object} card
  * @property {string} card.cardHolderName
  * @property {string} card.cardNumber
