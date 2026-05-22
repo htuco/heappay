@@ -57,7 +57,7 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
 
         {selectedUser && (
           <div className="space-y-5">
-            <div className="grid gap-3 rounded-2xl border border-border bg-background p-4 sm:grid-cols-2">
+            <div className="grid gap-3 rounded-surface border border-border bg-background p-4 sm:grid-cols-2">
               <div>
                 <p className="text-xs uppercase tracking-widest text-muted-foreground">Name</p>
                 <p className="mt-1 font-medium text-card-foreground">{selectedUser.fullName}</p>
@@ -96,7 +96,7 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-background p-4 space-y-3">
+            <div className="rounded-surface border border-border bg-background p-4 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Edit User</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
@@ -129,7 +129,7 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
                 {selectedUser.cards.map((item) => (
                   <article
                     key={`${selectedUser.id}-${item.id}`}
-                    className="rounded-2xl border border-border bg-card p-3"
+                    className="rounded-surface border border-border bg-card p-3"
                   >
                     <p className="text-sm font-semibold text-card-foreground">{item.card.cardHolderName}</p>
                     <p className="mt-1 text-xs text-muted-foreground">

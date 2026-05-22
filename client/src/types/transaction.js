@@ -25,6 +25,22 @@ export const TRANSACTION_API_ERROR_CODES = Object.freeze({
  * @property {string} amount - Decimal string from the API (e.g. "100.00")
  * @property {string | null} note
  * @property {string} created_at
+ * @property {TransactionParty | null=} sender
+ * @property {TransactionParty=} recipient
+ */
+
+/**
+ * User/card summary attached to a transaction side.
+ * @typedef {Object} TransactionParty
+ * @property {number} card_id
+ * @property {number} user_id
+ * @property {string | null=} first_name
+ * @property {string | null=} last_name
+ * @property {string | null=} full_name
+ * @property {string | null=} email
+ * @property {string | null=} cardholder_name
+ * @property {string | null=} brand
+ * @property {string | null=} last_four
  */
 
 /**

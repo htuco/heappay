@@ -27,18 +27,22 @@ export default function Layout() {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       {!isLanding && (
-        <aside className="w-64 shrink-0 border-r border-border/60 bg-card flex flex-col h-screen sticky top-0">
-          <div className="px-6 py-6">
+        <aside className="w-60 shrink-0 border-r border-sidebar-border bg-sidebar flex flex-col h-screen sticky top-0">
+          <div className="flex h-[85px] items-center border-b border-sidebar-border/70 px-5">
             <Link
               to="/"
-              className="flex items-center gap-2 text-2xl font-bold tracking-tight text-primary"
-              style={{ letterSpacing: '-0.02em' }}
+              className="flex min-w-0 items-center gap-3 text-sidebar-foreground"
             >
-              <img src={logo} alt="Heap logo" className="h-7 w-auto shrink-0" />
-              Heap
+              <img src={logo} alt="Heap logo" className="h-8 w-auto shrink-0" />
+              <span className="min-w-0">
+                <span className="block text-xl font-bold leading-5 text-primary">Heap</span>
+                <span className="mt-1 block truncate text-[11px] font-medium text-muted-foreground">
+                  Smart finance
+                </span>
+              </span>
             </Link>
           </div>
-          <div className="flex-1 px-4 pb-6 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto px-3.5 py-5">
             <Navbar />
           </div>
         </aside>
@@ -64,7 +68,7 @@ export default function Layout() {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggle}
-                className="nav-pill p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                className="nav-pill p-2 rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 aria-label="Toggle theme"
               >
                 {isDark ? <Sun className="h-4.5 w-4.5" strokeWidth={2} /> : <Moon className="h-4.5 w-4.5" strokeWidth={2} />}

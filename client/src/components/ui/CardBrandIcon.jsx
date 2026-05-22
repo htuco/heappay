@@ -1,21 +1,25 @@
-import { PaymentIcon } from 'react-svg-credit-card-payment-icons'
+import { PaymentIcon, getCardType } from 'react-svg-credit-card-payment-icons'
 
-const ALIAS = {
+const BRAND_ICON_ALIASES = {
   visa: 'Visa',
+  'visa-electron': 'Visa',
   mastercard: 'Mastercard',
   master: 'Mastercard',
   'master-card': 'Mastercard',
-  amex: 'Amex',
-  'american-express': 'Amex',
-  'american express': 'Amex',
+  amex: 'AmericanExpress',
+  'american-express': 'AmericanExpress',
+  'american express': 'AmericanExpress',
+  americanexpress: 'AmericanExpress',
   discover: 'Discover',
   diners: 'DinersClub',
   'diners-club': 'DinersClub',
+  'diners club': 'DinersClub',
   dinersclub: 'DinersClub',
   jcb: 'JCB',
   maestro: 'Maestro',
   unionpay: 'UnionPay',
   'union-pay': 'UnionPay',
+  'union pay': 'UnionPay',
   elo: 'Elo',
   hipercard: 'Hipercard',
   hiper: 'Hiper',
@@ -25,19 +29,25 @@ const ALIAS = {
   swish: 'Swish',
 }
 
-function detect(cardNumber) {
-  if (!cardNumber) return null
-  const digits = String(cardNumber).replace(/\D/g, '')
-  if (/^4/.test(digits)) return 'Visa'
-  if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard'
-  if (/^3[47]/.test(digits)) return 'Amex'
-  if (/^6(011|5|4[4-9])/.test(digits)) return 'Discover'
-  return null
+function resolveIconType(cardNumber, brand) {
+  const normalizedBrand = String(brand ?? '').trim().toLowerCase()
+  if (BRAND_ICON_ALIASES[normalizedBrand]) return BRAND_ICON_ALIASES[normalizedBrand]
+
+  const digits = String(cardNumber ?? '').replace(/\D/g, '')
+  return digits ? getCardType(digits) : 'Generic'
 }
 
-export function CardBrandIcon({ cardNumber, brand, width = 44, format = 'flatRounded' }) {
-  const type = (brand && ALIAS[brand.toLowerCase().trim()]) ?? detect(cardNumber) ?? 'Generic'
-  return <PaymentIcon type={type} format={format} width={width} />
+export default function CardBrandIcon({
+  cardNumber,
+  brand,
+  width = 42,
+  format = 'flatRounded',
+}) {
+  return (
+    <PaymentIcon
+      type={resolveIconType(cardNumber, brand)}
+      format={format}
+      width={width}
+    />
+  )
 }
-
-export default CardBrandIcon
