@@ -253,7 +253,7 @@ export default function LandingPage() {
 
           {/* ─ Left: copy ─ */}
           <div className="order-2 lg:order-1 space-y-8 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/8 px-3.5 py-1.5 text-xs font-semibold text-primary">
+            <div className="inline-flex items-center gap-2 rounded-chip border border-primary/30 bg-primary/8 px-3.5 py-1.5 text-xs font-semibold text-primary">
               <Zap className="h-3.5 w-3.5" />
               Live card previews · 11 card networks
             </div>
@@ -360,19 +360,19 @@ export default function LandingPage() {
           </div>
 
           {/* Browser-style mockup */}
-          <div className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border/60 bg-card">
+          <div className="relative mx-auto max-w-4xl overflow-hidden rounded-surface border border-border/60 bg-card">
             {/* Window chrome */}
             <div className="flex items-center gap-2 border-b border-border/60 bg-muted/40 px-4 py-3">
               <span className="h-3 w-3 rounded-full bg-red-400/80" />
               <span className="h-3 w-3 rounded-full bg-yellow-400/80" />
               <span className="h-3 w-3 rounded-full bg-green-400/80" />
-              <span className="ml-4 truncate rounded-md bg-background/80 px-3 py-1 text-xs text-muted-foreground">heap.app/dashboard</span>
+              <span className="ml-4 truncate rounded-chip bg-background/80 px-3 py-1 text-xs text-muted-foreground">heap.app/dashboard</span>
             </div>
 
             {/* Dashboard body */}
             <div className="grid gap-5 p-6 sm:grid-cols-3">
               {/* Total balance card */}
-              <div className="sm:col-span-2 rounded-xl bg-gradient-to-br from-primary-light via-primary to-primary-dark p-6 text-white">
+              <div className="sm:col-span-2 rounded-input bg-gradient-to-br from-primary-light via-primary to-primary-dark p-6 text-white">
                 <p className="text-xs font-medium uppercase tracking-widest text-white/70">Total balance</p>
                 <p className="mt-2 text-4xl font-extrabold tracking-tight">$12,847.59</p>
                 <div className="mt-4 flex items-center gap-2 text-xs">
@@ -384,19 +384,19 @@ export default function LandingPage() {
               </div>
 
               {/* Quick stat */}
-              <div className="rounded-xl border border-border/60 bg-background p-5">
+              <div className="rounded-input border border-border/60 bg-background p-5">
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">This month</p>
                 <p className="mt-2 text-2xl font-bold">$2,341</p>
                 <p className="mt-1 text-xs text-muted-foreground">42 transactions</p>
                 <div className="mt-3 flex items-end gap-1 h-10">
                   {[40, 65, 35, 78, 52, 88, 70].map((h, i) => (
-                    <div key={i} className="flex-1 rounded-sm bg-primary/30" style={{ height: `${h}%` }} />
+                    <div key={i} className="flex-1 rounded-chip bg-primary/30" style={{ height: `${h}%` }} />
                   ))}
                 </div>
               </div>
 
               {/* Recent activity */}
-              <div className="sm:col-span-3 rounded-xl border border-border/60 bg-background">
+              <div className="sm:col-span-3 rounded-input border border-border/60 bg-background">
                 <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
                   <p className="text-sm font-semibold">Recent activity</p>
                   <span className="text-xs text-muted-foreground">Last 24h</span>
@@ -443,9 +443,9 @@ export default function LandingPage() {
           {FEATURES.map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
-              className="group flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-primary/30 hover:shadow-lg"
+              className="group flex flex-col gap-4 rounded-surface border border-border/60 bg-card p-6 transition-all duration-200 hover:border-primary/30 hover:shadow-lg"
             >
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-input bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                 <Icon className="h-5 w-5" />
               </span>
               <div>
@@ -471,7 +471,7 @@ export default function LandingPage() {
 
             {STEPS.map(({ n, title, desc }) => (
               <div key={n} className="flex flex-col items-center gap-4 text-center">
-                <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground shadow-lg">
+                <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-surface bg-primary text-lg font-extrabold text-primary-foreground shadow-lg">
                   {n}
                 </span>
                 <h3 className="font-bold">{title}</h3>
@@ -493,7 +493,7 @@ export default function LandingPage() {
 
         <div className="grid gap-5 md:grid-cols-2">
           {/* Old way */}
-          <div className="rounded-2xl border border-border/60 bg-card p-7">
+          <div className="rounded-surface border border-border/60 bg-card p-7">
             <div className="mb-5 flex items-center gap-3">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground text-sm font-bold">×</span>
               <h3 className="font-bold text-muted-foreground">Traditional banking</h3>
@@ -515,7 +515,7 @@ export default function LandingPage() {
           </div>
 
           {/* Heap */}
-          <div className="rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 to-transparent p-7 shadow-lg">
+          <div className="rounded-surface border-2 border-primary/40 bg-gradient-to-br from-primary/5 to-transparent p-7 shadow-lg">
             <div className="mb-5 flex items-center gap-3">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
                 <ShieldCheck className="h-4 w-4" />
@@ -542,8 +542,8 @@ export default function LandingPage() {
 
       {/* ── SECURITY STRIP ── */}
       <section className="mx-auto w-full max-w-6xl px-5 py-16">
-        <div className="flex flex-col items-center gap-6 rounded-3xl border border-primary/20 bg-primary/5 px-8 py-12 text-center sm:flex-row sm:text-left">
-          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <div className="flex flex-col items-center gap-6 rounded-panel border border-primary/20 bg-primary/5 px-8 py-12 text-center sm:flex-row sm:text-left">
+          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-surface bg-primary/10 text-primary">
             <Lock className="h-7 w-7" />
           </span>
           <div>
@@ -569,7 +569,7 @@ export default function LandingPage() {
 
           <div className="grid gap-5 sm:grid-cols-3">
             {TESTIMONIALS.map(({ name, role, quote }) => (
-              <div key={name} className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-6">
+              <div key={name} className="flex flex-col gap-4 rounded-surface border border-border/60 bg-card p-6">
                 <div className="flex gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-primary text-primary" />
