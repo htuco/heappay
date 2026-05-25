@@ -76,7 +76,18 @@ class TransactionResponse(BaseModel):
     amount: Decimal
     note: str | None
     created_at: datetime
+    has_pending_refund: bool = False
     sender: TransactionPartyResponse | None = Field(
         default=None, validation_alias=AliasPath("sender_card")
     )
     recipient: TransactionPartyResponse = Field(validation_alias=AliasPath("recipient_card"))
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_has_pending_refund(cls, values):
+        detail = getattr(values, "refund_detail", None)
+        if detail is not None:
+            request = getattr(detail, "request", None)
+            if request is not None and getattr(request, "request_status_id", None) == 1:
+                values.__dict__["has_pending_refund"] = True
+        return values

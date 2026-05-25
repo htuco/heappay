@@ -44,7 +44,10 @@ export function useAuth() {
 	const isHydrated = status !== 'idle' && status !== 'loading'
 	const isAuthenticated = status === 'authenticated'
 	const isAdmin = user?.role_name === 'admin'
+	const isSupport = user?.role_name === 'support'
+	const isManager = user?.role_name === 'manager'
+	const isStaff = isAdmin || isManager || isSupport
 	const hasRole = (roleName) => user?.role_name === roleName
 
-	return { user, isLoading, isHydrated, isAuthenticated, error, login, register, updateProfile, uploadProfileAvatar, logout, isAdmin, hasRole }
+	return { user, isLoading, isHydrated, isAuthenticated, error, login, register, updateProfile, uploadProfileAvatar, logout, isAdmin, isSupport, isManager, isStaff, hasRole }
 }

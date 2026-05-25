@@ -97,7 +97,7 @@ class FakeCardService:
 def _build_client(user_id: int = 10, is_admin: bool = False) -> tuple[TestClient, FakeCardService]:
     app = create_app()
     fake_service = FakeCardService()
-    ctx = UserContext(user_id=user_id, is_admin=is_admin)
+    ctx = UserContext(user_id=user_id, is_admin=is_admin, is_staff=is_admin)
     app.dependency_overrides[get_user_context] = lambda: ctx
     app.dependency_overrides[get_card_service] = lambda: fake_service
     client = TestClient(app)

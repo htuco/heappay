@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { AlertTriangle, MessageSquareText } from 'lucide-react'
+import { AlertTriangle, Loader2, MessageSquareText } from 'lucide-react'
 
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import transactionsService from '@/services/transactionsService'
 
 const REFUND_REASONS = [
   'Duplicate payment',
@@ -40,12 +41,16 @@ export default function PaymentPage() {
   const [cancelConfirmationId, setCancelConfirmationId] = useState('')
   const [refundReason, setRefundReason] = useState(REFUND_REASONS[0])
   const [refundOtherReason, setRefundOtherReason] = useState('')
+  const [isSubmittingRefund, setIsSubmittingRefund] = useState(false)
+  const [refundError, setRefundError] = useState(null)
+  const [refundedTransactionIds, setRefundedTransactionIds] = useState(new Set())
   const cancelTransactionId = getTransactionId(transactionToCancel)
   const refundTransactionId = getTransactionId(transactionToRefund)
   const isCancelConfirmed =
     Boolean(cancelTransactionId) && cancelConfirmationId.trim() === String(cancelTransactionId)
   const resolvedRefundReason = refundReason === 'Other' ? refundOtherReason.trim() : refundReason
-  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason)
+  const refundAlreadyPending = refundTransactionId !== null && refundedTransactionIds.has(refundTransactionId)
+  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason) && !isSubmittingRefund && !refundAlreadyPending
 
   function closeCancelPreview() {
     setTransactionToCancel(null)
@@ -56,10 +61,26 @@ export default function PaymentPage() {
     setTransactionToRefund(null)
     setRefundReason(REFUND_REASONS[0])
     setRefundOtherReason('')
+    setRefundError(null)
+  }
+
+  async function handleSubmitRefund() {
+    if (!canSubmitRefundRequest) return
+    setIsSubmittingRefund(true)
+    setRefundError(null)
+    try {
+      await transactionsService.requestRefund(refundTransactionId, resolvedRefundReason)
+      setRefundedTransactionIds((prev) => new Set(prev).add(refundTransactionId))
+      closeRefundPreview()
+    } catch (err) {
+      setRefundError(err?.message ?? 'Failed to submit refund request.')
+    } finally {
+      setIsSubmittingRefund(false)
+    }
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <TransactionHistory onTransactionSelect={setSelectedTransaction} />
       <TransactionDetailPanel
         open={Boolean(selectedTransaction)}
@@ -67,6 +88,7 @@ export default function PaymentPage() {
         onClose={() => setSelectedTransaction(null)}
         onCancel={setTransactionToCancel}
         onRefund={setTransactionToRefund}
+        refundRequestedTransactionIds={refundedTransactionIds}
       />
       <DialogRoot
         open={Boolean(transactionToCancel)}
@@ -215,12 +237,23 @@ export default function PaymentPage() {
                   Keep payment
                 </Button>
               </DialogClose>
+              {refundAlreadyPending && (
+                <p className="col-span-2 -mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  A refund request for this transaction is already pending review.
+                </p>
+              )}
+              {refundError && (
+                <p className="col-span-2 -mt-1 text-xs text-destructive">{refundError}</p>
+              )}
               <Button
                 className="h-11 rounded-input bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 disabled:bg-slate-200 disabled:text-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
                 disabled={!canSubmitRefundRequest}
-                onClick={closeRefundPreview}
+                onClick={handleSubmitRefund}
               >
-                Submit request
+                {isSubmittingRefund ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : null}
+                {isSubmittingRefund ? 'Submitting…' : 'Submit request'}
               </Button>
             </DialogFooter>
           </div>

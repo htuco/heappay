@@ -22,6 +22,7 @@ class UserRepository:
     def list_users(
         self,
         *,
+        q: str | None,
         email: str | None,
         status_id: int | None,
         user_role_id: int | None,
@@ -30,6 +31,15 @@ class UserRepository:
         offset: int,
     ) -> list[User]:
         stmt: Select[tuple[User]] = select(User).order_by(User.user_id)
+        if q is not None:
+            pattern = f"%{q}%"
+            stmt = stmt.where(
+                or_(
+                    User.email.ilike(pattern),
+                    User.first_name.ilike(pattern),
+                    User.last_name.ilike(pattern),
+                )
+            )
         if email is not None:
             stmt = stmt.where(User.email == email)
         if status_id is not None:

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.user.user import UserRepository
-from routes.dependencies import get_current_user_id, require_admin
+from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.response import ApiResponse
 from schemas.user.crud import UserCreateRequest, UserResponse, UserSearchResponse, UserUpdateRequest
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
@@ -39,16 +39,18 @@ def _user_response_with_signed_avatar(row) -> UserResponse:
 
 @router.get("", response_model=list[UserResponse])
 def list_users(
+    q: str | None = Query(default=None),
     email: str | None = Query(default=None),
     status_id: int | None = Query(default=None, ge=1),
     user_role_id: int | None = Query(default=None, ge=1),
     include_deleted: bool = Query(default=False),
     limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
-    _: int = Depends(require_admin),
+    _: int = Depends(require_staff),
     service: UserService = Depends(get_user_service),
 ) -> list[UserResponse]:
     rows = service.list_users(
+        q=q.strip() if q else None,
         email=email,
         status_id=status_id,
         user_role_id=user_role_id,
@@ -150,3 +152,31 @@ def delete_user(
     except UserNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Suspend / Activate (staff) ───────────────────────────────────────────────
+
+@router.post("/{user_id}/suspend", response_model=UserResponse, summary="(Staff) Suspend a user account.")
+def suspend_user(
+    user_id: int,
+    _: int = Depends(require_staff),
+    service: UserService = Depends(get_user_service),
+) -> UserResponse:
+    try:
+        row = service.update_user(user_id, UserUpdateRequest(status_id=3))
+    except UserNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
+    return UserResponse.model_validate(row)
+
+
+@router.post("/{user_id}/activate", response_model=UserResponse, summary="(Staff) Activate a user account.")
+def activate_user(
+    user_id: int,
+    _: int = Depends(require_staff),
+    service: UserService = Depends(get_user_service),
+) -> UserResponse:
+    try:
+        row = service.update_user(user_id, UserUpdateRequest(status_id=1))
+    except UserNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
+    return UserResponse.model_validate(row)

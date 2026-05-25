@@ -48,7 +48,8 @@ export function formatTransactionDateInputValue(value) {
   return `${year}-${month}-${day}`
 }
 
-export function getTransactionStatus(statusId) {
+export function getTransactionStatus(statusId, hasPendingRefund = false) {
+  if (hasPendingRefund && statusId === 2) return { label: 'Refund Requested', variant: 'warning' }
   if (statusId === 1) return { label: 'Pending', variant: 'warning' }
   if (statusId === 2) return { label: 'Completed', variant: 'success' }
   if (statusId === 3) return { label: 'Failed', variant: 'error' }
