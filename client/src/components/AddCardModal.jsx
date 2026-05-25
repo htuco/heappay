@@ -176,19 +176,21 @@ export default function AddCardModal({
         </span>
       </div>
 
-      <div className="add-card-preview add-card-preview--solid">
-        <Cards
-          number={form.number}
-          expiry={form.expiry}
-          cvc={form.cvv}
-          name={form.name}
-          focused={focused}
-          issuer={issuer}
-          placeholders={{ name: "CARD HOLDER" }}
-        />
+      <div className="flex flex-1 items-center justify-center">
+        <div className="add-card-preview add-card-preview--solid">
+          <Cards
+            number={form.number}
+            expiry={form.expiry}
+            cvc={form.cvv}
+            name={form.name}
+            focused={focused}
+            issuer={issuer}
+            placeholders={{ name: "CARD HOLDER" }}
+          />
+        </div>
       </div>
 
-      <div className="flex items-start gap-2.5 rounded-surface border border-border bg-card p-3.5 shadow-sm">
+      <div className="mt-auto flex items-start gap-2.5 rounded-surface border border-border bg-card p-3.5">
         <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-chip bg-muted text-muted-foreground">
           <ShieldCheck className="h-4 w-4" strokeWidth={2.2} />
         </span>
