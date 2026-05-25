@@ -87,6 +87,16 @@ export async function restoreCard(cardId) {
   return data
 }
 
+export async function blockCard(cardId) {
+  const { data } = await api.post(`/cards/${cardId}/block`)
+  return data
+}
+
+export async function unblockCard(cardId) {
+  const { data } = await api.post(`/cards/${cardId}/unblock`)
+  return data
+}
+
 export async function getMainCard(userId) {
   const { data } = await api.get('/cards/main', { params: { user_id: userId } })
   return data

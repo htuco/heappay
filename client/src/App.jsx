@@ -2,6 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import Layout from './components/Layout'
 import AdminPage from './pages/AdminPage'
+import SupportPage from './pages/SupportPage'
+import SupportUsersPage from './pages/SupportUsersPage'
+import SupportTicketsPage from './pages/SupportTicketsPage'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
 import PaymentPage from './pages/PaymentPage'
@@ -37,6 +40,23 @@ function AdminRoute({ children }) {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (!isAdmin) return <Navigate to="/dashboard" replace />
+
+  return children
+}
+
+function StaffRoute({ children }) {
+  const { isHydrated, isAuthenticated, isStaff } = useAuth()
+
+  if (!isHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isStaff) return <Navigate to="/dashboard" replace />
 
   return children
 }
@@ -80,6 +100,9 @@ export default function App() {
       {/* App shell routes */}
       <Route element={<Layout />}>
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+        <Route path="/support" element={<StaffRoute><Navigate to="/support/users" replace /></StaffRoute>} />
+        <Route path="/support/users" element={<StaffRoute><SupportUsersPage /></StaffRoute>} />
+        <Route path="/support/tickets" element={<StaffRoute><SupportTicketsPage /></StaffRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
         <Route path="/payments" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
