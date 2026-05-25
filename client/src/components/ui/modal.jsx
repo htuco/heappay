@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
 
 const modalVariants = cva(
-  "bg-background border border-border/60 rounded-panel w-full max-h-[90vh] overflow-auto relative transition-all duration-200",
+  "bg-background border border-border/60 rounded-panel w-full max-h-[90vh] overflow-auto relative animate-in fade-in-0 zoom-in-85 slide-in-from-bottom-14 duration-500 ease-[cubic-bezier(0.34,1.45,0.64,1)]",
   {
     variants: {
       size: {
@@ -56,10 +56,7 @@ const Modal = forwardRef(
 
     return (
       <div
-        className={cn(
-          "fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 transition-opacity duration-200",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4 backdrop-blur-[3px] animate-in fade-in-0 duration-200"
         onClick={handleBackdropClick}
         role="dialog"
         aria-modal="true"
@@ -70,7 +67,6 @@ const Modal = forwardRef(
           ref={ref}
           className={cn(
             modalVariants({ size }),
-            isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95",
             isSplit && "overflow-hidden",
             className
           )}
