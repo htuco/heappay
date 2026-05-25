@@ -27,7 +27,7 @@ export default function AdminUsersPanel({
 
   return (
     <article
-      className={`rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5 xl:col-span-7 ${
+      className={`rounded-panel border border-border bg-card p-4 shadow-sm sm:p-5 xl:col-span-7 ${
         activeSection === 'cards' ? 'xl:order-2' : ''
       }`}
     >
@@ -66,7 +66,7 @@ export default function AdminUsersPanel({
       </div>
 
       {paginatedUsers.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-background/50 p-6 text-center">
+        <div className="rounded-surface border border-dashed border-border bg-background/50 p-6 text-center">
           <p className="font-medium text-card-foreground">No users found</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Try different filters or reset the current search criteria.
@@ -77,7 +77,7 @@ export default function AdminUsersPanel({
         </div>
       ) : (
         <>
-          <div className="hidden overflow-x-auto rounded-2xl border border-border md:block">
+          <div className="hidden overflow-x-auto rounded-surface border border-border md:block">
             <table className="w-full min-w-[620px] table-fixed text-left text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-widest text-muted-foreground">
                 <tr>
@@ -142,7 +142,7 @@ export default function AdminUsersPanel({
             {paginatedUsers.map((user) => (
               <article
                 key={user.id}
-                className={`rounded-2xl border bg-background p-3 transition-colors ${
+                className={`rounded-surface border bg-background p-3 transition-colors ${
                   !showAllCards && focusedUserId === user.id
                     ? 'border-primary/40 ring-1 ring-primary/30'
                     : 'border-border'

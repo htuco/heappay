@@ -27,7 +27,7 @@ function Toast({ notification, onDismiss }) {
 	return (
 		<div
 			className={cn(
-				'flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur-sm',
+				'flex items-start gap-3 rounded-surface border px-4 py-3 text-sm shadow-lg backdrop-blur-sm',
 				'w-80 max-w-[calc(100vw-2.5rem)]',
 				container,
 			)}

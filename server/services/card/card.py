@@ -26,6 +26,10 @@ class DuplicateCardNumberError(Exception):
     """A card with this number is already registered."""
 
 
+class CardDoesNotBelongToUserError(Exception):
+    """Card does not belong to the requesting user."""
+
+
 class CardService:
     def __init__(self, repo: CardRepository) -> None:
         self._repo = repo
@@ -95,11 +99,29 @@ class CardService:
             changes["last_four"] = changes["card_numb"][-4:]
         return self._repo.update(row, changes)
 
+    def get_main_card(self, user_id: int) -> Card | None:
+        return self._repo.get_main_card(user_id)
+
+    def set_main_card(self, user_id: int, card_id: int) -> Card:
+        card = self._repo.get_by_id(card_id, include_deleted=False)
+        if card is None:
+            raise CardNotFoundError()
+        if card.user_id != user_id:
+            raise CardDoesNotBelongToUserError()
+        result = self._repo.set_main_card(user_id, card_id)
+        if result is None:
+            raise CardNotFoundError()
+        return result
+
     def delete(self, card_id: int) -> None:
         row = self._repo.get_by_id(card_id, include_deleted=False)
         if row is None:
             raise CardNotFoundError()
+        was_main = row.is_main
+        user_id = row.user_id
         self._repo.soft_delete(row)
+        if was_main:
+            self._repo._promote_next_main_card(user_id)
 
     def lookup_by_card_number(self, card_numb: str) -> tuple[Card, User] | None:
         return self._repo.lookup_by_card_number(card_numb)

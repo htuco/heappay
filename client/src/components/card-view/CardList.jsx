@@ -7,7 +7,7 @@ import PaymentCard from '@/components/payment-card/PaymentCard'
 export default function CardList({ items }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-surface border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
         No cards.
       </div>
     )

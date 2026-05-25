@@ -104,7 +104,7 @@ function ManageCardDialogBody({ card, onUpdate, onDelete, isAdmin, cardStatuses 
 
       <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]">
         <section className="border-b border-border bg-muted/30 px-5 py-6 sm:px-6 lg:border-b-0 lg:border-r">
-          <div className="manage-card-preview mx-auto max-w-sm rounded-2xl border border-border bg-background p-4 shadow-sm">
+          <div className="manage-card-preview mx-auto max-w-sm rounded-panel border border-border bg-background p-4 shadow-sm">
             <PaymentCard card={previewCard} />
           </div>
 
