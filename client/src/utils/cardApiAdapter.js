@@ -31,6 +31,7 @@ export function normalizeApiCard(card, typesById, statusesById, holderName) {
     source: card,
     balance: card.balance ?? '0.00',
     isMain: card.is_main ?? false,
+    hasPending: card.has_pending ?? false,
     card: {
       cardHolderName: card.cardholder_name || holderName || 'Card holder',
       cardNumber: maskCardNumber(card.masked_card_number, { brand }),
@@ -104,5 +105,6 @@ export function buildCreateCardPayload({ cardInput, userId, cardTypes, cardStatu
     cvc: cardInput.cvv,
     expires_at: expiryInputToApiDate(cardInput.expiry),
     cardholder_name: cardInput.name?.trim() || null,
+    is_main: Boolean(cardInput.isPrimary),
   }
 }
