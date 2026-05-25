@@ -55,12 +55,23 @@ export const registerUser = createAsyncThunk(
 
 export const updateProfileUser = createAsyncThunk(
   'auth/updateProfileUser',
-  async ({ firstName, lastName, email }, { rejectWithValue }) => {
+  async ({ firstName, lastName, email, avatarUrl }, { rejectWithValue }) => {
     try {
-      const user = await authService.updateProfile({ firstName, lastName, email })
+      const user = await authService.updateProfile({ firstName, lastName, email, avatarUrl })
       return user
     } catch (error) {
       return rejectWithValue(getApiErrorMessage(error, 'Profile update failed.'))
+    }
+  },
+)
+
+export const uploadProfileAvatarUser = createAsyncThunk(
+  'auth/uploadProfileAvatarUser',
+  async (file, { rejectWithValue }) => {
+    try {
+      return await authService.uploadProfileAvatar(file)
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Could not upload profile photo.'))
     }
   },
 )
@@ -149,12 +160,20 @@ const authSlice = createSlice({
         state.status = 'authenticated'
         state.error = null
       })
-      .addCase(updateNotificationPreferences.fulfilled, (state, action) => {
+      .addCase(uploadProfileAvatarUser.fulfilled, (state, action) => {
         state.user = action.payload
+        state.status = 'authenticated'
         state.error = null
       })
       .addCase(updateProfileUser.rejected, (state, action) => {
         state.error = action.payload ?? 'Profile update failed.'
+      })
+      .addCase(updateNotificationPreferences.fulfilled, (state, action) => {
+        state.user = action.payload
+        state.error = null
+      })
+      .addCase(uploadProfileAvatarUser.rejected, (state, action) => {
+        state.error = action.payload ?? 'Could not upload profile photo.'
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null

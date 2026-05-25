@@ -34,13 +34,30 @@ export async function getMe() {
 	return user
 }
 
-export async function updateProfile({ firstName, lastName, email }) {
-	const { data } = await api.patch('/auth/me', {
-		first_name: firstName,
-		last_name: lastName,
-		email,
-	})
+export async function updateProfile({ firstName, lastName, email, avatarUrl } = {}) {
+	const payload = {}
+	if (firstName !== undefined) payload.first_name = firstName
+	if (lastName !== undefined) payload.last_name = lastName
+	if (email !== undefined) payload.email = email
+	if (avatarUrl !== undefined) payload.avatar_url = avatarUrl
+	if (Object.keys(payload).length === 0) {
+		throw new Error('No profile fields to update.')
+	}
+	const { data } = await api.patch('/auth/me', payload)
 	const user = data.data.user
+	setAuthUser(user, { remember: getAuthRememberPreference() })
+	return user
+}
+
+export async function uploadProfileAvatar(file) {
+	const formData = new FormData()
+	formData.append('file', file)
+	const { data } = await api.post('/auth/me/avatar', formData)
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token)
+	}
+	const user = td.user
 	setAuthUser(user, { remember: getAuthRememberPreference() })
 	return user
 }

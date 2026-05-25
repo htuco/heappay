@@ -6,6 +6,7 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 
 from repositories.user.auth import UserAuthRepository
+from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from schemas.user.auth import (
     ChangePasswordRequest,
     DeactivateAccountRequest,
@@ -102,6 +103,7 @@ class UserAuthService:
         access_token: str | None = None,
     ) -> TokenResponse:
         role_name = self.repo.get_role_name_for_user(user.user_role_id)
+        raw_avatar = getattr(user, "avatar_url", None)
         user_response = UserResponse(
             id=user.user_id,
             email=user.email,
@@ -111,6 +113,7 @@ class UserAuthService:
             user_role_id=user.user_role_id,
             role_name=role_name,
             billing_reminders_enabled=user.billing_reminders_enabled,
+            avatar_url=resolve_avatar_url_for_client(raw_avatar, self.settings),
         )
         return TokenResponse(
             access_token=access_token or self.create_access_token(user.user_id),
@@ -197,9 +200,24 @@ class UserAuthService:
             if existing_user and existing_user.user_id != user_id:
                 raise ValueError("EMAIL_NOT_AVAILABLE")
 
+        previous_avatar_url = getattr(current_user, "avatar_url", None)
+        payload_keys = payload.model_dump(exclude_unset=True)
+        updating_avatar = "avatar_url" in payload_keys
+
         updated_user = self.repo.update_profile(user_id, payload)
         if not updated_user:
             return None
+
+        if updating_avatar and previous_avatar_url:
+            new_avatar_url = getattr(updated_user, "avatar_url", None)
+            if new_avatar_url != previous_avatar_url:
+                from services.storage.avatar_display_url import delete_managed_avatar_for_user
+
+                delete_managed_avatar_for_user(
+                    previous_avatar_url,
+                    user_id=user_id,
+                    settings=self.settings,
+                )
 
         return self._build_token_response_for_user(
             updated_user,
