@@ -6,6 +6,7 @@ from repositories.user.user import UserRepository
 from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.response import ApiResponse
 from schemas.user.crud import UserCreateRequest, UserResponse, UserSearchResponse, UserUpdateRequest
+from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.user.user import (
     DuplicateEmailError,
     InvalidUserRoleError,
@@ -13,6 +14,7 @@ from services.user.user import (
     UserNotFoundError,
     UserService,
 )
+from settings import get_settings
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -24,6 +26,15 @@ _INVALID_STATUS_DETAIL = "Invalid status_id"
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(UserRepository(db))
+
+
+def _user_response_with_signed_avatar(row) -> UserResponse:
+    s = get_settings()
+    r = UserResponse.model_validate(row)
+    url = resolve_avatar_url_for_client(r.avatar_url, s)
+    if url == r.avatar_url:
+        return r
+    return r.model_copy(update={"avatar_url": url})
 
 
 @router.get("", response_model=list[UserResponse])
@@ -47,7 +58,7 @@ def list_users(
         limit=limit,
         offset=offset,
     )
-    return [UserResponse.model_validate(row) for row in rows]
+    return [_user_response_with_signed_avatar(row) for row in rows]
 
 
 @router.get("/search", response_model=ApiResponse[list[UserSearchResponse]])
@@ -82,7 +93,7 @@ def get_user(
         row = service.get_user(user_id, include_deleted=include_deleted)
     except UserNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
-    return UserResponse.model_validate(row)
+    return _user_response_with_signed_avatar(row)
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -103,7 +114,7 @@ def create_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_STATUS_DETAIL
         ) from exc
-    return UserResponse.model_validate(row)
+    return _user_response_with_signed_avatar(row)
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
@@ -127,7 +138,7 @@ def update_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_STATUS_DETAIL
         ) from exc
-    return UserResponse.model_validate(row)
+    return _user_response_with_signed_avatar(row)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

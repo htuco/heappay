@@ -359,6 +359,61 @@
     transform-origin: center center;
   }
 
+  .manage-card-preview .payment-card-rccs-shell {
+    min-height: 202px;
+    overflow: hidden;
+  }
+
+  .manage-card-preview .payment-card-rccs-shell .rccs {
+    transform: scale(1.08) !important;
+  }
+
+  .all-cards-modal-card .payment-card-rccs-shell {
+    align-items: center;
+    justify-content: center;
+    min-height: calc(var(--all-cards-slot-height, 214px) - 12px);
+    overflow: hidden;
+  }
+
+  .all-cards-modal-card .payment-card-rccs-shell .rccs {
+    transform: scale(var(--all-cards-card-scale, 1.08)) !important;
+  }
+
+  .all-cards-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, var(--all-cards-card-width, 340px)), var(--all-cards-card-width, 340px))
+    );
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .all-cards-modal-card {
+    display: flex;
+    min-height: var(--all-cards-slot-height, 214px);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .all-cards-modal-grid {
+      --all-cards-card-width: min(100%, 340px);
+      --all-cards-card-scale: 1.08;
+      --all-cards-slot-height: 214px;
+    }
+  }
+
+  .all-cards-modal-shell {
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.12),
+      0 0 0 10px hsl(var(--background) / 0.72),
+      0 0 0 11px hsl(var(--primary) / 0.16),
+      0 24px 60px hsl(var(--foreground) / 0.14);
+  }
+
   /* Dual-card layout: animate position/scale/opacity when roles swap */
   .carousel-card-slot-shell {
     transition:
@@ -368,6 +423,7 @@
     will-change: left, transform, opacity;
   }
 
+  /* In carousel slots, scale down so cards don't overlap adjacent positions */
   .carousel-card-slot .payment-card-rccs-shell {
     min-height: 0;
     overflow: visible;
@@ -481,7 +537,6 @@
   /* Solid preview variant for the AddCardModal — no gradients, no patterns. */
   .add-card-preview--solid {
     @apply relative flex w-full items-center justify-center overflow-hidden rounded-panel border border-slate-200 bg-white px-0 py-4 dark:border-[#3a3a3a] dark:bg-[#262626];
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
     min-height: 230px;
   }
   /* Center the card and keep its native size. */
@@ -516,7 +571,7 @@
   .add-card-preview--solid .rccs__card--back {
     border-radius: 18px !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28) !important;
+    box-shadow: none !important;
   }
   .add-card-preview--solid .rccs__issuer {
     transition: opacity 0.3s ease, transform 0.35s ease !important;

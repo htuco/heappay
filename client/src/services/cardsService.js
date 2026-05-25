@@ -82,6 +82,10 @@ export async function deleteCard(cardId) {
   await api.delete(`/cards/${cardId}`)
 }
 
+export async function hardDeleteCard(cardId) {
+  await api.delete(`/cards/${cardId}/hard`)
+}
+
 export async function restoreCard(cardId) {
   const { data } = await api.post(`/cards/${cardId}/restore`)
   return data

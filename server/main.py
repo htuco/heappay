@@ -10,6 +10,7 @@ from routes import health, system
 from routes.card.card import router as card_router
 from routes.card.card_status import router as card_status_router
 from routes.card.card_type import router as card_type_router
+from routes.storage.images import router as storage_router
 from routes.transaction.transaction import router as transaction_router
 from routes.transaction.transaction_type import router as transaction_type_router
 from routes.request.request import router as request_router
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(system.router)
     app.include_router(auth_router)
+    app.include_router(storage_router)
     app.include_router(users_router)
     app.include_router(user_role_router)
     app.include_router(user_status_router)

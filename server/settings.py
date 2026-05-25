@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
 
+    # Supabase Storage (optional — required for /storage/images and POST /auth/me/avatar)
+    supabase_url: str | None = None
+    supabase_service_role_key: str | None = None
+    supabase_storage_bucket: str = "uploads"
+    # Signed URLs for avatars (private buckets). Ignored if Supabase env is unset.
+    supabase_avatar_signed_ttl_seconds: int = 60 * 60 * 24 * 7
+
     @computed_field
     @property
     def cors_origin_list(self) -> list[str]:

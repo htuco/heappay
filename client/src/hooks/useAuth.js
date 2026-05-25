@@ -9,6 +9,7 @@ import {
 	selectAuthStatus,
 	selectAuthUser,
 	updateProfileUser,
+	uploadProfileAvatarUser,
 } from '@/store/slices/authSlice'
 
 export function useAuth() {
@@ -30,8 +31,12 @@ export function useAuth() {
 		return dispatch(registerUser({ firstName, lastName, email, password })).unwrap()
 	}, [dispatch])
 
-	const updateProfile = useCallback(async ({ firstName, lastName, email }) => {
-		return dispatch(updateProfileUser({ firstName, lastName, email })).unwrap()
+	const updateProfile = useCallback(async (fields) => {
+		return dispatch(updateProfileUser(fields)).unwrap()
+	}, [dispatch])
+
+	const uploadProfileAvatar = useCallback(async (file) => {
+		return dispatch(uploadProfileAvatarUser(file)).unwrap()
 	}, [dispatch])
 
 	const logout = useCallback(() => dispatch(logoutUser()).unwrap(), [dispatch])
@@ -44,5 +49,5 @@ export function useAuth() {
 	const isStaff = isAdmin || isManager || isSupport
 	const hasRole = (roleName) => user?.role_name === roleName
 
-	return { user, isLoading, isHydrated, isAuthenticated, error, login, register, updateProfile, logout, isAdmin, isSupport, isManager, isStaff, hasRole }
+	return { user, isLoading, isHydrated, isAuthenticated, error, login, register, updateProfile, uploadProfileAvatar, logout, isAdmin, isSupport, isManager, isStaff, hasRole }
 }

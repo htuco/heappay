@@ -75,6 +75,9 @@ class FakeCardService:
     def list_all(self, **_kwargs) -> list[_CardRow]:
         return list(self._rows.values())
 
+    def pending_card_ids_for_user(self, user_id: int) -> set[int]:
+        return set()
+
     def create(self, payload):
         raise NotImplementedError
 
@@ -94,7 +97,7 @@ class FakeCardService:
 def _build_client(user_id: int = 10, is_admin: bool = False) -> tuple[TestClient, FakeCardService]:
     app = create_app()
     fake_service = FakeCardService()
-    ctx = UserContext(user_id=user_id, is_admin=is_admin)
+    ctx = UserContext(user_id=user_id, is_admin=is_admin, is_staff=is_admin)
     app.dependency_overrides[get_user_context] = lambda: ctx
     app.dependency_overrides[get_card_service] = lambda: fake_service
     client = TestClient(app)
