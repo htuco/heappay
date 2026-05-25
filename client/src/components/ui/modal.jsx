@@ -4,13 +4,15 @@ import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
 
 const modalVariants = cva(
-  "bg-background border rounded-panel shadow-lg w-full max-h-[90vh] overflow-auto relative transition-all duration-200",
+  "bg-background border border-border/60 rounded-panel w-full max-h-[90vh] overflow-auto relative transition-all duration-200",
   {
     variants: {
       size: {
         default: "max-w-md",
         lg: "max-w-lg",
         xl: "max-w-xl",
+        "2xl": "max-w-2xl",
+        "3xl": "max-w-3xl",
       },
     },
     defaultVariants: {
@@ -20,7 +22,21 @@ const modalVariants = cva(
 )
 
 const Modal = forwardRef(
-  ({ isOpen, onClose, title, children, className, size = "default", ...props }, ref) => {
+  (
+    {
+      isOpen,
+      onClose,
+      title,
+      subtitle,
+      children,
+      className,
+      contentClassName,
+      size = "default",
+      variant = "default",
+      ...props
+    },
+    ref
+  ) => {
     const handleBackdropClick = (e) => {
       if (e.target === e.currentTarget) onClose()
     }
@@ -35,6 +51,8 @@ const Modal = forwardRef(
     }, [isOpen, onClose])
 
     if (!isOpen) return null
+
+    const isSplit = variant === "split"
 
     return (
       <div
@@ -53,24 +71,48 @@ const Modal = forwardRef(
           className={cn(
             modalVariants({ size }),
             isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95",
+            isSplit && "overflow-hidden",
             className
           )}
           {...props}
         >
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 id="modal-title" className="text-lg font-semibold">{title}</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 rounded hover:bg-muted transition-colors"
-              aria-label="Close modal"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <div id="modal-description" className="p-4">
-            {children}
-          </div>
+          {isSplit ? (
+            <div id="modal-description" className={cn("relative", contentClassName)}>
+              {children}
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4">
+                <div className="min-w-0 pt-0.5">
+                  <h2
+                    id="modal-title"
+                    className="text-lg sm:text-xl font-semibold leading-tight tracking-tight text-card-foreground"
+                  >
+                    {title}
+                  </h2>
+                  {subtitle && (
+                    <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  aria-label="Close modal"
+                >
+                  <X size={15} strokeWidth={2.5} />
+                </button>
+              </div>
+              <div
+                id="modal-description"
+                className={cn("px-6 pb-6 sm:px-7 sm:pb-7", contentClassName)}
+              >
+                {children}
+              </div>
+            </>
+          )}
         </div>
       </div>
     )
