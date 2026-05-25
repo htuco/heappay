@@ -5,7 +5,7 @@ import { CARD_PAGE_SIZE, USER_PAGE_SIZE } from '@/utils/admin.constants'
 import { useAdminData } from '@/hooks/useAdminData'
 import { getCardStatus } from '@/utils/admin.utils'
 import usersService from '@/services/usersService'
-import { updateCard, deleteCard } from '@/services/cardsService'
+import { updateCard, hardDeleteCard } from '@/services/cardsService'
 import { useNotifications } from '@/context/NotificationContext'
 
 function userMatchesChip(user, chip) {
@@ -221,9 +221,9 @@ export default function useAdminPageState() {
   }
 
   async function handleCardDelete(cardId) {
-    await deleteCard(cardId)
+    await hardDeleteCard(cardId)
     refresh()
-    notify({ type: 'success', message: 'Card deleted successfully.' })
+    notify({ type: 'success', message: 'Card permanently deleted.' })
     closeManageCard()
   }
 

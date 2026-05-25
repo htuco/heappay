@@ -3,10 +3,13 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.card.card import CardRepository
-from routes.dependencies import UserContext, get_user_context
+from routes.dependencies import UserContext, get_user_context, require_admin
 from schemas.card import CardCreate, CardLookupResponse, CardPatch, CardResponse
 from services.card.card import (
+    CardBelongsToAnotherAccountError,
     CardDoesNotBelongToUserError,
+    CardHasPendingTransactionsError,
+    CardHasTransactionsError,
     CardNotFoundError,
     CardService,
     CardStatusNotFoundError,
@@ -22,6 +25,9 @@ _USER_NOT_FOUND = "User not found."
 _STATUS_NOT_FOUND = "Card status not found."
 _CARD_TYPE_NOT_FOUND = "Card type not found."
 _DUPLICATE_CARD_NUMBER = "A card with this number is already registered."
+_CARD_BELONGS_TO_ANOTHER_ACCOUNT = "This card belongs to another account."
+_CARD_HAS_TRANSACTIONS = "This card cannot be permanently deleted because it has transaction history."
+_CARD_HAS_PENDING_TRANSACTIONS = "This card has a pending transaction. Wait for it to settle before removing the card."
 _FORBIDDEN = "You do not have access to this card."
 _FORBIDDEN_OTHER_USER = "You cannot manage cards for other users."
 _NO_MAIN_CARD = "No main card set for this user."
@@ -31,7 +37,7 @@ def get_card_service(db: Session = Depends(get_db)) -> CardService:
     return CardService(CardRepository(db))
 
 
-def _to_response(row) -> CardResponse:
+def _to_response(row, *, has_pending: bool = False) -> CardResponse:
     return CardResponse(
         card_id=row.card_id,
         user_id=row.user_id,
@@ -45,6 +51,7 @@ def _to_response(row) -> CardResponse:
         created_at=row.created_at,
         deleted_at=row.deleted_at,
         is_main=row.is_main,
+        has_pending=has_pending,
     )
 
 
@@ -52,6 +59,11 @@ def _require_owner_or_admin(card_user_id: int, ctx: UserContext) -> None:
     """Raise 403 if the caller is not the card owner and not an admin."""
     if not ctx.is_admin and card_user_id != ctx.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN)
+
+
+def _to_response_with_pending(row, service: CardService) -> CardResponse:
+    pending_ids = service.pending_card_ids_for_user(row.user_id)
+    return _to_response(row, has_pending=row.card_id in pending_ids)
 
 
 # ─── Lookup (any authenticated user) ─────────────────────────────────────────
@@ -103,7 +115,11 @@ def list_cards(
         limit=limit,
         offset=offset,
     )
-    return [_to_response(r) for r in rows]
+    pending_ids: set[int] = set()
+    user_ids = {r.user_id for r in rows}
+    for uid in user_ids:
+        pending_ids.update(service.pending_card_ids_for_user(uid))
+    return [_to_response(r, has_pending=r.card_id in pending_ids) for r in rows]
 
 
 # ─── List (deleted) ───────────────────────────────────────────────────────────
@@ -154,7 +170,7 @@ def get_main_card(
     row = service.get_main_card(user_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NO_MAIN_CARD)
-    return _to_response(row)
+    return _to_response_with_pending(row, service)
 
 
 # ─── Get one ──────────────────────────────────────────────────────────────────
@@ -169,7 +185,7 @@ def get_card(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
     _require_owner_or_admin(row.user_id, ctx)
-    return _to_response(row)
+    return _to_response_with_pending(row, service)
 
 
 # ─── Create ───────────────────────────────────────────────────────────────────
@@ -190,6 +206,11 @@ def create_card(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_CARD_NUMBER
         ) from None
+    except CardBelongsToAnotherAccountError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_CARD_BELONGS_TO_ANOTHER_ACCOUNT,
+        ) from None
     except UserNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_USER_NOT_FOUND
@@ -202,7 +223,7 @@ def create_card(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_TYPE_NOT_FOUND
         ) from None
-    return _to_response(row)
+    return _to_response_with_pending(row, service)
 
 
 # ─── Patch ────────────────────────────────────────────────────────────────────
@@ -236,7 +257,7 @@ def patch_card(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_TYPE_NOT_FOUND
         ) from None
-    return _to_response(row)
+    return _to_response_with_pending(row, service)
 
 
 # ─── Delete ───────────────────────────────────────────────────────────────────
@@ -251,7 +272,34 @@ def delete_card(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
     _require_owner_or_admin(row.user_id, ctx)
-    service.delete(card_id)
+    try:
+        service.delete(card_id)
+    except CardHasPendingTransactionsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_CARD_HAS_PENDING_TRANSACTIONS,
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Hard delete (admin only) ────────────────────────────────────────────────
+
+@router.delete("/{card_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
+def hard_delete_card(
+    card_id: int,
+    _admin_user_id: int = Depends(require_admin),
+    service: CardService = Depends(get_card_service),
+) -> Response:
+    try:
+        service.hard_delete(card_id)
+    except CardNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND
+        ) from None
+    except CardHasTransactionsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_CARD_HAS_TRANSACTIONS
+        ) from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -273,7 +321,7 @@ def restore_card(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND
         ) from None
-    return _to_response(row)
+    return _to_response_with_pending(row, service)
 
 
 # ─── Set main ─────────────────────────────────────────────────────────────────
@@ -299,4 +347,4 @@ def set_main_card(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
         ) from None
-    return _to_response(row)
+    return _to_response_with_pending(row, service)

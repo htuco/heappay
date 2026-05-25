@@ -13,6 +13,8 @@ import {
 import SplitModal, {
   SplitModalContextLabel,
 } from "@/components/ui/SplitModal"
+import { useNotifications } from "@/context/NotificationContext"
+import { formatBrandLabel } from "@/utils/paymentCard.utils"
 
 const ISSUER_MAP = {
   amex: "american-express",
@@ -87,6 +89,7 @@ export default function AddCardModal({
   const [form, setForm] = React.useState(emptyForm)
   const [errors, setErrors] = React.useState({})
   const [focused, setFocused] = React.useState("")
+  const { notify } = useNotifications()
 
   const brand = detectCardBrand(form.number)
   const issuer = getIssuer(brand)
@@ -148,6 +151,14 @@ export default function AddCardModal({
         type: brand?.key ?? "Unknown",
         cardType: form.cardType,
         isPrimary: form.isPrimary,
+      })
+      const brandLabel = formatBrandLabel(brand?.key) || "Card"
+      const tail = digits.slice(-4)
+      notify({
+        type: "success",
+        message: form.isPrimary
+          ? `${brandLabel} •••• ${tail} added as your main card.`
+          : `${brandLabel} •••• ${tail} added to your wallet.`,
       })
       setForm(emptyForm)
       setErrors({})

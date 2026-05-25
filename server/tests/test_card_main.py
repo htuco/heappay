@@ -75,6 +75,9 @@ class FakeCardService:
     def list_all(self, **_kwargs) -> list[_CardRow]:
         return list(self._rows.values())
 
+    def pending_card_ids_for_user(self, user_id: int) -> set[int]:
+        return set()
+
     def create(self, payload):
         raise NotImplementedError
 

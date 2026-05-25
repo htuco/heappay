@@ -70,7 +70,8 @@ function ManageCardDialogBody({ card, onUpdate, onDelete, isAdmin, cardStatuses 
     try {
       await onDelete(card.rawId)
     } catch (err) {
-      setError(err?.message || 'Failed to delete card.')
+      const detail = err?.response?.data?.detail
+      setError(detail || err?.message || 'Failed to delete card.')
       setIsDeleting(false)
     }
   }
@@ -158,7 +159,7 @@ function ManageCardDialogBody({ card, onUpdate, onDelete, isAdmin, cardStatuses 
           <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/25 p-4">
             <p className="text-sm font-semibold text-card-foreground">Before saving</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Status changes apply immediately after saving. Deleting removes the card from the admin card list.
+              Status changes apply immediately. Deleting permanently removes the card from the system and cannot be undone. Cards with transaction history cannot be deleted.
             </p>
           </div>
 
@@ -179,7 +180,7 @@ function ManageCardDialogBody({ card, onUpdate, onDelete, isAdmin, cardStatuses 
           className="w-full sm:w-auto"
         >
           <Trash2 className="size-4" />
-          {isDeleting ? 'Deleting...' : 'Delete card'}
+          {isDeleting ? 'Deleting...' : 'Permanently delete'}
         </Button>
         <Button
           size="lg"

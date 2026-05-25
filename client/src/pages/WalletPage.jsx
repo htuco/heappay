@@ -17,7 +17,7 @@ const SECONDARY_CTA_CLASS =
   'h-11 w-full justify-center gap-2 rounded-surface border border-white/30 bg-white/10 text-sm font-medium text-primary-foreground backdrop-blur transition hover:bg-white/20 hover:text-primary-foreground'
 
 export default function WalletPage() {
-  const { cards, isLoading, isSaving, error, saveError, addCard, setMainCard } = useWalletCards()
+  const { cards, isLoading, isSaving, error, saveError, addCard, setMainCard, removeCard } = useWalletCards()
   const [activeIndex, setActiveIndex] = useState(0)
 
   const safeIndex = cards.length > 0 ? Math.min(activeIndex, cards.length - 1) : 0
@@ -77,6 +77,16 @@ export default function WalletPage() {
                   triggerClassName={SECONDARY_CTA_CLASS}
                   triggerVariant="ghost"
                   onSetMain={setMainCard}
+                  onRemove={removeCard}
+                  addCardSlot={
+                    <AddCardModal
+                      onSubmit={addCard}
+                      isSubmitting={isSaving}
+                      submitError={saveError}
+                      triggerLabel="Add new card"
+                      triggerVariant="default"
+                    />
+                  }
                 />
               }
             />

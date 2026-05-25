@@ -1,4 +1,7 @@
 from services.card.card import (
+    CardBelongsToAnotherAccountError,
+    CardHasPendingTransactionsError,
+    CardHasTransactionsError,
     CardNotFoundError,
     CardService,
     CardStatusNotFoundError,
@@ -14,4 +17,7 @@ __all__ = [
     "CardStatusNotFoundError",
     "CardTypeNotFoundError",
     "DuplicateCardNumberError",
+    "CardBelongsToAnotherAccountError",
+    "CardHasTransactionsError",
+    "CardHasPendingTransactionsError",
 ]
