@@ -1,7 +1,7 @@
 """add users.avatar_url
 
-Revision ID: b1c2d3e4f5a6
-Revises: 9a8b7c6d5e4f
+Revision ID: f2d6a9b8c3e1
+Revises: b1c2d3e4f5a6
 """
 
 from typing import Sequence, Union
@@ -9,8 +9,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "b1c2d3e4f5a6"
-down_revision: Union[str, Sequence[str], None] = "9a8b7c6d5e4f"
+revision: str = "f2d6a9b8c3e1"
+down_revision: Union[str, Sequence[str], None] = "b1c2d3e4f5a6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
