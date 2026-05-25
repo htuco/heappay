@@ -30,6 +30,7 @@ def _user_response(role_id: int = 2, role_name: str = "user") -> UserResponse:
         user_role_id=role_id,
         role_name=role_name,
         billing_reminders_enabled=True,
+        avatar_url=None,
     )
 
 
