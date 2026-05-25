@@ -56,6 +56,7 @@ class FakeUserService:
     def list_users(
         self,
         *,
+        q: str | None,
         email: str | None,
         status_id: int | None,
         user_role_id: int | None,
