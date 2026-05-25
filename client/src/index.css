@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -480,7 +481,6 @@
   /* Solid preview variant for the AddCardModal — no gradients, no patterns. */
   .add-card-preview--solid {
     @apply relative flex w-full items-center justify-center overflow-hidden rounded-panel border border-slate-200 bg-white px-0 py-4 dark:border-[#3a3a3a] dark:bg-[#262626];
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
     min-height: 230px;
   }
   /* Center the card and keep its native size. */
@@ -515,7 +515,7 @@
   .add-card-preview--solid .rccs__card--back {
     border-radius: 18px !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28) !important;
+    box-shadow: none !important;
   }
   .add-card-preview--solid .rccs__issuer {
     transition: opacity 0.3s ease, transform 0.35s ease !important;
