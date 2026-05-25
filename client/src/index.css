@@ -349,6 +349,59 @@
     transform-origin: center center;
   }
 
+  .manage-card-preview .payment-card-rccs-shell {
+    min-height: 202px;
+    overflow: hidden;
+  }
+
+  .manage-card-preview .payment-card-rccs-shell .rccs {
+    transform: scale(1.08) !important;
+  }
+
+  .all-cards-modal-card .payment-card-rccs-shell {
+    align-items: center;
+    justify-content: center;
+    min-height: calc(var(--all-cards-slot-height, 214px) - 12px);
+    overflow: hidden;
+  }
+
+  .all-cards-modal-card .payment-card-rccs-shell .rccs {
+    transform: scale(var(--all-cards-card-scale, 1.08)) !important;
+  }
+
+  .all-cards-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, var(--all-cards-card-width, 340px)), var(--all-cards-card-width, 340px))
+    );
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .all-cards-modal-card {
+    display: flex;
+    min-height: var(--all-cards-slot-height, 214px);
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 640px) {
+    .all-cards-modal-grid {
+      --all-cards-card-width: min(100%, 340px);
+      --all-cards-card-scale: 1.08;
+      --all-cards-slot-height: 214px;
+    }
+  }
+
+  .all-cards-modal-shell {
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.12),
+      0 0 0 10px hsl(var(--background) / 0.72),
+      0 0 0 11px hsl(var(--primary) / 0.16),
+      0 24px 60px hsl(var(--foreground) / 0.14);
+  }
+
   /* In carousel slots, scale down so cards don't overlap adjacent positions */
   .carousel-card-slot .payment-card-rccs-shell {
     min-height: 0;
