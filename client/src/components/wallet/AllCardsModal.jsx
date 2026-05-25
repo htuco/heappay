@@ -23,6 +23,12 @@ export default function AllCardsModal({
       isActive: false,
     },
   }))
+  const cardCount = modalItems.length
+  const gridStyle = {
+    '--all-cards-card-width': cardCount <= 2 ? '430px' : cardCount <= 4 ? '390px' : '340px',
+    '--all-cards-card-scale': cardCount <= 2 ? '1.28' : cardCount <= 4 ? '1.18' : '1.08',
+    '--all-cards-slot-height': cardCount <= 2 ? '252px' : cardCount <= 4 ? '232px' : '214px',
+  }
 
   function openModal() {
     setAnimateIn(false)
@@ -66,7 +72,7 @@ export default function AllCardsModal({
       aria-labelledby="all-cards-modal-title"
       aria-describedby="all-cards-modal-description"
     >
-      <div className="relative max-h-[90vh] w-full max-w-6xl overflow-auto rounded-lg border bg-background shadow-lg">
+      <div className="all-cards-modal-shell relative max-h-[90vh] w-full max-w-6xl overflow-auto rounded-lg border bg-background shadow-lg">
         <div className="flex items-start justify-between border-b px-5 py-4 sm:px-6">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
@@ -98,9 +104,9 @@ export default function AllCardsModal({
 
         <div
           id="all-cards-modal-description"
-          className="space-y-4 px-5 py-5 sm:px-6"
+          className="space-y-5 px-5 py-5 sm:px-6"
         >
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex items-center rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
               {modalItems.length} {modalItems.length === 1 ? 'Card' : 'Cards'}
             </div>
@@ -112,12 +118,18 @@ export default function AllCardsModal({
           ) : (
             <div
               className={[
-                'grid gap-4 transition-opacity duration-300 ease-out sm:grid-cols-2 xl:grid-cols-3',
+                'all-cards-modal-grid transition-opacity duration-300 ease-out',
                 animateIn ? 'opacity-100' : 'opacity-0',
               ].join(' ')}
+              style={gridStyle}
             >
               {modalItems.map((item) => (
-                <PaymentCard key={item.id} card={item.card} />
+                <div
+                  key={item.id}
+                  className="all-cards-modal-card"
+                >
+                  <PaymentCard card={item.card} />
+                </div>
               ))}
             </div>
           )}
