@@ -1,5 +1,6 @@
 import AdminCardsManagementPanel from '@/components/admin/AdminCardsManagementPanel'
 import AdminKpiRow from '@/components/admin/AdminKpiRow'
+import AdminTransactionsPanel from '@/components/admin/AdminTransactionsPanel'
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel'
 import ManageCardDialog from '@/components/admin/ManageCardDialog'
 import UserDetailsDialog from '@/components/admin/UserDetailsDialog'
@@ -100,6 +101,8 @@ export default function AdminPage() {
           setCardPage={cardsPanel.setCardPage}
         />
       </section>
+
+      <AdminTransactionsPanel />
 
       <UserDetailsDialog
         selectedUser={selectedUser}

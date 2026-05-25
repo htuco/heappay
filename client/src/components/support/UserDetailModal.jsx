@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CardBrandIcon } from '@/components/ui/CardBrandIcon'
+import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import {
   DialogContent,
   DialogRoot,
