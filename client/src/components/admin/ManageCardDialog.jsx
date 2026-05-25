@@ -61,7 +61,7 @@ export default function ManageCardDialog({ card, onClose, onUpdate, onDelete, is
 
         {card && (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-border bg-background p-4 space-y-1">
+            <div className="rounded-surface border border-border bg-background p-4 space-y-1">
               <p className="font-medium text-card-foreground">{card.card.cardHolderName}</p>
               <p className="text-sm text-muted-foreground">
                 {card.card.brand.toUpperCase()} •••• {card.card.cardNumber.slice(-4)}

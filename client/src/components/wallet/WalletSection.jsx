@@ -11,7 +11,7 @@ export default function WalletSection({
 	const hasHeader = title || subtitle || icon || actions
 	return (
 		<Tag
-			className={`rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6 ${className}`}
+			className={`rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 ${className}`}
 		>
 			{hasHeader && (
 				<header
@@ -19,7 +19,7 @@ export default function WalletSection({
 				>
 					<div className="flex items-start gap-3 min-w-0">
 						{icon && (
-							<span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/15 to-primary-light/15 text-primary">
+							<span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-input bg-linear-to-br from-primary/15 to-primary-light/15 text-primary">
 								{icon}
 							</span>
 						)}

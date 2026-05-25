@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
 
 const modalVariants = cva(
-  "bg-background border rounded-lg shadow-lg w-full max-h-[90vh] overflow-auto relative transition-all duration-200",
+  "bg-background border rounded-panel shadow-lg w-full max-h-[90vh] overflow-auto relative transition-all duration-200",
   {
     variants: {
       size: {

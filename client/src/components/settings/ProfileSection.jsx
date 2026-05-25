@@ -37,7 +37,7 @@ export default function ProfileSection() {
       />
 
       <div className="space-y-4">
-        <div className="bg-emphasis rounded-2xl border border-border p-4">
+        <div className="bg-emphasis rounded-surface border border-border p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <UserAvatar

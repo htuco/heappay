@@ -7,6 +7,7 @@ import cardStatusesService from '@/services/cardStatusesService'
 import userRolesService from '@/services/userRolesService'
 import userStatusesService from '@/services/userStatusesService'
 import { buildCardAssignments } from '@/utils/admin.utils'
+import { fetchAllPaginated } from '@/utils/fetchAllPaginated'
 
 const DISABLED_CARD_STATUSES = new Set(['frozen', 'expired', 'cancelled'])
 
@@ -69,8 +70,8 @@ export function useAdminData() {
 
       try {
         const [rawUsers, rawCards, cardTypes, cardStatusesList, userRolesList, userStatusesList] = await Promise.all([
-          usersService.list({ limit: 1000 }),
-          listCards({ limit: 1000 }),
+          fetchAllPaginated((page) => usersService.list(page)),
+          fetchAllPaginated((page) => listCards(page)),
           cardTypesService.list(),
           cardStatusesService.list(),
           userRolesService.list(),
