@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.card.card import CardRepository
-from routes.dependencies import UserContext, get_user_context
+from routes.dependencies import UserContext, get_user_context, require_staff
 from schemas.card import CardCreate, CardLookupResponse, CardPatch, CardResponse
 from services.card.card import (
     CardDoesNotBelongToUserError,
@@ -48,9 +48,8 @@ def _to_response(row) -> CardResponse:
     )
 
 
-def _require_owner_or_admin(card_user_id: int, ctx: UserContext) -> None:
-    """Raise 403 if the caller is not the card owner and not an admin."""
-    if not ctx.is_admin and card_user_id != ctx.user_id:
+def _require_owner_or_staff(card_user_id: int, ctx: UserContext) -> None:
+    if not ctx.is_staff and card_user_id != ctx.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN)
 
 
@@ -90,7 +89,7 @@ def list_cards(
     ctx: UserContext = Depends(get_user_context),
     service: CardService = Depends(get_card_service),
 ) -> list[CardResponse]:
-    if not ctx.is_admin:
+    if not ctx.is_staff:
         if user_id is not None and user_id != ctx.user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_OTHER_USER
@@ -118,7 +117,7 @@ def list_deleted_cards(
     ctx: UserContext = Depends(get_user_context),
     service: CardService = Depends(get_card_service),
 ) -> list[CardResponse]:
-    if not ctx.is_admin:
+    if not ctx.is_staff:
         if user_id is not None and user_id != ctx.user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_OTHER_USER
@@ -168,7 +167,7 @@ def get_card(
     row = service.get_by_id(card_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
-    _require_owner_or_admin(row.user_id, ctx)
+    _require_owner_or_staff(row.user_id, ctx)
     return _to_response(row)
 
 
@@ -180,7 +179,7 @@ def create_card(
     ctx: UserContext = Depends(get_user_context),
     service: CardService = Depends(get_card_service),
 ) -> CardResponse:
-    if not ctx.is_admin and payload.user_id != ctx.user_id:
+    if not ctx.is_staff and payload.user_id != ctx.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_OTHER_USER
         )
@@ -217,7 +216,7 @@ def patch_card(
     row = service.get_by_id(card_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
-    _require_owner_or_admin(row.user_id, ctx)
+    _require_owner_or_staff(row.user_id, ctx)
     try:
         row = service.patch(card_id, payload)
     except CardNotFoundError:
@@ -250,12 +249,42 @@ def delete_card(
     row = service.get_by_id(card_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
-    _require_owner_or_admin(row.user_id, ctx)
+    _require_owner_or_staff(row.user_id, ctx)
     service.delete(card_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ─── Restore ──────────────────────────────────────────────────────────────────
+
+@router.post("/{card_id}/block", response_model=CardResponse, summary="(Staff) Block a card.")
+def block_card(
+    card_id: int,
+    _: int = Depends(require_staff),
+    service: CardService = Depends(get_card_service),
+) -> CardResponse:
+    if service.get_by_id(card_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
+    try:
+        row = service.patch(card_id, CardPatch(status_id=3))
+    except (CardNotFoundError, CardStatusNotFoundError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND) from None
+    return _to_response(row)
+
+
+@router.post("/{card_id}/unblock", response_model=CardResponse, summary="(Staff) Unblock a card.")
+def unblock_card(
+    card_id: int,
+    _: int = Depends(require_staff),
+    service: CardService = Depends(get_card_service),
+) -> CardResponse:
+    if service.get_by_id(card_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
+    try:
+        row = service.patch(card_id, CardPatch(status_id=1))
+    except (CardNotFoundError, CardStatusNotFoundError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND) from None
+    return _to_response(row)
+
 
 @router.post("/{card_id}/restore", response_model=CardResponse)
 def restore_card(
@@ -266,7 +295,7 @@ def restore_card(
     row = service.get_by_id_including_deleted(card_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
-    _require_owner_or_admin(row.user_id, ctx)
+    _require_owner_or_staff(row.user_id, ctx)
     try:
         row = service.restore(card_id)
     except CardNotFoundError:

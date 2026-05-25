@@ -34,6 +34,7 @@ class UserService:
     def list_users(
         self,
         *,
+        q: str | None,
         email: str | None,
         status_id: int | None,
         user_role_id: int | None,
@@ -42,6 +43,7 @@ class UserService:
         offset: int,
     ) -> list[User]:
         return self._repo.list_users(
+            q=q,
             email=email,
             status_id=status_id,
             user_role_id=user_role_id,
