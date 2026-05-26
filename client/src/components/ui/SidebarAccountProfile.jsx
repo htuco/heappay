@@ -4,6 +4,7 @@ import AvatarUploadModal from '@/components/settings/AvatarUploadModal'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 import { useAuth } from '@/hooks/useAuth'
 import { listCards } from '@/services/cardsService'
 import transactionsService from '@/services/transactionsService'
@@ -253,7 +254,12 @@ export default function SidebarAccountProfile({ user }) {
 
   async function handleAvatarUpload(file) {
     await uploadProfileAvatar(file)
-    notify({ type: 'success', message: 'Profile photo updated.' })
+    notify({
+      type: 'success',
+      category: CATEGORIES.SECURITY,
+      message: 'Profile photo updated.',
+      link: { route: '/settings' },
+    })
   }
 
   return (

@@ -8,6 +8,7 @@ import { changePassword } from '@/services/authService'
 import { clearAuthSession } from '@/utils/authStorage'
 import { getApiErrorMessage } from '@/utils/api'
 import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 import { useAppDispatch } from '@/store/hooks'
 import { clearAuthState } from '@/store/slices/authSlice'
 
@@ -64,7 +65,12 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 			})
 			dispatch(clearAuthState())
 			clearAuthSession()
-			notify({ type: 'success', message: 'Password updated successfully. Please sign in again.' })
+			notify({
+				type: 'success',
+				category: CATEGORIES.SECURITY,
+				message: 'Password updated successfully. Please sign in again.',
+				link: { route: '/settings' },
+			})
 			handleClose()
 			window.location.assign('/login?passwordChanged=1')
 		} catch (err) {

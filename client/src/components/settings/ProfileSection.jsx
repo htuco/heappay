@@ -7,6 +7,7 @@ import ProfileField from '@/components/settings/ProfileField'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 import { useAuth } from '@/hooks/useAuth'
 
 export default function ProfileSection() {
@@ -21,7 +22,12 @@ export default function ProfileSection() {
 
   async function handleAvatarUpload(file) {
     await uploadProfileAvatar(file)
-    notify({ type: 'success', message: 'Profile photo updated.' })
+    notify({
+      type: 'success',
+      category: CATEGORIES.SECURITY,
+      message: 'Profile photo updated.',
+      link: { route: '/settings' },
+    })
   }
 
   return (
