@@ -1,0 +1,18 @@
+export const CATEGORIES = Object.freeze({
+	PAYMENT_SENT: 'payment_sent',
+	PAYMENT_RECEIVED: 'payment_received',
+	PAYMENT_SELF: 'payment_self',
+	REFUND_REQUESTED: 'refund_requested',
+	REFUND_APPROVED: 'refund_approved',
+	REFUND_DECLINED: 'refund_declined',
+	CARD_BLOCKED: 'card_blocked',
+	CARD_UNBLOCKED: 'card_unblocked',
+	CARD_EXPIRING: 'card_expiring',
+	CARD_EXPIRED: 'card_expired',
+	ACCOUNT_SUSPENDED: 'account_suspended',
+	ACCOUNT_REACTIVATED: 'account_reactivated',
+	ACCOUNT_DEACTIVATED: 'account_deactivated',
+	SECURITY: 'security',
+	ADMIN_ACTION: 'admin_action',
+	SYSTEM: 'system',
+})
