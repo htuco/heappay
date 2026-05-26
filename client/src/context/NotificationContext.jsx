@@ -17,6 +17,10 @@ import {
 	NOTIFICATION_HISTORY_CAP,
 } from './notifications/storage'
 import { CATEGORIES } from './notifications/categories'
+import { useIncomingTransferWatcher } from './notifications/useIncomingTransferWatcher'
+import { useAccountEventsWatcher } from './notifications/useAccountEventsWatcher'
+import { useCardExpiryWatcher } from './notifications/useCardExpiryWatcher'
+import { subscribeDataChange, DATA_CHANGE_KINDS } from '@/utils/dataEvents'
 
 const DEFAULT_CATEGORY = CATEGORIES.SYSTEM
 
@@ -48,6 +52,7 @@ export function NotificationProvider({ children }) {
 	const [queue, setQueue] = useState([])
 	const dedupRef = useRef(new Set())
 	const hydratedFor = useRef(null)
+	const selfCardActionRef = useRef(0)
 
 	// Hydrate from localStorage when the user changes (login / hydrateSession)
 	useEffect(() => {
@@ -123,6 +128,21 @@ export function NotificationProvider({ children }) {
 		},
 		[userId],
 	)
+
+	// Treat any CARD data-change event as a "user just did this" signal so
+	// the account-events watcher can skip notifying on the same change.
+	useEffect(() => {
+		const unsubscribe = subscribeDataChange((kind) => {
+			if (kind === DATA_CHANGE_KINDS.CARD) {
+				selfCardActionRef.current = Date.now()
+			}
+		})
+		return unsubscribe
+	}, [])
+
+	useIncomingTransferWatcher({ userId, notify })
+	useAccountEventsWatcher({ userId, notify, selfActionRef: selfCardActionRef })
+	useCardExpiryWatcher({ userId, notify })
 
 	const markRead = useCallback((id) => {
 		setHistory((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
