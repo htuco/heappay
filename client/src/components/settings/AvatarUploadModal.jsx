@@ -144,7 +144,7 @@ export default function AvatarUploadModal({ isOpen, onClose, onUpload }) {
           ref={inputRef}
           type="file"
           accept={ACCEPT}
-          className="hidden"
+          className="sr-only"
           tabIndex={-1}
           onChange={handleInputChange}
         />
