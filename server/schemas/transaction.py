@@ -43,7 +43,7 @@ class TransactionSummaryResponse(BaseModel):
 
 
 class TransactionPartyResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     card_id: int
     user_id: int
@@ -51,6 +51,7 @@ class TransactionPartyResponse(BaseModel):
     brand: str | None = Field(default=None, validation_alias=AliasPath("card_type", "vendor"))
     cardholder_name: str | None
     email: str | None = Field(default=None, validation_alias=AliasPath("user", "email"))
+    avatar_url: str | None = Field(default=None, validation_alias=AliasPath("user", "avatar_url"))
     first_name: str | None = Field(
         default=None, validation_alias=AliasPath("user", "first_name")
     )

@@ -9,6 +9,14 @@ from models.transaction_status import TransactionStatus
 from models.transaction_type import TransactionType
 
 
+_SORT_COLUMNS = {
+    "newest": Transaction.created_at.desc(),
+    "oldest": Transaction.created_at.asc(),
+    "amount_desc": Transaction.amount.desc(),
+    "amount_asc": Transaction.amount.asc(),
+}
+
+
 class TransactionRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
@@ -19,20 +27,37 @@ class TransactionRepository:
         user_id: int,
         limit: int = 50,
         offset: int = 0,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        sort: str = "newest",
     ) -> list[Transaction]:
         """List transactions where the user owns either the sender or recipient card."""
         stmt = (
-            self._user_transactions_stmt(user_id)
+            self._filtered_user_transactions_stmt(
+                user_id,
+                status_id=status_id,
+                transaction_type_id=transaction_type_id,
+            )
             .options(*self._party_load_options())
-            .order_by(Transaction.created_at.desc())
+            .order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["newest"]))
             .limit(limit)
             .offset(offset)
         )
         return list(self._db.scalars(stmt).all())
 
-    def count_for_user(self, *, user_id: int) -> int:
+    def count_for_user(
+        self,
+        *,
+        user_id: int,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+    ) -> int:
         stmt = select(func.count()).select_from(
-            self._user_transactions_stmt(user_id).subquery()
+            self._filtered_user_transactions_stmt(
+                user_id,
+                status_id=status_id,
+                transaction_type_id=transaction_type_id,
+            ).subquery()
         )
         return int(self._db.execute(stmt).scalar_one())
 
@@ -58,6 +83,20 @@ class TransactionRepository:
                 Transaction.recipient_card_id.in_(user_card_ids),
             )
         )
+
+    def _filtered_user_transactions_stmt(
+        self,
+        user_id: int,
+        *,
+        status_id: int | None,
+        transaction_type_id: int | None,
+    ):
+        stmt = self._user_transactions_stmt(user_id)
+        if status_id is not None:
+            stmt = stmt.where(Transaction.status_id == status_id)
+        if transaction_type_id is not None:
+            stmt = stmt.where(Transaction.transaction_type_id == transaction_type_id)
+        return stmt
 
     def get_summary_for_user(
         self,

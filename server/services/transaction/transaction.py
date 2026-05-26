@@ -39,9 +39,29 @@ class TransactionService:
         user_id: int,
         limit: int = 50,
         offset: int = 0,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
-        items = self._repo.list_for_user(user_id=user_id, limit=limit, offset=offset)
-        total = self._repo.count_for_user(user_id=user_id)
+        if status_id is not None and not self._repo.transaction_status_exists(status_id):
+            raise TransactionStatusNotFoundError()
+        if transaction_type_id is not None and not self._repo.transaction_type_exists(
+            transaction_type_id
+        ):
+            raise TransactionTypeNotFoundError()
+        items = self._repo.list_for_user(
+            user_id=user_id,
+            limit=limit,
+            offset=offset,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            sort=sort,
+        )
+        total = self._repo.count_for_user(
+            user_id=user_id,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+        )
         return items, total
 
     def list_all(
@@ -135,6 +155,18 @@ class TransactionService:
             raise TransactionNotFoundError()
         if not self._user_participates(row, user_id):
             raise ForbiddenError()
+
+        changes = payload.model_dump(exclude_unset=True)
+        if "status_id" in changes and not self._repo.transaction_status_exists(
+            changes["status_id"]
+        ):
+            raise TransactionStatusNotFoundError()
+        return self._repo.update(row, changes)
+
+    def patch_as_staff(self, transaction_id: int, payload: TransactionPatch) -> Transaction:
+        row = self._repo.get_by_id(transaction_id)
+        if row is None:
+            raise TransactionNotFoundError()
 
         changes = payload.model_dump(exclude_unset=True)
         if "status_id" in changes and not self._repo.transaction_status_exists(

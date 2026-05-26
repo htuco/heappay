@@ -108,6 +108,7 @@ class CardLookupResponse(BaseModel):
     owner_name: str
     owner_email: str
     user_id: int
+    avatar_url: str | None = None
     cardholder_name: str | None = None
 
 

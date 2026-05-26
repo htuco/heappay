@@ -14,6 +14,7 @@ from schemas.transaction import (
     TransactionSummaryPoint,
     TransactionSummaryResponse,
 )
+from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.transaction.transaction import (
     CardNotFoundError,
     ForbiddenError,
@@ -23,6 +24,7 @@ from services.transaction.transaction import (
     TransactionStatusNotFoundError,
     TransactionTypeNotFoundError,
 )
+from settings import get_settings
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -42,13 +44,17 @@ def _card_to_party(card) -> TransactionPartyResponse | None:
     if card is None:
         return None
     user = card.user
+    settings = get_settings()
     return TransactionPartyResponse(
         card_id=card.card_id,
         last_four=card.last_four,
+        brand=card.card_type.vendor if card.card_type else None,
         cardholder_name=card.cardholder_name,
         user_id=user.user_id if user else 0,
-        full_name=f"{user.first_name} {user.last_name}".strip() if user else None,
         email=user.email if user else None,
+        avatar_url=resolve_avatar_url_for_client(user.avatar_url, settings) if user else None,
+        first_name=user.first_name if user else None,
+        last_name=user.last_name if user else None,
     )
 
 
@@ -97,7 +103,7 @@ def list_all_transactions(
 ) -> ApiResponse[Page[TransactionResponse]]:
     offset = (page - 1) * page_size
     rows, total = service.list_all(limit=page_size, offset=offset)
-    items = [TransactionResponse.model_validate(r) for r in rows]
+    items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
     )
@@ -120,12 +126,32 @@ def list_transactions_for_user(
     user_id: int,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
+    status_id: int | None = Query(default=None, ge=1),
+    transaction_type_id: int | None = Query(default=None, ge=1),
+    sort: str = Query(
+        default="newest",
+        pattern="^(newest|oldest|amount_desc|amount_asc)$",
+    ),
     _: int = Depends(require_staff),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[Page[TransactionResponse]]:
-    rows, total = service.list_for_user(
-        user_id=user_id, limit=page_size, offset=(page - 1) * page_size
-    )
+    try:
+        rows, total = service.list_for_user(
+            user_id=user_id,
+            limit=page_size,
+            offset=(page - 1) * page_size,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            sort=sort,
+        )
+    except TransactionStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionTypeNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
+        ) from None
     items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
@@ -134,6 +160,34 @@ def list_transactions_for_user(
         success=True,
         message=f"Retrieved {len(items)} of {total} transactions.",
         data=page_data,
+    )
+
+
+@router.patch(
+    "/{transaction_id}/staff",
+    response_model=ApiResponse[TransactionResponse],
+    summary="(Staff) Update a transaction.",
+)
+def patch_transaction_as_staff(
+    transaction_id: int,
+    payload: TransactionPatch,
+    _: int = Depends(require_staff),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[TransactionResponse]:
+    try:
+        row = service.patch_as_staff(transaction_id, payload)
+    except TransactionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TRANSACTION_NOT_FOUND
+        ) from None
+    except TransactionStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    return ApiResponse[TransactionResponse](
+        success=True,
+        message="Transaction updated successfully.",
+        data=_to_detail_response(row),
     )
 
 
@@ -179,7 +233,7 @@ def list_transactions_for_card(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
         ) from None
-    items = [TransactionResponse.model_validate(r) for r in rows]
+    items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
     )
@@ -251,7 +305,7 @@ def create_transaction(
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction created successfully.",
-        data=TransactionResponse.model_validate(row),
+        data=_to_detail_response(row),
     )
 
 
@@ -279,5 +333,5 @@ def patch_transaction(
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction updated successfully.",
-        data=TransactionResponse.model_validate(row),
+        data=_to_detail_response(row),
     )

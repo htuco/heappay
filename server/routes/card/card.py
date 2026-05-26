@@ -5,6 +5,7 @@ from database import get_db
 from repositories.card.card import CardRepository
 from routes.dependencies import UserContext, get_user_context, require_admin, require_staff
 from schemas.card import CardCreate, CardLookupResponse, CardPatch, CardResponse
+from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.card.card import (
     CardBelongsToAnotherAccountError,
     CardDoesNotBelongToUserError,
@@ -17,6 +18,7 @@ from services.card.card import (
     DuplicateCardNumberError,
     UserNotFoundError,
 )
+from settings import get_settings
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 
@@ -85,6 +87,7 @@ def lookup_card(
         owner_name=f"{user.first_name} {user.last_name}".strip(),
         owner_email=user.email,
         user_id=user.user_id,
+        avatar_url=resolve_avatar_url_for_client(user.avatar_url, get_settings()),
         cardholder_name=card.cardholder_name,
     )
 
