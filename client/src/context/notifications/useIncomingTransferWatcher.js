@@ -7,6 +7,7 @@ import { useVisibilityInterval } from './useVisibilityInterval'
 const POLL_MS = 15_000
 const PAGE_SIZE = 20
 const COMPLETED_STATUS_ID = 2
+const REVERSED_STATUS_ID = 4
 
 function senderLabel(tx) {
 	const s = tx?.sender
@@ -31,12 +32,17 @@ function formatAmount(amount) {
 export function useIncomingTransferWatcher({ userId, notify }) {
 	const baselineRef = useRef(null)
 	const establishedRef = useRef(false)
+	// Snapshot of (transaction_id → status_id) for the user's outgoing
+	// transactions, used to detect 2→4 (Completed→Reversed) transitions that
+	// indicate a refund was approved server-side.
+	const outgoingStatusRef = useRef(new Map())
 
 	// Reset per-user state on user swap so the new user's baseline is
 	// established fresh, not inherited from the previous user.
 	useEffect(() => {
 		baselineRef.current = null
 		establishedRef.current = false
+		outgoingStatusRef.current = new Map()
 	}, [userId])
 
 	const tick = useCallback(async () => {
@@ -59,11 +65,16 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 
 		const maxId = items.reduce((acc, t) => Math.max(acc, t.transaction_id), 0)
 
-		// First successful poll for this user: just set the high-water-mark.
+		// First successful poll for this user: just snapshot — no notifications.
 		if (!establishedRef.current) {
 			establishedRef.current = true
 			baselineRef.current = maxId
 			saveBaseline(userId, 'incoming_tx', maxId)
+			for (const t of items) {
+				if (t.sender?.user_id === userId) {
+					outgoingStatusRef.current.set(t.transaction_id, t.status_id)
+				}
+			}
 			return
 		}
 
@@ -84,6 +95,27 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 				surface: 'panel',
 				dedupKey: `tx:${tx.transaction_id}:received`,
 			})
+		}
+
+		// Detect refund-approved on the user's outgoing transactions: status
+		// flips from Completed (2) to Reversed (4). The decline path doesn't
+		// touch the transaction so it can't be detected here without a
+		// dedicated /requests/user endpoint open to the requester (out of
+		// scope for this ticket — requires a backend change).
+		for (const tx of items) {
+			if (tx.sender?.user_id !== userId) continue
+			const prev = outgoingStatusRef.current.get(tx.transaction_id)
+			outgoingStatusRef.current.set(tx.transaction_id, tx.status_id)
+			if (prev === COMPLETED_STATUS_ID && tx.status_id === REVERSED_STATUS_ID) {
+				notify({
+					type: 'success',
+					category: CATEGORIES.REFUND_APPROVED,
+					message: `Your refund for ${formatAmount(tx.amount)} was approved.`,
+					link: { route: '/payments', modal: { kind: 'transaction', id: tx.transaction_id } },
+					surface: 'panel',
+					dedupKey: `tx:${tx.transaction_id}:refund_approved`,
+				})
+			}
 		}
 
 		if (maxId > baselineRef.current) {
