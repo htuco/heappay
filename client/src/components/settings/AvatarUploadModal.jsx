@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { FolderOpen, ImagePlus } from 'lucide-react'
 
 import { Modal } from '@/components/ui/modal'
@@ -131,8 +132,11 @@ export default function AvatarUploadModal({ isOpen, onClose, onUpload }) {
 
   const openPicker = () => inputRef.current?.click()
 
-  return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Update profile photo" size="lg">
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="pointer-events-auto relative z-60">
+      <Modal isOpen={isOpen} onClose={handleClose} title="Update profile photo" size="lg">
       <form className="space-y-4" onSubmit={handleSubmit}>
         <p className="text-sm text-muted-foreground">
           Drag and drop an image here, or browse your device. {ACCEPT_LABEL}, max 5 MB.
@@ -144,7 +148,7 @@ export default function AvatarUploadModal({ isOpen, onClose, onUpload }) {
           ref={inputRef}
           type="file"
           accept={ACCEPT}
-          className="hidden"
+          className="sr-only"
           tabIndex={-1}
           onChange={handleInputChange}
         />
@@ -208,6 +212,8 @@ export default function AvatarUploadModal({ isOpen, onClose, onUpload }) {
           </Button>
         </div>
       </form>
-    </Modal>
+      </Modal>
+    </div>,
+    document.body,
   )
 }
