@@ -47,7 +47,7 @@ export default function ProfileSection() {
                   avatar_url: user?.avatar_url,
                 }}
                 useStockPlaceholder={false}
-                className="h-16 w-16 rounded-3xl text-lg"
+                className="h-16 w-16 rounded-full text-lg"
               />
 
               <div>

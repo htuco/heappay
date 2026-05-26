@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -14,7 +14,23 @@ function pickAvatarUrl(user) {
 function getInitials(user) {
   const first = user?.first_name?.[0] ?? ''
   const last = user?.last_name?.[0] ?? ''
-  return (first + last).toUpperCase() || '?'
+  const primary = (first + last).toUpperCase()
+  if (primary) return primary
+
+  const fallback = user?.full_name ?? user?.name ?? user?.cardholder_name ?? user?.email ?? ''
+  const words = String(fallback).trim().split(/\s+/).filter(Boolean)
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return '?'
+}
+
+function getAvatarLabel(user, initials) {
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim()
+  return (
+    [user?.full_name, user?.name, fullName, user?.cardholder_name, user?.email]
+      .find((value) => typeof value === 'string' && value.trim())
+      ?.trim() ?? initials
+  )
 }
 
 export default function UserAvatar({
@@ -22,21 +38,19 @@ export default function UserAvatar({
   className = '',
   textClassName = '',
   src,
-  /** When there is no custom image URL, load a stock portrait instead of showing initials. */
-  useStockPlaceholder = true,
+  /** Opt in only when a deliberately generic portrait is preferred over initials. */
+  useStockPlaceholder = false,
 }) {
-  const [imageFailed, setImageFailed] = useState(false)
-  const [imageReady, setImageReady] = useState(false)
+  const [failedSrc, setFailedSrc] = useState(null)
+  const [readySrc, setReadySrc] = useState(null)
   const customUrl = src ?? pickAvatarUrl(user)
   const imageSrc =
     customUrl ?? (useStockPlaceholder ? STOCK_PLACEHOLDER_URL : null)
 
-  useEffect(() => {
-    setImageFailed(false)
-    setImageReady(false)
-  }, [imageSrc])
-
   const initials = getInitials(user)
+  const label = getAvatarLabel(user, initials)
+  const imageFailed = imageSrc != null && failedSrc === imageSrc
+  const imageReady = imageSrc != null && readySrc === imageSrc
   const showImage = Boolean(!imageFailed && imageSrc)
 
   return (
@@ -52,17 +66,17 @@ export default function UserAvatar({
           <img
             key={imageSrc}
             src={imageSrc}
-            alt={initials}
+            alt={label}
             referrerPolicy="no-referrer"
             decoding="async"
             className={cn(
               'block h-full w-full min-h-0 min-w-0 object-cover transition-opacity duration-200 ease-out',
               imageReady ? 'opacity-100' : 'opacity-0',
             )}
-            onLoad={() => setImageReady(true)}
+            onLoad={() => setReadySrc(imageSrc)}
             onError={() => {
-              setImageReady(false)
-              setImageFailed(true)
+              setReadySrc(null)
+              setFailedSrc(imageSrc)
             }}
           />
           {!imageReady ? (

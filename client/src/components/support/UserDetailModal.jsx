@@ -12,6 +12,8 @@ import {
   DialogContent,
   DialogRoot,
 } from '@/components/ui/dialog'
+import { Select } from '@/components/ui/select'
+import UserAvatar from '@/components/ui/UserAvatar'
 import { blockCard, listCards, unblockCard } from '@/services/cardsService'
 import transactionsService from '@/services/transactionsService'
 import usersService from '@/services/usersService'
@@ -19,14 +21,6 @@ import { useAppSelector } from '@/store/hooks'
 import { selectCardTypes } from '@/store/slices/referenceDataSlice'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function fmt(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit',
-  })
-}
 
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -39,12 +33,6 @@ function fmtAmount(v) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
-function initials(user) {
-  const f = user?.first_name?.[0] ?? ''
-  const l = user?.last_name?.[0] ?? ''
-  return (f + l).toUpperCase() || '?'
-}
-
 const USER_STATUS = {
   1: { label: 'Active',    dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
   2: { label: 'Inactive',  dot: 'bg-muted-foreground/50', text: 'text-muted-foreground' },
@@ -52,18 +40,43 @@ const USER_STATUS = {
 }
 
 const TX_TYPE_META = {
-  1: { label: 'Payment',  Icon: ArrowUpRight,  bg: 'bg-destructive/10',  color: 'text-destructive'  },
-  2: { label: 'Deposit',  Icon: ArrowDownLeft, bg: 'bg-success/10',      color: 'text-success'      },
-  3: { label: 'Transfer', Icon: ArrowUpRight,  bg: 'bg-primary/10',      color: 'text-primary'      },
-  4: { label: 'Refund',   Icon: RotateCcw,     bg: 'bg-warning/10',      color: 'text-warning'      },
+  1: { label: 'Deposit',    Icon: ArrowDownLeft, bg: 'bg-success/10',      color: 'text-success'      },
+  2: { label: 'Payment',    Icon: ArrowUpRight,  bg: 'bg-destructive/10',  color: 'text-destructive'  },
+  3: { label: 'Refund',     Icon: RotateCcw,     bg: 'bg-warning/10',      color: 'text-warning'      },
+  4: { label: 'Withdrawal', Icon: ArrowUpRight,  bg: 'bg-primary/10',      color: 'text-primary'      },
+  5: { label: 'Chargeback', Icon: RotateCcw,     bg: 'bg-destructive/10',  color: 'text-destructive'  },
 }
 
 const TX_STATUS = {
   1: { label: 'Pending',   variant: 'warning'     },
   2: { label: 'Completed', variant: 'success'     },
-  3: { label: 'Failed',    variant: 'error'       },
+  3: { label: 'Rejected',  variant: 'error'       },
   4: { label: 'Reversed',  variant: 'secondary'   },
 }
+
+const TX_STATUS_OPTIONS = [
+  { value: '1', label: 'Pending' },
+  { value: '2', label: 'Completed' },
+  { value: '3', label: 'Rejected' },
+  { value: '4', label: 'Reversed' },
+]
+
+const TX_STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  ...TX_STATUS_OPTIONS,
+]
+
+const TX_TYPE_OPTIONS = [
+  { value: 'all', label: 'All types' },
+  ...Object.entries(TX_TYPE_META).map(([value, meta]) => ({ value, label: meta.label })),
+]
+
+const TX_SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'amount_desc', label: 'Amount high' },
+  { value: 'amount_asc', label: 'Amount low' },
+]
 
 const REQUEST_STATUS = {
   1: { label: 'Pending',  variant: 'warning'     },
@@ -237,12 +250,24 @@ function TransactionsTab({ userId }) {
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [actionError, setActionError] = useState(null)
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [sort, setSort] = useState('newest')
+  const [pendingTransactionId, setPendingTransactionId] = useState(null)
+
+  const queryParams = useMemo(() => ({
+    pageSize: 8,
+    statusId: statusFilter === 'all' ? undefined : Number(statusFilter),
+    transactionTypeId: typeFilter === 'all' ? undefined : Number(typeFilter),
+    sort,
+  }), [sort, statusFilter, typeFilter])
 
   const load = useCallback(async (p) => {
     setIsLoading(true)
     setError(null)
     try {
-      const result = await transactionsService.listForUser(userId, { page: p, pageSize: 8 })
+      const result = await transactionsService.listForUser(userId, { ...queryParams, page: p })
       setData(result)
       setPage(p)
     } catch {
@@ -250,34 +275,95 @@ function TransactionsTab({ userId }) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId])
+  }, [queryParams, userId])
 
   useEffect(() => { load(1) }, [load])
 
+  async function updateStatus(tx, statusValue) {
+    const nextStatusId = Number(statusValue)
+    if (!Number.isFinite(nextStatusId) || tx.status_id === nextStatusId) return
+
+    setPendingTransactionId(tx.transaction_id)
+    setActionError(null)
+    try {
+      const updated = await transactionsService.patchAsStaff(tx.transaction_id, {
+        status_id: nextStatusId,
+      })
+      if (statusFilter !== 'all' && Number(statusFilter) !== nextStatusId) {
+        await load(page)
+      } else {
+        setData((prev) => prev
+          ? {
+              ...prev,
+              items: prev.items.map((item) => (
+                item.transaction_id === updated.transaction_id ? updated : item
+              )),
+            }
+          : prev)
+      }
+    } catch (err) {
+      setActionError(err?.message ?? 'Failed to update transaction status.')
+    } finally {
+      setPendingTransactionId(null)
+    }
+  }
+
   if (isLoading && !data) return <LoadingRows />
   if (error) return <ErrorMsg>{error}</ErrorMsg>
-  if (!data || data.items.length === 0) return <EmptyMsg>No transactions found.</EmptyMsg>
 
-  const totalPages = Math.ceil(data.total / 8)
+  const items = data?.items ?? []
+  const totalPages = Math.ceil((data?.total ?? 0) / 8)
 
   return (
     <div>
+      <div className="mb-3 grid grid-cols-3 gap-2">
+        <Select
+          aria-label="Filter transactions by status"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+          options={TX_STATUS_FILTER_OPTIONS}
+          className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+        />
+        <Select
+          aria-label="Filter transactions by type"
+          value={typeFilter}
+          onChange={(event) => setTypeFilter(event.target.value)}
+          options={TX_TYPE_OPTIONS}
+          className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+        />
+        <Select
+          aria-label="Sort transactions"
+          value={sort}
+          onChange={(event) => setSort(event.target.value)}
+          options={TX_SORT_OPTIONS}
+          className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+        />
+      </div>
+      {actionError && (
+        <p className="mb-3 rounded-input border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {actionError}
+        </p>
+      )}
       <div className="rounded-input border border-border overflow-hidden">
-        <div className="grid grid-cols-[28px_1fr_72px_88px_80px] gap-3 border-b border-border bg-muted/30 px-4 py-2">
+        <div className="grid grid-cols-[28px_minmax(0,1fr)_78px_110px_90px_118px] gap-3 border-b border-border bg-muted/30 px-4 py-2">
           <span />
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Counterparty</span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Type</span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground text-right">Amount</span>
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Set Status</span>
         </div>
         <div className="divide-y divide-border/60">
-          {data.items.map((tx) => {
+          {items.length === 0 ? (
+            <EmptyMsg>No transactions found.</EmptyMsg>
+          ) : items.map((tx) => {
             const meta = TX_TYPE_META[tx.transaction_type_id] ?? TX_TYPE_META[1]
             const TxIcon = meta.Icon
             const statusMeta = TX_STATUS[tx.status_id] ?? TX_STATUS[1]
+            const isPendingStatusUpdate = pendingTransactionId === tx.transaction_id
             const counterparty = tx.sender?.full_name ?? tx.sender?.cardholder_name ?? tx.recipient?.full_name ?? '—'
             return (
-              <div key={tx.transaction_id} className="grid grid-cols-[28px_1fr_72px_88px_80px] items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors">
+              <div key={tx.transaction_id} className="grid grid-cols-[28px_minmax(0,1fr)_78px_110px_90px_118px] items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors">
                 <div className={`flex size-7 shrink-0 items-center justify-center rounded-input ${meta.bg}`}>
                   <TxIcon className={`size-3.5 ${meta.color}`} strokeWidth={2} />
                 </div>
@@ -288,6 +374,17 @@ function TransactionsTab({ userId }) {
                 <span className="text-xs text-muted-foreground">{meta.label}</span>
                 <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
                 <p className="text-right text-sm font-semibold tabular-nums text-foreground">{fmtAmount(tx.amount)}</p>
+                <div className="flex items-center gap-1.5">
+                  {isPendingStatusUpdate && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
+                  <Select
+                    aria-label="Set transaction status"
+                    value={String(tx.status_id)}
+                    onChange={(event) => updateStatus(tx, event.target.value)}
+                    options={TX_STATUS_OPTIONS}
+                    disabled={isPendingStatusUpdate}
+                    className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+                  />
+                </div>
               </div>
             )
           })}
@@ -394,9 +491,11 @@ export default function UserDetailModal({ user, open, onOpenChange, rolesById, o
       >
         {/* Header */}
         <div className="flex items-center gap-4 border-b border-border px-6 py-5 pr-16">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
-            {initials(user)}
-          </div>
+          <UserAvatar
+            user={user}
+            className="size-11 text-sm ring-1 ring-border"
+            textClassName="text-sm"
+          />
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-foreground leading-tight">
               {user.first_name} {user.last_name}

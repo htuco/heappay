@@ -617,12 +617,13 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
 
             {lookupState.status === 'found' && lookupState.info && (
               <div className="flex items-center gap-3 rounded-surface bg-success/10 px-4 py-3 ring-1 ring-success/30">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/20">
-                  <CheckCircle2
-                    className="h-4.5 w-4.5 text-success"
-                    strokeWidth={2.2}
-                  />
-                </span>
+                <UserAvatar
+                  user={{
+                    full_name: lookupState.info.owner_name,
+                    avatar_url: lookupState.info.avatar_url,
+                  }}
+                  className="h-9 w-9 text-xs ring-1 ring-success/30"
+                />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-card-foreground">
                     {lookupState.info.owner_name}

@@ -20,7 +20,7 @@ import { useAuth } from '@/hooks/useAuth'
 import useTransactionDetail from '@/hooks/useTransactionDetail'
 
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
-const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Failed', 4: 'Reversed' }
+const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Rejected', 4: 'Reversed' }
 const STATUS_VARIANT = { 1: 'warning', 2: 'success', 3: 'error', 4: 'secondary' }
 const CLOSE_ANIMATION_MS = 240
 const PANEL_ENTER_ANIMATION =
@@ -73,6 +73,20 @@ function getStatusLabel(transaction) {
 
 function getPartyName(party) {
   return party?.full_name ?? party?.name ?? party?.cardholder_name ?? party?.email ?? null
+}
+
+function avatarUserFromParty(party, fallbackName) {
+  if (!party && !fallbackName) return null
+  const name = fallbackName ?? getPartyName(party) ?? ''
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return {
+    ...party,
+    first_name: party?.first_name ?? parts[0],
+    last_name: party?.last_name ?? parts.slice(1).join(' '),
+    full_name: party?.full_name ?? name,
+    name,
+    avatar_url: party?.avatar_url,
+  }
 }
 
 function isPartyCurrentUser(party, currentUserId) {
@@ -184,12 +198,31 @@ function HeaderCard({ transaction, currentUserId, ownedCardIds }) {
     <div className="rounded-surface border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
-              outgoing ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
-            }`}
-          >
-            <DirectionIcon className="size-5" />
+          <span className="relative shrink-0">
+            {counterparty.user ? (
+              <UserAvatar
+                user={avatarUserFromParty(counterparty.user, counterparty.name)}
+                className="size-10 text-xs ring-1 ring-border"
+                textClassName="text-xs"
+              />
+            ) : (
+              <span
+                className={`flex size-10 items-center justify-center rounded-full ${
+                  outgoing ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
+                }`}
+              >
+                <DirectionIcon className="size-5" />
+              </span>
+            )}
+            {counterparty.user ? (
+              <span
+                className={`absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-card ${
+                  outgoing ? 'bg-destructive text-destructive-foreground' : 'bg-success text-success-foreground'
+                }`}
+              >
+                <DirectionIcon className="size-3" strokeWidth={2.4} />
+              </span>
+            ) : null}
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm text-card-foreground">
@@ -207,15 +240,15 @@ function HeaderCard({ transaction, currentUserId, ownedCardIds }) {
   )
 }
 
-function PartyCard({ label, name, email, lastFour }) {
-  const initials = name
-    ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-    : '?'
+function PartyCard({ label, party, name, email, lastFour }) {
+  const avatarUser = avatarUserFromParty(party, name)
   return (
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
-      <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-        {initials}
-      </div>
+      <UserAvatar
+        user={avatarUser}
+        className="size-11 text-sm ring-1 ring-primary/15"
+        textClassName="text-sm"
+      />
       <div>
         <p className="text-sm font-semibold text-card-foreground leading-tight">{name ?? '—'}</p>
         {email && <p className="mt-0.5 text-xs text-muted-foreground">{email}</p>}
@@ -235,6 +268,7 @@ function TransferFlow({ transaction }) {
     <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-4">
       <PartyCard
         label="Sender"
+        party={sender}
         name={sender?.full_name ?? sender?.cardholder_name}
         email={sender?.email}
         lastFour={sender?.last_four}
@@ -245,6 +279,7 @@ function TransferFlow({ transaction }) {
       </div>
       <PartyCard
         label="Recipient"
+        party={recipient}
         name={recipient?.full_name ?? recipient?.cardholder_name}
         email={recipient?.email}
         lastFour={recipient?.last_four}
@@ -268,7 +303,7 @@ function DetailsSection({ transaction, currentUserId, ownedCardIds }) {
         <DetailRow label={outgoing ? 'Recipient' : 'Sender'}>
           <span className="inline-flex items-center gap-2">
             <UserAvatar
-              user={counterparty.user}
+              user={avatarUserFromParty(counterparty.user, counterparty.name)}
               className="size-6 text-[10px]"
               textClassName="text-[10px]"
             />

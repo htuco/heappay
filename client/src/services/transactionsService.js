@@ -81,6 +81,9 @@ function buildPageParams(params = {}) {
 	const query = {}
 	if (typeof params.page === 'number') query.page = params.page
 	if (typeof params.pageSize === 'number') query.page_size = params.pageSize
+	if (typeof params.statusId === 'number') query.status_id = params.statusId
+	if (typeof params.transactionTypeId === 'number') query.transaction_type_id = params.transactionTypeId
+	if (typeof params.sort === 'string') query.sort = params.sort
 	return query
 }
 
@@ -194,9 +197,24 @@ export const transactionsService = {
 	},
 
 	/**
+	 * (Staff) Update a transaction for any user.
+	 * @param {number} transactionId
+	 * @param {import('@/types/transaction').PatchTransactionPayload} payload
+	 * @returns {Promise<import('@/types/transaction').Transaction>}
+	 */
+	async patchAsStaff(transactionId, payload) {
+		try {
+			const { data } = await api.patch(`/transactions/${transactionId}/staff`, payload)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * (Staff) List transactions for a specific user (paginated).
 	 * @param {number} userId
-	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @param {{ page?: number, pageSize?: number, statusId?: number, transactionTypeId?: number, sort?: string }} [params]
 	 * @returns {Promise<import('@/types/transaction').TransactionPage>}
 	 */
 	async listForUser(userId, params = {}) {

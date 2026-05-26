@@ -38,6 +38,7 @@ export const TRANSACTION_API_ERROR_CODES = Object.freeze({
  * @property {string | null=} last_name
  * @property {string | null=} full_name
  * @property {string | null=} email
+ * @property {string | null=} avatar_url
  * @property {string | null=} cardholder_name
  * @property {string | null=} brand
  * @property {string | null=} last_four

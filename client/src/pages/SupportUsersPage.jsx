@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, MinusCircle, XCircle } from 'lucide-react'
+import { CheckCircle2, MinusCircle, RefreshCw, Search, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,14 +24,17 @@ function StatusIcon({ statusId }) {
 
 function Legend() {
   return (
-    <div className="mb-3 flex items-center gap-4 rounded-input border border-border/60 bg-muted/20 px-3 py-2">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mr-1">Legend</span>
-      {Object.values(STATUS_META).map(({ Icon, color, label }) => (
-        <span key={label} className="flex items-center gap-1.5">
-          <Icon className={`size-3.5 ${color}`} strokeWidth={1.75} />
-          <span className="text-xs text-muted-foreground">{label}</span>
-        </span>
-      ))}
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-input border border-border/60 bg-muted/20 px-3 py-2">
+      <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Legend</span>
+      {Object.values(STATUS_META).map((meta) => {
+        const StatusGlyph = meta.Icon
+        return (
+          <span key={meta.label} className="flex items-center gap-1.5">
+            <StatusGlyph className={`size-3.5 ${meta.color}`} strokeWidth={1.75} />
+            <span className="text-xs text-muted-foreground">{meta.label}</span>
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -98,42 +101,49 @@ export default function SupportUsersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
-      {/* Toolbar */}
-      <div className="mb-3 flex items-center gap-2">
-        <Input
-          value={search}
-          onChange={handleSearch}
-          placeholder="Search by name or email…"
-          className="h-8 max-w-xs border-border/70 text-sm shadow-none"
-        />
-        <Select
-          value={roleFilter}
-          onChange={(e) => handleRoleFilter(e.target.value)}
-          options={[{ value: '', label: 'All roles' }, ...(userRoles ?? []).map((r) => ({ value: String(r.role_id), label: r.role_name }))]}
-          className="h-8 w-36 border-border/70 py-0 text-xs shadow-none"
-        />
-        <Button
-          variant="outline"
-          className="h-8 rounded-input border-border/70 text-xs shadow-none"
-          onClick={() => load(page)}
-          disabled={isLoading}
-        >
-          Refresh
-        </Button>
-        {!isLoading && (
-          <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-            {total} user{total !== 1 ? 's' : ''}
+    <div className="mx-auto w-full max-w-6xl space-y-4">
+      <div className="rounded-surface border border-border bg-card p-4 shadow-xs">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid w-full gap-2 sm:grid-cols-[minmax(220px,360px)_160px_auto]">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={handleSearch}
+                placeholder="Search by name or email..."
+                className="h-9 border-border/70 bg-background pl-9 text-sm shadow-none"
+              />
+            </label>
+            <Select
+              value={roleFilter}
+              onChange={(e) => handleRoleFilter(e.target.value)}
+              options={[{ value: '', label: 'All roles' }, ...(userRoles ?? []).map((r) => ({ value: String(r.role_id), label: r.role_name }))]}
+              className="h-9 border-border/70 bg-background py-0 text-xs shadow-none"
+            />
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-9 gap-2 border-border/70 text-xs shadow-none"
+              onClick={() => load(page)}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`size-3.5 ${isLoading ? 'animate-spin' : ''}`} aria-hidden />
+              Refresh
+            </Button>
+          </div>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {isLoading ? 'Loading users...' : `${total} user${total !== 1 ? 's' : ''}`}
           </span>
-        )}
-      </div>
+        </div>
 
-      <Legend />
+        <div className="mt-3">
+          <Legend />
+        </div>
+      </div>
 
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-input border border-border/80 bg-card shadow-sm">
+      <div className="overflow-hidden rounded-surface border border-border bg-card shadow-xs">
         <div className="hidden border-b border-border/60 bg-muted/30 px-4 py-2.5 sm:grid sm:grid-cols-[1fr_1fr_100px_120px] sm:gap-x-4">
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Name</span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Email</span>
@@ -155,10 +165,10 @@ export default function SupportUsersPage() {
             : users.map((user) => (
               <div
                 key={user.user_id}
-                className="group grid grid-cols-[1fr_auto] items-center gap-x-4 px-4 py-2.5 cursor-pointer transition-colors hover:bg-muted/20 sm:grid-cols-[1fr_1fr_100px_120px]"
+                className="group grid cursor-pointer grid-cols-[1fr_auto] items-center gap-x-4 px-4 py-3 transition-colors hover:bg-muted/20 sm:grid-cols-[1fr_1fr_100px_120px]"
                 onClick={() => setSelectedUser(user)}
               >
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
                   <StatusIcon statusId={user.status_id} />
                   <span className="truncate text-sm font-medium text-foreground">
                     {user.first_name} {user.last_name}
@@ -168,10 +178,12 @@ export default function SupportUsersPage() {
                 <p className="hidden truncate text-sm text-muted-foreground sm:block">{user.email}</p>
 
                 <div className="hidden sm:block">
-                  <Badge variant="secondary">{rolesById[user.user_role_id] ?? user.user_role_id}</Badge>
+                  <Badge variant="secondary" className="capitalize">
+                    {rolesById[user.user_role_id] ?? user.user_role_id}
+                  </Badge>
                 </div>
 
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex items-center justify-end gap-2">
                   <Button
                     variant="outline"
                     className={`h-7 rounded-input px-2.5 text-xs shadow-none ${
@@ -194,7 +206,6 @@ export default function SupportUsersPage() {
         </div>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">Page {page} of {totalPages}</p>
