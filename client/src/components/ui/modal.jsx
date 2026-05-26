@@ -1,5 +1,4 @@
 import { forwardRef, useEffect } from "react"
-import { createPortal } from "react-dom"
 import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
@@ -52,13 +51,12 @@ const Modal = forwardRef(
     }, [isOpen, onClose])
 
     if (!isOpen) return null
-    if (typeof document === "undefined") return null
 
     const isSplit = variant === "split"
 
-    return createPortal(
+    return (
       <div
-        className="pointer-events-auto fixed inset-0 z-60 flex items-center justify-center bg-foreground/30 p-4 backdrop-blur-[3px] animate-in fade-in-0 duration-200"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4 backdrop-blur-[3px] animate-in fade-in-0 duration-200"
         onClick={handleBackdropClick}
         role="dialog"
         aria-modal="true"
@@ -112,8 +110,7 @@ const Modal = forwardRef(
             </>
           )}
         </div>
-      </div>,
-      document.body
+      </div>
     )
   }
 )
