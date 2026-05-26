@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, MoreHorizontal, X } from 'lucide-react'
 import { useNotifications } from '@/context/NotificationContext'
+import { useNotificationNavigation } from '@/context/notifications/useNotificationNavigation'
 import { cn } from '@/lib/utils'
 import NotificationRow from './NotificationRow'
 import NotificationEmptyState from './NotificationEmptyState'
@@ -15,6 +16,7 @@ const SHEET_OPEN_CLASSES =
 export default function NotificationPanel() {
 	const { history, unreadCount, markRead, markAllRead, discard, clearHistory } =
 		useNotifications()
+	const navigateForNotification = useNotificationNavigation()
 	const [open, setOpen] = useState(false)
 	const [menuOpen, setMenuOpen] = useState(false)
 	const panelRef = useRef(null)
@@ -86,11 +88,10 @@ export default function NotificationPanel() {
 	const handleSelect = useCallback(
 		(item) => {
 			markRead(item.id)
-			// Deep-link routing comes online in Part 5 (link.route + detail modal).
-			// For now selecting a row just marks it read.
-			void item
+			navigateForNotification(item)
+			handleClose()
 		},
-		[markRead],
+		[markRead, navigateForNotification, handleClose],
 	)
 
 	const handleClearAll = () => {
