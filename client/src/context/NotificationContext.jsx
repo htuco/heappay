@@ -46,15 +46,11 @@ export function NotificationProvider({ children }) {
 
 	const [history, setHistory] = useState([])
 	const [queue, setQueue] = useState([])
-	const timers = useRef({})
 	const dedupRef = useRef(new Set())
 	const hydratedFor = useRef(null)
 
 	// Hydrate from localStorage when the user changes (login / hydrateSession)
 	useEffect(() => {
-		// clear any pending toast timers from the previous user
-		Object.values(timers.current).forEach(clearTimeout)
-		timers.current = {}
 		setQueue([])
 
 		if (!userId) {
@@ -77,8 +73,6 @@ export function NotificationProvider({ children }) {
 	}, [userId, history])
 
 	const dismiss = useCallback((id) => {
-		clearTimeout(timers.current[id])
-		delete timers.current[id]
 		setQueue((prev) => prev.filter((n) => n.id !== id))
 	}, [])
 
@@ -117,9 +111,8 @@ export function NotificationProvider({ children }) {
 
 			if (surface !== 'panel') {
 				setQueue((prev) => [...prev, item])
-				if (duration > 0) {
-					timers.current[id] = setTimeout(() => dismiss(id), duration)
-				}
+				// Auto-dismiss is owned by the Toast component itself so it can
+				// play an exit animation before removal.
 			}
 
 			if (surface !== 'toast') {
@@ -128,7 +121,7 @@ export function NotificationProvider({ children }) {
 
 			return id
 		},
-		[userId, dismiss],
+		[userId],
 	)
 
 	const markRead = useCallback((id) => {
