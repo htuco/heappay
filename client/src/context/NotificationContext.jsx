@@ -20,6 +20,7 @@ import { CATEGORIES } from './notifications/categories'
 import { useIncomingTransferWatcher } from './notifications/useIncomingTransferWatcher'
 import { useAccountEventsWatcher } from './notifications/useAccountEventsWatcher'
 import { useCardExpiryWatcher } from './notifications/useCardExpiryWatcher'
+import { usePendingRefundWatcher } from './notifications/usePendingRefundWatcher'
 import { subscribeDataChange, DATA_CHANGE_KINDS } from '@/utils/dataEvents'
 
 const DEFAULT_CATEGORY = CATEGORIES.SYSTEM
@@ -143,6 +144,7 @@ export function NotificationProvider({ children }) {
 	useIncomingTransferWatcher({ userId, notify })
 	useAccountEventsWatcher({ userId, notify, selfActionRef: selfCardActionRef })
 	useCardExpiryWatcher({ userId, notify })
+	usePendingRefundWatcher({ userId, notify })
 
 	const markRead = useCallback((id) => {
 		setHistory((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
