@@ -18,6 +18,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import transactionsService from '@/services/transactionsService'
+import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 
 const REFUND_REASONS = [
   'Duplicate payment',
@@ -36,6 +38,7 @@ function getTransactionId(transaction) {
 }
 
 export default function PaymentPage() {
+  const { notify } = useNotifications()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTransaction, setSelectedTransaction] = useState(null)
   const [transactionToCancel, setTransactionToCancel] = useState(null)
@@ -95,6 +98,12 @@ export default function PaymentPage() {
     try {
       await transactionsService.requestRefund(refundTransactionId, resolvedRefundReason)
       setRefundedTransactionIds((prev) => new Set(prev).add(refundTransactionId))
+      notify({
+        type: 'success',
+        category: CATEGORIES.REFUND_REQUESTED,
+        message: 'Refund request submitted. We’ll notify you when it’s reviewed.',
+        link: { route: '/payments', modal: { kind: 'transaction', id: refundTransactionId } },
+      })
       closeRefundPreview()
     } catch (err) {
       setRefundError(err?.message ?? 'Failed to submit refund request.')
