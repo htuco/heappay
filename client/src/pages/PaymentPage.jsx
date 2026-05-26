@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { AlertTriangle, Loader2, MessageSquareText } from 'lucide-react'
 
@@ -35,6 +36,7 @@ function getTransactionId(transaction) {
 }
 
 export default function PaymentPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTransaction, setSelectedTransaction] = useState(null)
   const [transactionToCancel, setTransactionToCancel] = useState(null)
   const [transactionToRefund, setTransactionToRefund] = useState(null)
@@ -51,6 +53,28 @@ export default function PaymentPage() {
   const resolvedRefundReason = refundReason === 'Other' ? refundOtherReason.trim() : refundReason
   const refundAlreadyPending = refundTransactionId !== null && refundedTransactionIds.has(refundTransactionId)
   const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason) && !isSubmittingRefund && !refundAlreadyPending
+
+  // Open the detail panel when the URL carries ?tx=<id> (e.g. from a
+  // notification deep-link). useTransactionDetail will fetch the full record.
+  useEffect(() => {
+    const txParam = searchParams.get('tx')
+    if (!txParam) return
+    const id = Number.parseInt(txParam, 10)
+    if (!Number.isFinite(id)) return
+    setSelectedTransaction((current) => {
+      if (getTransactionId(current) === id) return current
+      return { transaction_id: id }
+    })
+  }, [searchParams])
+
+  function closeSelectedTransaction() {
+    setSelectedTransaction(null)
+    if (searchParams.has('tx')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('tx')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   function closeCancelPreview() {
     setTransactionToCancel(null)
@@ -85,7 +109,7 @@ export default function PaymentPage() {
       <TransactionDetailPanel
         open={Boolean(selectedTransaction)}
         transaction={selectedTransaction}
-        onClose={() => setSelectedTransaction(null)}
+        onClose={closeSelectedTransaction}
         onCancel={setTransactionToCancel}
         onRefund={setTransactionToRefund}
         refundRequestedTransactionIds={refundedTransactionIds}
