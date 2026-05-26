@@ -960,12 +960,14 @@ export default function PaymentWizard({
   const [isLoadingRef, setIsLoadingRef] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
     setStep(initialCardId ? 1 : 0)
     setForm({ ...INITIAL_FORM, fromCardId: initialCardId ?? null })
     setSubmitError('')
+    setShowCloseConfirm(false)
   }, [isOpen, initialCardId])
 
   useEffect(() => {
@@ -998,7 +1000,27 @@ export default function PaymentWizard({
     setStep(0)
     setForm(INITIAL_FORM)
     setSubmitError('')
+    setShowCloseConfirm(false)
     onClose()
+  }
+
+  function hasWizardProgress() {
+    if (step === 0 || step === 3) return false
+    return Boolean(
+      form.recipientCardNumber ||
+        form.recipientEmailQuery ||
+        form.recipientInfo ||
+        form.amount ||
+        form.note
+    )
+  }
+
+  function requestClose() {
+    if (hasWizardProgress()) {
+      setShowCloseConfirm(true)
+      return
+    }
+    resetAndClose()
   }
 
   function handleChange(field, value) {
@@ -1051,7 +1073,7 @@ export default function PaymentWizard({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={resetAndClose}
+      onClose={requestClose}
       variant="split"
       size={isSuccess ? 'lg' : '3xl'}
     >
@@ -1094,7 +1116,7 @@ export default function PaymentWizard({
               </h2>
               <button
                 type="button"
-                onClick={resetAndClose}
+                onClick={requestClose}
                 className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Close modal"
               >
@@ -1139,6 +1161,57 @@ export default function PaymentWizard({
                   error={submitError}
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCloseConfirm && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-foreground/30 p-4 backdrop-blur-[3px] animate-in fade-in-0 duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCloseConfirm(false)
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="discard-confirm-title"
+        >
+          <div className="bg-background border border-border/60 rounded-panel w-full max-w-md relative animate-in fade-in-0 zoom-in-85 slide-in-from-bottom-14 duration-500 ease-[cubic-bezier(0.34,1.45,0.64,1)]">
+            <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4">
+              <div className="min-w-0 pt-0.5">
+                <h2
+                  id="discard-confirm-title"
+                  className="text-lg sm:text-xl font-semibold leading-tight tracking-tight text-card-foreground"
+                >
+                  Discard this payment?
+                </h2>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                  Your recipient and amount will be cleared. You can start again any time.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCloseConfirm(false)}
+                className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Close confirmation"
+              >
+                <X size={15} strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="px-6 pb-6 sm:px-7 sm:pb-7">
+              <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCloseConfirm(false)}
+                  className="text-card-foreground"
+                >
+                  Keep editing
+                </Button>
+                <Button type="button" variant="destructive" onClick={resetAndClose}>
+                  Discard
+                </Button>
+              </div>
             </div>
           </div>
         </div>
