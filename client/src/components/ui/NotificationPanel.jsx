@@ -18,16 +18,16 @@ function timeAgo(ts) {
 }
 
 export default function NotificationPanel() {
-	const { history, clearHistory } = useNotifications()
+	const { history, unreadCount, markAllRead, clearHistory } = useNotifications()
 	const [open, setOpen] = useState(false)
-	const [seen, setSeen] = useState(0)
 	const panelRef = useRef(null)
 
-	const unseen = history.length - seen
-
 	const handleOpen = () => {
-		setOpen((prev) => !prev)
-		setSeen(history.length)
+		setOpen((prev) => {
+			const next = !prev
+			if (next && unreadCount > 0) markAllRead()
+			return next
+		})
 	}
 
 	// Close on outside click
@@ -49,7 +49,7 @@ export default function NotificationPanel() {
 				aria-label="Notifications"
 			>
 				<Bell className="h-4.5 w-4.5" strokeWidth={2} />
-				{unseen > 0 && (
+				{unreadCount > 0 && (
 					<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
 				)}
 			</button>
