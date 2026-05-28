@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { AlertTriangle, MessageSquareText } from 'lucide-react'
+import { AlertTriangle, Loader2, MessageSquareText } from 'lucide-react'
 
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import transactionsService from '@/services/transactionsService'
 
 const REFUND_REASONS = [
   'Duplicate payment',
@@ -40,12 +41,16 @@ export default function PaymentPage() {
   const [cancelConfirmationId, setCancelConfirmationId] = useState('')
   const [refundReason, setRefundReason] = useState(REFUND_REASONS[0])
   const [refundOtherReason, setRefundOtherReason] = useState('')
+  const [isSubmittingRefund, setIsSubmittingRefund] = useState(false)
+  const [refundError, setRefundError] = useState(null)
+  const [refundedTransactionIds, setRefundedTransactionIds] = useState(new Set())
   const cancelTransactionId = getTransactionId(transactionToCancel)
   const refundTransactionId = getTransactionId(transactionToRefund)
   const isCancelConfirmed =
     Boolean(cancelTransactionId) && cancelConfirmationId.trim() === String(cancelTransactionId)
   const resolvedRefundReason = refundReason === 'Other' ? refundOtherReason.trim() : refundReason
-  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason)
+  const refundAlreadyPending = refundTransactionId !== null && refundedTransactionIds.has(refundTransactionId)
+  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason) && !isSubmittingRefund && !refundAlreadyPending
 
   function closeCancelPreview() {
     setTransactionToCancel(null)
@@ -56,10 +61,26 @@ export default function PaymentPage() {
     setTransactionToRefund(null)
     setRefundReason(REFUND_REASONS[0])
     setRefundOtherReason('')
+    setRefundError(null)
+  }
+
+  async function handleSubmitRefund() {
+    if (!canSubmitRefundRequest) return
+    setIsSubmittingRefund(true)
+    setRefundError(null)
+    try {
+      await transactionsService.requestRefund(refundTransactionId, resolvedRefundReason)
+      setRefundedTransactionIds((prev) => new Set(prev).add(refundTransactionId))
+      closeRefundPreview()
+    } catch (err) {
+      setRefundError(err?.message ?? 'Failed to submit refund request.')
+    } finally {
+      setIsSubmittingRefund(false)
+    }
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <TransactionHistory onTransactionSelect={setSelectedTransaction} />
       <TransactionDetailPanel
         open={Boolean(selectedTransaction)}
@@ -67,6 +88,7 @@ export default function PaymentPage() {
         onClose={() => setSelectedTransaction(null)}
         onCancel={setTransactionToCancel}
         onRefund={setTransactionToRefund}
+        refundRequestedTransactionIds={refundedTransactionIds}
       />
       <DialogRoot
         open={Boolean(transactionToCancel)}
@@ -76,7 +98,7 @@ export default function PaymentPage() {
       >
         <DialogContent
           overlayClassName="bg-slate-950/35 backdrop-blur-[10px]"
-          className="max-w-[27rem] rounded-[20px] border border-slate-200/80 bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] [&>button]:right-5 [&>button]:top-5 [&>button]:flex [&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:p-0 [&>button]:opacity-60 [&>button]:hover:bg-slate-100 [&>button]:hover:opacity-100 dark:[&>button]:hover:bg-white/10"
+          className="max-w-[27rem] rounded-panel border border-slate-200/80 bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] [&>button]:right-5 [&>button]:top-5 [&>button]:flex [&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:p-0 [&>button]:opacity-60 [&>button]:hover:bg-slate-100 [&>button]:hover:opacity-100 dark:[&>button]:hover:bg-white/10"
         >
           <div className="p-6 sm:p-7">
             <DialogHeader className="mb-0 gap-0 pr-8">
@@ -91,7 +113,7 @@ export default function PaymentPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-[18px] rounded-[14px] border border-slate-200/80 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/5">
+            <div className="mt-[18px] rounded-surface border border-slate-200/80 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-card-foreground">
                   Transaction #{cancelTransactionId ?? '—'}
@@ -112,7 +134,7 @@ export default function PaymentPage() {
                 value={cancelConfirmationId}
                 onChange={(event) => setCancelConfirmationId(event.target.value)}
                 placeholder={cancelTransactionId ? String(cancelTransactionId) : 'Transaction ID'}
-                className="mt-2.5 h-11 rounded-xl border border-slate-200 bg-background px-3.5 font-semibold tabular-nums shadow-none focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 dark:border-white/10"
+                className="mt-2.5 h-11 rounded-input border border-slate-200 bg-background px-3.5 font-semibold tabular-nums shadow-none focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 dark:border-white/10"
               />
               <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                 Enter <span className="font-semibold text-card-foreground">{cancelTransactionId ?? 'the ID'}</span> to enable cancellation.
@@ -122,14 +144,14 @@ export default function PaymentPage() {
             <DialogFooter className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <DialogClose asChild>
                 <Button
-                  className="h-11 rounded-xl bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
+                  className="h-11 rounded-input bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
                 >
                   Keep payment
                 </Button>
               </DialogClose>
               <Button
                 variant="outline"
-                className="h-11 rounded-xl border-red-200 bg-white px-4 font-semibold text-red-600 shadow-none hover:border-red-300 hover:bg-red-50 hover:text-red-600 focus-visible:border-red-300 focus-visible:ring-red-500/15 disabled:border-red-100 disabled:bg-red-50/40 disabled:text-red-300 dark:border-red-400/30 dark:bg-transparent dark:text-red-300 dark:hover:border-red-400/50 dark:hover:bg-red-400/10"
+                className="h-11 rounded-input border-red-200 bg-white px-4 font-semibold text-red-600 shadow-none hover:border-red-300 hover:bg-red-50 hover:text-red-600 focus-visible:border-red-300 focus-visible:ring-red-500/15 disabled:border-red-100 disabled:bg-red-50/40 disabled:text-red-300 dark:border-red-400/30 dark:bg-transparent dark:text-red-300 dark:hover:border-red-400/50 dark:hover:bg-red-400/10"
                 disabled={!isCancelConfirmed}
                 onClick={closeCancelPreview}
               >
@@ -147,7 +169,7 @@ export default function PaymentPage() {
       >
         <DialogContent
           overlayClassName="bg-slate-950/35 backdrop-blur-[10px]"
-          className="max-w-[30rem] rounded-[20px] border border-slate-200/80 bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] [&>button]:right-5 [&>button]:top-5 [&>button]:flex [&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:p-0 [&>button]:opacity-60 [&>button]:hover:bg-slate-100 [&>button]:hover:opacity-100 dark:[&>button]:hover:bg-white/10"
+          className="max-w-[30rem] rounded-panel border border-slate-200/80 bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] [&>button]:right-5 [&>button]:top-5 [&>button]:flex [&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:p-0 [&>button]:opacity-60 [&>button]:hover:bg-slate-100 [&>button]:hover:opacity-100 dark:[&>button]:hover:bg-white/10"
         >
           <div className="p-6 sm:p-7">
             <DialogHeader className="mb-0 gap-0 pr-8">
@@ -162,7 +184,7 @@ export default function PaymentPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-[18px] rounded-[14px] border border-slate-200/80 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/5">
+            <div className="mt-[18px] rounded-surface border border-slate-200/80 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-card-foreground">
                   Transaction #{refundTransactionId ?? '—'}
@@ -182,7 +204,7 @@ export default function PaymentPage() {
                 value={refundReason}
                 onChange={(event) => setRefundReason(event.target.value)}
                 options={REFUND_REASON_OPTIONS}
-                className="mt-2.5 h-11 rounded-xl border border-slate-200 bg-background px-3.5 shadow-none focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 dark:border-white/10"
+                className="mt-2.5 h-11 rounded-input border border-slate-200 bg-background px-3.5 shadow-none focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 dark:border-white/10"
               />
             </div>
 
@@ -197,7 +219,7 @@ export default function PaymentPage() {
                   onChange={(event) => setRefundOtherReason(event.target.value.slice(0, 180))}
                   placeholder="Tell us why this payment should be refunded."
                   rows={4}
-                  className="mt-2.5 w-full resize-none rounded-[10px] border border-slate-200 bg-background px-3.5 py-3 text-sm font-medium text-card-foreground shadow-none outline-none transition focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 disabled:pointer-events-none disabled:opacity-50 dark:border-white/10"
+                  className="mt-2.5 w-full resize-none rounded-input border border-slate-200 bg-background px-3.5 py-3 text-sm font-medium text-card-foreground shadow-none outline-none transition focus-visible:border-blue-400 focus-visible:ring-[3px] focus-visible:ring-blue-500/10 disabled:pointer-events-none disabled:opacity-50 dark:border-white/10"
                 />
               </div>
             )}
@@ -210,17 +232,28 @@ export default function PaymentPage() {
               <DialogClose asChild>
                 <Button
                   variant="outline"
-                  className="h-11 rounded-xl border-slate-200 bg-white px-4 font-semibold text-slate-700 shadow-none hover:bg-slate-50 dark:border-white/10 dark:bg-transparent dark:text-slate-200 dark:hover:bg-white/5"
+                  className="h-11 rounded-input border-slate-200 bg-white px-4 font-semibold text-slate-700 shadow-none hover:bg-slate-50 dark:border-white/10 dark:bg-transparent dark:text-slate-200 dark:hover:bg-white/5"
                 >
                   Keep payment
                 </Button>
               </DialogClose>
+              {refundAlreadyPending && (
+                <p className="col-span-2 -mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  A refund request for this transaction is already pending review.
+                </p>
+              )}
+              {refundError && (
+                <p className="col-span-2 -mt-1 text-xs text-destructive">{refundError}</p>
+              )}
               <Button
-                className="h-11 rounded-xl bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 disabled:bg-slate-200 disabled:text-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
+                className="h-11 rounded-input bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 disabled:bg-slate-200 disabled:text-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
                 disabled={!canSubmitRefundRequest}
-                onClick={closeRefundPreview}
+                onClick={handleSubmitRefund}
               >
-                Submit request
+                {isSubmittingRefund ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : null}
+                {isSubmittingRefund ? 'Submitting…' : 'Submit request'}
               </Button>
             </DialogFooter>
           </div>

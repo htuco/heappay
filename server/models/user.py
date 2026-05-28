@@ -28,6 +28,7 @@ class User(Base):
     billing_reminders_enabled: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
+    avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")

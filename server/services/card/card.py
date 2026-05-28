@@ -26,6 +26,22 @@ class DuplicateCardNumberError(Exception):
     """A card with this number is already registered."""
 
 
+class CardDoesNotBelongToUserError(Exception):
+    """Card does not belong to the requesting user."""
+
+
+class CardBelongsToAnotherAccountError(Exception):
+    """A soft-deleted card with this number is owned by another user."""
+
+
+class CardHasTransactionsError(Exception):
+    """Card cannot be hard-deleted because transactions reference it."""
+
+
+class CardHasPendingTransactionsError(Exception):
+    """Card cannot be removed because a pending transaction references it."""
+
+
 class CardService:
     def __init__(self, repo: CardRepository) -> None:
         self._repo = repo
@@ -52,6 +68,9 @@ class CardService:
     def get_by_id(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=False)
 
+    def pending_card_ids_for_user(self, user_id: int) -> set[int]:
+        return self._repo.pending_card_ids_for_user(user_id)
+
     def get_by_id_including_deleted(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=True)
 
@@ -61,6 +80,25 @@ class CardService:
             status_id=payload.status_id,
             card_type_id=payload.card_type_id,
         )
+
+        existing = self._repo.find_by_card_number_including_deleted(payload.card_numb)
+        if existing is not None:
+            if existing.deleted_at is None:
+                raise DuplicateCardNumberError()
+            if existing.user_id != payload.user_id:
+                raise CardBelongsToAnotherAccountError()
+            return self._repo.resurrect(
+                existing,
+                changes={
+                    "status_id": payload.status_id,
+                    "card_type_id": payload.card_type_id,
+                    "cvc": payload.cvc,
+                    "expires_at": payload.expires_at,
+                    "cardholder_name": payload.cardholder_name,
+                    "is_main": payload.is_main,
+                },
+            )
+
         try:
             return self._repo.create(
                 user_id=payload.user_id,
@@ -71,6 +109,7 @@ class CardService:
                 cvc=payload.cvc,
                 expires_at=payload.expires_at,
                 cardholder_name=payload.cardholder_name,
+                is_main=payload.is_main,
             )
         except IntegrityError as exc:
             if "uq_cards_card_numb" in str(exc.orig).lower() or "card_numb" in str(exc.orig).lower():
@@ -95,11 +134,43 @@ class CardService:
             changes["last_four"] = changes["card_numb"][-4:]
         return self._repo.update(row, changes)
 
+    def get_main_card(self, user_id: int) -> Card | None:
+        return self._repo.get_main_card(user_id)
+
+    def set_main_card(self, user_id: int, card_id: int) -> Card:
+        card = self._repo.get_by_id(card_id, include_deleted=False)
+        if card is None:
+            raise CardNotFoundError()
+        if card.user_id != user_id:
+            raise CardDoesNotBelongToUserError()
+        result = self._repo.set_main_card(user_id, card_id)
+        if result is None:
+            raise CardNotFoundError()
+        return result
+
     def delete(self, card_id: int) -> None:
         row = self._repo.get_by_id(card_id, include_deleted=False)
         if row is None:
             raise CardNotFoundError()
+        if self._repo.has_pending_transactions(card_id):
+            raise CardHasPendingTransactionsError()
+        was_main = row.is_main
+        user_id = row.user_id
         self._repo.soft_delete(row)
+        if was_main:
+            self._repo._promote_next_main_card(user_id)
+
+    def hard_delete(self, card_id: int) -> None:
+        row = self._repo.get_by_id(card_id, include_deleted=True)
+        if row is None:
+            raise CardNotFoundError()
+        if self._repo.has_transactions(card_id):
+            raise CardHasTransactionsError()
+        was_main = row.is_main and row.deleted_at is None
+        user_id = row.user_id
+        self._repo.hard_delete(row)
+        if was_main:
+            self._repo._promote_next_main_card(user_id)
 
     def lookup_by_card_number(self, card_numb: str) -> tuple[Card, User] | None:
         return self._repo.lookup_by_card_number(card_numb)

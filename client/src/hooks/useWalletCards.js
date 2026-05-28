@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useAuth } from '@/hooks/useAuth'
-import { createCard, listCards, updateCard } from '@/services/cardsService'
+import { createCard, deleteCard as deleteCardService, listCards, setMainCard as setMainCardService, updateCard } from '@/services/cardsService'
 import cardStatusesService from '@/services/cardStatusesService'
 import cardTypesService from '@/services/cardTypesService'
 import { getApiErrorMessage } from '@/utils/api'
@@ -137,7 +137,16 @@ export function useWalletCards() {
           holderName
         )
 
-        setCards((currentCards) => [...currentCards, normalizedCard])
+        setCards((currentCards) => {
+          const next = normalizedCard.isMain
+            ? currentCards.map((item) => ({
+                ...item,
+                isMain: false,
+                source: { ...item.source, is_main: false },
+              }))
+            : currentCards
+          return [...next, normalizedCard]
+        })
         return normalizedCard
       } catch (err) {
         const message = getApiErrorMessage(err, err?.message || 'Unable to add card.')
@@ -179,6 +188,79 @@ export function useWalletCards() {
     [holderName, statusesById, typesById]
   )
 
+  const setMainCard = useCallback(
+    async (cardId) => {
+      setIsSaving(true)
+      setSaveError(null)
+
+      let previousCards
+      setCards((current) => {
+        previousCards = current
+        return current.map((item) => ({
+          ...item,
+          isMain: item.id === String(cardId),
+          source: { ...item.source, is_main: item.id === String(cardId) },
+        }))
+      })
+
+      try {
+        const updatedCard = await setMainCardService(cardId)
+        const normalizedCard = normalizeApiCard(updatedCard, typesById, statusesById, holderName)
+        setCards((current) =>
+          current.map((item) =>
+            item.id === String(cardId)
+              ? normalizedCard
+              : { ...item, isMain: false, source: { ...item.source, is_main: false } }
+          )
+        )
+        return normalizedCard
+      } catch (err) {
+        setCards(previousCards)
+        const message = getApiErrorMessage(err, err?.message || 'Unable to set main card.')
+        setSaveError(message)
+        throw err
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [holderName, statusesById, typesById]
+  )
+
+  const removeCard = useCallback(
+    async (cardId) => {
+      setIsSaving(true)
+      setSaveError(null)
+
+      const cardIdStr = String(cardId)
+      let previousCards
+      setCards((current) => {
+        previousCards = current
+        const removed = current.find((item) => item.id === cardIdStr)
+        const remaining = current.filter((item) => item.id !== cardIdStr)
+        if (removed?.isMain && remaining.length > 0) {
+          const [first, ...rest] = remaining
+          return [
+            { ...first, isMain: true, source: { ...first.source, is_main: true } },
+            ...rest,
+          ]
+        }
+        return remaining
+      })
+
+      try {
+        await deleteCardService(cardId)
+      } catch (err) {
+        setCards(previousCards)
+        const message = getApiErrorMessage(err, err?.message || 'Unable to remove card.')
+        setSaveError(message)
+        throw err
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    []
+  )
+
   return {
     cards,
     isLoading: authLoading || isLoading,
@@ -187,5 +269,7 @@ export function useWalletCards() {
     saveError,
     addCard,
     updateCard: updateWalletCard,
+    setMainCard,
+    removeCard,
   }
 }

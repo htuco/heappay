@@ -51,6 +51,7 @@ class ProfileUpdateRequest(BaseModel):
     email: EmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    avatar_url: str | None = Field(default=None, max_length=2048)
 
     @field_validator("first_name", "last_name")
     @classmethod
@@ -62,9 +63,26 @@ class ProfileUpdateRequest(BaseModel):
             raise ValueError("value cannot be empty or whitespace only")
         return stripped
 
+    @field_validator("avatar_url")
+    @classmethod
+    def normalize_avatar_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("avatar_url cannot be empty or whitespace only")
+        if not stripped.lower().startswith("https://"):
+            raise ValueError("avatar_url must be an https URL")
+        return stripped
+
     @model_validator(mode="after")
     def require_at_least_one_field(self) -> "ProfileUpdateRequest":
-        if self.email is None and self.first_name is None and self.last_name is None:
+        if (
+            self.email is None
+            and self.first_name is None
+            and self.last_name is None
+            and self.avatar_url is None
+        ):
             raise ValueError("At least one field must be provided for update")
         return self
 
@@ -84,6 +102,7 @@ class UserResponse(BaseModel):
     user_role_id: int
     role_name: str
     billing_reminders_enabled: bool = True
+    avatar_url: str | None = None
 
 
 class TokenResponse(BaseModel):

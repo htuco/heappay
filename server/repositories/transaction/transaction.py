@@ -1,12 +1,20 @@
 from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
 from models.transaction import Transaction
 from models.transaction_status import TransactionStatus
 from models.transaction_type import TransactionType
+
+
+_SORT_COLUMNS = {
+    "newest": Transaction.created_at.desc(),
+    "oldest": Transaction.created_at.asc(),
+    "amount_desc": Transaction.amount.desc(),
+    "amount_asc": Transaction.amount.asc(),
+}
 
 
 class TransactionRepository:
@@ -19,25 +27,44 @@ class TransactionRepository:
         user_id: int,
         limit: int = 50,
         offset: int = 0,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        sort: str = "newest",
     ) -> list[Transaction]:
         """List transactions where the user owns either the sender or recipient card."""
         stmt = (
-            self._user_transactions_stmt(user_id)
-            .order_by(Transaction.created_at.desc())
+            self._filtered_user_transactions_stmt(
+                user_id,
+                status_id=status_id,
+                transaction_type_id=transaction_type_id,
+            )
+            .options(*self._party_load_options())
+            .order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["newest"]))
             .limit(limit)
             .offset(offset)
         )
         return list(self._db.scalars(stmt).all())
 
-    def count_for_user(self, *, user_id: int) -> int:
+    def count_for_user(
+        self,
+        *,
+        user_id: int,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+    ) -> int:
         stmt = select(func.count()).select_from(
-            self._user_transactions_stmt(user_id).subquery()
+            self._filtered_user_transactions_stmt(
+                user_id,
+                status_id=status_id,
+                transaction_type_id=transaction_type_id,
+            ).subquery()
         )
         return int(self._db.execute(stmt).scalar_one())
 
     def list_all(self, *, limit: int = 50, offset: int = 0) -> list[Transaction]:
         stmt = (
             select(Transaction)
+            .options(*self._party_load_options())
             .order_by(Transaction.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -56,6 +83,20 @@ class TransactionRepository:
                 Transaction.recipient_card_id.in_(user_card_ids),
             )
         )
+
+    def _filtered_user_transactions_stmt(
+        self,
+        user_id: int,
+        *,
+        status_id: int | None,
+        transaction_type_id: int | None,
+    ):
+        stmt = self._user_transactions_stmt(user_id)
+        if status_id is not None:
+            stmt = stmt.where(Transaction.status_id == status_id)
+        if transaction_type_id is not None:
+            stmt = stmt.where(Transaction.transaction_type_id == transaction_type_id)
+        return stmt
 
     def get_summary_for_user(
         self,
@@ -128,6 +169,7 @@ class TransactionRepository:
         """List transactions where card_id appears as sender or recipient."""
         stmt = (
             self._card_transactions_stmt(card_id)
+            .options(*self._party_load_options())
             .order_by(Transaction.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -149,8 +191,20 @@ class TransactionRepository:
         )
 
     def get_by_id(self, transaction_id: int) -> Transaction | None:
-        stmt = select(Transaction).where(Transaction.transaction_id == transaction_id)
+        stmt = (
+            select(Transaction)
+            .options(*self._party_load_options())
+            .where(Transaction.transaction_id == transaction_id)
+        )
         return self._db.scalars(stmt).first()
+
+    def _party_load_options(self):
+        return (
+            joinedload(Transaction.sender_card).joinedload(Card.user),
+            joinedload(Transaction.sender_card).joinedload(Card.card_type),
+            joinedload(Transaction.recipient_card).joinedload(Card.user),
+            joinedload(Transaction.recipient_card).joinedload(Card.card_type),
+        )
 
     def card_owner_id(self, card_id: int) -> int | None:
         stmt = select(Card.user_id).where(

@@ -3,6 +3,7 @@ import os
 
 from fastapi.testclient import TestClient
 
+from routes.dependencies import require_admin, require_staff
 from routes.user.user import get_user_service
 from services.user.user import (
     DuplicateEmailError,
@@ -55,6 +56,7 @@ class FakeUserService:
     def list_users(
         self,
         *,
+        q: str | None,
         email: str | None,
         status_id: int | None,
         user_role_id: int | None,
@@ -136,6 +138,8 @@ def _build_client() -> tuple[TestClient, FakeUserService]:
     app = create_app()
     fake_service = FakeUserService()
     app.dependency_overrides[get_user_service] = lambda: fake_service
+    app.dependency_overrides[require_admin] = lambda: 1
+    app.dependency_overrides[require_staff] = lambda: 1
     return TestClient(app), fake_service
 
 

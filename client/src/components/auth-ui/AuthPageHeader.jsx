@@ -8,7 +8,7 @@ export default function AuthPageHeader({
 	return (
 		<div className={`space-y-3 text-center ${className}`}>
 			<div
-				className={`mx-auto grid h-12 w-12 place-items-center rounded-xl bg-linear-to-br from-primary to-secondary text-primary-foreground ${iconWrapperClassName}`}
+				className={`mx-auto grid h-12 w-12 place-items-center rounded-input bg-linear-to-br from-primary to-secondary text-primary-foreground ${iconWrapperClassName}`}
 			>
 				{icon}
 			</div>
