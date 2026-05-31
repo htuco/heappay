@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
+    groq_api_key: str = ""
+    supabase_database_url: str = ""
+    cohere_api_key: str = ""
 
     @computed_field
     @property

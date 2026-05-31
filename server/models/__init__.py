@@ -10,3 +10,4 @@ from models.transaction_type import TransactionType  # noqa: F401
 from models.user import User  # noqa: F401
 from models.user_role import UserRole  # noqa: F401
 from models.user_status import UserStatus  # noqa: F401
+from models.chat_message import ChatMessage  # noqa: F401
