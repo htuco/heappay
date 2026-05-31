@@ -34,7 +34,7 @@ function normalizeError(error) {
 
 /**
  * Look up a card by its full card number.
- * Returns card_id, masked number, owner name, owner email, and user_id.
+ * Returns card_id, masked number, owner details, avatar URL, and user_id.
  * Throws if no active card with that number exists.
  * @param {string} cardNumber - Raw digits (spaces/dashes are stripped server-side)
  */
@@ -82,7 +82,31 @@ export async function deleteCard(cardId) {
   await api.delete(`/cards/${cardId}`)
 }
 
+export async function hardDeleteCard(cardId) {
+  await api.delete(`/cards/${cardId}/hard`)
+}
+
 export async function restoreCard(cardId) {
   const { data } = await api.post(`/cards/${cardId}/restore`)
+  return data
+}
+
+export async function blockCard(cardId) {
+  const { data } = await api.post(`/cards/${cardId}/block`)
+  return data
+}
+
+export async function unblockCard(cardId) {
+  const { data } = await api.post(`/cards/${cardId}/unblock`)
+  return data
+}
+
+export async function getMainCard(userId) {
+  const { data } = await api.get('/cards/main', { params: { user_id: userId } })
+  return data
+}
+
+export async function setMainCard(cardId) {
+  const { data } = await api.patch(`/cards/${cardId}/set-main`)
   return data
 }

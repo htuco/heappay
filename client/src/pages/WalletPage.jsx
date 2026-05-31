@@ -11,13 +11,13 @@ import { useWalletCards } from '@/hooks/useWalletCards'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
 
 const PRIMARY_CTA_CLASS =
-  'h-12 w-full justify-center gap-2 rounded-2xl bg-white text-base font-semibold text-primary shadow-lg transition hover:-translate-y-0.5 hover:bg-white hover:text-primary hover:shadow-xl'
+  'h-12 w-full justify-center gap-2 rounded-surface bg-white text-base font-semibold text-primary shadow-lg transition hover:-translate-y-0.5 hover:bg-white hover:text-primary hover:shadow-xl'
 
 const SECONDARY_CTA_CLASS =
-  'h-11 w-full justify-center gap-2 rounded-2xl border border-white/30 bg-white/10 text-sm font-medium text-primary-foreground backdrop-blur transition hover:bg-white/20 hover:text-primary-foreground'
+  'h-11 w-full justify-center gap-2 rounded-surface border border-white/30 bg-white/10 text-sm font-medium text-primary-foreground backdrop-blur transition hover:bg-white/20 hover:text-primary-foreground'
 
 export default function WalletPage() {
-  const { cards, isLoading, isSaving, error, saveError, addCard } = useWalletCards()
+  const { cards, isLoading, isSaving, error, saveError, addCard, setMainCard, removeCard } = useWalletCards()
   const [activeIndex, setActiveIndex] = useState(0)
 
   const safeIndex = cards.length > 0 ? Math.min(activeIndex, cards.length - 1) : 0
@@ -28,7 +28,7 @@ export default function WalletPage() {
       {error ? (
         <div
           role="alert"
-          className="rounded-3xl border border-destructive/30 bg-destructive/10 px-5 py-4 text-sm text-destructive shadow-sm"
+          className="rounded-panel border border-destructive/30 bg-destructive/10 px-5 py-4 text-sm text-destructive shadow-sm"
         >
           {error}
         </div>
@@ -38,7 +38,7 @@ export default function WalletPage() {
         <div className="lg:col-span-8">
           <WalletSection className="h-full">
             {cards.length === 0 && !isLoading ? (
-              <div className="flex flex-col items-center gap-3 rounded-2xl bg-muted/30 p-12 text-center">
+              <div className="flex flex-col items-center gap-3 rounded-surface bg-muted/30 p-12 text-center">
                 <p className="text-base font-semibold text-card-foreground">
                   No payment cards yet
                 </p>
@@ -56,7 +56,7 @@ export default function WalletPage() {
           </WalletSection>
         </div>
         <div className="lg:col-span-4">
-          <div className="lg:sticky lg:top-6">
+          <div className="h-full">
             <BalancePanel
               activeCard={activeCard}
               isLoading={isLoading}
@@ -76,6 +76,17 @@ export default function WalletPage() {
                   triggerLabel="Manage Cards"
                   triggerClassName={SECONDARY_CTA_CLASS}
                   triggerVariant="ghost"
+                  onSetMain={setMainCard}
+                  onRemove={removeCard}
+                  addCardSlot={
+                    <AddCardModal
+                      onSubmit={addCard}
+                      isSubmitting={isSaving}
+                      submitError={saveError}
+                      triggerLabel="Add new card"
+                      triggerVariant="default"
+                    />
+                  }
                 />
               }
             />

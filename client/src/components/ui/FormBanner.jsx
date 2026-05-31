@@ -28,7 +28,7 @@ export default function FormBanner({ variant = 'error', message }) {
     <div
       role={config.role}
       aria-live={variant === 'error' ? 'assertive' : 'polite'}
-      className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 pl-5 text-sm shadow-sm animate-auth-banner-in ${config.container}`}
+      className={`relative flex items-center gap-3 overflow-hidden rounded-surface border px-4 py-3 pl-5 text-sm shadow-sm animate-auth-banner-in ${config.container}`}
     >
       <span
         aria-hidden="true"

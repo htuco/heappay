@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Depends, File, HTTPException, Security, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from database import get_db
 from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
+from routes.storage.deps import get_supabase_image_storage_service
 from schemas.user.auth import (
     AuthResponse,
     ChangePasswordRequest,
@@ -15,6 +16,7 @@ from schemas.user.auth import (
     RefreshRequest,
     RegisterRequest,
 )
+from services.storage.supabase_image_storage import SupabaseImageStorageService
 from services.user.auth import UserAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -165,6 +167,53 @@ def update_me(
         raise Unauthorized("Invalid or expired token.")
 
     return AuthResponse(success=True, message="Profile updated successfully.", data=token_data)
+
+
+@router.post("/me/avatar", response_model=AuthResponse)
+def upload_me_avatar(
+    file: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+    storage: SupabaseImageStorageService = Depends(get_supabase_image_storage_service),
+) -> AuthResponse:
+    """Upload a profile image to storage and set users.avatar_url in one step."""
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    raw = file.file.read()
+    if not raw:
+        raise InvalidInput("Empty file.")
+
+    try:
+        uploaded = storage.upload_user_image(user_id, raw, file.content_type or "")
+    except ValueError as exc:
+        code = str(exc)
+        if code == "FILE_TOO_LARGE":
+            raise InvalidInput("Image must be 5 MB or smaller.") from None
+        if code == "UNSUPPORTED_IMAGE_TYPE":
+            raise InvalidInput("Only JPEG, PNG, and WebP images are allowed.") from None
+        if code in ("STORAGE_NOT_CONFIGURED", "STORAGE_UPLOAD_FAILED"):
+            raise InvalidInput("Could not store the image. Try again later.") from None
+        raise InvalidInput("Could not store the image.") from None
+
+    try:
+        token_data = service.update_profile(
+            credentials.credentials,
+            ProfileUpdateRequest(avatar_url=uploaded.url),
+        )
+    except ValueError:
+        storage.delete_object_by_path(uploaded.path)
+        raise InvalidInput("Could not update profile.") from None
+
+    if token_data is None:
+        storage.delete_object_by_path(uploaded.path)
+        raise Unauthorized("Invalid or expired token.")
+
+    return AuthResponse(success=True, message="Profile photo updated.", data=token_data)
 
 
 @router.patch("/notification-preferences", response_model=AuthResponse)

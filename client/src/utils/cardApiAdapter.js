@@ -1,3 +1,5 @@
+import { maskCardNumber } from '@/utils/cardMask'
+
 const DISABLED_STATUSES = new Set(['frozen', 'expired', 'cancelled'])
 const ACTIVE_STATUS_NAME = 'active'
 const DEFAULT_CARD_TYPE_NAME = 'debit'
@@ -22,16 +24,19 @@ export function getUserDisplayName(user) {
 export function normalizeApiCard(card, typesById, statusesById, holderName) {
   const statusName = normalizeLookupName(statusesById[card.status_id]?.status_name)
   const vendor = normalizeLookupName(typesById[card.card_type_id]?.vendor)
+  const brand = vendor || 'unknown'
 
   return {
     id: String(card.card_id),
     source: card,
     balance: card.balance ?? '0.00',
+    isMain: card.is_main ?? false,
+    hasPending: card.has_pending ?? false,
     card: {
       cardHolderName: card.cardholder_name || holderName || 'Card holder',
-      cardNumber: card.masked_card_number,
+      cardNumber: maskCardNumber(card.masked_card_number, { brand }),
       expiryDate: card.expires_at,
-      brand: vendor || 'unknown',
+      brand,
       isActive: statusName === ACTIVE_STATUS_NAME,
       isDisabled: DISABLED_STATUSES.has(statusName),
       status: statusName || 'unknown',
@@ -100,5 +105,6 @@ export function buildCreateCardPayload({ cardInput, userId, cardTypes, cardStatu
     cvc: cardInput.cvv,
     expires_at: expiryInputToApiDate(cardInput.expiry),
     cardholder_name: cardInput.name?.trim() || null,
+    is_main: Boolean(cardInput.isPrimary),
   }
 }

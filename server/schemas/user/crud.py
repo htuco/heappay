@@ -34,6 +34,7 @@ class UserUpdateRequest(BaseModel):
     address: str | None = Field(default=None, max_length=255)
     status_id: int | None = Field(default=None, ge=1)
     user_role_id: int | None = Field(default=None, ge=1)
+    avatar_url: str | None = Field(default=None, max_length=2048)
 
     @field_validator("first_name", "last_name", "address")
     @classmethod
@@ -43,6 +44,18 @@ class UserUpdateRequest(BaseModel):
         stripped = value.strip()
         if not stripped:
             raise ValueError("value cannot be empty or whitespace only")
+        return stripped
+
+    @field_validator("avatar_url")
+    @classmethod
+    def normalize_avatar_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("avatar_url cannot be empty or whitespace only")
+        if not stripped.lower().startswith("https://"):
+            raise ValueError("avatar_url must be an https URL")
         return stripped
 
     @model_validator(mode="after")
@@ -55,6 +68,7 @@ class UserUpdateRequest(BaseModel):
             and self.address is None
             and self.status_id is None
             and self.user_role_id is None
+            and self.avatar_url is None
         ):
             raise ValueError("At least one field must be provided for update")
         return self
@@ -68,6 +82,7 @@ class UserResponse(BaseModel):
     first_name: str
     last_name: str
     address: str | None
+    avatar_url: str | None = None
     status_id: int
     user_role_id: int
     created_at: datetime

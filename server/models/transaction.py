@@ -37,3 +37,4 @@ class Transaction(Base):
     recipient_card = relationship("Card", foreign_keys=[recipient_card_id])
     transaction_type = relationship("TransactionType", back_populates="transactions")
     status = relationship("TransactionStatus", back_populates="transactions")
+    refund_detail = relationship("RefundRequestDetail", back_populates="transaction", uselist=False)

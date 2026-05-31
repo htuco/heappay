@@ -83,6 +83,7 @@ function mapUserApiError(rawError) {
 function buildListUsersQuery(params = {}) {
   const query = {}
 
+  if (params.q) query.q = params.q
   if (params.email) query.email = params.email
   if (typeof params.statusId === 'number') query.status_id = params.statusId
   if (typeof params.userRoleId === 'number') query.user_role_id = params.userRoleId
@@ -177,6 +178,32 @@ export const usersService = {
   async delete(userId) {
     try {
       await api.delete(`/users/${userId}`)
+    } catch (error) {
+      throw mapUserApiError(error)
+    }
+  },
+
+  /**
+   * @param {number} userId
+   * @returns {Promise<import('../types/user').User>}
+   */
+  async suspend(userId) {
+    try {
+      const response = await api.post(`/users/${userId}/suspend`)
+      return response.data
+    } catch (error) {
+      throw mapUserApiError(error)
+    }
+  },
+
+  /**
+   * @param {number} userId
+   * @returns {Promise<import('../types/user').User>}
+   */
+  async activate(userId) {
+    try {
+      const response = await api.post(`/users/${userId}/activate`)
+      return response.data
     } catch (error) {
       throw mapUserApiError(error)
     }

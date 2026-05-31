@@ -4,6 +4,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Ban,
+  MoveRight,
   Info,
   Loader2,
   ReceiptText,
@@ -15,10 +16,11 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import UserAvatar from '@/components/ui/UserAvatar'
+import { useAuth } from '@/hooks/useAuth'
 import useTransactionDetail from '@/hooks/useTransactionDetail'
 
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
-const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Failed', 4: 'Reversed' }
+const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Rejected', 4: 'Reversed' }
 const STATUS_VARIANT = { 1: 'warning', 2: 'success', 3: 'error', 4: 'secondary' }
 const CLOSE_ANIMATION_MS = 240
 const PANEL_ENTER_ANIMATION =
@@ -69,20 +71,58 @@ function getStatusLabel(transaction) {
   )
 }
 
-function getCounterparty(transaction) {
+function getPartyName(party) {
+  return party?.full_name ?? party?.name ?? party?.cardholder_name ?? party?.email ?? null
+}
+
+function avatarUserFromParty(party, fallbackName) {
+  if (!party && !fallbackName) return null
+  const name = fallbackName ?? getPartyName(party) ?? ''
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return {
+    ...party,
+    first_name: party?.first_name ?? parts[0],
+    last_name: party?.last_name ?? parts.slice(1).join(' '),
+    full_name: party?.full_name ?? name,
+    name,
+    avatar_url: party?.avatar_url,
+  }
+}
+
+function isPartyCurrentUser(party, currentUserId) {
+  return party?.user_id != null && currentUserId != null && Number(party.user_id) === Number(currentUserId)
+}
+
+function isCardOwned(cardId, ownedCardIds) {
+  return cardId != null && ownedCardIds?.has(Number(cardId))
+}
+
+function isOutgoing(transaction, currentUserId, ownedCardIds) {
+  if (Number(transaction?.transaction_type_id) === 1 || transaction?.sender_card_id == null) return false
+  if (isPartyCurrentUser(transaction?.sender, currentUserId)) return true
+  if (isPartyCurrentUser(transaction?.recipient, currentUserId)) return false
+  if (isCardOwned(transaction?.sender_card_id, ownedCardIds)) return true
+  if (isCardOwned(transaction?.recipient_card_id, ownedCardIds)) return false
+  return [2, 4, 5].includes(Number(transaction?.transaction_type_id))
+}
+
+function getCounterparty(transaction, currentUserId, ownedCardIds) {
+  if (Number(transaction?.transaction_type_id) === 1 || transaction?.sender_card_id == null) {
+    return { name: 'External deposit', user: null }
+  }
+
+  const outgoing = isOutgoing(transaction, currentUserId, ownedCardIds)
+  const party = outgoing ? transaction?.recipient : transaction?.sender
+  const fallbackCardId = outgoing ? transaction?.recipient_card_id : transaction?.sender_card_id
   const name =
-    transaction?.recipient?.name ??
+    getPartyName(party) ??
     transaction?.recipient_name ??
     transaction?.merchant_name ??
     transaction?.payee_name ??
     transaction?.description ??
-    (transaction?.recipient_card_id ? `Card #${transaction.recipient_card_id}` : null)
-  const user = transaction?.recipient ?? transaction?.counterparty ?? null
+    (fallbackCardId ? `Card #${fallbackCardId}` : null)
+  const user = party ?? transaction?.counterparty ?? null
   return { name: name || '—', user }
-}
-
-function isOutgoing(transaction) {
-  return [2, 4, 5].includes(Number(transaction?.transaction_type_id))
 }
 
 function isPending(transaction) {
@@ -93,11 +133,8 @@ function isCompleted(transaction) {
   return Number(transaction?.status_id) === 2 || getStatusLabel(transaction).toLowerCase() === 'completed'
 }
 
-function isSentByCurrentUser(transaction, ownedCardIds) {
-  const senderCardId = Number(transaction?.sender_card_id)
-  if (!senderCardId) return false
-  if (ownedCardIds?.size) return ownedCardIds.has(senderCardId)
-  return isOutgoing(transaction)
+function isSentByCurrentUser(transaction, ownedCardIds, currentUserId) {
+  return isOutgoing(transaction, currentUserId, ownedCardIds)
 }
 
 function isUserToUserTransaction(transaction) {
@@ -119,7 +156,7 @@ function DetailRow({ label, children }) {
 
 function LoadingState() {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+    <div className="flex items-center gap-3 rounded-surface border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
       <Loader2 className="size-4 animate-spin" />
       Loading full payment details…
     </div>
@@ -128,7 +165,7 @@ function LoadingState() {
 
 function ErrorState({ error }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+    <div className="flex items-start gap-3 rounded-surface border border-destructive/30 bg-destructive/5 p-4">
       <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
       <div>
         <p className="text-sm font-medium text-destructive">Could not load detail data</p>
@@ -142,7 +179,7 @@ function ErrorState({ error }) {
 
 function MissingState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-center">
+    <div className="flex flex-col items-center justify-center rounded-surface border border-dashed border-border bg-muted/20 p-8 text-center">
       <ReceiptText className="size-7 text-muted-foreground" strokeWidth={1.5} />
       <p className="mt-3 font-medium text-card-foreground">No transaction selected</p>
       <p className="mt-1 text-sm text-muted-foreground">Select a transaction from history to view details.</p>
@@ -150,23 +187,42 @@ function MissingState() {
   )
 }
 
-function HeaderCard({ transaction }) {
-  const outgoing = isOutgoing(transaction)
+function HeaderCard({ transaction, currentUserId, ownedCardIds }) {
+  const outgoing = isOutgoing(transaction, currentUserId, ownedCardIds)
   const DirectionIcon = outgoing ? ArrowUpRight : ArrowDownLeft
-  const counterparty = getCounterparty(transaction)
+  const counterparty = getCounterparty(transaction, currentUserId, ownedCardIds)
   const verb = outgoing ? 'Sending money to' : 'Received from'
   const subline = outgoing ? 'Sent' : 'Received'
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="rounded-surface border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
-              outgoing ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
-            }`}
-          >
-            <DirectionIcon className="size-5" />
+          <span className="relative shrink-0">
+            {counterparty.user ? (
+              <UserAvatar
+                user={avatarUserFromParty(counterparty.user, counterparty.name)}
+                className="size-10 text-xs ring-1 ring-border"
+                textClassName="text-xs"
+              />
+            ) : (
+              <span
+                className={`flex size-10 items-center justify-center rounded-full ${
+                  outgoing ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
+                }`}
+              >
+                <DirectionIcon className="size-5" />
+              </span>
+            )}
+            {counterparty.user ? (
+              <span
+                className={`absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-card ${
+                  outgoing ? 'bg-destructive text-destructive-foreground' : 'bg-success text-success-foreground'
+                }`}
+              >
+                <DirectionIcon className="size-3" strokeWidth={2.4} />
+              </span>
+            ) : null}
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm text-card-foreground">
@@ -184,8 +240,57 @@ function HeaderCard({ transaction }) {
   )
 }
 
-function DetailsSection({ transaction }) {
-  const counterparty = getCounterparty(transaction)
+function PartyCard({ label, party, name, email, lastFour }) {
+  const avatarUser = avatarUserFromParty(party, name)
+  return (
+    <div className="flex flex-1 flex-col items-center gap-2 text-center">
+      <UserAvatar
+        user={avatarUser}
+        className="size-11 text-sm ring-1 ring-primary/15"
+        textClassName="text-sm"
+      />
+      <div>
+        <p className="text-sm font-semibold text-card-foreground leading-tight">{name ?? '—'}</p>
+        {email && <p className="mt-0.5 text-xs text-muted-foreground">{email}</p>}
+        {lastFour && <p className="mt-0.5 text-xs text-muted-foreground">•••• {lastFour}</p>}
+      </div>
+      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{label}</span>
+    </div>
+  )
+}
+
+function TransferFlow({ transaction }) {
+  const sender = transaction?.sender
+  const recipient = transaction?.recipient
+  if (!sender && !recipient) return null
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-4">
+      <PartyCard
+        label="Sender"
+        party={sender}
+        name={sender?.full_name ?? sender?.cardholder_name}
+        email={sender?.email}
+        lastFour={sender?.last_four}
+      />
+      <div className="flex shrink-0 flex-col items-center gap-1">
+        <MoveRight className="size-5 text-muted-foreground" />
+        <span className="text-xs font-semibold text-card-foreground">{formatAmount(transaction?.amount)}</span>
+      </div>
+      <PartyCard
+        label="Recipient"
+        party={recipient}
+        name={recipient?.full_name ?? recipient?.cardholder_name}
+        email={recipient?.email}
+        lastFour={recipient?.last_four}
+      />
+    </div>
+  )
+}
+
+function DetailsSection({ transaction, currentUserId, ownedCardIds }) {
+  const outgoing = isOutgoing(transaction, currentUserId, ownedCardIds)
+  const counterparty = getCounterparty(transaction, currentUserId, ownedCardIds)
   const statusLabel = getStatusLabel(transaction)
   const statusVariant = STATUS_VARIANT[transaction?.status_id] ?? 'secondary'
 
@@ -195,10 +300,10 @@ function DetailsSection({ transaction }) {
       <dl className="mt-2 divide-y divide-border/70">
         <DetailRow label="Transaction ID">{getTransactionId(transaction) ?? '—'}</DetailRow>
         <DetailRow label="Transaction Date">{formatDate(transaction?.created_at)}</DetailRow>
-        <DetailRow label="Recipient">
+        <DetailRow label={outgoing ? 'Recipient' : 'Sender'}>
           <span className="inline-flex items-center gap-2">
             <UserAvatar
-              user={counterparty.user}
+              user={avatarUserFromParty(counterparty.user, counterparty.name)}
               className="size-6 text-[10px]"
               textClassName="text-[10px]"
             />
@@ -208,7 +313,9 @@ function DetailsSection({ transaction }) {
         <DetailRow label="Status">
           <Badge variant={statusVariant}>{statusLabel}</Badge>
         </DetailRow>
-        <DetailRow label="Amount Sent">{formatAmount(transaction?.amount)}</DetailRow>
+        <DetailRow label={outgoing ? 'Amount Sent' : 'Amount Received'}>
+          {formatAmount(transaction?.amount)}
+        </DetailRow>
         <DetailRow label="Fee">{formatAmount(transaction?.fee ?? 0)}</DetailRow>
         <DetailRow label="Type">{getTypeLabel(transaction)}</DetailRow>
       </dl>
@@ -229,7 +336,7 @@ function NotesSection({ value, onChange, placeholder = 'Add a few notes to help 
         placeholder={placeholder}
         rows={4}
         maxLength={500}
-        className="w-full resize-none rounded-2xl border border-border bg-card p-3 text-sm text-card-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+        className="w-full resize-none rounded-input border border-border bg-card p-3 text-sm text-card-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
       />
     </section>
   )
@@ -247,19 +354,25 @@ function PanelBody({
   onShare,
   onSaveNotes,
   ownedCardIds,
+  currentUserId,
   refundRequestedTransactionIds,
   isCancelling,
 }) {
   const [notes, setNotes] = useState(detail?.note ?? detail?.notes ?? '')
   const animationClass = isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
   const transactionId = getTransactionId(detail)
-  const canCancel = isPending(detail) && isSentByCurrentUser(detail, ownedCardIds)
-  const refundRequested = refundRequestedTransactionIds?.has(transactionId)
-  const canRefund = isUserToUserTransaction(detail) && isCompleted(detail) && isPaymentTransaction(detail)
+  const sentByCurrentUser = isSentByCurrentUser(detail, ownedCardIds, currentUserId)
+  const canCancel = isPending(detail) && sentByCurrentUser
+  const refundRequested = detail?.has_pending_refund || refundRequestedTransactionIds?.has(transactionId)
+  const canRefund =
+    isUserToUserTransaction(detail) &&
+    isCompleted(detail) &&
+    isPaymentTransaction(detail) &&
+    sentByCurrentUser
 
   return (
     <aside
-      className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl will-change-transform ${animationClass}`}
+      className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-panel border border-border bg-card shadow-2xl will-change-transform ${animationClass}`}
     >
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <h2
@@ -284,15 +397,24 @@ function PanelBody({
 
         {detail && (
           <>
-            <HeaderCard transaction={detail} />
+            <HeaderCard
+              transaction={detail}
+              currentUserId={currentUserId}
+              ownedCardIds={ownedCardIds}
+            />
+            <TransferFlow transaction={detail} />
 
             {!hasApiDetail && (
-              <div className="rounded-2xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+              <div className="rounded-surface border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
                 Showing available history data until the detail API responds with the full record.
               </div>
             )}
 
-            <DetailsSection transaction={detail} />
+            <DetailsSection
+              transaction={detail}
+              currentUserId={currentUserId}
+              ownedCardIds={ownedCardIds}
+            />
             <NotesSection value={notes} onChange={setNotes} />
           </>
         )}
@@ -302,7 +424,7 @@ function PanelBody({
         {canCancel && (
           <Button
             variant="destructive"
-            className="col-span-2 h-11 rounded-lg border-2 border-destructive/20 px-4 text-sm font-semibold shadow-none"
+            className="col-span-2 h-11 rounded-input border-2 border-destructive/20 px-4 text-sm font-semibold shadow-none"
             disabled={!detail || isCancelling}
             onClick={() => onCancel?.(detail)}
           >
@@ -318,7 +440,7 @@ function PanelBody({
           <>
             <Button
               variant="outline"
-              className="col-span-2 h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
+              className="col-span-2 h-11 rounded-input border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
               disabled={!detail || refundRequested}
               onClick={() => onRefund?.(detail)}
             >
@@ -334,7 +456,7 @@ function PanelBody({
         )}
         <Button
           variant="outline"
-          className="h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
+          className="h-11 rounded-input border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
           disabled={!detail}
           onClick={() => onShare?.(detail, { notes })}
         >
@@ -343,7 +465,7 @@ function PanelBody({
         </Button>
         <Button
           variant="outline"
-          className="h-11 rounded-lg border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
+          className="h-11 rounded-input border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
           disabled={!detail}
           onClick={() => onSaveNotes?.(detail, notes)}
         >
@@ -368,6 +490,8 @@ export default function TransactionDetailPanel({
   isCancelling = false,
 }) {
   const { detail, hasApiDetail, isLoading, error } = useTransactionDetail(open ? transaction : null)
+  const { user } = useAuth()
+  const currentUserId = user?.user_id ?? user?.id
   const [isClosing, setIsClosing] = useState(false)
 
   const requestClose = useCallback(() => {
@@ -428,12 +552,13 @@ export default function TransactionDetailPanel({
           onShare={onShare}
           onSaveNotes={onSaveNotes}
           ownedCardIds={ownedCardIds}
+          currentUserId={currentUserId}
           refundRequestedTransactionIds={refundRequestedTransactionIds}
           isCancelling={isCancelling}
         />
       ) : (
         <aside
-          className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl will-change-transform ${
+          className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-panel border border-border bg-card shadow-2xl will-change-transform ${
             isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
           }`}
         >

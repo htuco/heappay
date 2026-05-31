@@ -48,7 +48,8 @@ export function formatTransactionDateInputValue(value) {
   return `${year}-${month}-${day}`
 }
 
-export function getTransactionStatus(statusId) {
+export function getTransactionStatus(statusId, hasPendingRefund = false) {
+  if (hasPendingRefund && statusId === 2) return { label: 'Refund Requested', variant: 'warning' }
   if (statusId === 1) return { label: 'Pending', variant: 'warning' }
   if (statusId === 2) return { label: 'Completed', variant: 'success' }
   if (statusId === 3) return { label: 'Failed', variant: 'error' }
@@ -86,6 +87,16 @@ export function transactionMatchesLookup(transaction, lookupValue) {
     transaction.transaction_id,
     transaction.sender_card_id ?? 'external',
     transaction.recipient_card_id,
+    transaction.sender?.full_name,
+    transaction.sender?.email,
+    transaction.sender?.cardholder_name,
+    transaction.sender?.brand,
+    transaction.sender?.last_four,
+    transaction.recipient?.full_name,
+    transaction.recipient?.email,
+    transaction.recipient?.cardholder_name,
+    transaction.recipient?.brand,
+    transaction.recipient?.last_four,
     transaction.transaction_type_id,
     type,
     transaction.status_id,

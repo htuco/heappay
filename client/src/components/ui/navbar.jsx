@@ -1,17 +1,24 @@
 import { NavLink } from 'react-router-dom'
-import { ArrowLeftRight, CreditCard, LayoutDashboard, Settings, Shield } from 'lucide-react'
+import { ArrowLeftRight, CreditCard, LayoutDashboard, Settings, Shield, Users, TicketCheck } from 'lucide-react'
 import { useAppSelector } from '@/store/hooks'
 import { selectAuthUser } from '@/store/slices/authSlice'
+import SidebarAccountProfile from '@/components/ui/SidebarAccountProfile'
 
 const mainLinks = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
-  { name: 'Payments', path: '/payments', icon: ArrowLeftRight },
+  { name: 'Transactions', path: '/payments', icon: ArrowLeftRight },
 ]
 
-const adminLinks = [{ name: 'Users', path: '/admin', icon: Shield }]
+const adminLinks = [{ name: 'Admin', path: '/admin', icon: Shield }]
+const supportLinks = [
+  { name: 'Users', path: '/support/users', icon: Users },
+  { name: 'Tickets', path: '/support/tickets', icon: TicketCheck },
+]
 
 const bottomLinks = [{ name: 'Settings', path: '/settings', icon: Settings }]
+
+const STAFF_ROLES = new Set(['admin', 'manager', 'support'])
 
 function NavLinkItem({ item }) {
   const Icon = item.icon
@@ -21,48 +28,74 @@ function NavLinkItem({ item }) {
       to={item.path}
       end
       className={({ isActive }) =>
-        `nav-pill flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium ${
+        `nav-pill group relative flex h-11 items-center gap-3 rounded-input px-3.5 text-sm ${
           isActive
-            ? 'bg-accent text-accent-foreground'
-            : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+            ? 'bg-primary/10 text-sidebar-foreground font-semibold ring-1 ring-primary/10'
+            : 'font-medium text-muted-foreground hover:bg-muted/55 hover:text-sidebar-foreground'
         }`
       }
     >
-      <Icon className="w-[18px] h-[18px]" strokeWidth={2} />
-      {item.name}
+      {({ isActive }) => (
+        <>
+          <span
+            className={`absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-pill bg-primary transition-opacity ${
+              isActive ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+          <Icon
+            className={`h-4.5 w-4.5 shrink-0 transition-colors ${
+              isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+            }`}
+            strokeWidth={2}
+          />
+          <span className="truncate">{item.name}</span>
+        </>
+      )}
     </NavLink>
+  )
+}
+
+function NavSection({ label, children, className = '' }) {
+  return (
+    <section className={`space-y-1.5 ${className}`}>
+      <p className="px-3.5 text-[10px] font-semibold uppercase text-muted-foreground/75">
+        {label}
+      </p>
+      <div className="space-y-1">{children}</div>
+    </section>
   )
 }
 
 export default function Navbar() {
   const user = useAppSelector(selectAuthUser)
-  const isAdmin = user?.role_name === 'admin'
+  const role = user?.role_name
+  const isAdmin = role === 'admin'
+  const isStaff = STAFF_ROLES.has(role)
 
   return (
     <nav className="flex h-full flex-col">
-      <div className="flex flex-col gap-1">
-        {mainLinks.map((item) => (
-          <NavLinkItem key={item.path} item={item} />
-        ))}
+      <div className="flex flex-col gap-6">
+        <NavSection label="Main">
+          {mainLinks.map((item) => (
+            <NavLinkItem key={item.path} item={item} />
+          ))}
+        </NavSection>
 
-        {isAdmin && (
-          <>
-            <div className="my-3 border-t border-border" />
-            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Admin Features
-            </p>
-            {adminLinks.map((item) => (
+        {isStaff && (
+          <NavSection label={isAdmin ? 'Management' : 'Staff'}>
+            {(isAdmin ? adminLinks : supportLinks).map((item) => (
               <NavLinkItem key={item.path} item={item} />
             ))}
-          </>
+          </NavSection>
         )}
       </div>
 
-      <div className="mt-auto border-t border-border pt-3">
+      <NavSection label="Account" className="mt-auto border-t border-sidebar-border/80 pt-5">
+        <SidebarAccountProfile user={user} />
         {bottomLinks.map((item) => (
           <NavLinkItem key={item.path} item={item} />
         ))}
-      </div>
+      </NavSection>
     </nav>
   )
 }

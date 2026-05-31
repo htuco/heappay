@@ -24,7 +24,7 @@ export default function AdminCardsManagementPanel({
 }) {
   return (
     <article
-      className={`rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5 xl:col-span-5 ${
+      className={`rounded-panel border border-border bg-card p-4 shadow-sm sm:p-5 xl:col-span-5 ${
         activeSection === 'cards' ? 'xl:order-1' : ''
       }`}
     >
@@ -65,20 +65,20 @@ export default function AdminCardsManagementPanel({
       )}
 
       {showAllCards && unmatchedCards.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-dashed border-border bg-background/50 p-4 text-xs text-muted-foreground">
+        <div className="mb-3 rounded-surface border border-dashed border-border bg-background/50 p-4 text-xs text-muted-foreground">
           {unmatchedCards.length} card{unmatchedCards.length === 1 ? '' : 's'} could not be matched to any user and are hidden.
         </div>
       )}
 
       {!showAllCards && !focusedUserId && (
-        <div className="mb-3 rounded-2xl border border-dashed border-border bg-background/50 p-4 text-xs text-muted-foreground">
+        <div className="mb-3 rounded-surface border border-dashed border-border bg-background/50 p-4 text-xs text-muted-foreground">
           Select a user row/card to load their cards. Use{' '}
           <span className="font-medium text-card-foreground">View</span> for details.
         </div>
       )}
 
       {paginatedCards.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-background/50 p-6 text-center">
+        <div className="rounded-surface border border-dashed border-border bg-background/50 p-6 text-center">
           <p className="font-medium text-card-foreground">No cards found</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {!showAllCards && focusedUserId
@@ -98,7 +98,7 @@ export default function AdminCardsManagementPanel({
               return (
                 <div
                   key={item.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-surface border border-border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <p className="font-medium text-card-foreground">{item.ownerName}</p>

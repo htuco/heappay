@@ -1,16 +1,28 @@
+import { useState } from 'react'
 import { UserRound } from 'lucide-react'
 
+import AvatarUploadModal from '@/components/settings/AvatarUploadModal'
 import SettingsCard from '@/components/settings/SettingsCard'
 import ProfileField from '@/components/settings/ProfileField'
 import UserAvatar from '@/components/ui/UserAvatar'
+import { Button } from '@/components/ui/button'
+import { useNotifications } from '@/context/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
 
 export default function ProfileSection() {
-  const { user } = useAuth()
+  const { notify } = useNotifications()
+  const { user, uploadProfileAvatar } = useAuth()
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false)
+
   const firstName = user?.first_name ?? ''
   const lastName = user?.last_name ?? ''
   const email = user?.email ?? ''
   const displayName = [firstName, lastName].filter(Boolean).join(' ').trim()
+
+  async function handleAvatarUpload(file) {
+    await uploadProfileAvatar(file)
+    notify({ type: 'success', message: 'Profile photo updated.' })
+  }
 
   return (
     <SettingsCard
@@ -18,16 +30,24 @@ export default function ProfileSection() {
       icon={UserRound}
       description="Personal information shown across your account."
     >
+      <AvatarUploadModal
+        isOpen={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        onUpload={handleAvatarUpload}
+      />
+
       <div className="space-y-4">
-        <div className="bg-emphasis rounded-2xl border border-border p-4">
+        <div className="bg-emphasis rounded-surface border border-border p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <UserAvatar
                 user={{
                   first_name: firstName,
                   last_name: lastName,
+                  avatar_url: user?.avatar_url,
                 }}
-                className="h-16 w-16 rounded-3xl text-lg"
+                useStockPlaceholder={false}
+                className="h-16 w-16 rounded-full text-lg"
               />
 
               <div>
@@ -39,6 +59,19 @@ export default function ProfileSection() {
                   Shown across your account.
                 </p>
               </div>
+            </div>
+
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={!user}
+                onClick={() => setAvatarModalOpen(true)}
+              >
+                Change photo
+              </Button>
             </div>
           </div>
         </div>

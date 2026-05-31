@@ -4,6 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from models.user import User
 from repositories.user.user import UserRepository
 from schemas.user.crud import UserCreateRequest, UserSearchDefaultCard, UserSearchResponse, UserUpdateRequest
+from services.storage.avatar_display_url import resolve_avatar_url_for_client
+from settings import get_settings
 
 
 class UserNotFoundError(Exception):
@@ -34,6 +36,7 @@ class UserService:
     def list_users(
         self,
         *,
+        q: str | None,
         email: str | None,
         status_id: int | None,
         user_role_id: int | None,
@@ -42,6 +45,7 @@ class UserService:
         offset: int,
     ) -> list[User]:
         return self._repo.list_users(
+            q=q,
             email=email,
             status_id=status_id,
             user_role_id=user_role_id,
@@ -58,6 +62,7 @@ class UserService:
 
     def search(self, q: str, *, exclude_user_id: int, limit: int = 10) -> list[UserSearchResponse]:
         rows = self._repo.search(q.strip(), exclude_user_id=exclude_user_id, limit=limit)
+        settings = get_settings()
         results: list[UserSearchResponse] = []
         for user, card, vendor in rows:
             default_card = None
@@ -73,7 +78,7 @@ class UserService:
                     first_name=user.first_name,
                     last_name=user.last_name,
                     email=user.email,
-                    avatar_url=getattr(user, "avatar_url", None),
+                    avatar_url=resolve_avatar_url_for_client(user.avatar_url, settings),
                     default_card=default_card,
                 )
             )
@@ -104,6 +109,8 @@ class UserService:
         if row is None or row.deleted_at is not None:
             raise UserNotFoundError()
 
+        previous_avatar_url = row.avatar_url
+
         if payload.user_role_id is not None and not self._repo.user_role_exists(payload.user_role_id):
             raise InvalidUserRoleError()
         if payload.status_id is not None and not self._repo.user_status_exists(payload.status_id):
@@ -126,11 +133,28 @@ class UserService:
             row.user_role_id = payload.user_role_id
         if payload.password is not None:
             row.password_hash = self._hash_password(payload.password)
+        if payload.avatar_url is not None:
+            row.avatar_url = payload.avatar_url
 
         try:
-            return self._repo.save(row)
+            saved = self._repo.save(row)
         except IntegrityError as exc:
             raise DuplicateEmailError() from exc
+
+        if (
+            payload.avatar_url is not None
+            and previous_avatar_url
+            and str(payload.avatar_url) != previous_avatar_url
+        ):
+            from services.storage.avatar_display_url import delete_managed_avatar_for_user
+
+            delete_managed_avatar_for_user(
+                previous_avatar_url,
+                user_id=user_id,
+                settings=get_settings(),
+            )
+
+        return saved
 
     def delete_user(self, user_id: int) -> None:
         row = self._repo.get_by_id(user_id)

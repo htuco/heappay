@@ -81,6 +81,9 @@ function buildPageParams(params = {}) {
 	const query = {}
 	if (typeof params.page === 'number') query.page = params.page
 	if (typeof params.pageSize === 'number') query.page_size = params.pageSize
+	if (typeof params.statusId === 'number') query.status_id = params.statusId
+	if (typeof params.transactionTypeId === 'number') query.transaction_type_id = params.transactionTypeId
+	if (typeof params.sort === 'string') query.sort = params.sort
 	return query
 }
 
@@ -187,6 +190,108 @@ export const transactionsService = {
 	async patch(transactionId, payload) {
 		try {
 			const { data } = await api.patch(`/transactions/${transactionId}`, payload)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) Update a transaction for any user.
+	 * @param {number} transactionId
+	 * @param {import('@/types/transaction').PatchTransactionPayload} payload
+	 * @returns {Promise<import('@/types/transaction').Transaction>}
+	 */
+	async patchAsStaff(transactionId, payload) {
+		try {
+			const { data } = await api.patch(`/transactions/${transactionId}/staff`, payload)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) List transactions for a specific user (paginated).
+	 * @param {number} userId
+	 * @param {{ page?: number, pageSize?: number, statusId?: number, transactionTypeId?: number, sort?: string }} [params]
+	 * @returns {Promise<import('@/types/transaction').TransactionPage>}
+	 */
+	async listForUser(userId, params = {}) {
+		try {
+			const { data } = await api.get(`/transactions/user/${userId}`, { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) List refund requests for a specific user (paginated).
+	 * @param {number} userId
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listRefundsForUser(userId, params = {}) {
+		try {
+			const { data } = await api.get(`/requests/user/${userId}`, { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Submit a refund request for a completed outgoing transaction.
+	 * @param {number} transactionId
+	 * @param {string | null} [note]
+	 * @returns {Promise<object>}
+	 */
+	async requestRefund(transactionId, note = null) {
+		try {
+			const { data } = await api.post('/requests/refund', { transaction_id: transactionId, note })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) Approve a pending refund request.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async approveRefund(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/approve`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) Decline a pending refund request.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async declineRefund(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/decline`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) List all pending refund requests (paginated).
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listPendingRefunds(params = {}) {
+		try {
+			const { data } = await api.get('/requests/refunds/pending', { params: buildPageParams(params) })
 			return data.data
 		} catch (error) {
 			throw mapTransactionApiError(error)
