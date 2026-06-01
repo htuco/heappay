@@ -57,14 +57,16 @@ function Toast({ notification, onDismiss }) {
 	return (
 		<div
 			className={cn(
-				'flex items-start gap-3 rounded-surface border px-4 py-3 text-sm shadow-lg backdrop-blur-sm',
+				'flex items-start gap-3 rounded-surface border px-4 py-3 text-sm backdrop-blur-sm',
 				'w-80 max-w-[calc(100vw-2.5rem)]',
 				container,
 				leaving
 					? 'animate-out fade-out-0 slide-out-to-right-6 duration-200 ease-in'
 					: 'animate-in fade-in-0 slide-in-from-right-6 duration-300 ease-[cubic-bezier(0.34,1.45,0.64,1)]',
 			)}
-			role="alert"
+			// Errors interrupt (assertive/alert); everything else is announced
+			// politely via the container's live region without stealing focus.
+			role={notification.type === 'error' ? 'alert' : 'status'}
 			onMouseEnter={pauseAutoDismiss}
 			onMouseLeave={startAutoDismiss}
 		>
@@ -91,10 +93,18 @@ function Toast({ notification, onDismiss }) {
 
 export default function ToastStack() {
 	const { queue, dismiss } = useNotifications()
-	if (!queue.length) return null
 
+	// The live region is always mounted (even when empty) so screen readers
+	// register it up front and announce toasts as they're added. Mounting it
+	// only when toasts exist can cause the first announcement to be missed.
 	return (
-		<div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 items-end">
+		<div
+			className="fixed bottom-5 right-5 z-60 flex flex-col gap-2 items-end"
+			role="region"
+			aria-label="Notifications"
+			aria-live="polite"
+			aria-relevant="additions"
+		>
 			{queue.map((n) => (
 				<Toast key={n.id} notification={n} onDismiss={dismiss} />
 			))}
