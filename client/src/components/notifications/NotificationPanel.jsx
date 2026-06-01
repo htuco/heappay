@@ -14,7 +14,7 @@ const SHEET_OPEN_CLASSES =
 	'animate-in fade-in-0 slide-in-from-bottom-8 duration-400 ease-[cubic-bezier(0.34,1.45,0.64,1)]'
 
 export default function NotificationPanel() {
-	const { history, unreadCount, markRead, markAllRead, discard, clearHistory } =
+	const { history, unreadCount, dotCount, markRead, markAllRead, markAllSeen, discard, clearHistory } =
 		useNotifications()
 	const navigateForNotification = useNotificationNavigation()
 	const [open, setOpen] = useState(false)
@@ -27,11 +27,13 @@ export default function NotificationPanel() {
 	const handleToggle = useCallback(() => {
 		setOpen((prev) => {
 			const next = !prev
-			if (next && unreadCount > 0) markAllRead()
+			// Opening clears the bell dot but leaves rows unread so the user can
+			// still see what's new. Rows flip to read on click / "Mark all as read".
+			if (next && dotCount > 0) markAllSeen()
 			return next
 		})
 		setMenuOpen(false)
-	}, [unreadCount, markAllRead])
+	}, [dotCount, markAllSeen])
 
 	const handleClose = useCallback(() => {
 		setOpen(false)
@@ -72,6 +74,12 @@ export default function NotificationPanel() {
 		return () => document.removeEventListener('keydown', onKey)
 	}, [open, handleClose])
 
+	// Keep the dot cleared while the panel stays open: anything that arrives
+	// in-view has effectively been seen, so advance the seen marker past it.
+	useEffect(() => {
+		if (open && dotCount > 0) markAllSeen()
+	}, [open, dotCount, markAllSeen])
+
 	// Lock body scroll while the mobile sheet is open
 	useEffect(() => {
 		if (!open) return
@@ -94,13 +102,21 @@ export default function NotificationPanel() {
 		[markRead, navigateForNotification, handleClose],
 	)
 
-	const handleClearAll = () => {
+	// These fire on mousedown, not click: the document-level outside-click
+	// listeners (panel + menu) also run on mousedown and re-render the panel,
+	// which unmounts the menu item before its `click` is dispatched — so an
+	// onClick here never runs ("Clear all" appeared to do nothing). Acting on
+	// mousedown (the event that demonstrably reaches the button) avoids the race.
+	// preventDefault keeps focus/selection stable through the re-render.
+	const handleClearAll = (e) => {
+		e.preventDefault()
 		clearHistory()
 		setMenuOpen(false)
 		handleClose()
 	}
 
-	const handleMarkAllRead = () => {
+	const handleMarkAllRead = (e) => {
+		e.preventDefault()
 		markAllRead()
 		setMenuOpen(false)
 	}
@@ -130,9 +146,10 @@ export default function NotificationPanel() {
 								<MoreHorizontal className="h-4 w-4" />
 							</button>
 							{menuOpen && (
-								<div className="absolute right-0 top-full mt-1 w-44 rounded-surface border border-border bg-popover shadow-lg z-10 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
+								<div className="absolute right-0 top-full mt-1 w-44 rounded-surface border border-border bg-popover z-10 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
 									<button
 										type="button"
+										onMouseDown={handleMarkAllRead}
 										onClick={handleMarkAllRead}
 										disabled={unreadCount === 0}
 										className="w-full text-left px-3 py-2 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
@@ -141,6 +158,7 @@ export default function NotificationPanel() {
 									</button>
 									<button
 										type="button"
+										onMouseDown={handleClearAll}
 										onClick={handleClearAll}
 										className="w-full text-left px-3 py-2 text-xs text-destructive hover:bg-destructive/10"
 									>
@@ -168,7 +186,7 @@ export default function NotificationPanel() {
 					<div>
 						{groups.map((group) => (
 							<section key={group.label}>
-								<div className="sticky top-0 z-[1] bg-popover/95 backdrop-blur-[2px] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+								<div className="sticky top-0 z-1 bg-popover/95 backdrop-blur-[2px] px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
 									{group.label}
 								</div>
 								<ul className="divide-y divide-border/40">
@@ -196,11 +214,11 @@ export default function NotificationPanel() {
 				onClick={handleToggle}
 				className="nav-pill relative p-2 rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground"
 				aria-label="Notifications"
-				aria-haspopup="menu"
+				aria-haspopup="dialog"
 				aria-expanded={open}
 			>
 				<Bell className="h-4.5 w-4.5" strokeWidth={2} />
-				{unreadCount > 0 && (
+				{dotCount > 0 && (
 					<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
 				)}
 			</button>
@@ -210,11 +228,12 @@ export default function NotificationPanel() {
 				<div
 					className={cn(
 						'hidden sm:flex absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1.5rem)]',
-						'flex-col rounded-surface border border-border bg-popover shadow-xl z-50 overflow-hidden',
-						'max-h-[min(32rem,calc(100vh-6rem))]',
+						'flex-col rounded-surface border border-border bg-popover z-50 overflow-hidden',
+						'max-h-[min(40rem,calc(100vh-4rem))]',
 						PANEL_OPEN_CLASSES,
 					)}
-					role="menu"
+					role="dialog"
+					aria-label="Notifications"
 				>
 					{body}
 				</div>
@@ -230,11 +249,13 @@ export default function NotificationPanel() {
 					/>
 					<div
 						className={cn(
-							'flex flex-col rounded-t-panel border-t border-border bg-popover shadow-2xl',
+							'flex flex-col rounded-t-panel border-t border-border bg-popover',
 							'max-h-[85vh]',
 							SHEET_OPEN_CLASSES,
 						)}
-						role="menu"
+						role="dialog"
+						aria-modal="true"
+						aria-label="Notifications"
 					>
 						<div className="flex justify-center pt-2 pb-1">
 							<span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
