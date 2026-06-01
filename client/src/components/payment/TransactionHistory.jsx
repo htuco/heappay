@@ -126,7 +126,7 @@ export default function TransactionHistory({ onTransactionSelect, pageSize = 20 
               onChange={(e) => setLookupValue(e.target.value)}
               placeholder="Search transactions…"
               disabled={!hasTransactions && !isLoading}
-              className="h-8 rounded-input border-border/70 bg-background pl-8 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-border focus-visible:ring-0"
+              className="h-8 rounded-input border-border/70 bg-background pl-8 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
 
@@ -135,7 +135,7 @@ export default function TransactionHistory({ onTransactionSelect, pageSize = 20 
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             disabled={!hasTransactions && !isLoading}
-            className="h-8 w-auto rounded-input border-border/70 bg-background text-sm shadow-none focus-visible:border-border focus-visible:ring-0"
+            className="h-8 w-auto rounded-input border-border/70 bg-background text-sm shadow-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
 
           <Select
