@@ -8,6 +8,7 @@ import SplitModal, {
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 import { getApiErrorMessage } from '@/utils/api'
 import {
   DropdownMenuContent,
@@ -460,7 +461,12 @@ export default function AllCardsModal({
       setIsSubmittingMain(true)
       await Promise.resolve(onSetMain(Number(pendingMainCard.id)))
       setPendingMainCard(null)
-      notify({ type: 'success', message: `${label} is now your main card.` })
+      notify({
+        type: 'success',
+        category: CATEGORIES.SYSTEM,
+        message: `${label} is now your main card.`,
+        link: { route: '/wallet', modal: { kind: 'card', id: Number(pendingMainCard.id) } },
+      })
     } catch (err) {
       notify({
         type: 'error',
@@ -490,7 +496,12 @@ export default function AllCardsModal({
       setIsSubmittingRemove(true)
       await Promise.resolve(onRemove(Number(pendingRemoveCard.id)))
       setPendingRemoveCard(null)
-      notify({ type: 'success', message: `${label} removed from your wallet.` })
+      notify({
+        type: 'success',
+        category: CATEGORIES.SYSTEM,
+        message: `${label} removed from your wallet.`,
+        link: { route: '/wallet' },
+      })
     } catch (err) {
       notify({
         type: 'error',

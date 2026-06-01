@@ -14,6 +14,7 @@ import SplitModal, {
   SplitModalContextLabel,
 } from "@/components/ui/SplitModal"
 import { useNotifications } from "@/context/NotificationContext"
+import { CATEGORIES } from "@/context/notifications/categories"
 import { formatBrandLabel } from "@/utils/paymentCard.utils"
 
 const ISSUER_MAP = {
@@ -156,9 +157,11 @@ export default function AddCardModal({
       const tail = digits.slice(-4)
       notify({
         type: "success",
+        category: CATEGORIES.SYSTEM,
         message: form.isPrimary
           ? `${brandLabel} •••• ${tail} added as your main card.`
           : `${brandLabel} •••• ${tail} added to your wallet.`,
+        link: { route: '/wallet' },
       })
       setForm(emptyForm)
       setErrors({})

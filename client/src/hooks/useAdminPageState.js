@@ -7,6 +7,7 @@ import { getCardStatus } from '@/utils/admin.utils'
 import usersService from '@/services/usersService'
 import { updateCard, hardDeleteCard } from '@/services/cardsService'
 import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 
 function userMatchesChip(user, chip) {
   if (chip === 'all') return true
@@ -208,21 +209,36 @@ export default function useAdminPageState() {
   async function handleUserSave(userId, payload) {
     await usersService.update(userId, payload)
     refresh()
-    notify({ type: 'success', message: 'User updated successfully.' })
+    notify({
+      type: 'success',
+      category: CATEGORIES.ADMIN_ACTION,
+      message: 'User updated successfully.',
+      link: { route: '/admin' },
+    })
     setSelectedUserId(null)
   }
 
   async function handleCardUpdate(cardId, payload) {
     await updateCard(cardId, payload)
     refresh()
-    notify({ type: 'success', message: 'Card updated successfully.' })
+    notify({
+      type: 'success',
+      category: CATEGORIES.ADMIN_ACTION,
+      message: 'Card updated successfully.',
+      link: { route: '/admin' },
+    })
     closeManageCard()
   }
 
   async function handleCardDelete(cardId) {
     await hardDeleteCard(cardId)
     refresh()
-    notify({ type: 'success', message: 'Card permanently deleted.' })
+    notify({
+      type: 'success',
+      category: CATEGORIES.ADMIN_ACTION,
+      message: 'Card permanently deleted.',
+      link: { route: '/admin' },
+    })
     closeManageCard()
   }
 

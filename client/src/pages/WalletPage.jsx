@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import AddCardModal from '@/components/AddCardModal'
 import CardCarousel from '@/components/card-view/CardCarousel'
@@ -19,6 +20,36 @@ const SECONDARY_CTA_CLASS =
 export default function WalletPage() {
   const { cards, isLoading, isSaving, error, saveError, addCard, setMainCard, removeCard } = useWalletCards()
   const [activeIndex, setActiveIndex] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [highlight, setHighlight] = useState(false)
+  const consumedCardParamRef = useRef(null)
+  const walletSectionRef = useRef(null)
+
+  // Deep-link target from a notification: ?card=<id>. Scrolls the carousel
+  // to that card and flashes a ring around the wallet section.
+  useEffect(() => {
+    const param = searchParams.get('card')
+    if (!param) return
+    if (cards.length === 0) return
+    if (consumedCardParamRef.current === param) return
+
+    const index = cards.findIndex((c) => c.id === param)
+    if (index < 0) return
+
+    consumedCardParamRef.current = param
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setActiveIndex(index)
+    setHighlight(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
+    walletSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const pulseTimer = setTimeout(() => setHighlight(false), 1800)
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('card')
+    setSearchParams(next, { replace: true })
+
+    return () => clearTimeout(pulseTimer)
+  }, [searchParams, cards, setSearchParams])
 
   const safeIndex = cards.length > 0 ? Math.min(activeIndex, cards.length - 1) : 0
   const activeCard = cards[safeIndex]
@@ -35,7 +66,12 @@ export default function WalletPage() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-8">
+        <div
+          ref={walletSectionRef}
+          className={`lg:col-span-8 rounded-panel transition-shadow duration-500 ${
+            highlight ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+          }`}
+        >
           <WalletSection className="h-full">
             {cards.length === 0 && !isLoading ? (
               <div className="flex flex-col items-center gap-3 rounded-surface bg-muted/30 p-12 text-center">

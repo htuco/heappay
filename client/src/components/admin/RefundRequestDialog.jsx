@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import transactionsService from '@/services/transactionsService'
+import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 
 function formatAmount(amount) {
   const num = Number.parseFloat(amount ?? '0')
@@ -24,6 +26,7 @@ function formatDate(iso) {
 }
 
 export default function RefundRequestDialog({ request, open, onOpenChange, onResolved }) {
+  const { notify } = useNotifications()
   const [isApproving, setIsApproving] = useState(false)
   const [isDeclining, setIsDeclining] = useState(false)
   const [error, setError] = useState(null)
@@ -31,11 +34,19 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
   const tx = request?.refund_detail?.transaction_id
   const isBusy = isApproving || isDeclining
 
+  const requesterLabel = request?.requester_name || `user #${request?.target_user_id ?? '?'}`
+
   async function handleApprove() {
     setIsApproving(true)
     setError(null)
     try {
       await transactionsService.approveRefund(request.request_id)
+      notify({
+        type: 'success',
+        category: CATEGORIES.REFUND_APPROVED,
+        message: `Refund #${request.request_id} approved for ${requesterLabel}.`,
+        link: { route: '/support/tickets' },
+      })
       onResolved?.('approved')
       onOpenChange?.(false)
     } catch (err) {
@@ -50,6 +61,12 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
     setError(null)
     try {
       await transactionsService.declineRefund(request.request_id)
+      notify({
+        type: 'info',
+        category: CATEGORIES.REFUND_DECLINED,
+        message: `Refund #${request.request_id} declined for ${requesterLabel}.`,
+        link: { route: '/support/tickets' },
+      })
       onResolved?.('declined')
       onOpenChange?.(false)
     } catch (err) {

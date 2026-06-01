@@ -22,6 +22,7 @@ import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 import { listCards, lookupCardByNumber } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
@@ -1010,7 +1011,7 @@ export default function PaymentWizard({
     setIsSubmitting(true)
 
     try {
-      await transactionsService.create({
+      const created = await transactionsService.create({
         sender_card_id: form.fromCardId,
         recipient_card_id: form.recipientInfo.card_id,
         transaction_type_id: form.txTypeId,
@@ -1020,16 +1021,24 @@ export default function PaymentWizard({
 
       setStep(3)
 
-      notify({
-        type: 'success',
-        message: `${formatMoney(form.amount)} sent to ${form.recipientInfo.owner_name}.`,
-      })
+      const isSelfTransfer = form.recipientInfo.user_id === user?.id
+      const txLink = created?.transaction_id
+        ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
+        : { route: '/payments' }
 
-      if (form.recipientInfo.user_id === user?.id) {
+      if (isSelfTransfer) {
         notify({
-          type: 'info',
-          message: `+${formatMoney(form.amount)} received on card ****${form.recipientInfo.last_four}.`,
-          duration: 5000,
+          type: 'success',
+          category: CATEGORIES.PAYMENT_SELF,
+          message: `Transferred ${formatMoney(form.amount)} to your card ****${form.recipientInfo.last_four}.`,
+          link: txLink,
+        })
+      } else {
+        notify({
+          type: 'success',
+          category: CATEGORIES.PAYMENT_SENT,
+          message: `${formatMoney(form.amount)} sent to ${form.recipientInfo.owner_name}.`,
+          link: txLink,
         })
       }
 
