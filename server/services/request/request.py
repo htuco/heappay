@@ -18,8 +18,20 @@ class NotRefundableError(Exception):
     """Transaction cannot be refunded (not completed, is a deposit, or is not a payment)."""
 
 
-class RefundAlreadyPendingError(Exception):
-    """A pending refund already exists for this transaction."""
+class RefundAlreadyExistsError(Exception):
+    """A refund already exists for this transaction (one is allowed per tx).
+
+    Carries the existing refund's status so the caller can tell the user
+    whether it is still pending, was approved, or was declined (final).
+    """
+
+    def __init__(self, status: str | None) -> None:
+        self.status = status
+        super().__init__(f"A refund request already exists ({status}).")
+
+
+# Backwards-compatible alias — older imports referenced this name.
+RefundAlreadyPendingError = RefundAlreadyExistsError
 
 
 class InsufficientBalanceError(Exception):
@@ -59,10 +71,14 @@ class RequestService:
         if tx.status_id != completed_id:
             raise NotRefundableError("Only completed transactions can be refunded.")
 
-        # only one pending refund per transaction
-        existing = self._repo.get_pending_refund_for_transaction(transaction_id)
+        # only one refund per transaction, ever — matches the DB unique
+        # constraint, so this pre-check returns a clean 409 instead of letting a
+        # duplicate insert escape as an IntegrityError (500). The existing
+        # refund's status drives a precise message (pending / approved / declined).
+        existing = self._repo.get_any_refund_for_transaction(transaction_id)
         if existing is not None:
-            raise RefundAlreadyPendingError()
+            status = self._repo.status_name_for(existing.request_status_id)
+            raise RefundAlreadyExistsError(status)
 
         return self._repo.create_refund_request(
             requester_user_id=user_id,
