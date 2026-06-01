@@ -33,6 +33,16 @@ const REFUND_REASON_OPTIONS = REFUND_REASONS.map((reason) => ({
   label: reason,
 }))
 
+// Status-aware copy when a refund already exists for the transaction being
+// viewed in the refund modal. `null` status (optimistic, this-session) falls
+// back to the pending message.
+const REFUND_EXISTS_MESSAGE = {
+  pending: 'A refund request for this transaction is already pending review.',
+  approved: 'This transaction has already been refunded.',
+  declined: 'A refund for this transaction was declined. That decision is final.',
+  cancelled: 'A previous refund request for this transaction was cancelled.',
+}
+
 function getTransactionId(transaction) {
   return transaction?.transaction_id ?? transaction?.id ?? null
 }
@@ -54,8 +64,17 @@ export default function PaymentPage() {
   const isCancelConfirmed =
     Boolean(cancelTransactionId) && cancelConfirmationId.trim() === String(cancelTransactionId)
   const resolvedRefundReason = refundReason === 'Other' ? refundOtherReason.trim() : refundReason
-  const refundAlreadyPending = refundTransactionId !== null && refundedTransactionIds.has(refundTransactionId)
-  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason) && !isSubmittingRefund && !refundAlreadyPending
+  // A refund already exists for this transaction if the detail carries a
+  // refund_status (any state — a transaction can only ever have one refund) or
+  // it was just optimistically requested this session.
+  const existingRefundStatus = transactionToRefund?.refund_status ?? null
+  const refundAlreadyExists =
+    refundTransactionId !== null &&
+    (existingRefundStatus !== null || refundedTransactionIds.has(refundTransactionId))
+  // Kept name for the existing JSX/message below; now covers every "already
+  // exists" case, not just pending.
+  const refundAlreadyPending = refundAlreadyExists
+  const canSubmitRefundRequest = Boolean(refundTransactionId) && Boolean(resolvedRefundReason) && !isSubmittingRefund && !refundAlreadyExists
 
   // Open the detail panel when the URL carries ?tx=<id> (e.g. from a
   // notification deep-link). useTransactionDetail will fetch the full record.
@@ -261,6 +280,21 @@ export default function PaymentPage() {
               Your reason will be added to the transaction notes and used by the review team.
             </p>
 
+            {(refundAlreadyPending || refundError) && (
+              <p
+                className={`mt-4 text-xs leading-5 ${
+                  refundError
+                    ? 'text-destructive'
+                    : 'text-amber-600 dark:text-amber-400'
+                }`}
+                role="alert"
+              >
+                {refundError ??
+                  REFUND_EXISTS_MESSAGE[existingRefundStatus] ??
+                  REFUND_EXISTS_MESSAGE.pending}
+              </p>
+            )}
+
             <DialogFooter className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <DialogClose asChild>
                 <Button
@@ -270,14 +304,6 @@ export default function PaymentPage() {
                   Keep payment
                 </Button>
               </DialogClose>
-              {refundAlreadyPending && (
-                <p className="col-span-2 -mt-1 text-xs text-amber-600 dark:text-amber-400">
-                  A refund request for this transaction is already pending review.
-                </p>
-              )}
-              {refundError && (
-                <p className="col-span-2 -mt-1 text-xs text-destructive">{refundError}</p>
-              )}
               <Button
                 className="h-11 rounded-input bg-slate-950 px-4 font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:ring-slate-950/20 disabled:bg-slate-200 disabled:text-slate-400 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
                 disabled={!canSubmitRefundRequest}
