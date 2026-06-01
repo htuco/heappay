@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux'
 import { getMe } from '@/services/authService'
 import { listCards } from '@/services/cardsService'
 import { CATEGORIES } from './categories'
+import { cardLabel } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
 
 const POLL_MS = 30_000
@@ -16,16 +17,6 @@ const selectRefStatuses = (state) => ({
 function statusName(list, id, key) {
 	const entry = list.find((s) => s[key] === id)
 	return entry?.status_name ?? null
-}
-
-function lastFour(maskedNumber) {
-	if (!maskedNumber) return '????'
-	const digits = String(maskedNumber).replace(/\D/g, '')
-	return digits.slice(-4) || '????'
-}
-
-function cardLabel(card) {
-	return `card ****${lastFour(card.masked_card_number)}`
 }
 
 function isoDay(ts = Date.now()) {

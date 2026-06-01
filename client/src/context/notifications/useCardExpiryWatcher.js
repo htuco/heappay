@@ -2,14 +2,9 @@ import { useCallback, useEffect } from 'react'
 import { listCards } from '@/services/cardsService'
 import { subscribeDataChange, DATA_CHANGE_KINDS } from '@/utils/dataEvents'
 import { CATEGORIES } from './categories'
+import { cardLabel } from './format'
 
 const EXPIRING_THRESHOLD_DAYS = 30
-
-function lastFour(maskedNumber) {
-	if (!maskedNumber) return '????'
-	const digits = String(maskedNumber).replace(/\D/g, '')
-	return digits.slice(-4) || '????'
-}
 
 function daysUntil(dateStr) {
 	if (!dateStr) return null
@@ -47,7 +42,7 @@ export function useCardExpiryWatcher({ userId, notify }) {
 		for (const card of cards) {
 			const days = daysUntil(card.expires_at)
 			if (days === null) continue
-			const label = `card ****${lastFour(card.masked_card_number)}`
+			const label = cardLabel(card)
 
 			if (days < 0) {
 				notify({
