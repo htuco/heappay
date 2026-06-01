@@ -4,6 +4,8 @@ from sqlalchemy import case, func, or_, select, text
 from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
+from models.refund_request_detail import RefundRequestDetail
+from models.request import Request
 from models.transaction import Transaction
 from models.transaction_status import TransactionStatus
 from models.transaction_type import TransactionType
@@ -204,6 +206,11 @@ class TransactionRepository:
             joinedload(Transaction.sender_card).joinedload(Card.card_type),
             joinedload(Transaction.recipient_card).joinedload(Card.user),
             joinedload(Transaction.recipient_card).joinedload(Card.card_type),
+            # Eager-load the refund chain so has_pending_refund / refund_status on
+            # TransactionResponse don't trigger a lazy query per row (N+1).
+            joinedload(Transaction.refund_detail)
+            .joinedload(RefundRequestDetail.request)
+            .joinedload(Request.request_status),
         )
 
     def card_owner_id(self, card_id: int) -> int | None:
