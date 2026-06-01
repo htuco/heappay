@@ -14,6 +14,8 @@ import {
 	saveHistory,
 	loadDedupSet,
 	saveDedupSet,
+	loadSeenAt,
+	saveSeenAt,
 	NOTIFICATION_HISTORY_CAP,
 } from './notifications/storage'
 import { CATEGORIES } from './notifications/categories'
@@ -27,7 +29,21 @@ const DEFAULT_CATEGORY = CATEGORIES.SYSTEM
 
 const NotificationContext = createContext(null)
 
-let _nextId = 1
+// Notification ids must be unique across the whole app lifetime AND stable
+// across reloads — history is persisted in localStorage, so a counter that
+// resets to 1 on every page load (or HMR) collides with already-stored ids and
+// produces duplicate React keys (which silently breaks list reconciliation,
+// e.g. row clicks / "Clear all" not firing). Seed from a UUID/timestamp so a
+// fresh session can never reuse a persisted id.
+let _idSeq = 0
+function nextNotificationId() {
+	_idSeq += 1
+	const rand =
+		typeof crypto !== 'undefined' && crypto.randomUUID
+			? crypto.randomUUID()
+			: Math.random().toString(36).slice(2)
+	return `n_${Date.now().toString(36)}_${_idSeq}_${rand}`
+}
 
 /**
  * Notification model
@@ -51,6 +67,13 @@ export function NotificationProvider({ children }) {
 
 	const [history, setHistory] = useState([])
 	const [queue, setQueue] = useState([])
+	// `seenAt` = last time the panel was opened. Items newer than this drive the
+	// bell dot ("something new arrived"). It is deliberately separate from each
+	// item's `read` flag: opening the panel clears the dot but must NOT mark
+	// rows read, so the unread styling (accent rule, tint, bold) survives the
+	// open and the user can still scan what's new. `read` flips only on an
+	// explicit interaction (row click or "Mark all as read").
+	const [seenAt, setSeenAt] = useState(0)
 	const dedupRef = useRef(new Set())
 	const hydratedFor = useRef(null)
 	const selfCardActionRef = useRef(0)
@@ -61,6 +84,7 @@ export function NotificationProvider({ children }) {
 
 		if (!userId) {
 			setHistory([])
+			setSeenAt(0)
 			dedupRef.current = new Set()
 			hydratedFor.current = null
 			return
@@ -68,6 +92,7 @@ export function NotificationProvider({ children }) {
 
 		const stored = loadHistory(userId)
 		setHistory(stored)
+		setSeenAt(loadSeenAt(userId))
 		dedupRef.current = loadDedupSet(userId)
 		hydratedFor.current = userId
 	}, [userId])
@@ -96,7 +121,7 @@ export function NotificationProvider({ children }) {
 				return null
 			}
 
-			const id = _nextId++
+			const id = nextNotificationId()
 			const item = {
 				id,
 				type,
@@ -154,6 +179,14 @@ export function NotificationProvider({ children }) {
 		setHistory((prev) => prev.map((n) => (n.read ? n : { ...n, read: true })))
 	}, [])
 
+	// Clears the bell dot without touching `read`, so rows keep their unread
+	// styling after the panel opens. Called on panel open.
+	const markAllSeen = useCallback(() => {
+		const now = Date.now()
+		setSeenAt(now)
+		if (userId) saveSeenAt(userId, now)
+	}, [userId])
+
 	const discard = useCallback((id) => {
 		setHistory((prev) => prev.filter((n) => n.id !== id))
 	}, [])
@@ -162,9 +195,16 @@ export function NotificationProvider({ children }) {
 		setHistory([])
 	}, [])
 
+	// Drives row styling + the in-panel count badge — only clears on interaction.
 	const unreadCount = useMemo(
 		() => history.reduce((acc, n) => (n.read ? acc : acc + 1), 0),
 		[history],
+	)
+
+	// Drives the bell dot — "something arrived since you last opened the panel".
+	const dotCount = useMemo(
+		() => history.reduce((acc, n) => (n.createdAt > seenAt ? acc + 1 : acc), 0),
+		[history, seenAt],
 	)
 
 	const value = useMemo(
@@ -172,14 +212,16 @@ export function NotificationProvider({ children }) {
 			queue,
 			history,
 			unreadCount,
+			dotCount,
 			notify,
 			dismiss,
 			markRead,
 			markAllRead,
+			markAllSeen,
 			discard,
 			clearHistory,
 		}),
-		[queue, history, unreadCount, notify, dismiss, markRead, markAllRead, discard, clearHistory],
+		[queue, history, unreadCount, dotCount, notify, dismiss, markRead, markAllRead, markAllSeen, discard, clearHistory],
 	)
 
 	return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>

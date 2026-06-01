@@ -19,7 +19,23 @@ export function loadHistory(userId) {
 	if (!userId) return []
 	const raw = localStorage.getItem(keyFor(userId, 'history'))
 	const list = safeParse(raw, [])
-	return Array.isArray(list) ? list : []
+	if (!Array.isArray(list)) return []
+	// Migrate legacy histories: ids used to come from a counter that reset to 1
+	// each page load, so persisted items can share an id (duplicate React keys
+	// break list reconciliation). Re-key any collisions to a unique string while
+	// preserving order/content.
+	const seen = new Set()
+	return list.map((item) => {
+		if (item == null) return item
+		const id = item.id
+		if (id == null || seen.has(id)) {
+			const fresh = `n_legacy_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`
+			seen.add(fresh)
+			return { ...item, id: fresh }
+		}
+		seen.add(id)
+		return item
+	})
 }
 
 export function saveHistory(userId, history) {
@@ -29,6 +45,22 @@ export function saveHistory(userId, history) {
 		localStorage.setItem(keyFor(userId, 'history'), JSON.stringify(trimmed))
 	} catch {
 		// quota exceeded or storage unavailable — fail silently
+	}
+}
+
+export function loadSeenAt(userId) {
+	if (!userId) return 0
+	const raw = localStorage.getItem(keyFor(userId, 'seenAt'))
+	const value = safeParse(raw, 0)
+	return typeof value === 'number' ? value : 0
+}
+
+export function saveSeenAt(userId, value) {
+	if (!userId) return
+	try {
+		localStorage.setItem(keyFor(userId, 'seenAt'), JSON.stringify(value))
+	} catch {
+		// noop
 	}
 }
 
