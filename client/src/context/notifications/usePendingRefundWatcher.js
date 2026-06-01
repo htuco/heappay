@@ -4,17 +4,36 @@ import { selectAuthUser } from '@/store/slices/authSlice'
 import transactionsService from '@/services/transactionsService'
 import { loadBaseline, saveBaseline } from './storage'
 import { CATEGORIES } from './categories'
+import { formatAmount } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
 
 const POLL_MS = 30_000
 const PAGE_SIZE = 20
+// See useIncomingTransferWatcher: bound how far back a single poll walks while
+// still covering more new requests than can realistically arrive between polls.
+const MAX_PAGES = 5
 const STAFF_ROLES = new Set(['admin', 'support', 'manager'])
 
-function formatAmount(amount) {
-	if (amount == null) return ''
-	const n = Number.parseFloat(amount)
-	if (Number.isNaN(n)) return String(amount)
-	return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+/**
+ * Pages forward (newest-first) collecting pending refunds with request_id >
+ * minId, until a page reaches the baseline or MAX_PAGES is hit. Prevents a
+ * burst of more than PAGE_SIZE new requests from pushing the baseline past
+ * unseen ones.
+ */
+async function collectPendingSince(minId) {
+	const collected = []
+	for (let page = 1; page <= MAX_PAGES; page++) {
+		const res = await transactionsService.listPendingRefunds({ page, pageSize: PAGE_SIZE })
+		const items = Array.isArray(res?.items) ? res.items : []
+		if (items.length === 0) break
+		collected.push(...items)
+		const smallestId = items.reduce(
+			(acc, r) => Math.min(acc, r.request_id),
+			Number.POSITIVE_INFINITY,
+		)
+		if (smallestId <= minId || items.length < PAGE_SIZE) break
+	}
+	return collected
 }
 
 /**
@@ -42,24 +61,32 @@ export function usePendingRefundWatcher({ userId, notify }) {
 			baselineRef.current = loadBaseline(userId, 'pending_refunds') ?? 0
 		}
 
-		let page
+		let items
 		try {
-			page = await transactionsService.listPendingRefunds({ page: 1, pageSize: PAGE_SIZE })
+			items = establishedRef.current
+				? await collectPendingSince(baselineRef.current)
+				: (await transactionsService.listPendingRefunds({ page: 1, pageSize: PAGE_SIZE }))?.items
 		} catch {
 			return
 		}
 
-		const items = Array.isArray(page?.items) ? page.items : []
-		if (items.length === 0) return
+		items = Array.isArray(items) ? items : []
 
-		const maxId = items.reduce((acc, r) => Math.max(acc, r.request_id), 0)
-
+		// First successful poll just establishes the baseline (even when empty,
+		// so the watcher is armed) — existing requests are not replayed. An empty
+		// first poll leaves the baseline at 0, so the next request that appears
+		// is correctly treated as new.
 		if (!establishedRef.current) {
 			establishedRef.current = true
+			const maxId = items.reduce((acc, r) => Math.max(acc, r.request_id), baselineRef.current)
 			baselineRef.current = maxId
 			saveBaseline(userId, 'pending_refunds', maxId)
 			return
 		}
+
+		if (items.length === 0) return
+
+		const maxId = items.reduce((acc, r) => Math.max(acc, r.request_id), 0)
 
 		const fresh = items
 			.filter((r) => r.request_id > baselineRef.current)
@@ -75,7 +102,7 @@ export function usePendingRefundWatcher({ userId, notify }) {
 					? `${who} requested a refund of ${amount}.`
 					: `${who} submitted a refund request.`,
 				link: { route: '/support/tickets' },
-				surface: 'panel',
+				surface: 'both',
 				dedupKey: `refund:${req.request_id}:pending`,
 			})
 		}

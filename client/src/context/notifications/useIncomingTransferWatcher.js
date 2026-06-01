@@ -2,23 +2,48 @@ import { useCallback, useEffect, useRef } from 'react'
 import { transactionsService } from '@/services/transactionsService'
 import { loadBaseline, saveBaseline } from './storage'
 import { CATEGORIES } from './categories'
+import { formatAmount } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
 
 const POLL_MS = 15_000
 const PAGE_SIZE = 20
+// Safety cap on how many pages a single poll will walk back. At PAGE_SIZE 20
+// that covers 100 transactions newer than the baseline — far more than can
+// realistically appear between two 15s polls, while bounding a cold-start or
+// long-offline catch-up so the poll can't run away.
+const MAX_PAGES = 5
 const COMPLETED_STATUS_ID = 2
 const REVERSED_STATUS_ID = 4
+
+/**
+ * Fetches transactions newest-first, paging forward until it has collected
+ * every item with transaction_id > minId (i.e. the page's smallest id drops to
+ * or below the baseline), or until MAX_PAGES is reached. Returns the combined
+ * list. Avoids the "only page 1 examined" blind spot where a burst of more than
+ * PAGE_SIZE transactions between polls would push the baseline past unseen
+ * incoming transfers.
+ */
+async function collectSince(minId) {
+	const collected = []
+	for (let page = 1; page <= MAX_PAGES; page++) {
+		const res = await transactionsService.list({ page, pageSize: PAGE_SIZE })
+		const items = Array.isArray(res?.items) ? res.items : []
+		if (items.length === 0) break
+		collected.push(...items)
+		const smallestId = items.reduce(
+			(acc, t) => Math.min(acc, t.transaction_id),
+			Number.POSITIVE_INFINITY,
+		)
+		// Once a page reaches the baseline (or there's no next page), stop.
+		if (smallestId <= minId || items.length < PAGE_SIZE) break
+	}
+	return collected
+}
 
 function senderLabel(tx) {
 	const s = tx?.sender
 	if (!s) return 'someone'
 	return s.full_name || [s.first_name, s.last_name].filter(Boolean).join(' ') || 'someone'
-}
-
-function formatAmount(amount) {
-	const n = Number.parseFloat(amount ?? '0')
-	if (Number.isNaN(n)) return String(amount ?? '')
-	return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 /**
@@ -53,23 +78,30 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 			baselineRef.current = loadBaseline(userId, 'incoming_tx') ?? 0
 		}
 
-		let page
+		// On the first (snapshot) poll we only need page 1 to establish the
+		// baseline. After that, page back to the baseline so a burst larger than
+		// one page can't slip newer transfers past us.
+		let items
 		try {
-			page = await transactionsService.list({ page: 1, pageSize: PAGE_SIZE })
+			items = establishedRef.current
+				? await collectSince(baselineRef.current)
+				: (await transactionsService.list({ page: 1, pageSize: PAGE_SIZE }))?.items
 		} catch {
 			return
 		}
 
-		const items = Array.isArray(page?.items) ? page.items : []
-		if (items.length === 0) return
-
-		const maxId = items.reduce((acc, t) => Math.max(acc, t.transaction_id), 0)
+		items = Array.isArray(items) ? items : []
 
 		// First successful poll for this user: just snapshot — no notifications.
+		// Done even when the list is empty so the watcher is armed; otherwise the
+		// very first transaction to ever appear would be swallowed as "baseline".
 		if (!establishedRef.current) {
 			establishedRef.current = true
-			baselineRef.current = maxId
-			saveBaseline(userId, 'incoming_tx', maxId)
+			baselineRef.current = items.reduce(
+				(acc, t) => Math.max(acc, t.transaction_id),
+				baselineRef.current,
+			)
+			saveBaseline(userId, 'incoming_tx', baselineRef.current)
 			for (const t of items) {
 				if (t.sender?.user_id === userId) {
 					outgoingStatusRef.current.set(t.transaction_id, t.status_id)
@@ -77,6 +109,10 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 			}
 			return
 		}
+
+		if (items.length === 0) return
+
+		const maxId = items.reduce((acc, t) => Math.max(acc, t.transaction_id), 0)
 
 		const incoming = items
 			.filter((t) => t.transaction_id > baselineRef.current)
