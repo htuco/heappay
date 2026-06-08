@@ -7,6 +7,7 @@ import SupportUsersPage from './pages/SupportUsersPage'
 import SupportTicketsPage from './pages/SupportTicketsPage'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PaymentPage from './pages/PaymentPage'
 import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
@@ -96,6 +97,7 @@ export default function App() {
       />
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+      <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordPage /></PublicOnlyRoute>} />
 
       {/* App shell routes */}
       <Route element={<Layout />}>
