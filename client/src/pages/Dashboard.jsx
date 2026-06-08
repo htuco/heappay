@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CreditCard, Plus } from 'lucide-react'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
@@ -96,12 +96,6 @@ function PaymentCardError() {
   )
 }
 
-// Minimum overlay duration for card fetches that take long enough to show the loader.
-// Prevents the Lottie overlay from flashing on slower connections. Skipped for very
-// fast loads (<200ms) and for background refetches (showLoader: false).
-const MIN_LOADER_MS = 1500
-const FAST_LOAD_THRESHOLD_MS = 200
-
 export default function DashboardPage() {
   const { user } = useAuth()
   const { cards, isLoading, error, refetch } = useDashboardCards()
@@ -118,8 +112,6 @@ export default function DashboardPage() {
     error: recentActivityError,
   } = useTransactions({ pageSize: 5 })
   const [typeNameById, setTypeNameById] = useState({})
-  const [overlayVisible, setOverlayVisible] = useState(false)
-  const loadingStartedAtRef = useRef(null)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
   const [addCardOpen, setAddCardOpen] = useState(false)
@@ -142,46 +134,6 @@ export default function DashboardPage() {
         return (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'
       })()
     : undefined
-
-  useEffect(() => {
-    if (!user?.id) {
-      loadingStartedAtRef.current = null
-      /* eslint-disable react-hooks/set-state-in-effect */
-      setOverlayVisible(false)
-      /* eslint-enable react-hooks/set-state-in-effect */
-      return
-    }
-
-    if (isLoading) {
-      if (loadingStartedAtRef.current === null) {
-        loadingStartedAtRef.current = Date.now()
-      }
-      setOverlayVisible(true)
-      return
-    }
-
-    if (loadingStartedAtRef.current === null) {
-      setOverlayVisible(false)
-      return
-    }
-
-    const duration = Date.now() - loadingStartedAtRef.current
-    loadingStartedAtRef.current = null
-
-    if (duration < FAST_LOAD_THRESHOLD_MS) {
-      setOverlayVisible(false)
-      return
-    }
-
-    if (duration >= MIN_LOADER_MS) {
-      setOverlayVisible(false)
-      return
-    }
-
-    const remaining = MIN_LOADER_MS - duration
-    const t = setTimeout(() => setOverlayVisible(false), remaining)
-    return () => clearTimeout(t)
-  }, [isLoading, user?.id])
 
   useEffect(() => {
     if (!user) {
@@ -215,7 +167,9 @@ export default function DashboardPage() {
     [cards, typeNameById, user],
   )
 
-  const showLoader = Boolean(user?.id) && overlayVisible
+  // useDashboardCards keeps isLoading true for at least MIN_LOADER_MS on page loads.
+  // Background refetches pass showLoader: false and do not trigger the overlay.
+  const showLoader = Boolean(user?.id) && isLoading
 
   return (
     <div className="space-y-6">
