@@ -16,10 +16,10 @@ class Transaction(Base):
     transaction_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     # Nullable: deposits originate externally and have no sender card
     sender_card_id: Mapped[int | None] = mapped_column(
-        ForeignKey("cards.card_id"), nullable=True
+        ForeignKey("cards.card_id", ondelete="RESTRICT"), nullable=True
     )
     recipient_card_id: Mapped[int] = mapped_column(
-        ForeignKey("cards.card_id"), nullable=False
+        ForeignKey("cards.card_id", ondelete="RESTRICT"), nullable=False
     )
     transaction_type_id: Mapped[int] = mapped_column(
         ForeignKey("transaction_types.transaction_type_id"), nullable=False
