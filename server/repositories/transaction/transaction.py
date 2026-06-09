@@ -264,12 +264,28 @@ class TransactionRepository:
         if pending_id is None:
             return []
 
-        stmt = (
-            select(Transaction)
+        # Lock rows on transactions only — FOR UPDATE with outer joins (deposits
+        # have no sender_card) is rejected by PostgreSQL.
+        lock_stmt = (
+            select(Transaction.transaction_id)
             .where(
                 Transaction.status_id == pending_id,
                 Transaction.processing_eligible_at <= func.now(),
             )
+            .order_by(
+                Transaction.processing_eligible_at.asc(),
+                Transaction.created_at.asc(),
+            )
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        ids = list(self._db.scalars(lock_stmt).all())
+        if not ids:
+            return []
+
+        stmt = (
+            select(Transaction)
+            .where(Transaction.transaction_id.in_(ids))
             .options(
                 joinedload(Transaction.sender_card).joinedload(Card.user).joinedload(
                     User.status
@@ -284,10 +300,8 @@ class TransactionRepository:
                 Transaction.processing_eligible_at.asc(),
                 Transaction.created_at.asc(),
             )
-            .limit(limit)
-            .with_for_update(skip_locked=True)
         )
-        return list(self._db.scalars(stmt).all())
+        return list(self._db.scalars(stmt).unique().all())
 
     def complete(self, transaction_id: int, *, processed_by: str) -> Transaction:
         pending_id = self.get_status_id_by_name("pending")

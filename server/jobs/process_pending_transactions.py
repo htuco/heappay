@@ -12,20 +12,9 @@ from __future__ import annotations
 import logging
 import sys
 
-from database import SessionLocal
-from repositories.transaction.transaction import TransactionRepository
-from services.transaction.transaction_processor import TransactionProcessorService
+from jobs.scheduled_tasks import run
 
 logger = logging.getLogger(__name__)
-
-
-def run() -> dict[str, int]:
-    db = SessionLocal()
-    try:
-        processor = TransactionProcessorService(TransactionRepository(db))
-        return processor.process_batch()
-    finally:
-        db.close()
 
 
 def main() -> int:
@@ -40,8 +29,10 @@ def main() -> int:
         return 1
 
     logger.info(
-        "transaction processor finished: processed=%(processed)d allowed=%(allowed)d "
-        "denied=%(denied)d skipped=%(skipped)d errors=%(errors)d",
+        "scheduled tasks finished: cards_expired=%(cards_expired)d "
+        "cards_skipped_pending=%(cards_skipped_pending)d cards_errors=%(cards_errors)d "
+        "processed=%(processed)d allowed=%(allowed)d denied=%(denied)d "
+        "skipped=%(skipped)d errors=%(errors)d",
         stats,
     )
     return 0

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
 from models.transaction import Transaction
@@ -16,6 +16,8 @@ RECIPIENT_USER_INACTIVE = "RECIPIENT_USER_INACTIVE"
 SENDER_USER_INACTIVE = "SENDER_USER_INACTIVE"
 RECIPIENT_CARD_INACTIVE = "RECIPIENT_CARD_INACTIVE"
 SENDER_CARD_INACTIVE = "SENDER_CARD_INACTIVE"
+RECIPIENT_CARD_EXPIRED = "RECIPIENT_CARD_EXPIRED"
+SENDER_CARD_EXPIRED = "SENDER_CARD_EXPIRED"
 SELF_TRANSFER = "SELF_TRANSFER"
 AUTO_ALLOW = "AUTO_ALLOW"
 PENDING_TIMEOUT_ALLOW = "PENDING_TIMEOUT_ALLOW"
@@ -77,6 +79,8 @@ def evaluate_transaction(tx: Transaction, settings: Settings) -> ProcessorDecisi
     recipient = tx.recipient_card
     if recipient is None or recipient.deleted_at is not None:
         return ProcessorDecision("deny", RECIPIENT_CARD_MISSING)
+    if _is_card_expired(recipient):
+        return ProcessorDecision("deny", RECIPIENT_CARD_EXPIRED)
     if not _is_active_card(recipient):
         return ProcessorDecision("deny", RECIPIENT_CARD_INACTIVE)
     if not _is_active_user(recipient.user):
@@ -86,6 +90,8 @@ def evaluate_transaction(tx: Transaction, settings: Settings) -> ProcessorDecisi
     if tx.sender_card_id is not None:
         if sender is None or sender.deleted_at is not None:
             return ProcessorDecision("deny", SENDER_CARD_MISSING)
+        if _is_card_expired(sender):
+            return ProcessorDecision("deny", SENDER_CARD_EXPIRED)
         if not _is_active_card(sender):
             return ProcessorDecision("deny", SENDER_CARD_INACTIVE)
         if not _is_active_user(sender.user):
@@ -102,6 +108,14 @@ def evaluate_transaction(tx: Transaction, settings: Settings) -> ProcessorDecisi
         return ProcessorDecision("deny", PENDING_TIMEOUT_DENY)
 
     return ProcessorDecision("allow", AUTO_ALLOW)
+
+
+def _is_card_expired(card) -> bool:
+    return card.expires_at < _today_utc()
+
+
+def _today_utc() -> date:
+    return datetime.now(timezone.utc).date()
 
 
 def _is_active_card(card) -> bool:

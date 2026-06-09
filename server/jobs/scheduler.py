@@ -7,7 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from jobs.process_pending_transactions import run
+from jobs.scheduled_tasks import run
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -19,18 +19,20 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def _transaction_processor_loop(interval_seconds: int) -> None:
-    """Run the processor immediately, then every *interval_seconds*."""
+async def _scheduled_tasks_loop(interval_seconds: int) -> None:
+    """Run maintenance immediately, then every *interval_seconds*."""
     while True:
         try:
             stats = await asyncio.to_thread(run)
             logger.info(
-                "transaction processor: processed=%(processed)d allowed=%(allowed)d "
-                "denied=%(denied)d skipped=%(skipped)d errors=%(errors)d",
+                "scheduled tasks: cards_expired=%(cards_expired)d "
+                "cards_skipped_pending=%(cards_skipped_pending)d "
+                "processed=%(processed)d allowed=%(allowed)d denied=%(denied)d "
+                "skipped=%(skipped)d errors=%(errors)d",
                 stats,
             )
         except Exception:
-            logger.exception("transaction processor failed")
+            logger.exception("scheduled tasks failed")
         await asyncio.sleep(interval_seconds)
 
 
@@ -42,11 +44,11 @@ def lifespan(settings: Settings):
         task: asyncio.Task | None = None
         if settings.tx_processor_scheduler_enabled:
             logger.info(
-                "starting transaction processor scheduler (every %ss)",
+                "starting scheduled tasks (card expiry + transactions, every %ss)",
                 settings.tx_processor_interval_seconds,
             )
             task = asyncio.create_task(
-                _transaction_processor_loop(settings.tx_processor_interval_seconds)
+                _scheduled_tasks_loop(settings.tx_processor_interval_seconds)
             )
         yield
         if task is not None:
@@ -55,6 +57,6 @@ def lifespan(settings: Settings):
                 await task
             except asyncio.CancelledError:
                 pass
-            logger.info("transaction processor scheduler stopped")
+            logger.info("scheduled tasks stopped")
 
     return _lifespan

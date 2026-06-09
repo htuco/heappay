@@ -148,6 +148,22 @@ class CardService:
             raise CardNotFoundError()
         return result
 
+    def expire_overdue_cards(self, *, limit: int = 100) -> dict[str, int]:
+        """
+        Soft-delete cards past expires_at. Skips cards with pending transactions
+        (same rule as manual delete).
+        """
+        stats = {"cards_expired": 0, "cards_skipped_pending": 0, "cards_errors": 0}
+        for card in self._repo.list_expired_for_soft_delete(limit=limit):
+            try:
+                self.delete(card.card_id)
+                stats["cards_expired"] += 1
+            except CardHasPendingTransactionsError:
+                stats["cards_skipped_pending"] += 1
+            except CardNotFoundError:
+                stats["cards_errors"] += 1
+        return stats
+
     def delete(self, card_id: int) -> None:
         row = self._repo.get_by_id(card_id, include_deleted=False)
         if row is None:

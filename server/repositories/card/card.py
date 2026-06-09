@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import delete as sa_delete, or_, select, update
+from sqlalchemy import delete as sa_delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from models.card import Card
@@ -202,6 +202,20 @@ class CardRepository:
             .distinct()
         )
         return set(self._db.scalars(stmt).all())
+
+    def list_expired_for_soft_delete(self, *, limit: int) -> list[Card]:
+        """Non-deleted cards whose expires_at is before today."""
+        stmt = (
+            select(Card)
+            .where(
+                Card.deleted_at.is_(None),
+                Card.expires_at < func.current_date(),
+            )
+            .order_by(Card.expires_at.asc(), Card.card_id.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        return list(self._db.scalars(stmt).all())
 
     def has_pending_transactions(self, card_id: int) -> bool:
         """True if a pending transaction references this card on either side."""
