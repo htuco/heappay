@@ -33,3 +33,4 @@ class User(Base):
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")
     cards = relationship("Card", back_populates="user")
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user")
