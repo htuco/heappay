@@ -198,6 +198,17 @@ class TransactionRepository:
         )
         return self._db.scalars(stmt).first()
 
+    def get_by_idempotency_key(self, idempotency_key: str) -> Transaction | None:
+        stmt = (
+            select(Transaction)
+            .options(*self._party_load_options())
+            .where(Transaction.idempotency_key == idempotency_key)
+        )
+        return self._db.scalars(stmt).first()
+
+    def rollback(self) -> None:
+        self._db.rollback()
+
     def _party_load_options(self):
         return (
             joinedload(Transaction.sender_card).joinedload(Card.user),
@@ -230,6 +241,7 @@ class TransactionRepository:
         status_id: int,
         amount: Decimal,
         note: str | None,
+        idempotency_key: str | None = None,
     ) -> Transaction:
         """Atomski: smanji sender balance, povecaj recipient balance, kreiraj transaction."""
         if sender_card is not None:
@@ -243,6 +255,7 @@ class TransactionRepository:
             status_id=status_id,
             amount=amount,
             note=note,
+            idempotency_key=idempotency_key,
         )
         self._db.add(row)
         self._db.commit()

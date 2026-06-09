@@ -10,6 +10,7 @@ class TransactionCreate(BaseModel):
     transaction_type_id: int = Field(gt=0)
     amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     note: str | None = Field(default=None, max_length=255)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
 
     @model_validator(mode="after")
     def validate_sender_recipient_distinct(self) -> "TransactionCreate":

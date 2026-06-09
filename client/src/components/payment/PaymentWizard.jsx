@@ -27,6 +27,7 @@ import { listCards, lookupCardByNumber } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
+import { createIdempotencyKey } from '@/utils/idempotency'
 
 const SEND_TYPE_NAMES = new Set(['payment'])
 const AUTO_CLOSE_MS = 1200
@@ -961,6 +962,7 @@ export default function PaymentWizard({
   const [isLoadingRef, setIsLoadingRef] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const idempotencyKeyRef = useRef(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -999,6 +1001,7 @@ export default function PaymentWizard({
     setStep(0)
     setForm(INITIAL_FORM)
     setSubmitError('')
+    idempotencyKeyRef.current = null
     onClose()
   }
 
@@ -1007,8 +1010,14 @@ export default function PaymentWizard({
   }
 
   async function handleSubmit() {
+    if (isSubmitting) return
+
     setSubmitError('')
     setIsSubmitting(true)
+
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = createIdempotencyKey()
+    }
 
     try {
       const created = await transactionsService.create({
@@ -1017,6 +1026,7 @@ export default function PaymentWizard({
         transaction_type_id: form.txTypeId,
         amount: form.amount,
         note: form.note || null,
+        idempotency_key: idempotencyKeyRef.current,
       })
 
       setStep(3)

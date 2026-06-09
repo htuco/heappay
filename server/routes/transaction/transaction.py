@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -277,11 +277,12 @@ def get_transaction(
 )
 def create_transaction(
     payload: TransactionCreate,
+    response: Response,
     user_id: int = Depends(get_current_user_id),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionResponse]:
     try:
-        row = service.create(payload, user_id=user_id)
+        row, created = service.create(payload, user_id=user_id)
     except CardNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND
@@ -302,9 +303,16 @@ def create_transaction(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
         ) from None
+    response.status_code = (
+        status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    )
     return ApiResponse[TransactionResponse](
         success=True,
-        message="Transaction created successfully.",
+        message=(
+            "Transaction created successfully."
+            if created
+            else "Transaction already exists (idempotent replay)."
+        ),
         data=_to_detail_response(row),
     )
 
