@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
@@ -20,6 +21,13 @@ _SORT_COLUMNS = {
 class TransactionRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
+
+    def _commit(self) -> None:
+        try:
+            self._db.commit()
+        except SQLAlchemyError:
+            self._db.rollback()
+            raise
 
     def list_for_user(
         self,
@@ -245,14 +253,14 @@ class TransactionRepository:
             note=note,
         )
         self._db.add(row)
-        self._db.commit()
+        self._commit()
         self._db.refresh(row)
         return row
 
     def update(self, row: Transaction, changes: dict) -> Transaction:
         for key, value in changes.items():
             setattr(row, key, value)
-        self._db.commit()
+        self._commit()
         self._db.refresh(row)
         return row
 
