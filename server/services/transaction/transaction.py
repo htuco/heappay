@@ -1,6 +1,9 @@
+from datetime import datetime, timedelta, timezone
+
 from models.transaction import Transaction
 from repositories.transaction.transaction import TransactionRepository
 from schemas.transaction import TransactionCreate, TransactionPatch
+from settings import get_settings
 
 
 class TransactionNotFoundError(Exception):
@@ -138,6 +141,11 @@ class TransactionService:
         if sender_card is not None and sender_card.balance < payload.amount:
             raise InsufficientBalanceError()
 
+        delay_seconds = get_settings().tx_min_processing_delay_seconds
+        processing_eligible_at = datetime.now(timezone.utc) + timedelta(
+            seconds=delay_seconds
+        )
+
         return self._repo.create_with_balance_update(
             sender_card=sender_card,
             recipient_card=recipient_card,
@@ -145,6 +153,7 @@ class TransactionService:
             status_id=status_id,
             amount=payload.amount,
             note=payload.note,
+            processing_eligible_at=processing_eligible_at,
         )
 
     def patch(
