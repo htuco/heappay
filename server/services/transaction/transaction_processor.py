@@ -16,9 +16,8 @@ RECIPIENT_USER_INACTIVE = "RECIPIENT_USER_INACTIVE"
 SENDER_USER_INACTIVE = "SENDER_USER_INACTIVE"
 RECIPIENT_CARD_INACTIVE = "RECIPIENT_CARD_INACTIVE"
 SENDER_CARD_INACTIVE = "SENDER_CARD_INACTIVE"
-AMOUNT_OVER_HARD_LIMIT = "AMOUNT_OVER_HARD_LIMIT"
 SELF_TRANSFER = "SELF_TRANSFER"
-AUTO_ALLOW_UNDER_THRESHOLD = "AUTO_ALLOW_UNDER_THRESHOLD"
+AUTO_ALLOW = "AUTO_ALLOW"
 PENDING_TIMEOUT_ALLOW = "PENDING_TIMEOUT_ALLOW"
 PENDING_TIMEOUT_DENY = "PENDING_TIMEOUT_DENY"
 
@@ -94,18 +93,15 @@ def evaluate_transaction(tx: Transaction, settings: Settings) -> ProcessorDecisi
         if sender.user_id == recipient.user_id:
             return ProcessorDecision("deny", SELF_TRANSFER)
 
-    if tx.amount > settings.tx_hard_deny_amount:
-        return ProcessorDecision("deny", AMOUNT_OVER_HARD_LIMIT)
+    if tx.amount > settings.tx_manual_review_above_amount:
+        return ProcessorDecision("skip")
 
     if _is_pending_timeout(tx, settings):
         if settings.tx_pending_timeout_action == "allow":
             return ProcessorDecision("allow", PENDING_TIMEOUT_ALLOW)
         return ProcessorDecision("deny", PENDING_TIMEOUT_DENY)
 
-    if tx.amount <= settings.tx_auto_allow_max_amount:
-        return ProcessorDecision("allow", AUTO_ALLOW_UNDER_THRESHOLD)
-
-    return ProcessorDecision("skip")
+    return ProcessorDecision("allow", AUTO_ALLOW)
 
 
 def _is_active_card(card) -> bool:

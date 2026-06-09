@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     # Transaction processor (cron job)
     tx_processor_batch_size: int = 100
     tx_min_processing_delay_seconds: int = 3
-    tx_auto_allow_max_amount: Decimal = Decimal("500.00")
-    tx_hard_deny_amount: Decimal = Decimal("10000.00")
+    # Amounts above this stay pending for staff; everything else auto-allows if rules pass.
+    tx_manual_review_above_amount: Decimal = Decimal("500000.00")
     tx_pending_max_age_minutes: int = 1440
     tx_pending_timeout_action: Literal["allow", "deny"] = "deny"
     tx_staff_bypass_delay: bool = False

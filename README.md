@@ -122,6 +122,26 @@ Server:
 uv run python main.py          # Start FastAPI app
 uv run pytest                  # Run tests
 uv run alembic upgrade head    # Apply database migrations
+uv run python -m jobs.process_pending_transactions   # Process pending transactions
+```
+
+### Transaction processor (cron)
+
+Pending payments are held in escrow until the processor completes or fails them.
+Configure thresholds in `server/.env` (see `server/.env.example`).
+
+Run every 10–30 seconds in development so the processing delay is visible:
+
+```bash
+cd server
+uv run python -m jobs.process_pending_transactions
+```
+
+Example crontab (every minute at :00 and :30):
+
+```cron
+* * * * * cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1
+* * * * * sleep 30; cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1
 ```
 
 ## Features
