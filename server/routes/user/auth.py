@@ -12,6 +12,8 @@ from schemas.user.auth import (
     DeactivateAccountRequest,
     LoginRequest,
     NotificationPreferencesUpdate,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     ProfileUpdateRequest,
     RefreshRequest,
     RegisterRequest,
@@ -104,6 +106,38 @@ def change_password(
         raise InvalidInput("Could not update password.") from None
 
     return AuthResponse(success=True, message="Password updated successfully.", data=None)
+
+
+@router.post("/password-reset/request", response_model=AuthResponse)
+def request_password_reset(
+    payload: PasswordResetRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    try:
+        service.request_password_reset(payload)
+    except ValueError as exc:
+        if str(exc) == "MAIL_DELIVERY_FAILED":
+            raise InvalidInput("Could not send password reset email.") from None
+        raise InvalidInput("Could not request password reset.") from None
+
+    return AuthResponse(
+        success=True,
+        message="If an account exists for this email, a reset link has been sent.",
+        data=None,
+    )
+
+
+@router.post("/password-reset/confirm", response_model=AuthResponse)
+def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    try:
+        service.confirm_password_reset(payload)
+    except ValueError:
+        raise InvalidInput("Password reset link is invalid or expired.") from None
+
+    return AuthResponse(success=True, message="Password reset successfully.", data=None)
 
 
 @router.post("/deactivate", response_model=AuthResponse)
