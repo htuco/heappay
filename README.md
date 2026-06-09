@@ -125,19 +125,24 @@ uv run alembic upgrade head    # Apply database migrations
 uv run python -m jobs.process_pending_transactions   # Process pending transactions
 ```
 
-### Transaction processor (cron)
+### Transaction processor
 
 Pending payments are held in escrow until the processor completes or fails them.
 Configure thresholds in `server/.env` (see `server/.env.example`).
 
-Run every 10–30 seconds in development so the processing delay is visible:
+**By default**, starting the API also starts an in-process scheduler: it runs the
+processor once immediately, then every `TX_PROCESSOR_INTERVAL_SECONDS` (default
+60). Set `TX_PROCESSOR_SCHEDULER_ENABLED=false` if you use an external cron
+instead (recommended when running multiple API workers).
+
+You can still run the job manually:
 
 ```bash
 cd server
 uv run python -m jobs.process_pending_transactions
 ```
 
-Example crontab (every minute at :00 and :30):
+Example crontab when the in-app scheduler is disabled (every minute at :00 and :30):
 
 ```cron
 * * * * * cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1

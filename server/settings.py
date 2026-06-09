@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     # Signed URLs for avatars (private buckets). Ignored if Supabase env is unset.
     supabase_avatar_signed_ttl_seconds: int = 60 * 60 * 24 * 7
 
-    # Transaction processor (cron job)
+    # Transaction processor (cron job + in-app scheduler)
+    tx_processor_scheduler_enabled: bool = True
+    tx_processor_interval_seconds: int = 60
     tx_processor_batch_size: int = 100
     tx_min_processing_delay_seconds: int = 3
     # Amounts above this stay pending for staff; everything else auto-allows if rules pass.
