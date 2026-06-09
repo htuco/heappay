@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
 from models.transaction import Transaction
+from models.user import User
 from models.transaction_status import TransactionStatus
 from models.transaction_type import TransactionType
 
@@ -268,6 +269,16 @@ class TransactionRepository:
             .where(
                 Transaction.status_id == pending_id,
                 Transaction.processing_eligible_at <= func.now(),
+            )
+            .options(
+                joinedload(Transaction.sender_card).joinedload(Card.user).joinedload(
+                    User.status
+                ),
+                joinedload(Transaction.sender_card).joinedload(Card.status),
+                joinedload(Transaction.recipient_card).joinedload(Card.user).joinedload(
+                    User.status
+                ),
+                joinedload(Transaction.recipient_card).joinedload(Card.status),
             )
             .order_by(
                 Transaction.processing_eligible_at.asc(),
