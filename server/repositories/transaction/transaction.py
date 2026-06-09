@@ -121,6 +121,7 @@ class TransactionRepository:
         user_card_ids = select(Card.card_id).where(Card.user_id == user_id).scalar_subquery()
 
         since = func.now() - text(f"INTERVAL '{int(months)} months'")
+        completed_id = self.get_status_id_by_name("completed")
 
         period_col = func.to_char(
             func.date_trunc("month", Transaction.created_at), "YYYY-MM"
@@ -146,19 +147,23 @@ class TransactionRepository:
             Decimal("0"),
         )
 
+        filters = [
+            Transaction.created_at >= since,
+            or_(
+                Transaction.recipient_card_id.in_(user_card_ids),
+                Transaction.sender_card_id.in_(user_card_ids),
+            ),
+        ]
+        if completed_id is not None:
+            filters.append(Transaction.status_id == completed_id)
+
         stmt = (
             select(
                 period_col.label("period"),
                 income_expr.label("income"),
                 expense_expr.label("expense"),
             )
-            .where(
-                Transaction.created_at >= since,
-                or_(
-                    Transaction.recipient_card_id.in_(user_card_ids),
-                    Transaction.sender_card_id.in_(user_card_ids),
-                ),
-            )
+            .where(*filters)
             .group_by(period_col)
             .order_by(period_col.desc())
         )
