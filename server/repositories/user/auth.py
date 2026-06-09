@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from models.user_role import UserRole
 from models.user_status import UserStatus
+from models.password_reset_token import PasswordResetToken
 from models.user import User
 from schemas.user.auth import ProfileUpdateRequest, RegisterRequest
 
@@ -89,6 +90,45 @@ class UserAuthRepository:
             update(User)
             .where(User.user_id == user_id)
             .values(refresh_token=None)
+        )
+        self._db.commit()
+
+    def create_password_reset_token(
+        self,
+        user_id: int,
+        token_hash: str,
+        expires_at: datetime,
+    ) -> PasswordResetToken:
+        row = PasswordResetToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        self._db.add(row)
+        self._db.commit()
+        self._db.refresh(row)
+        return row
+
+    def get_password_reset_token(self, token_hash: str) -> PasswordResetToken | None:
+        stmt = select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+        return self._db.scalars(stmt).first()
+
+    def mark_password_reset_token_used(self, token_id: int) -> None:
+        self._db.execute(
+            update(PasswordResetToken)
+            .where(PasswordResetToken.token_id == token_id)
+            .values(used_at=datetime.now(timezone.utc))
+        )
+        self._db.commit()
+
+    def mark_password_reset_tokens_used_for_user(self, user_id: int) -> None:
+        self._db.execute(
+            update(PasswordResetToken)
+            .where(
+                PasswordResetToken.user_id == user_id,
+                PasswordResetToken.used_at.is_(None),
+            )
+            .values(used_at=datetime.now(timezone.utc))
         )
         self._db.commit()
 
