@@ -16,6 +16,7 @@ from services.card.card import (
     CardStatusNotFoundError,
     CardTypeNotFoundError,
     DuplicateCardNumberError,
+    NoSweepDestinationError,
     UserNotFoundError,
 )
 from settings import get_settings
@@ -30,6 +31,9 @@ _DUPLICATE_CARD_NUMBER = "A card with this number is already registered."
 _CARD_BELONGS_TO_ANOTHER_ACCOUNT = "This card belongs to another account."
 _CARD_HAS_TRANSACTIONS = "This card cannot be permanently deleted because it has transaction history."
 _CARD_HAS_PENDING_TRANSACTIONS = "This card has a pending transaction. Wait for it to settle before removing the card."
+_CARD_NO_SWEEP_DESTINATION = (
+    "Cannot remove the only card while it has a balance. Add another card first."
+)
 _FORBIDDEN = "You do not have access to this card."
 _FORBIDDEN_OTHER_USER = "You cannot manage cards for other users."
 _NO_MAIN_CARD = "No main card set for this user."
@@ -280,6 +284,11 @@ def delete_card(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=_CARD_HAS_PENDING_TRANSACTIONS,
+        ) from None
+    except NoSweepDestinationError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_CARD_NO_SWEEP_DESTINATION,
         ) from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

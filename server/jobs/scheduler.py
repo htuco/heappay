@@ -27,6 +27,7 @@ async def _scheduled_tasks_loop(interval_seconds: int) -> None:
             logger.info(
                 "scheduled tasks: cards_expired=%(cards_expired)d "
                 "cards_skipped_pending=%(cards_skipped_pending)d "
+                "cards_skipped_no_destination=%(cards_skipped_no_destination)d "
                 "processed=%(processed)d allowed=%(allowed)d denied=%(denied)d "
                 "skipped=%(skipped)d errors=%(errors)d",
                 stats,

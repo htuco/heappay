@@ -171,6 +171,36 @@ class FakeCardRepo:
             return None
         return c
 
+    def get_by_id_for_update(self, card_id: int):
+        return self.get_by_id(card_id)
+
+    def get_main_card(self, user_id: int):
+        for c in self._cards.values():
+            if (
+                c.user_id == user_id
+                and c.is_main
+                and c.deleted_at is None
+            ):
+                return c
+        return None
+
+    def get_oldest_active_card_for_user(self, user_id: int, *, exclude_card_id: int):
+        others = [
+            c
+            for c in self._cards.values()
+            if c.user_id == user_id
+            and c.card_id != exclude_card_id
+            and c.deleted_at is None
+        ]
+        return sorted(others, key=lambda c: c.card_id)[0] if others else None
+
+    def transfer_balance(self, *, from_card_id: int, to_card_id: int, amount):
+        self._cards[from_card_id].balance -= amount
+        self._cards[to_card_id].balance += amount
+
+    def create_completed_sweep_transaction(self, **kwargs):
+        return None
+
     def has_pending_transactions(self, card_id: int) -> bool:
         return card_id in self._pending
 
@@ -178,11 +208,14 @@ class FakeCardRepo:
         row.deleted_at = datetime.now(timezone.utc)
 
     def _promote_next_main_card(self, user_id: int) -> None:
-        pass
+        for c in self._cards.values():
+            if c.user_id == user_id and c.deleted_at is None:
+                c.is_main = True
+                return
 
 
 def test_expire_overdue_cards_soft_deletes_when_no_pending():
-    expired = _FakeCard(5, user_id=9)
+    expired = _FakeCard(5, balance="0.00", user_id=9)
     expired.expires_at = date(2020, 1, 1)
     repo = FakeCardRepo([expired])
     service = CardService(repo)  # type: ignore[arg-type]
@@ -199,3 +232,55 @@ def test_expire_overdue_cards_skips_pending():
     stats = service.expire_overdue_cards(limit=10)
     assert stats["cards_skipped_pending"] == 1
     assert expired.deleted_at is None
+
+
+def test_expire_sweeps_balance_to_main_card():
+    main = _FakeCard(1, balance="200.00", user_id=9)
+    main.is_main = True
+    expired = _FakeCard(2, balance="75.50", user_id=9)
+    expired.is_main = False
+    expired.expires_at = date(2020, 1, 1)
+    repo = FakeCardRepo([main, expired])
+    service = CardService(repo)  # type: ignore[arg-type]
+    stats = service.expire_overdue_cards(limit=10)
+    assert stats["cards_expired"] == 1
+    assert expired.deleted_at is not None
+    assert expired.balance == Decimal("0.00")
+    assert main.balance == Decimal("275.50")
+
+
+def test_expire_main_card_sweeps_to_other_card():
+    expiring_main = _FakeCard(1, balance="40.00", user_id=9)
+    expiring_main.is_main = True
+    expiring_main.expires_at = date(2020, 1, 1)
+    other = _FakeCard(2, balance="10.00", user_id=9)
+    other.is_main = False
+    repo = FakeCardRepo([expiring_main, other])
+    service = CardService(repo)  # type: ignore[arg-type]
+    service.expire_overdue_cards(limit=10)
+    assert expiring_main.deleted_at is not None
+    assert other.balance == Decimal("50.00")
+    assert other.is_main is True
+
+
+def test_manual_delete_sweeps_balance_to_main_card():
+    main = _FakeCard(1, balance="200.00", user_id=9)
+    main.is_main = True
+    other = _FakeCard(2, balance="30.00", user_id=9)
+    other.is_main = False
+    repo = FakeCardRepo([main, other])
+    service = CardService(repo)  # type: ignore[arg-type]
+    service.delete(2)
+    assert other.deleted_at is not None
+    assert main.balance == Decimal("230.00")
+
+
+def test_expire_skips_when_only_card_has_balance():
+    only = _FakeCard(1, balance="25.00", user_id=9)
+    only.is_main = True
+    only.expires_at = date(2020, 1, 1)
+    repo = FakeCardRepo([only])
+    service = CardService(repo)  # type: ignore[arg-type]
+    stats = service.expire_overdue_cards(limit=10)
+    assert stats["cards_skipped_no_destination"] == 1
+    assert only.deleted_at is None

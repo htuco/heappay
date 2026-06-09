@@ -42,6 +42,10 @@ class CardHasPendingTransactionsError(Exception):
     """Card cannot be removed because a pending transaction references it."""
 
 
+class NoSweepDestinationError(Exception):
+    """Expired card has a balance but no other active card to receive it."""
+
+
 class CardService:
     def __init__(self, repo: CardRepository) -> None:
         self._repo = repo
@@ -150,31 +154,70 @@ class CardService:
 
     def expire_overdue_cards(self, *, limit: int = 100) -> dict[str, int]:
         """
-        Soft-delete cards past expires_at. Skips cards with pending transactions
-        (same rule as manual delete).
+        Soft-delete cards past expires_at. Sweeps remaining balance to the user's
+        main card (or oldest other active card if the expired card is main).
+        Skips cards with pending transactions (same rule as manual delete).
         """
-        stats = {"cards_expired": 0, "cards_skipped_pending": 0, "cards_errors": 0}
+        stats = {
+            "cards_expired": 0,
+            "cards_skipped_pending": 0,
+            "cards_skipped_no_destination": 0,
+            "cards_errors": 0,
+        }
         for card in self._repo.list_expired_for_soft_delete(limit=limit):
             try:
-                self.delete(card.card_id)
+                self._expire_card(card.card_id)
                 stats["cards_expired"] += 1
             except CardHasPendingTransactionsError:
                 stats["cards_skipped_pending"] += 1
+            except NoSweepDestinationError:
+                stats["cards_skipped_no_destination"] += 1
             except CardNotFoundError:
                 stats["cards_errors"] += 1
         return stats
 
-    def delete(self, card_id: int) -> None:
-        row = self._repo.get_by_id(card_id, include_deleted=False)
+    def _expire_card(self, card_id: int) -> None:
+        self._soft_delete_with_sweep(card_id)
+
+    def _soft_delete_with_sweep(self, card_id: int) -> None:
+        row = self._repo.get_by_id_for_update(card_id)
         if row is None:
             raise CardNotFoundError()
         if self._repo.has_pending_transactions(card_id):
             raise CardHasPendingTransactionsError()
+
+        if row.balance > 0:
+            destination = self._find_sweep_destination(row)
+            if destination is None:
+                raise NoSweepDestinationError()
+            swept_amount = row.balance
+            self._repo.transfer_balance(
+                from_card_id=row.card_id,
+                to_card_id=destination.card_id,
+                amount=swept_amount,
+            )
+            self._repo.create_completed_sweep_transaction(
+                from_card_id=row.card_id,
+                to_card_id=destination.card_id,
+                amount=swept_amount,
+            )
+
         was_main = row.is_main
         user_id = row.user_id
         self._repo.soft_delete(row)
         if was_main:
             self._repo._promote_next_main_card(user_id)
+
+    def _find_sweep_destination(self, card: Card) -> Card | None:
+        main = self._repo.get_main_card(card.user_id)
+        if main is not None and main.card_id != card.card_id:
+            return main
+        return self._repo.get_oldest_active_card_for_user(
+            card.user_id, exclude_card_id=card.card_id
+        )
+
+    def delete(self, card_id: int) -> None:
+        self._soft_delete_with_sweep(card_id)
 
     def hard_delete(self, card_id: int) -> None:
         row = self._repo.get_by_id(card_id, include_deleted=True)
