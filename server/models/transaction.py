@@ -32,6 +32,14 @@ class Transaction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    processing_eligible_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    processed_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    deny_reason_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     sender_card = relationship("Card", foreign_keys=[sender_card_id])
     recipient_card = relationship("Card", foreign_keys=[recipient_card_id])
