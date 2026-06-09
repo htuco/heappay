@@ -94,6 +94,20 @@ export async function changePassword({ currentPassword, newPassword }) {
 	return data
 }
 
+export async function requestPasswordReset({ email }) {
+	const { data } = await api.post('/auth/password-reset/request', { email })
+	return data
+}
+
+export async function confirmPasswordReset({ token, newPassword }) {
+	const { data } = await api.post('/auth/password-reset/confirm', {
+		token,
+		new_password: newPassword,
+		confirm_password: newPassword,
+	})
+	return data
+}
+
 export async function deactivateAccount({ currentPassword }) {
 	const { data } = await api.post('/auth/deactivate', {
 		current_password: currentPassword,
