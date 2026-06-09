@@ -2,6 +2,8 @@ from services.transaction.transaction import (
     CardNotFoundError,
     ForbiddenError,
     InsufficientBalanceError,
+    InvalidTransactionTransitionError,
+    ProcessingDelayNotElapsedError,
     TransactionNotFoundError,
     TransactionService,
     TransactionStatusNotFoundError,
@@ -24,4 +26,6 @@ __all__ = [
     "TransactionStatusNotFoundError",
     "InsufficientBalanceError",
     "ForbiddenError",
+    "InvalidTransactionTransitionError",
+    "ProcessingDelayNotElapsedError",
 ]
