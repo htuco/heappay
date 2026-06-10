@@ -57,7 +57,9 @@ export function getCarouselArrowGroupClass(count) {
     count === 2
       ? { left: 'left-[14%]', right: 'left-[90%]' }
       : { left: 'left-[24%]', right: 'left-[76%]' }
-  const base = 'absolute top-1/2 z-50 -translate-x-1/2 -translate-y-1/2'
+  // Hidden below md: percentage positions land on top of the card on a
+  // phone-width stage, and swipe / side-card tap covers navigation there.
+  const base = 'max-md:hidden absolute top-1/2 z-50 -translate-x-1/2 -translate-y-1/2'
   return {
     left: `${base} ${left}`,
     right: `${base} ${right}`,

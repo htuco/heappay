@@ -7,12 +7,16 @@ export default function WalletSection({
 	className = '',
 	children,
 	as: Tag = 'section',
+	mobileChromeless = false,
 }) {
 	const hasHeader = title || subtitle || icon || actions
+	// mobileChromeless drops the panel frame below md so full-bleed content
+	// (e.g. the card carousel) isn't boxed in on phones.
+	const chrome = mobileChromeless
+		? 'md:rounded-panel md:border md:border-border md:bg-card md:p-6 md:shadow-sm'
+		: 'rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6'
 	return (
-		<Tag
-			className={`rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 ${className}`}
-		>
+		<Tag className={`${chrome} ${className}`}>
 			{hasHeader && (
 				<header
 					className={`mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${headerClassName}`}
