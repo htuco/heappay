@@ -66,7 +66,7 @@ export default function LoginForm() {
 		}
 	}
 	return (
-		<div className="flex items-center justify-center px-6 py-10 text-foreground min-h-screen">
+		<div className="flex items-center justify-center px-4 py-8 text-foreground min-h-svh sm:px-6 sm:py-10">
 			<div className="mx-auto w-full max-w-110 mt-5">
 				<div className="space-y-6">
 					<AuthPageHeader
@@ -116,7 +116,7 @@ export default function LoginForm() {
 							<button
 								type="button"
 								onClick={() => navigate('/forgot-password')}
-								className="text-sm font-medium text-primary hover:underline"
+								className="inline-flex min-h-11 items-center text-sm font-medium text-primary touch-manipulation hover:underline md:min-h-0"
 							>
 								Forgot password
 							</button>

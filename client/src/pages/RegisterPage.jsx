@@ -8,13 +8,13 @@ export default function RegisterPage() {
 	const { isDark, toggle } = useTheme()
 
 	return (
-		<section className="grid min-h-screen grid-cols-1 md:grid-cols-[35%_65%]">
+		<section className="grid min-h-svh grid-cols-1 md:grid-cols-[35%_65%]">
 			<AuthCloseButton />
 
 			{/* Theme toggle */}
 			<button
 				onClick={toggle}
-				className="absolute top-4 right-4 z-50 p-2 rounded-input bg-primary/20 hover:bg-primary/30 transition-colors"
+				className="absolute top-[max(1rem,env(safe-area-inset-top,0px))] right-[max(1rem,env(safe-area-inset-right,0px))] z-50 flex h-11 w-11 items-center justify-center rounded-input bg-primary/20 hover:bg-primary/30 transition-colors touch-manipulation"
 				aria-label="Toggle theme"
 			>
 				{isDark ? (
@@ -24,7 +24,7 @@ export default function RegisterPage() {
 				)}
 			</button>
 
-			<div className="relative overflow-hidden bg-linear-to-br from-background to-background">
+			<div className="relative hidden overflow-hidden bg-linear-to-br from-background to-background md:block">
 				<div
 					className="absolute inset-0"
 					style={{

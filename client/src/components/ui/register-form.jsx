@@ -96,7 +96,7 @@ export default function RegisterForm() {
 	}
 
 	return (
-		<div className="flex items-center justify-center px-6 py-10 text-foreground min-h-screen">
+		<div className="flex items-center justify-center px-4 py-8 text-foreground min-h-svh sm:px-6 sm:py-10">
 			<div className="mx-auto w-full max-w-110 mt-5">
 				<div className="space-y-6">
 					<AuthPageHeader
@@ -112,7 +112,7 @@ export default function RegisterForm() {
 							<FormBanner variant="success" message="Account created successfully!" />
 						)}
 
-						<div className="grid grid-cols-2 gap-4">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<AuthTextInput
 								id="firstName"
 								name="firstName"

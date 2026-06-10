@@ -226,7 +226,7 @@ export default function LandingPage() {
               type="button"
               onClick={toggle}
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+              className="inline-flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full text-muted-foreground transition touch-manipulation hover:bg-muted/60 hover:text-foreground"
             >
               {isDark ? <Sun className="h-4 w-4" strokeWidth={2} /> : <Moon className="h-4 w-4" strokeWidth={2} />}
             </button>
@@ -553,7 +553,7 @@ export default function LandingPage() {
               Your money and your information stay yours.
             </p>
           </div>
-          <Button asChild className="ml-auto shrink-0 rounded-full px-6 font-semibold">
+          <Button asChild className="shrink-0 rounded-full px-6 font-semibold sm:ml-auto">
             <Link to="/register">Get started free</Link>
           </Button>
         </div>
@@ -616,7 +616,7 @@ export default function LandingPage() {
             <span className="font-semibold">Heap</span>
             <span>© {new Date().getFullYear()}</span>
           </div>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             <a href="#features"     className="transition hover:text-foreground">Features</a>
             <a href="#how"          className="transition hover:text-foreground">How it works</a>
             <a href="#testimonials" className="transition hover:text-foreground">Reviews</a>
