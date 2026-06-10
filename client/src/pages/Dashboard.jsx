@@ -182,7 +182,7 @@ export default function DashboardPage() {
       {showLoader && <DashboardLoadingOverlay />}
       {/* Row 1: Balance (2/3) + Payment Card (1/3) */}
       <section className="grid items-stretch gap-5 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           <TotalBalanceWidget
             totalBalance={formattedBalance}
             monthlyGrowth={monthlyGrowth}
@@ -215,7 +215,7 @@ export default function DashboardPage() {
 
       {/* Row 2: Money Flow (2/3) + Quick Actions (1/3) */}
       <section className="grid items-stretch gap-5 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           <MoneyFlowPlaceholder
             chartData={chartData}
             isLoading={summaryLoading}
@@ -241,7 +241,7 @@ export default function DashboardPage() {
         ) : (
           <CardStatusOverview {...cardStatusProps} />
         )}
-        <div className="xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           <DashboardPlaceholder
             title="Recent Activity"
             transactions={recentTransactions}

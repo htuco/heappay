@@ -28,7 +28,7 @@ export default function CardStatusOverview({
 
   return (
     <section
-      className="flex h-full flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6"
+      className="flex h-full min-w-0 flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6"
     >
       <header className="min-w-0">
         <h2 className="text-lg font-semibold tracking-tight text-card-foreground">
