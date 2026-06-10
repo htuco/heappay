@@ -13,7 +13,7 @@ export default function AuthPageHeader({
 				{icon}
 			</div>
 
-			<h1 className="text-5xl font-semibold tracking-tight text-foreground">
+			<h1 className="text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
 				{title}
 			</h1>
 

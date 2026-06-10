@@ -13,7 +13,7 @@ export default function AuthLinkLabel({
 			<button
 				type="button"
 				onClick={onAction}
-				className="font-semibold text-primary hover:underline"
+				className="inline-flex min-h-11 items-center align-middle font-semibold text-primary touch-manipulation hover:underline md:min-h-0"
 			>
 				{actionText}
 			</button>
