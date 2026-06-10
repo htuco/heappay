@@ -26,7 +26,7 @@ import {
 
 function PaymentCardSkeleton() {
   return (
-    <div className="animate-pulse relative aspect-[1.58/1] min-h-[210px] w-full min-w-0 overflow-hidden rounded-panel bg-muted p-4 sm:p-5 md:p-6 flex flex-col xl:max-w-[464px]">
+    <div className="animate-pulse relative aspect-[1.58/1] min-h-[210px] w-full min-w-0 overflow-hidden rounded-panel bg-muted p-4 sm:p-5 md:p-6 flex flex-col max-w-[464px]">
       <div className="flex items-start justify-between gap-3">
         <div className="h-3 w-20 rounded bg-muted-foreground/20" />
         <div className="h-8 w-14 rounded-input bg-muted-foreground/20" />
@@ -50,7 +50,7 @@ function PaymentCardSkeleton() {
 
 function PaymentCardEmpty() {
   return (
-    <div className="group relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-panel border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 via-card to-primary/10 p-5 sm:p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5 xl:max-w-[464px]">
+    <div className="group relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-panel border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 via-card to-primary/10 p-5 sm:p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5 max-w-[464px]">
       <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl transition-opacity duration-300 group-hover:opacity-70" />
       <div className="pointer-events-none absolute -bottom-20 -left-12 h-36 w-36 rounded-full bg-primary-light/15 blur-3xl" />
 
@@ -89,7 +89,7 @@ function PaymentCardEmpty() {
 
 function PaymentCardError() {
   return (
-    <div className="relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-panel border border-destructive/30 bg-destructive/5 p-4 sm:p-5 md:p-6 flex flex-col items-center justify-center text-center xl:max-w-[464px]">
+    <div className="relative aspect-[1.58/1] w-full min-w-0 overflow-hidden rounded-panel border border-destructive/30 bg-destructive/5 p-4 sm:p-5 md:p-6 flex flex-col items-center justify-center text-center max-w-[464px]">
       <p className="text-sm font-medium text-destructive">Could not load card</p>
       <p className="mt-1 text-xs text-muted-foreground">Please refresh the page</p>
     </div>
@@ -180,9 +180,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {showLoader && <DashboardLoadingOverlay />}
-      {/* Row 1: Balance (2/3) + Payment Card (1/3) */}
-      <section className="grid items-stretch gap-5 xl:grid-cols-3">
-        <div className="min-w-0 xl:col-span-2">
+      {/* Row 1: Balance (flexible) + Payment Card (fixed 384px at lg, 464px at xl) */}
+      <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
+        <div className="min-w-0">
           <TotalBalanceWidget
             totalBalance={formattedBalance}
             monthlyGrowth={monthlyGrowth}
@@ -200,22 +200,22 @@ export default function DashboardPage() {
             }
           />
         </div>
-        <div className="flex h-full items-center justify-center xl:justify-end">
+        <div className="flex h-full items-center justify-center lg:justify-end">
           {isLoading ? (
             <PaymentCardSkeleton />
           ) : error ? (
             <PaymentCardError />
           ) : primaryCard ? (
-            <PaymentCard card={primaryCard.card} className="xl:max-w-[464px]" />
+            <PaymentCard card={primaryCard.card} className="payment-card-fit max-w-[464px]" />
           ) : (
             <PaymentCardEmpty />
           )}
         </div>
       </section>
 
-      {/* Row 2: Money Flow (2/3) + Quick Actions (1/3) */}
-      <section className="grid items-stretch gap-5 xl:grid-cols-3">
-        <div className="min-w-0 xl:col-span-2">
+      {/* Row 2: Money Flow (flexible) + Quick Actions (fixed 384px at lg, 464px at xl) */}
+      <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
+        <div className="min-w-0">
           <MoneyFlowPlaceholder
             chartData={chartData}
             isLoading={summaryLoading}
@@ -223,25 +223,29 @@ export default function DashboardPage() {
             onRetry={refreshSummary}
           />
         </div>
-        <QuickActions
-          onSend={() => setPaymentWizardOpen(true)}
-          onTopUp={() => setTopUpOpen(true)}
-          onAddNew={() => setAddCardOpen(true)}
-        />
+        <div className="min-w-0">
+          <QuickActions
+            onSend={() => setPaymentWizardOpen(true)}
+            onTopUp={() => setTopUpOpen(true)}
+            onAddNew={() => setAddCardOpen(true)}
+          />
+        </div>
       </section>
 
-      {/* Row 3: Card Status (1/3) + Recent Activity (2/3) */}
-      <section className="grid items-stretch gap-5 xl:grid-cols-3">
-        {error ? (
-          <section className="flex h-full flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
-            <p className="text-sm text-destructive">
-              Could not load card data. Please refresh.
-            </p>
-          </section>
-        ) : (
-          <CardStatusOverview {...cardStatusProps} />
-        )}
-        <div className="min-w-0 xl:col-span-2">
+      {/* Row 3: Card Status (fixed 384px at lg, 464px at xl) + Recent Activity (flexible) */}
+      <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,29rem)_minmax(0,1fr)]">
+        <div className="min-w-0">
+          {error ? (
+            <section className="flex h-full flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
+              <p className="text-sm text-destructive">
+                Could not load card data. Please refresh.
+              </p>
+            </section>
+          ) : (
+            <CardStatusOverview {...cardStatusProps} />
+          )}
+        </div>
+        <div className="min-w-0">
           <DashboardPlaceholder
             title="Recent Activity"
             transactions={recentTransactions}

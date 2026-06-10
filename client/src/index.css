@@ -495,6 +495,18 @@
     }
   }
 
+  /* Opt-in fit-to-container at every width, not just below md. The
+     dashboard hero card needs this: its grid stays single-column until
+     xl, so the fixed 1.6 scale overflows neighbouring rows between md
+     and xl, and overflows its narrow grid column at xl. */
+  .payment-card-fit.payment-card-rccs-shell {
+    height: calc(183px * var(--rccs-scale, 1));
+  }
+
+  .payment-card-fit.payment-card-rccs-shell .rccs {
+    transform: scale(var(--rccs-scale, 1)) !important;
+  }
+
   .card-carousel-payment-card--active .payment-card-rccs-shell:hover {
     transform: translateY(-2px);
   }

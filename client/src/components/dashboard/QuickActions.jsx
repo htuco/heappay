@@ -21,7 +21,7 @@ export default function QuickActions({ onSend, onTopUp, onAddNew }) {
   }
 
   return (
-    <section className="flex h-full w-full flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 xl:max-w-[464px] xl:justify-self-end">
+    <section className="flex h-full w-full flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
       <h2 className="mb-4 text-base font-semibold text-card-foreground sm:text-lg">
         Quick Actions
       </h2>

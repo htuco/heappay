@@ -13,7 +13,7 @@ export default function TotalBalanceWidget({
   const visibleBalance = isBalanceVisible ? totalBalance : '••••••••'
 
   return (
-    <section className="balance-shine relative flex h-full w-full flex-col justify-between overflow-hidden rounded-panel bg-linear-to-br from-primary-light via-primary to-primary-dark p-5 sm:p-7 text-white shadow-lg">
+    <section className="balance-shine relative flex h-full w-full flex-col justify-between overflow-hidden rounded-panel bg-linear-to-br from-primary-light via-primary to-primary-dark p-5 sm:p-7 lg:p-6 xl:p-7 text-white shadow-lg">
       <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-12 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
 
@@ -39,7 +39,7 @@ export default function TotalBalanceWidget({
         </button>
       </div>
 
-      <div className="relative z-10 mt-6">
+      <div className="relative z-10 mt-6 lg:mt-4 xl:mt-6">
         {isLoading ? (
           <div className="space-y-2">
             <div className="shimmer h-3 w-24 rounded-full" />
@@ -47,15 +47,15 @@ export default function TotalBalanceWidget({
           </div>
         ) : (
           <>
-            <p className="tabular text-4xl font-bold tracking-tight leading-none text-white sm:text-5xl md:text-6xl">
+            <p className="tabular text-4xl font-bold tracking-tight leading-none text-white sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl">
               {visibleBalance}
             </p>
-            <p className="mt-3 text-sm font-medium text-white/80">{currency}</p>
+            <p className="mt-3 lg:mt-2 xl:mt-3 text-sm font-medium text-white/80">{currency}</p>
           </>
         )}
       </div>
 
-      <hr className="relative z-10 mt-6 mb-5 border-white/25" />
+      <hr className="relative z-10 mt-6 mb-5 lg:mt-4 lg:mb-4 xl:mt-6 xl:mb-5 border-white/25" />
 
       <div className="relative z-10 flex flex-wrap items-center gap-4 sm:gap-6">
         {!isLoading && noMainCardCta ? (
