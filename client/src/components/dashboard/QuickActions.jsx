@@ -31,7 +31,7 @@ export default function QuickActions({ onSend, onTopUp, onAddNew }) {
             <div
               key={label}
               title="Coming soon"
-              className="flex w-full items-center justify-between gap-3 rounded-input border border-border/70 bg-background px-3 py-2 text-sm font-semibold text-foreground opacity-50 cursor-not-allowed select-none"
+              className="flex w-full min-h-11 md:min-h-0 items-center justify-between gap-3 rounded-input border border-border/70 bg-background px-3 py-2 text-sm font-semibold text-foreground opacity-50 cursor-not-allowed select-none"
             >
               <span className="flex items-center gap-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-input bg-primary/10 text-primary">
@@ -48,7 +48,7 @@ export default function QuickActions({ onSend, onTopUp, onAddNew }) {
               key={label}
               type="button"
               onClick={() => handleClick(key)}
-              className="group flex w-full items-center justify-between gap-3 rounded-input border border-border/70 bg-background px-3 py-2 text-sm font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5"
+              className="group flex w-full min-h-11 md:min-h-0 items-center justify-between gap-3 rounded-input border border-border/70 bg-background px-3 py-2 text-sm font-semibold text-foreground transition-all duration-200 touch-manipulation hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5"
             >
               <span className="flex items-center gap-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-input bg-primary/10 text-primary group-hover:bg-primary/15">

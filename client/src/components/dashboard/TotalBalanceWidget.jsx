@@ -13,7 +13,7 @@ export default function TotalBalanceWidget({
   const visibleBalance = isBalanceVisible ? totalBalance : '••••••••'
 
   return (
-    <section className="balance-shine relative flex h-full w-full flex-col justify-between overflow-hidden rounded-panel bg-linear-to-br from-primary-light via-primary to-primary-dark p-7 text-white shadow-lg">
+    <section className="balance-shine relative flex h-full w-full flex-col justify-between overflow-hidden rounded-panel bg-linear-to-br from-primary-light via-primary to-primary-dark p-5 sm:p-7 text-white shadow-lg">
       <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-12 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
 
@@ -26,7 +26,7 @@ export default function TotalBalanceWidget({
         </div>
         <button
           type="button"
-          className="cursor-pointer rounded-input border border-white/20 bg-white/10 p-2 text-white/80 transition hover:text-white"
+          className="flex h-11 w-11 md:h-auto md:w-auto cursor-pointer items-center justify-center rounded-input border border-white/20 bg-white/10 md:p-2 text-white/80 transition touch-manipulation hover:text-white"
           onClick={() => setIsBalanceVisible((prev) => !prev)}
           aria-label="Toggle balance visibility"
           aria-pressed={!isBalanceVisible}
