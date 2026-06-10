@@ -476,6 +476,25 @@
     transform: scale(1.5) !important;
   }
 
+  /* The rccs card is a fixed 290px-wide box that only scales visually —
+     transform doesn't affect layout, so on phones the desktop scales
+     (1.6 hero / 1.5 carousel) bleed over neighbouring content. Below md,
+     PaymentCard measures its shell and sets --rccs-scale = width / 290
+     (capped at 1.6) so the card always fills its container like any other
+     widget; the shell height is set so layout reserves the scaled size.
+     Keep this after the carousel scale rules: equal specificity +
+     !important means source order decides. */
+  @media (max-width: 767px) {
+    .payment-card-rccs-shell {
+      height: calc(183px * var(--rccs-scale, 1));
+    }
+    .payment-card-rccs-shell .rccs,
+    .card-carousel-slide .payment-card-rccs-shell .rccs,
+    .carousel-card-slot .payment-card-rccs-shell .rccs {
+      transform: scale(var(--rccs-scale, 1)) !important;
+    }
+  }
+
   .card-carousel-payment-card--active .payment-card-rccs-shell:hover {
     transform: translateY(-2px);
   }
