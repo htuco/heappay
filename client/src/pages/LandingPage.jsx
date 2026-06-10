@@ -10,7 +10,6 @@ import {
   ArrowLeftRight,
   ShieldCheck,
   TrendingUp,
-  Zap,
   Globe,
   Bell,
   ChevronRight,
@@ -253,11 +252,6 @@ export default function LandingPage() {
 
           {/* ─ Left: copy ─ */}
           <div className="order-2 lg:order-1 space-y-8 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-chip border border-primary/30 bg-primary/8 px-3.5 py-1.5 text-xs font-semibold text-primary">
-              <Zap className="h-3.5 w-3.5" />
-              Live card previews · 11 card networks
-            </div>
-
             <h1 className="text-5xl font-extrabold leading-[1.07] tracking-tight sm:text-6xl md:text-7xl">
               Your wallet,<br />
               <RotatingWord

@@ -1,8 +1,8 @@
 import LoginForm from '@/components/ui/login-form'
-import { CreditCard, Send, Shield, Moon, Sun } from 'lucide-react'
+import { ArrowLeftRight, CreditCard, Moon, ShieldCheck, Sun } from 'lucide-react'
 import { useState } from 'react'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
-import AuthOrbs from '@/components/auth-ui/AuthOrbs'
+import AuthMobileBackground from '@/components/auth-ui/AuthMobileBackground'
 import { useTheme } from '@/hooks/useTheme'
 
 function DeactivatedNotice() {
@@ -28,7 +28,8 @@ export default function LoginPage() {
 	const { isDark, toggle } = useTheme()
 
 	return (
-		<section className="grid min-h-svh grid-cols-1 md:grid-cols-[65%_35%]">
+		<section className="relative grid min-h-svh grid-cols-1 overflow-hidden md:grid-cols-[65%_35%]">
+			<AuthMobileBackground />
 			<AuthCloseButton />
 
 			{/* Theme toggle */}
@@ -44,39 +45,31 @@ export default function LoginPage() {
 				)}
 			</button>
 
-			<div>
+			<div className="auth-form-panel relative z-10">
 				<DeactivatedNotice />
 				<LoginForm />
 			</div>
-			<div className="relative hidden overflow-hidden bg-linear-to-br from-background to-background md:block">
-				<div
-					className="absolute inset-0"
-					style={{
-						backgroundImage: isDark
-							? 'linear-gradient(130deg, color-mix(in oklab, var(--primary) 78%, #000 22%), color-mix(in oklab, var(--primary) 92%, #000 8%), color-mix(in oklab, var(--primary) 70%, #000 30%))'
-							: 'linear-gradient(130deg, color-mix(in oklab, var(--primary) 88%, #fff 12%), color-mix(in oklab, var(--primary) 100%, #fff 0%), color-mix(in oklab, var(--primary) 82%, #fff 18%))',
-					}}
-				/>
-				<AuthOrbs />
+			<div className="relative hidden overflow-hidden bg-background md:block">
+				<AuthMobileBackground className="auth-mobile-background--desktop" />
 
-				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 text-center text-white dark:text-white md:px-6 xl:px-8">
+				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 text-center text-slate-950 dark:text-white md:px-6 xl:px-8">
 					<div className="max-w-85">
-						<div className="mb-6 md:mb-8 flex justify-center gap-4 md:gap-6">
-							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border bg-white/25 border-white/40">
-								<CreditCard className="h-5 w-5 md:h-6 md:w-6 text-white" />
+						<div className="mb-6 flex justify-center gap-4 md:mb-7 md:gap-5">
+							<div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-950/10 bg-white/35 text-slate-900/70 backdrop-blur-sm dark:border-white/25 dark:bg-white/12 dark:text-white/80 md:h-12 md:w-12">
+								<CreditCard className="h-5 w-5 md:h-6 md:w-6" />
 							</div>
-							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border bg-white/25 border-white/40">
-								<Send className="h-5 w-5 md:h-6 md:w-6 text-white" />
+							<div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-950/10 bg-white/35 text-slate-900/70 backdrop-blur-sm dark:border-white/25 dark:bg-white/12 dark:text-white/80 md:h-12 md:w-12">
+								<ArrowLeftRight className="h-5 w-5 md:h-6 md:w-6" />
 							</div>
-							<div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full backdrop-blur-md border bg-white/25 border-white/40">
-								<Shield className="h-5 w-5 md:h-6 md:w-6 text-white" />
+							<div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-950/10 bg-white/35 text-slate-900/70 backdrop-blur-sm dark:border-white/25 dark:bg-white/12 dark:text-white/80 md:h-12 md:w-12">
+								<ShieldCheck className="h-5 w-5 md:h-6 md:w-6" />
 							</div>
 						</div>
-						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight text-white dark:text-white">
-						"Your cards, finally connected."
+						<h2 className="text-2xl md:text-4xl leading-tight font-semibold tracking-tight">
+							Your cards, finally connected.
 						</h2>
-						<p className="mx-auto mt-2 md:mt-4 text-sm md:text-base leading-relaxed text-white/85 dark:text-white/85">
-						Manage all your cards and track every transaction in one place, with clear insights that help you understand and control your spending.
+						<p className="mx-auto mt-2 md:mt-4 text-sm md:text-base leading-relaxed text-slate-800/75 dark:text-white/85">
+							Manage cards, track transactions, and stay in control of your spending.
 						</p>
 					</div>
 				</div>
