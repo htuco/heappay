@@ -1,24 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { ArrowLeftRight, CreditCard, LayoutDashboard, Settings, Shield, Users, TicketCheck } from 'lucide-react'
 import { useAppSelector } from '@/store/hooks'
 import { selectAuthUser } from '@/store/slices/authSlice'
 import SidebarAccountProfile from '@/components/ui/SidebarAccountProfile'
-
-const mainLinks = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Wallet', path: '/wallet', icon: CreditCard },
-  { name: 'Transactions', path: '/payments', icon: ArrowLeftRight },
-]
-
-const adminLinks = [{ name: 'Admin', path: '/admin', icon: Shield }]
-const supportLinks = [
-  { name: 'Users', path: '/support/users', icon: Users },
-  { name: 'Tickets', path: '/support/tickets', icon: TicketCheck },
-]
-
-const bottomLinks = [{ name: 'Settings', path: '/settings', icon: Settings }]
-
-const STAFF_ROLES = new Set(['admin', 'manager', 'support'])
+import { MAIN_NAV_LINKS, SETTINGS_NAV_LINK, getRoleNavLinks } from './navLinks'
 
 function NavLinkItem({ item }) {
   const Icon = item.icon
@@ -70,20 +54,20 @@ export default function Navbar() {
   const user = useAppSelector(selectAuthUser)
   const role = user?.role_name
   const isAdmin = role === 'admin'
-  const isStaff = STAFF_ROLES.has(role)
+  const roleLinks = getRoleNavLinks(role)
 
   return (
     <nav className="flex h-full flex-col">
       <div className="flex flex-col gap-6">
         <NavSection label="Main">
-          {mainLinks.map((item) => (
+          {MAIN_NAV_LINKS.map((item) => (
             <NavLinkItem key={item.path} item={item} />
           ))}
         </NavSection>
 
-        {isStaff && (
+        {roleLinks.length > 0 && (
           <NavSection label={isAdmin ? 'Management' : 'Staff'}>
-            {(isAdmin ? adminLinks : supportLinks).map((item) => (
+            {roleLinks.map((item) => (
               <NavLinkItem key={item.path} item={item} />
             ))}
           </NavSection>
@@ -92,9 +76,7 @@ export default function Navbar() {
 
       <NavSection label="Account" className="mt-auto border-t border-sidebar-border/80 pt-5">
         <SidebarAccountProfile user={user} />
-        {bottomLinks.map((item) => (
-          <NavLinkItem key={item.path} item={item} />
-        ))}
+        <NavLinkItem item={SETTINGS_NAV_LINK} />
       </NavSection>
     </nav>
   )

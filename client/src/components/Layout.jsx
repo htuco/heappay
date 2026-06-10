@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Moon, Sun } from 'lucide-react'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
+import MobileTabBar from './ui/MobileTabBar'
 import logo from '@/assets/logo.png'
 import ToastStack from './ui/ToastStack'
 import NotificationPanel from './notifications/NotificationPanel'
@@ -27,7 +28,7 @@ export default function Layout() {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       {!isLanding && (
-        <aside className="w-60 shrink-0 border-r border-sidebar-border bg-sidebar flex flex-col h-screen sticky top-0">
+        <aside className="hidden w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:flex flex-col h-screen sticky top-0">
           <div className="flex h-[85px] items-center border-b border-sidebar-border/70 px-5">
             <Link
               to="/"
@@ -52,23 +53,23 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="sticky top-0 z-40 border-b border-border/60 bg-card/80 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-4 px-8 py-4">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 md:gap-4 md:px-8 md:py-4">
             <div className="flex min-w-0 flex-col justify-center leading-tight">
               {pageMeta ? (
                 <>
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  <h1 className="truncate text-xl font-bold tracking-tight text-foreground md:text-2xl">
                     {pageMeta.title}
                   </h1>
                   {pageMeta.subtitle && (
-                    <p className="text-sm text-muted-foreground">{pageMeta.subtitle}</p>
+                    <p className="hidden truncate text-sm text-muted-foreground sm:block">{pageMeta.subtitle}</p>
                   )}
                 </>
               ) : null}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1 md:gap-2">
               <button
                 onClick={toggle}
-                className="nav-pill p-2 rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                className="nav-pill flex h-11 w-11 items-center justify-center rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground touch-manipulation md:h-auto md:w-auto md:p-2"
                 aria-label="Toggle theme"
               >
                 {isDark ? <Sun className="h-4.5 w-4.5" strokeWidth={2} /> : <Moon className="h-4.5 w-4.5" strokeWidth={2} />}
@@ -79,14 +80,15 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 px-8 py-8 overflow-auto">
+        <main className="flex-1 overflow-auto overflow-x-hidden px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 md:px-8 md:py-8 md:pb-8">
           <Outlet />
         </main>
 
-        <footer className="border-t border-border/60 py-5 text-center text-xs text-muted-foreground">
+        <footer className="hidden border-t border-border/60 py-5 text-center text-xs text-muted-foreground md:block">
           Heap. All rights reserved.
         </footer>
       </div>
+      {!isLanding && <MobileTabBar />}
       <ToastStack />
     </div>
   )
