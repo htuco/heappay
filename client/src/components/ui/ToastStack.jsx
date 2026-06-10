@@ -99,7 +99,7 @@ export default function ToastStack() {
 	// only when toasts exist can cause the first announcement to be missed.
 	return (
 		<div
-			className="fixed bottom-5 right-5 z-60 flex flex-col gap-2 items-end"
+			className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-60 flex flex-col gap-2 items-end md:bottom-5 md:right-5"
 			role="region"
 			aria-label="Notifications"
 			aria-live="polite"
