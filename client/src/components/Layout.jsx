@@ -3,7 +3,7 @@ import { Moon, Sun } from 'lucide-react'
 import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
 import MobileTabBar from './ui/MobileTabBar'
-import logo from '@/assets/logo.png'
+import BrandLogo from './ui/BrandLogo'
 import ToastStack from './ui/ToastStack'
 import NotificationPanel from './notifications/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
@@ -32,15 +32,9 @@ export default function Layout() {
           <div className="flex h-[85px] items-center border-b border-sidebar-border/70 px-5">
             <Link
               to="/"
-              className="flex min-w-0 items-center gap-3 text-sidebar-foreground"
+              className="flex min-w-0 items-center text-sidebar-foreground"
             >
-              <img src={logo} alt="Heap logo" className="h-8 w-auto shrink-0" />
-              <span className="min-w-0">
-                <span className="block text-xl font-bold leading-5 text-primary">Heap</span>
-                <span className="mt-1 block truncate text-[11px] font-medium text-muted-foreground">
-                  Smart finance
-                </span>
-              </span>
+              <BrandLogo className="h-10 w-auto shrink-0" />
             </Link>
           </div>
           <div className="flex-1 overflow-y-auto px-3.5 py-5">

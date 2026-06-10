@@ -1,4 +1,4 @@
-import logo from '@/assets/logo.png'
+import BrandLogo from '@/components/ui/BrandLogo'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
@@ -72,8 +72,8 @@ export default function LoginForm() {
 					<AuthPageHeader
 						title="Welcome back"
 						subtitle="Welcome back! Please enter your details."
-						icon={<img src={logo} alt="Heap logo" className="h-9 w-auto" />}
-						iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-14 w-14"
+						icon={<BrandLogo className="h-10 w-auto" />}
+						iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-12 w-auto"
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>

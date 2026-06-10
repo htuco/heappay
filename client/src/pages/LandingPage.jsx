@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import Cards from 'react-credit-cards-2'
 import 'react-credit-cards-2/dist/es/styles-compiled.css'
-import logo from '@/assets/logo.png'
+import BrandLogo from '@/components/ui/BrandLogo'
 import { Button } from '@/components/ui/button'
 import {
   CreditCard,
@@ -211,9 +211,8 @@ export default function LandingPage() {
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <div className="flex items-center gap-2.5">
-            <img src={logo} alt="Heap" className="h-7 w-auto" />
-            <span className="text-lg font-bold tracking-tight">Heap</span>
+          <div className="flex items-center">
+            <BrandLogo className="h-9 w-auto" />
           </div>
           <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground sm:flex">
             <a href="#features"      className="transition hover:text-foreground">Features</a>
@@ -606,8 +605,7 @@ export default function LandingPage() {
       <footer className="border-t border-border/60 bg-background">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-xs text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Heap" className="h-5 w-auto opacity-60" />
-            <span className="font-semibold">Heap</span>
+            <BrandLogo className="h-7 w-auto opacity-60" />
             <span>© {new Date().getFullYear()}</span>
           </div>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">

@@ -1,4 +1,4 @@
-import logo from '@/assets/logo.png'
+import BrandLogo from '@/components/ui/BrandLogo'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { registerSchema } from '@/schemas/registerSchema'
@@ -102,8 +102,8 @@ export default function RegisterForm() {
 					<AuthPageHeader
 						title="Create An Account"
 						subtitle="Sign up to get started with your cards"
-						icon={<img src={logo} alt="Heap logo" className="h-9 w-auto" />}
-						iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-14 w-14"
+						icon={<BrandLogo className="h-10 w-auto" />}
+						iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-12 w-auto"
 					/>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
