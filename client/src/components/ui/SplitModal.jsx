@@ -22,7 +22,7 @@ export default function SplitModal({
   className,
   rightClassName,
   leftClassName,
-  minHeight = 'min-h-128',
+  minHeight = 'md:min-h-128',
   gridCols = 'md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]',
 }) {
   return (
@@ -47,7 +47,7 @@ export default function SplitModal({
 
         <div
           className={cn(
-            'flex flex-col px-6 pt-5 pb-6 sm:px-7 sm:pb-7',
+            'flex flex-col px-4 pt-4 pb-5 sm:px-7 sm:pt-5 sm:pb-7',
             minHeight,
             rightClassName
           )}
@@ -74,7 +74,7 @@ export default function SplitModal({
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="shrink-0 inline-flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors touch-manipulation hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="Close modal"
             >
               <X size={15} strokeWidth={2.5} />
@@ -84,7 +84,7 @@ export default function SplitModal({
           <div className="flex-1">{children}</div>
 
           {footer && (
-            <div className="mt-8 flex items-center justify-between gap-3 border-t border-border pt-5">
+            <div className="mt-6 flex flex-col items-stretch gap-3 border-t border-border pt-4 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-5">
               {footer}
             </div>
           )}
