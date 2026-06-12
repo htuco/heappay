@@ -85,7 +85,7 @@ export default function Layout() {
         </main>
 
         <footer className="border-t border-border/60 py-5 text-center text-xs text-muted-foreground">
-          Heap. All rights reserved.
+          © {new Date().getFullYear()} Heap. All rights reserved.
         </footer>
       </div>
       <ToastStack />
