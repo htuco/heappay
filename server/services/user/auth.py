@@ -8,6 +8,7 @@ from jwt.exceptions import InvalidTokenError
 from repositories.user.auth import UserAuthRepository
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from schemas.user.auth import (
+    AcceptInvitationRequest,
     ChangePasswordRequest,
     DeactivateAccountRequest,
     LoginRequest,
@@ -110,6 +111,7 @@ class UserAuthService:
             first_name=user.first_name,
             last_name=user.last_name,
             created_at=user.created_at,
+            status_id=user.status_id,
             user_role_id=user.user_role_id,
             role_name=role_name,
             billing_reminders_enabled=user.billing_reminders_enabled,
@@ -175,6 +177,34 @@ class UserAuthService:
             raise ValueError("WRONG_CURRENT_PASSWORD")
         new_hash = self.hash_password(payload.new_password)
         self.repo.update_password_and_clear_refresh_token(user_id, new_hash)
+
+    def accept_invitation(
+        self,
+        user_id: int,
+        payload: AcceptInvitationRequest,
+        access_token: str,
+    ) -> TokenResponse:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+
+        new_hash = self.hash_password(payload.new_password)
+        try:
+            updated_user = self.repo.complete_invitation(user_id, new_hash)
+        except ValueError as exc:
+            if str(exc) == "NOT_INVITED":
+                raise ValueError("NOT_INVITED") from exc
+            raise
+        if updated_user is None:
+            raise ValueError("USER_NOT_FOUND")
+
+        new_refresh = self.create_refresh_token(user_id)
+        self.repo.save_refresh_token(user_id, new_refresh)
+        return self._build_token_response_for_user(
+            updated_user,
+            new_refresh,
+            access_token=access_token,
+        )
 
     def deactivate_account(self, user_id: int, payload: DeactivateAccountRequest) -> None:
         user = self.repo.get_user_by_id(user_id)

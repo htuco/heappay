@@ -94,6 +94,24 @@ export async function changePassword({ currentPassword, newPassword }) {
 	return data
 }
 
+/** Invited users: set password and move status to active (no current password). */
+export async function acceptInvitation({ newPassword }) {
+	const { data } = await api.post('/auth/accept-invitation', {
+		new_password: newPassword,
+		confirm_password: newPassword,
+	})
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token, {
+			remember: getAuthRememberPreference(),
+		})
+	}
+	if (td?.user) {
+		setAuthUser(td.user, { remember: getAuthRememberPreference() })
+	}
+	return td?.user
+}
+
 export async function deactivateAccount({ currentPassword }) {
 	const { data } = await api.post('/auth/deactivate', {
 		current_password: currentPassword,

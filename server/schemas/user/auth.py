@@ -43,6 +43,19 @@ class ChangePasswordRequest(BaseModel):
         return self
 
 
+class AcceptInvitationRequest(BaseModel):
+    """Set password for invited users (no current password)."""
+
+    new_password: PasswordStr
+    confirm_password: PasswordStr
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "AcceptInvitationRequest":
+        if self.new_password != self.confirm_password:
+            raise ValueError("Passwords do not match.")
+        return self
+
+
 class DeactivateAccountRequest(BaseModel):
     current_password: str = Field(min_length=1)
 
@@ -99,6 +112,7 @@ class UserResponse(BaseModel):
     first_name: str
     last_name: str
     created_at: datetime
+    status_id: int
     user_role_id: int
     role_name: str
     billing_reminders_enabled: bool = True
