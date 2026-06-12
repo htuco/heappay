@@ -82,6 +82,13 @@ class TransactionResponse(BaseModel):
     processed_by: str | None = None
     deny_reason_code: str | None = None
     has_pending_refund: bool = False
+    # Name of the existing refund request's status for this transaction, if any
+    # (pending | approved | declined | cancelled). None when no refund exists.
+    # Because a transaction can have at most one refund ever
+    # (uq_refund_request_per_transaction), this is unambiguous and lets the
+    # client pre-check the refund modal: disable "Submit request" and show a
+    # status label (esp. declined = final) without a second round-trip.
+    refund_status: str | None = None
     sender: TransactionPartyResponse | None = Field(
         default=None, validation_alias=AliasPath("sender_card")
     )
@@ -89,10 +96,15 @@ class TransactionResponse(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def populate_has_pending_refund(cls, values):
+    def populate_refund_fields(cls, values):
         detail = getattr(values, "refund_detail", None)
         if detail is not None:
             request = getattr(detail, "request", None)
-            if request is not None and getattr(request, "request_status_id", None) == 1:
-                values.__dict__["has_pending_refund"] = True
+            if request is not None:
+                if getattr(request, "request_status_id", None) == 1:
+                    values.__dict__["has_pending_refund"] = True
+                status = getattr(request, "request_status", None)
+                status_name = getattr(status, "name", None)
+                if status_name is not None:
+                    values.__dict__["refund_status"] = status_name
         return values
