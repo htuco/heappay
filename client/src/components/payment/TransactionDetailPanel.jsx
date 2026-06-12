@@ -392,9 +392,9 @@ function PanelBody({
 
   return (
     <aside
-      className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-panel border border-border bg-card shadow-2xl will-change-transform ${animationClass}`}
+      className={`relative z-10 flex h-full w-full flex-col overflow-hidden rounded-none border border-border bg-card shadow-2xl will-change-transform sm:max-w-md sm:rounded-panel ${animationClass}`}
     >
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
+      <header className="flex items-center justify-between border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] sm:px-6 sm:py-4 sm:pt-4">
         <h2
           id="transaction-detail-title"
           className="text-base font-semibold text-card-foreground"
@@ -405,13 +405,13 @@ function PanelBody({
           type="button"
           onClick={() => onClose?.()}
           aria-label="Close"
-          className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-card-foreground"
+          className="flex size-11 items-center justify-center rounded-full text-muted-foreground transition touch-manipulation hover:bg-muted hover:text-card-foreground sm:size-8"
         >
           <X className="size-4" />
         </button>
       </header>
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
         {isLoading && <LoadingState />}
         {error && <ErrorState error={error} />}
 
@@ -440,7 +440,7 @@ function PanelBody({
         )}
       </div>
 
-      <footer className="grid grid-cols-2 gap-3 border-t border-border bg-card px-6 py-4">
+      <footer className="grid grid-cols-2 gap-3 border-t border-border bg-card px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pb-4">
         {canCancel && (
           <Button
             variant="destructive"
@@ -547,7 +547,7 @@ export default function TransactionDetailPanel({
       role="dialog"
       aria-modal="true"
       aria-labelledby="transaction-detail-title"
-      className="fixed inset-0 z-50 flex justify-end p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex justify-end p-0 sm:p-6"
     >
       <button
         type="button"
@@ -578,11 +578,11 @@ export default function TransactionDetailPanel({
         />
       ) : (
         <aside
-          className={`relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-panel border border-border bg-card shadow-2xl will-change-transform ${
+          className={`relative z-10 flex h-full w-full flex-col overflow-hidden rounded-none border border-border bg-card shadow-2xl will-change-transform sm:max-w-md sm:rounded-panel ${
             isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
           }`}
         >
-          <header className="flex items-center justify-between border-b border-border px-6 py-4">
+          <header className="flex items-center justify-between border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] sm:px-6 sm:py-4 sm:pt-4">
             <h2
               id="transaction-detail-title"
               className="text-base font-semibold text-card-foreground"
@@ -593,12 +593,12 @@ export default function TransactionDetailPanel({
               type="button"
               onClick={requestClose}
               aria-label="Close"
-              className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-card-foreground"
+              className="flex size-11 items-center justify-center rounded-full text-muted-foreground transition touch-manipulation hover:bg-muted hover:text-card-foreground sm:size-8"
             >
               <X className="size-4" />
             </button>
           </header>
-          <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
             <MissingState />
           </div>
         </aside>

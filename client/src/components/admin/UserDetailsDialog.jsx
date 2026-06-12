@@ -143,11 +143,21 @@ export default function UserDetailsDialog({ selectedUser, setSelectedUser, userR
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setSelectedUser(null)} disabled={isSaving}>
+        <DialogFooter className="flex-col-reverse sm:flex-row">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => setSelectedUser(null)}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
-          <Button variant="default" onClick={handleSave} disabled={!isAdmin || isSaving}>
+          <Button
+            variant="default"
+            className="w-full sm:w-auto"
+            onClick={handleSave}
+            disabled={!isAdmin || isSaving}
+          >
             {isSaving ? 'Saving…' : 'Save changes'}
           </Button>
         </DialogFooter>

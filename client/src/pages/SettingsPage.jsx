@@ -114,7 +114,7 @@ export default function SettingsPage() {
                   key={item.id}
                   type="button"
                   onClick={() => !item.isMain && setMainCard(Number(item.id))}
-                  className={`flex w-full items-center gap-3 rounded-input border p-3 text-left transition-colors ${
+                  className={`flex w-full items-center gap-3 rounded-input border p-3 text-left transition-colors touch-manipulation ${
                     item.isMain
                       ? 'border-primary/40 bg-primary/5'
                       : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'

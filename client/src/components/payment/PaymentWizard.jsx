@@ -88,8 +88,8 @@ function StepProgress({ current }) {
                   active
                     ? 'text-card-foreground'
                     : done
-                    ? 'text-card-foreground/80'
-                    : 'text-muted-foreground'
+                    ? 'hidden text-card-foreground/80 sm:inline'
+                    : 'hidden text-muted-foreground sm:inline'
                 }`}
               >
                 {label}
@@ -191,7 +191,7 @@ function SegmentedControl({ options, value, onChange, ariaLabel }) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`flex-1 rounded-chip px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+            className={`min-h-11 flex-1 rounded-chip px-3 py-2 text-sm font-semibold transition-all duration-200 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-0 ${
               active
                 ? 'bg-card text-card-foreground shadow-sm ring-1 ring-border'
                 : 'text-muted-foreground hover:text-card-foreground'
@@ -721,7 +721,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
                   type="button"
                   onClick={() => applyQuickAmount(n)}
                   disabled={disabled}
-                  className="rounded-pill bg-card px-3.5 py-1.5 text-xs font-semibold text-card-foreground ring-1 ring-border transition-colors hover:bg-primary/5 hover:text-primary hover:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card disabled:hover:text-card-foreground disabled:hover:ring-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
+                  className="min-h-11 rounded-pill bg-card px-3.5 py-1.5 text-xs font-semibold text-card-foreground ring-1 ring-border transition-colors touch-manipulation hover:bg-primary/5 hover:text-primary hover:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card disabled:hover:text-card-foreground disabled:hover:ring-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted md:min-h-0"
                 >
                   ${n}
                 </button>
@@ -917,7 +917,7 @@ function StepResult({ amount, recipientName, onClose }) {
 
 function WizardFooter({ children }) {
   return (
-    <div className="mt-8 flex items-center justify-between gap-3 border-t border-border pt-5">
+    <div className="sticky bottom-0 z-10 -mx-6 mt-8 flex items-center justify-between gap-3 border-t border-border bg-background px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:-mx-7 sm:px-7 md:static md:z-auto md:mx-0 md:bg-transparent md:px-0 md:py-0 md:pb-0 md:pt-5">
       {children}
     </div>
   )
@@ -1070,7 +1070,7 @@ export default function PaymentWizard({
             <button
               type="button"
               onClick={resetAndClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors touch-manipulation md:h-8 md:w-8 hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="Close modal"
             >
               <X size={15} strokeWidth={2.5} />
@@ -1104,7 +1104,7 @@ export default function PaymentWizard({
               <button
                 type="button"
                 onClick={resetAndClose}
-                className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors touch-manipulation md:h-8 md:w-8 hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Close modal"
               >
                 <X size={15} strokeWidth={2.5} />

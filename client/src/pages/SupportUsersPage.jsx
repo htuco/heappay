@@ -111,14 +111,14 @@ export default function SupportUsersPage() {
                 value={search}
                 onChange={handleSearch}
                 placeholder="Search by name or email..."
-                className="h-9 border-border/70 bg-background pl-9 text-sm shadow-none"
+                className="h-9 border-border/70 bg-background pl-9 shadow-none"
               />
             </label>
             <Select
               value={roleFilter}
               onChange={(e) => handleRoleFilter(e.target.value)}
               options={[{ value: '', label: 'All roles' }, ...(userRoles ?? []).map((r) => ({ value: String(r.role_id), label: r.role_name }))]}
-              className="h-9 border-border/70 bg-background py-0 text-xs shadow-none"
+              className="h-9 border-border/70 bg-background py-0 shadow-none md:text-xs"
             />
             <Button
               variant="outline"

@@ -445,7 +445,7 @@ export default function TopUpModal({
                     key={n}
                     type="button"
                     onClick={() => applyQuickAmount(n)}
-                    className="rounded-pill bg-card px-3.5 py-1.5 text-xs font-semibold text-card-foreground ring-1 ring-border transition-colors hover:bg-primary/5 hover:text-primary hover:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
+                    className="min-h-11 rounded-pill bg-card px-3.5 py-1.5 text-xs font-semibold text-card-foreground ring-1 ring-border transition-colors touch-manipulation hover:bg-primary/5 hover:text-primary hover:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted md:min-h-0"
                   >
                     ${n}
                   </button>
