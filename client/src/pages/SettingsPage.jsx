@@ -12,7 +12,7 @@ import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
 import DeactivateAccountModal from '@/components/settings/DeactivateAccountModal'
 import ControlRow from '@/components/settings/ControlRow'
 import OptionGroup from '@/components/settings/OptionGroup'
-import SettingRow from '@/components/settings/SettingRow'
+import RecoveryMethodPanel from '@/components/settings/RecoveryMethodPanel'
 import SettingsCard from '@/components/settings/SettingsCard'
 import ProfileSection from '@/components/settings/ProfileSection'
 import SettingsHero from '@/components/settings/SettingsHero'
@@ -48,7 +48,7 @@ export default function SettingsPage() {
     if (user) {
       setDraftBillingReminders(savedBillingFromUser(user))
     }
-  }, [user?.billing_reminders_enabled, user?.id])
+  }, [user])
 
   const savedBilling = useMemo(() => savedBillingFromUser(user), [user])
 
@@ -109,22 +109,14 @@ export default function SettingsPage() {
         </SettingsCard>
 
         <SettingsCard
-          title="Change Password"
+          title="Account Recovery"
           icon={KeyRound}
-          description="Update your password and recovery email."
-          action={
-            <Button className="w-full sm:w-auto" onClick={() => setIsChangePasswordOpen(true)}>
-              Change Password
-            </Button>
-          }
+          description="Review the recovery method currently supported for your account."
         >
-          <div className="space-y-3">
-            <SettingRow
-              label="Recovery method"
-              value="Email link"
-              hint="Reset links sent to your account email."
-            />
-          </div>
+          <RecoveryMethodPanel
+            email={user?.email}
+            onChangePassword={() => setIsChangePasswordOpen(true)}
+          />
         </SettingsCard>
 
         <ChangePasswordModal
