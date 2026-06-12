@@ -1,7 +1,7 @@
 """restrict transaction card foreign keys on delete
 
-Revision ID: f9a8b7c6d5e4
-Revises: e3f4a5b6c7d8
+Revision ID: a4c5e6f7b8d9
+Revises: f9a8b7c6d5e4
 Create Date: 2026-06-08 12:00:00.000000
 
 """
@@ -10,8 +10,8 @@ from typing import Sequence, Union
 
 from alembic import op
 
-revision: str = "f9a8b7c6d5e4"
-down_revision: Union[str, Sequence[str], None] = "e3f4a5b6c7d8"
+revision: str = "a4c5e6f7b8d9"
+down_revision: Union[str, Sequence[str], None] = "f9a8b7c6d5e4"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
