@@ -16,6 +16,7 @@ import { listCards } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
+import { createIdempotencyKey } from '@/utils/idempotency'
 
 const QUICK_AMOUNTS = [10, 25, 50, 100]
 const SUCCESS_HOLD_MS = 1200
@@ -249,6 +250,7 @@ export default function TopUpModal({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(null)
   const amountInputRef = useRef(null)
+  const idempotencyKeyRef = useRef(null)
 
   useEffect(() => {
     if (!isOpen || !user) return
@@ -277,6 +279,7 @@ export default function TopUpModal({
     setAmount('')
     setError('')
     setSuccess(null)
+    idempotencyKeyRef.current = null
     onClose()
   }
 
@@ -287,9 +290,14 @@ export default function TopUpModal({
       setError('Deposit is not available right now. Please try again later.')
       return
     }
+    if (isSubmitting) return
 
     setError('')
     setIsSubmitting(true)
+
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = createIdempotencyKey()
+    }
 
     try {
       const card = cards.find((c) => c.card_id === selectedCardId)
@@ -299,6 +307,7 @@ export default function TopUpModal({
         transaction_type_id: depositTypeId,
         amount: amountNum.toFixed(2),
         note: null,
+        idempotency_key: idempotencyKeyRef.current,
       })
 
       notify({

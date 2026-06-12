@@ -20,13 +20,14 @@ from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
 _NOW = datetime.now(timezone.utc)
 
 
-def _user_response(role_id: int = 2, role_name: str = "user") -> UserResponse:
+def _user_response(role_id: int = 2, role_name: str = "user", status_id: int = 1) -> UserResponse:
     return UserResponse(
         id=42,
         email="test@example.com",
         first_name="Test",
         last_name="User",
         created_at=_NOW,
+        status_id=status_id,
         user_role_id=role_id,
         role_name=role_name,
         billing_reminders_enabled=True,

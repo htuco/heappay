@@ -15,7 +15,7 @@ function DialogOverlay({ className, ...props }) {
   return (
     <Dialog.Overlay
       className={cn(
-        "fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[3px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "fixed inset-0 z-50 bg-overlay backdrop-blur-xs data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
       {...props}
@@ -29,7 +29,7 @@ function DialogContent({ className, overlayClassName, closeButtonClassName, chil
       <DialogOverlay className={overlayClassName} />
       <Dialog.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-1.5rem)] sm:w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-panel border border-border bg-popover p-5 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.8)] dark:shadow-none max-h-[calc(100dvh-1.5rem)] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-1.5rem)] sm:w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-panel border border-border bg-popover p-5 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.8)] dark:shadow-none max-h-[calc(100dvh-1.5rem)] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-50 data-[state=open]:slide-in-from-bottom-16 data-[state=open]:duration-400 data-[state=open]:ease-modal-spring",
           className
         )}
         {...props}

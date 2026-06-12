@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { CreditCard } from 'lucide-react'
 
 import AddCardModal from '@/components/AddCardModal'
 import CardCarousel from '@/components/card-view/CardCarousel'
@@ -75,12 +76,23 @@ export default function WalletPage() {
           <WalletSection className="h-full" mobileChromeless>
             {cards.length === 0 && !isLoading ? (
               <div className="flex flex-col items-center gap-3 rounded-surface bg-muted/30 p-12 text-center">
+                <span className="rounded-surface bg-linear-to-br from-primary to-primary-light p-3.5 text-primary-foreground shadow-lg shadow-primary/30">
+                  <CreditCard className="h-6 w-6" strokeWidth={2} />
+                </span>
                 <p className="text-base font-semibold text-card-foreground">
                   No payment cards yet
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Add your first card to get started.
                 </p>
+                <AddCardModal
+                  onSubmit={addCard}
+                  isSubmitting={isSaving}
+                  submitError={saveError}
+                  triggerLabel="Add Card"
+                  triggerClassName="mt-2 inline-flex h-11 items-center gap-1.5 rounded-input bg-linear-to-r from-primary to-primary-light px-4 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/40"
+                  triggerVariant="ghost"
+                />
               </div>
             ) : (
               <CardCarousel

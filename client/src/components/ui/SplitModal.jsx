@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
+import { useModalAria } from '@/components/ui/modal-context'
 import { cn } from '@/lib/utils'
 
 /**
@@ -33,64 +34,97 @@ export default function SplitModal({
       size={size}
       className={className}
     >
-      <div className={cn('grid', gridCols)}>
-        {leftPanel && (
-          <aside
-            className={cn(
-              'hidden flex-col gap-5 bg-muted/40 p-6 md:flex',
-              leftClassName
-            )}
-          >
-            {leftPanel}
-          </aside>
-        )}
+      <SplitModalBody
+        onClose={onClose}
+        eyebrow={eyebrow}
+        title={title}
+        leftPanel={leftPanel}
+        footer={footer}
+        rightClassName={rightClassName}
+        leftClassName={leftClassName}
+        minHeight={minHeight}
+        gridCols={gridCols}
+      >
+        {children}
+      </SplitModalBody>
+    </Modal>
+  )
+}
 
-        <div
+// Rendered inside <Modal>, so it can read the modal's generated aria ids and
+// tag its own <h2> as the labelling node (no hardcoded shared id).
+function SplitModalBody({
+  onClose,
+  eyebrow,
+  title,
+  leftPanel,
+  children,
+  footer,
+  rightClassName,
+  leftClassName,
+  minHeight,
+  gridCols,
+}) {
+  const aria = useModalAria()
+
+  return (
+    <div className={cn('grid', gridCols)}>
+      {leftPanel && (
+        <aside
           className={cn(
-            'flex flex-col px-4 pt-4 pb-5 sm:px-7 sm:pt-5 sm:pb-7',
-            minHeight,
-            rightClassName
+            'hidden flex-col gap-5 bg-muted/40 p-6 md:flex',
+            leftClassName
           )}
         >
-          <header className="mb-5 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              {eyebrow && (
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {eyebrow}
-                </p>
-              )}
-              {title && (
-                <h2
-                  id="modal-title"
-                  className={cn(
-                    'text-base font-semibold leading-tight text-card-foreground',
-                    eyebrow && 'mt-1'
-                  )}
-                >
-                  {title}
-                </h2>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 inline-flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors touch-manipulation hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label="Close modal"
-            >
-              <X size={15} strokeWidth={2.5} />
-            </button>
-          </header>
+          {leftPanel}
+        </aside>
+      )}
 
-          <div className="flex-1">{children}</div>
+      <div
+        className={cn(
+          'flex flex-col px-6 pt-5 pb-6 sm:px-7 sm:pb-7',
+          minHeight,
+          rightClassName
+        )}
+      >
+        <header className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            {eyebrow && (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {eyebrow}
+              </p>
+            )}
+            {title && (
+              <h2
+                id={aria?.titleId}
+                className={cn(
+                  'text-base font-semibold leading-tight text-card-foreground',
+                  eyebrow && 'mt-1'
+                )}
+              >
+                {title}
+              </h2>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 inline-flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors touch-manipulation hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            aria-label="Close modal"
+          >
+            <X size={15} strokeWidth={2.5} />
+          </button>
+        </header>
 
-          {footer && (
-            <div className="mt-6 flex flex-col items-stretch gap-3 border-t border-border pt-4 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-5">
-              {footer}
-            </div>
-          )}
-        </div>
+        <div className="flex-1">{children}</div>
+
+        {footer && (
+          <div className="mt-6 flex flex-col items-stretch gap-3 border-t border-border pt-4 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-5">
+            {footer}
+          </div>
+        )}
       </div>
-    </Modal>
+    </div>
   )
 }
 

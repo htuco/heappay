@@ -96,8 +96,6 @@ function PaymentCardError() {
   )
 }
 
-const MIN_LOADER_MS = 1500
-
 export default function DashboardPage() {
   const { user } = useAuth()
   const { cards, isLoading, error, refetch } = useDashboardCards()
@@ -114,7 +112,6 @@ export default function DashboardPage() {
     error: recentActivityError,
   } = useTransactions({ pageSize: 5 })
   const [typeNameById, setTypeNameById] = useState({})
-  const [minDelayElapsed, setMinDelayElapsed] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
   const [addCardOpen, setAddCardOpen] = useState(false)
@@ -137,11 +134,6 @@ export default function DashboardPage() {
         return (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'
       })()
     : undefined
-
-  useEffect(() => {
-    const t = setTimeout(() => setMinDelayElapsed(true), MIN_LOADER_MS)
-    return () => clearTimeout(t)
-  }, [])
 
   useEffect(() => {
     if (!user) {
@@ -175,7 +167,9 @@ export default function DashboardPage() {
     [cards, typeNameById, user],
   )
 
-  const showLoader = isLoading || !minDelayElapsed
+  // useDashboardCards keeps isLoading true for at least MIN_LOADER_MS on page loads.
+  // Background refetches pass showLoader: false and do not trigger the overlay.
+  const showLoader = Boolean(user?.id) && isLoading
 
   return (
     <div className="space-y-6">

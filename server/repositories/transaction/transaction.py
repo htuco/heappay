@@ -1,12 +1,21 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
+from models.refund_request_detail import RefundRequestDetail
+from models.request import Request
 from models.transaction import Transaction
+from models.user import User
 from models.transaction_status import TransactionStatus
 from models.transaction_type import TransactionType
+
+
+class TransactionStateError(Exception):
+    """Transaction is not in the expected state for this operation."""
 
 
 _SORT_COLUMNS = {
@@ -20,6 +29,13 @@ _SORT_COLUMNS = {
 class TransactionRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
+
+    def _commit(self) -> None:
+        try:
+            self._db.commit()
+        except SQLAlchemyError:
+            self._db.rollback()
+            raise
 
     def list_for_user(
         self,
@@ -115,6 +131,7 @@ class TransactionRepository:
         user_card_ids = select(Card.card_id).where(Card.user_id == user_id).scalar_subquery()
 
         since = func.now() - text(f"INTERVAL '{int(months)} months'")
+        completed_id = self.get_status_id_by_name("completed")
 
         period_col = func.to_char(
             func.date_trunc("month", Transaction.created_at), "YYYY-MM"
@@ -140,19 +157,23 @@ class TransactionRepository:
             Decimal("0"),
         )
 
+        filters = [
+            Transaction.created_at >= since,
+            or_(
+                Transaction.recipient_card_id.in_(user_card_ids),
+                Transaction.sender_card_id.in_(user_card_ids),
+            ),
+        ]
+        if completed_id is not None:
+            filters.append(Transaction.status_id == completed_id)
+
         stmt = (
             select(
                 period_col.label("period"),
                 income_expr.label("income"),
                 expense_expr.label("expense"),
             )
-            .where(
-                Transaction.created_at >= since,
-                or_(
-                    Transaction.recipient_card_id.in_(user_card_ids),
-                    Transaction.sender_card_id.in_(user_card_ids),
-                ),
-            )
+            .where(*filters)
             .group_by(period_col)
             .order_by(period_col.desc())
         )
@@ -198,12 +219,28 @@ class TransactionRepository:
         )
         return self._db.scalars(stmt).first()
 
+    def get_by_idempotency_key(self, idempotency_key: str) -> Transaction | None:
+        stmt = (
+            select(Transaction)
+            .options(*self._party_load_options())
+            .where(Transaction.idempotency_key == idempotency_key)
+        )
+        return self._db.scalars(stmt).first()
+
+    def rollback(self) -> None:
+        self._db.rollback()
+
     def _party_load_options(self):
         return (
             joinedload(Transaction.sender_card).joinedload(Card.user),
             joinedload(Transaction.sender_card).joinedload(Card.card_type),
             joinedload(Transaction.recipient_card).joinedload(Card.user),
             joinedload(Transaction.recipient_card).joinedload(Card.card_type),
+            # Eager-load the refund chain so has_pending_refund / refund_status on
+            # TransactionResponse don't trigger a lazy query per row (N+1).
+            joinedload(Transaction.refund_detail)
+            .joinedload(RefundRequestDetail.request)
+            .joinedload(Request.request_status),
         )
 
     def card_owner_id(self, card_id: int) -> int | None:
@@ -230,11 +267,15 @@ class TransactionRepository:
         status_id: int,
         amount: Decimal,
         note: str | None,
+        processing_eligible_at: datetime,
+        idempotency_key: str | None = None,
     ) -> Transaction:
-        """Atomski: smanji sender balance, povecaj recipient balance, kreiraj transaction."""
+        """
+        Escrow create: hold funds on sender (if any); recipient is credited on complete().
+        Deposits (no sender) do not move balances until complete().
+        """
         if sender_card is not None:
             sender_card.balance = sender_card.balance - amount
-        recipient_card.balance = recipient_card.balance + amount
 
         row = Transaction(
             sender_card_id=sender_card.card_id if sender_card is not None else None,
@@ -243,16 +284,127 @@ class TransactionRepository:
             status_id=status_id,
             amount=amount,
             note=note,
+            processing_eligible_at=processing_eligible_at,
+            idempotency_key=idempotency_key,
         )
         self._db.add(row)
+        self._commit()
+        self._db.refresh(row)
+        return row
+
+    def list_pending_for_update(self, *, limit: int) -> list[Transaction]:
+        pending_id = self.get_status_id_by_name("pending")
+        if pending_id is None:
+            return []
+
+        # Lock rows on transactions only — FOR UPDATE with outer joins (deposits
+        # have no sender_card) is rejected by PostgreSQL.
+        lock_stmt = (
+            select(Transaction.transaction_id)
+            .where(
+                Transaction.status_id == pending_id,
+                Transaction.processing_eligible_at <= func.now(),
+            )
+            .order_by(
+                Transaction.processing_eligible_at.asc(),
+                Transaction.created_at.asc(),
+            )
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        ids = list(self._db.scalars(lock_stmt).all())
+        if not ids:
+            return []
+
+        stmt = (
+            select(Transaction)
+            .where(Transaction.transaction_id.in_(ids))
+            .options(
+                joinedload(Transaction.sender_card).joinedload(Card.user).joinedload(
+                    User.status
+                ),
+                joinedload(Transaction.sender_card).joinedload(Card.status),
+                joinedload(Transaction.recipient_card).joinedload(Card.user).joinedload(
+                    User.status
+                ),
+                joinedload(Transaction.recipient_card).joinedload(Card.status),
+            )
+            .order_by(
+                Transaction.processing_eligible_at.asc(),
+                Transaction.created_at.asc(),
+            )
+        )
+        return list(self._db.scalars(stmt).unique().all())
+
+    def complete(self, transaction_id: int, *, processed_by: str) -> Transaction:
+        pending_id = self.get_status_id_by_name("pending")
+        completed_id = self.get_status_id_by_name("completed")
+        if pending_id is None or completed_id is None:
+            raise TransactionStateError("Required transaction status not found.")
+
+        row = self._get_transaction_for_update(transaction_id)
+        if row is None:
+            raise TransactionStateError("Transaction not found.")
+        if row.status_id != pending_id:
+            raise TransactionStateError("Transaction is not pending.")
+
+        recipient_card = self.get_card_for_update(row.recipient_card_id)
+        if recipient_card is None:
+            raise TransactionStateError("Recipient card not found.")
+
+        recipient_card.balance = recipient_card.balance + row.amount
+        row.status_id = completed_id
+        row.processed_at = datetime.now(timezone.utc)
+        row.processed_by = processed_by
+        row.deny_reason_code = None
         self._db.commit()
         self._db.refresh(row)
         return row
 
+    def fail(
+        self,
+        transaction_id: int,
+        *,
+        reason_code: str,
+        processed_by: str,
+    ) -> Transaction:
+        pending_id = self.get_status_id_by_name("pending")
+        failed_id = self.get_status_id_by_name("failed")
+        if pending_id is None or failed_id is None:
+            raise TransactionStateError("Required transaction status not found.")
+
+        row = self._get_transaction_for_update(transaction_id)
+        if row is None:
+            raise TransactionStateError("Transaction not found.")
+        if row.status_id != pending_id:
+            raise TransactionStateError("Transaction is not pending.")
+
+        if row.sender_card_id is not None:
+            sender_card = self.get_card_for_update(row.sender_card_id)
+            if sender_card is None:
+                raise TransactionStateError("Sender card not found.")
+            sender_card.balance = sender_card.balance + row.amount
+
+        row.status_id = failed_id
+        row.processed_at = datetime.now(timezone.utc)
+        row.processed_by = processed_by
+        row.deny_reason_code = reason_code
+        self._db.commit()
+        self._db.refresh(row)
+        return row
+
+    def _get_transaction_for_update(self, transaction_id: int) -> Transaction | None:
+        stmt = (
+            select(Transaction)
+            .where(Transaction.transaction_id == transaction_id)
+            .with_for_update()
+        )
+        return self._db.scalars(stmt).first()
+
     def update(self, row: Transaction, changes: dict) -> Transaction:
         for key, value in changes.items():
             setattr(row, key, value)
-        self._db.commit()
+        self._commit()
         self._db.refresh(row)
         return row
 

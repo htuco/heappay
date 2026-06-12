@@ -6,6 +6,8 @@ import cardStatusesService from '@/services/cardStatusesService'
 import { getUserDisplayName, normalizeApiCards } from '@/utils/cardApiAdapter'
 import { subscribeDataChange } from '@/utils/dataEvents'
 
+const MIN_LOADER_MS = 1500
+
 export function useDashboardCards() {
   const { user, isLoading: authLoading } = useAuth()
   const [cards, setCards] = useState([])
@@ -17,6 +19,7 @@ export function useDashboardCards() {
       if (!user?.id) return
       if (showLoader) setIsLoading(true)
       setError(null)
+      const startedAt = Date.now()
       try {
         const [rawCards, cardTypes, cardStatuses] = await Promise.all([
           listCards({ user_id: user.id }),
@@ -27,8 +30,12 @@ export function useDashboardCards() {
         setCards(normalizeApiCards(rawCards, cardTypes, cardStatuses, holderName))
       } catch (err) {
         setError(err)
-      } finally {
-        if (showLoader) setIsLoading(false)
+      }
+
+      if (showLoader) {
+        const elapsed = Date.now() - startedAt
+        const remaining = Math.max(MIN_LOADER_MS - elapsed, 0)
+        setTimeout(() => setIsLoading(false), remaining)
       }
     },
     [user]

@@ -1,0 +1,137 @@
+import { useEffect, useRef, useState } from 'react'
+import { MessageCircle, Send, Trash2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useChat } from '@/hooks/useChat'
+
+export default function ChatWidget() {
+  const [open, setOpen] = useState(false)
+  const [input, setInput] = useState('')
+  const { messages, isLoading, isSending, sendMessage, clearHistory } = useChat()
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    if (open) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, open])
+
+  const handleSend = async () => {
+    if (!input.trim() || isSending) return
+    const text = input
+    setInput('')
+    await sendMessage(text)
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+      {open && (
+        <div className="flex flex-col w-80 h-[480px] rounded-2xl border border-border/60 bg-card shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-card">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">heap Assistant</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={clearHistory}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                title="Clear history"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce" />
+                </div>
+              </div>
+            ) : messages.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">
+                Ask me anything about your account, cards, or transactions.
+              </p>
+            ) : (
+              messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-foreground'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))
+            )}
+            {isSending && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-xl px-3 py-2">
+                  <div className="flex gap-1">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:-0.3s]" />
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:-0.15s]" />
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce" />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input */}
+          <div className="flex gap-2 px-4 py-3 border-t border-border/60">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask me anything..."
+              disabled={isSending}
+              className="text-sm"
+            />
+            <Button
+              size="icon"
+              onClick={handleSend}
+              disabled={isSending || !input.trim()}
+              className="shrink-0"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle button */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+      >
+        {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
+      </button>
+    </div>
+  )
+}

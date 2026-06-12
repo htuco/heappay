@@ -1,3 +1,3 @@
-from repositories.transaction.transaction import TransactionRepository
+from repositories.transaction.transaction import TransactionRepository, TransactionStateError
 
-__all__ = ["TransactionRepository"]
+__all__ = ["TransactionRepository", "TransactionStateError"]

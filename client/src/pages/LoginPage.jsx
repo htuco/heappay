@@ -1,31 +1,68 @@
 import LoginForm from '@/components/ui/login-form'
 import { ArrowLeftRight, CreditCard, Moon, ShieldCheck, Sun } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 import AuthMobileBackground from '@/components/auth-ui/AuthMobileBackground'
 import { useTheme } from '@/hooks/useTheme'
 
-function DeactivatedNotice() {
-	const isDeactivated = new URLSearchParams(window.location.search).get('deactivated') === '1'
-	const [visible, setVisible] = useState(isDeactivated)
-	if (!visible) return null
-	return (
-		<div className="mx-6 mt-6 flex items-start justify-between gap-3 rounded-input border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-			<p>Your account has been deactivated. If this was a mistake, contact support.</p>
-			<button
-				type="button"
-				onClick={() => setVisible(false)}
-				className="shrink-0 font-semibold hover:underline"
-				aria-label="Dismiss"
-			>
-				Dismiss
-			</button>
-		</div>
-	)
+const LOGIN_BANNERS = {
+  deactivated: {
+    className:
+      'border-destructive/40 bg-destructive/10 text-destructive',
+    message:
+      'Your account has been deactivated. If this was a mistake, contact support.',
+  },
+  suspended: {
+    className:
+      'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+    message:
+      'Your account has been suspended. Sign in again only after an administrator restores your access.',
+  },
+  invited: {
+    className: 'border-primary/40 bg-primary/10 text-foreground',
+    message:
+      'Please complete your invitation and set a password before using Heap.',
+  },
+  passwordChanged: {
+    className: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200',
+    message: 'Your password was updated. Sign in with your new password.',
+  },
+}
+
+function LoginStatusBanner() {
+  const [searchParams] = useSearchParams()
+  const [dismissed, setDismissed] = useState({})
+
+  const activeKey = ['deactivated', 'suspended', 'invited', 'passwordChanged'].find(
+    (key) => searchParams.get(key) === '1',
+  )
+
+  if (!activeKey || dismissed[activeKey]) {
+    return null
+  }
+
+  const banner = LOGIN_BANNERS[activeKey]
+
+  return (
+    <div
+      className={`mx-6 mt-6 flex items-start justify-between gap-3 rounded-input border px-4 py-3 text-sm ${banner.className}`}
+    >
+      <p>{banner.message}</p>
+      <button
+        type="button"
+        onClick={() => setDismissed((prev) => ({ ...prev, [activeKey]: true }))}
+        className="shrink-0 font-semibold hover:underline"
+        aria-label="Dismiss"
+      >
+        Dismiss
+      </button>
+    </div>
+  )
 }
 
 export default function LoginPage() {
-	const { isDark, toggle } = useTheme()
+  const { isDark, toggle } = useTheme()
 
 	return (
 		<section className="relative grid min-h-svh grid-cols-1 overflow-hidden md:grid-cols-[65%_35%]">
@@ -46,7 +83,7 @@ export default function LoginPage() {
 			</button>
 
 			<div className="auth-form-panel relative z-10">
-				<DeactivatedNotice />
+				<LoginStatusBanner />
 				<LoginForm />
 			</div>
 			<div className="relative hidden overflow-hidden bg-background md:block">

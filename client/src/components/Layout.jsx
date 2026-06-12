@@ -7,6 +7,7 @@ import BrandLogo from './ui/BrandLogo'
 import ToastStack from './ui/ToastStack'
 import NotificationPanel from './notifications/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
+import ChatWidget from './chat/ChatWidget'
 
 const PAGE_META = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Your financial overview.' },
@@ -79,11 +80,12 @@ export default function Layout() {
         </main>
 
         <footer className="hidden border-t border-border/60 py-5 text-center text-xs text-muted-foreground md:block">
-          Heap. All rights reserved.
+          © {new Date().getFullYear()} Heap. All rights reserved.
         </footer>
       </div>
       {!isLanding && <MobileTabBar />}
       <ToastStack />
+      <ChatWidget />
     </div>
   )
 }

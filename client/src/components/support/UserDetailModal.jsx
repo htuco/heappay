@@ -533,7 +533,8 @@ export default function UserDetailModal({ user, open, onOpenChange, rolesById, o
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
         style={{ '--tw-duration': '500ms' }}
-        className="max-w-195 w-full rounded-input border border-border bg-popover p-0 shadow-lg data-[state=open]:ease-[cubic-bezier(0.34,1.56,0.64,1)] data-[state=open]:zoom-in-50 data-[state=open]:slide-in-from-bottom-16 [&>button]:right-4 [&>button]:top-4 sm:[&>button]:right-5 sm:[&>button]:top-5 [&>button]:flex [&>button]:size-11 sm:[&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-input [&>button]:p-0 [&>button]:text-muted-foreground [&>button]:hover:bg-muted [&>button]:hover:text-foreground [&>button]:transition-colors [&>button]:touch-manipulation"
+        closeButtonClassName="size-11 sm:size-8 rounded-input p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="max-w-195 w-full rounded-input border border-border bg-popover p-0 shadow-lg data-[state=open]:ease-[cubic-bezier(0.34,1.56,0.64,1)] data-[state=open]:zoom-in-50 data-[state=open]:slide-in-from-bottom-16"
       >
         {/* Header */}
         <div className="flex flex-col gap-3 border-b border-border px-4 py-4 pr-14 sm:flex-row sm:items-center sm:gap-4 sm:px-6 sm:py-5 sm:pr-16">

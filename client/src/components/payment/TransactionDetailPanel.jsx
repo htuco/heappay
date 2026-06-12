@@ -361,8 +361,8 @@ function PanelBody({
   onClose,
   onRefund,
   onCancel,
-  onShare,
-  onSaveNotes,
+  _onShare,
+  _onSaveNotes,
   ownedCardIds,
   currentUserId,
   refundRequestedTransactionIds,
@@ -474,24 +474,26 @@ function PanelBody({
             )}
           </>
         )}
-        <Button
-          variant="outline"
-          className="h-11 rounded-input border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
-          disabled={!detail}
-          onClick={() => onShare?.(detail, { notes })}
-        >
-          <Share2 className="mr-2 size-4" />
-          Share transaction
-        </Button>
-        <Button
-          variant="outline"
-          className="h-11 rounded-input border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
-          disabled={!detail}
-          onClick={() => onSaveNotes?.(detail, notes)}
-        >
-          <Save className="mr-2 size-4" />
-          Save notes
-        </Button>
+        <span title="Coming soon" className="contents">
+          <Button
+            variant="outline"
+            className="h-11 rounded-input border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
+            disabled
+          >
+            <Share2 className="mr-2 size-4" />
+            Share transaction
+          </Button>
+        </span>
+        <span title="Coming soon" className="contents">
+          <Button
+            variant="outline"
+            className="h-11 rounded-input border-2 border-border bg-background/70 px-4 text-sm font-semibold shadow-none hover:bg-muted/70"
+            disabled
+          >
+            <Save className="mr-2 size-4" />
+            Save notes
+          </Button>
+        </span>
       </footer>
     </aside>
   )
