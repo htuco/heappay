@@ -243,7 +243,7 @@ export default function NotificationPanel() {
 			{open && (
 				<div className="sm:hidden fixed inset-0 z-50 flex flex-col animate-in fade-in-0 duration-200">
 					<div
-						className="flex-1 bg-foreground/30 backdrop-blur-[2px]"
+						className="flex-1 bg-overlay backdrop-blur-xs"
 						onClick={handleClose}
 						aria-hidden
 					/>

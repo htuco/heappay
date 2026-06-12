@@ -1,6 +1,7 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
-from sqlalchemy import delete as sa_delete, or_, select, update
+from sqlalchemy import delete as sa_delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from models.card import Card
@@ -8,6 +9,7 @@ from models.card_status import CardStatus
 from models.card_type import CardType
 from models.transaction import Transaction
 from models.transaction_status import TransactionStatus
+from models.transaction_type import TransactionType
 from models.user import User
 
 # (Card, User) result tuple alias
@@ -44,6 +46,14 @@ class CardRepository:
         stmt = select(Card).where(Card.card_id == card_id)
         if not include_deleted:
             stmt = stmt.where(Card.deleted_at.is_(None))
+        return self._db.scalars(stmt).first()
+
+    def get_by_id_for_update(self, card_id: int) -> Card | None:
+        stmt = (
+            select(Card)
+            .where(Card.card_id == card_id, Card.deleted_at.is_(None))
+            .with_for_update()
+        )
         return self._db.scalars(stmt).first()
 
     def create(
@@ -90,8 +100,76 @@ class CardRepository:
         return row
 
     def soft_delete(self, row: Card) -> None:
-        row.deleted_at = datetime.utcnow()
+        row.deleted_at = datetime.now(timezone.utc)
         self._db.commit()
+
+    def get_oldest_active_card_for_user(
+        self, user_id: int, *, exclude_card_id: int
+    ) -> Card | None:
+        stmt = (
+            select(Card)
+            .where(
+                Card.user_id == user_id,
+                Card.card_id != exclude_card_id,
+                Card.deleted_at.is_(None),
+            )
+            .order_by(Card.created_at.asc(), Card.card_id.asc())
+            .limit(1)
+        )
+        return self._db.scalars(stmt).first()
+
+    def transfer_balance(
+        self, *, from_card_id: int, to_card_id: int, amount: Decimal
+    ) -> None:
+        """Atomically move *amount* between two cards owned by the same user."""
+        if amount <= 0:
+            return
+        from_card = self.get_by_id_for_update(from_card_id)
+        to_card = self.get_by_id_for_update(to_card_id)
+        if from_card is None or to_card is None:
+            raise ValueError("Card not found for balance transfer.")
+        if from_card.user_id != to_card.user_id:
+            raise ValueError("Balance transfer requires cards with the same owner.")
+        if from_card.balance < amount:
+            raise ValueError("Insufficient balance for sweep.")
+        from_card.balance = from_card.balance - amount
+        to_card.balance = to_card.balance + amount
+        self._db.commit()
+
+    def create_completed_sweep_transaction(
+        self,
+        *,
+        from_card_id: int,
+        to_card_id: int,
+        amount: Decimal,
+    ) -> Transaction:
+        """Audit record for balance moved during card expiry (balances already updated)."""
+        payment_type_id = self._db.execute(
+            select(TransactionType.transaction_type_id).where(
+                TransactionType.name == "payment"
+            )
+        ).scalar_one()
+        completed_id = self._db.execute(
+            select(TransactionStatus.transaction_status_id).where(
+                TransactionStatus.name == "completed"
+            )
+        ).scalar_one()
+        now = datetime.now(timezone.utc)
+        row = Transaction(
+            sender_card_id=from_card_id,
+            recipient_card_id=to_card_id,
+            transaction_type_id=payment_type_id,
+            status_id=completed_id,
+            amount=amount,
+            note="Balance transferred from removed card",
+            processing_eligible_at=now,
+            processed_at=now,
+            processed_by="system",
+        )
+        self._db.add(row)
+        self._db.commit()
+        self._db.refresh(row)
+        return row
 
     def restore(self, row: Card) -> Card:
         row.deleted_at = None
@@ -202,6 +280,20 @@ class CardRepository:
             .distinct()
         )
         return set(self._db.scalars(stmt).all())
+
+    def list_expired_for_soft_delete(self, *, limit: int) -> list[Card]:
+        """Non-deleted cards whose expires_at is before today."""
+        stmt = (
+            select(Card)
+            .where(
+                Card.deleted_at.is_(None),
+                Card.expires_at < func.current_date(),
+            )
+            .order_by(Card.expires_at.asc(), Card.card_id.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        return list(self._db.scalars(stmt).all())
 
     def has_pending_transactions(self, card_id: int) -> bool:
         """True if a pending transaction references this card on either side."""

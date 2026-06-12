@@ -2,6 +2,9 @@ import logo from '@/assets/logo.png'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useAppSelector } from '@/store/hooks'
+import { selectUserStatuses } from '@/store/slices/referenceDataSlice'
+import { getStatusHomePath, resolveUserAccountStatus } from '@/utils/resolveUserAccountStatus'
 import { loginSchema } from '@/schemas/loginSchema'
 import { getApiErrorMessage } from '@/utils/api'
 import AuthButton from '@/components/auth-ui/AuthButton'
@@ -20,6 +23,7 @@ const INITIAL_FORM_STATE = {
 export default function LoginForm() {
 	const navigate = useNavigate()
 	const { login, isLoading: loading } = useAuth()
+	const userStatuses = useAppSelector(selectUserStatuses)
 	const [form, setForm] = useState(INITIAL_FORM_STATE)
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
@@ -53,14 +57,16 @@ export default function LoginForm() {
 		}
 
 		try {
-			await login({
+			const user = await login({
 				email: result.data.email,
 				password: result.data.password,
 				remember: form.rememberMe,
 			})
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
-			setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
+			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
+			const destination = getStatusHomePath(accountStatus)
+			setTimeout(() => navigate(destination, { replace: true }), 1500)
 		} catch (err) {
 			setError(getApiErrorMessage(err, 'Invalid email or password'))
 		}
