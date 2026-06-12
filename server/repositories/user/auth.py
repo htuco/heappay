@@ -10,6 +10,7 @@ from models.user import User
 from schemas.user.auth import ProfileUpdateRequest, RegisterRequest
 
 _ACTIVE_STATUS_NAME = "active"
+_INVITED_STATUS_NAME = "invited"
 _DEFAULT_USER_ROLE_NAME = "user"
 
 
@@ -131,6 +132,27 @@ class UserAuthRepository:
             .values(password_hash=hashed_password, refresh_token=None)
         )
         self._db.commit()
+
+    def complete_invitation(self, user_id: int, hashed_password: str) -> User | None:
+        invited_status_id = self._get_status_id_by_name(_INVITED_STATUS_NAME)
+        active_status_id = self._get_status_id_by_name(_ACTIVE_STATUS_NAME)
+        user = self.get_user_by_id(user_id)
+        if user is None or user.deleted_at is not None:
+            return None
+        if user.status_id != invited_status_id:
+            raise ValueError("NOT_INVITED")
+
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                password_hash=hashed_password,
+                status_id=active_status_id,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+        return self.get_user_by_id(user_id)
 
     def soft_delete_user(self, user_id: int) -> None:
         self._db.execute(

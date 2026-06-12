@@ -28,6 +28,10 @@ class RequestRepository:
         stmt = select(RequestStatus.request_status_id).where(RequestStatus.name == name)
         return self._db.execute(stmt).scalar_one_or_none()
 
+    def status_name_for(self, status_id: int) -> str | None:
+        stmt = select(RequestStatus.name).where(RequestStatus.request_status_id == status_id)
+        return self._db.execute(stmt).scalar_one_or_none()
+
     def get_transaction_status_id(self, name: str) -> int | None:
         stmt = select(TransactionStatus.transaction_status_id).where(
             TransactionStatus.name == name
@@ -48,6 +52,24 @@ class RequestRepository:
             .where(
                 RefundRequestDetail.transaction_id == transaction_id,
                 Request.request_status_id == pending_id,
+                Request.request_type_id == refund_type_id,
+            )
+        )
+        return self._db.scalars(stmt).first()
+
+    def get_any_refund_for_transaction(self, transaction_id: int) -> Request | None:
+        """Return any refund request for a transaction regardless of status.
+
+        The DB enforces a single refund per transaction
+        (``uq_refund_request_per_transaction``), so this is the authoritative
+        pre-check that keeps a duplicate insert from surfacing as a 500.
+        """
+        refund_type_id = self.get_type_id("refund")
+        stmt = (
+            select(Request)
+            .join(RefundRequestDetail, RefundRequestDetail.request_id == Request.request_id)
+            .where(
+                RefundRequestDetail.transaction_id == transaction_id,
                 Request.request_type_id == refund_type_id,
             )
         )

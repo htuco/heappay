@@ -122,6 +122,31 @@ Server:
 uv run python main.py          # Start FastAPI app
 uv run pytest                  # Run tests
 uv run alembic upgrade head    # Apply database migrations
+uv run python -m jobs.process_pending_transactions   # Process pending transactions
+```
+
+### Transaction processor
+
+Pending payments are held in escrow until the processor completes or fails them.
+Configure thresholds in `server/.env` (see `server/.env.example`).
+
+**By default**, starting the API also starts an in-process scheduler: it runs the
+processor once immediately, then every `TX_PROCESSOR_INTERVAL_SECONDS` (default
+60). Set `TX_PROCESSOR_SCHEDULER_ENABLED=false` if you use an external cron
+instead (recommended when running multiple API workers).
+
+You can still run the job manually:
+
+```bash
+cd server
+uv run python -m jobs.process_pending_transactions
+```
+
+Example crontab when the in-app scheduler is disabled (every minute at :00 and :30):
+
+```cron
+* * * * * cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1
+* * * * * sleep 30; cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1
 ```
 
 ## Features

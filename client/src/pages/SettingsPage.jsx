@@ -17,8 +17,8 @@ import SettingsCard from '@/components/settings/SettingsCard'
 import ProfileSection from '@/components/settings/ProfileSection'
 import SettingsHero from '@/components/settings/SettingsHero'
 import Toggle from '@/components/settings/Toggle'
+import DefaultCardPicker from '@/components/settings/DefaultCardPicker'
 import { Button } from '@/components/ui/button'
-import CardBrandIcon from '@/components/ui/CardBrandIcon'
 
 const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 
@@ -105,49 +105,7 @@ export default function SettingsPage() {
           icon={CreditCard}
           description="The card pre-selected for Top Up, Pay, and Transfer actions."
         >
-          <div className="space-y-2">
-            {cards.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No payment cards found.</p>
-            ) : (
-              cards.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => !item.isMain && setMainCard(Number(item.id))}
-                  className={`flex w-full items-center gap-3 rounded-input border p-3 text-left transition-colors ${
-                    item.isMain
-                      ? 'border-primary/40 bg-primary/5'
-                      : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'
-                  }`}
-                >
-                  <span
-                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                      item.isMain ? 'border-primary bg-primary' : 'border-border'
-                    }`}
-                  >
-                    {item.isMain && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
-                    )}
-                  </span>
-                  <span className="flex h-8 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[6px] shadow-xs">
-                    <CardBrandIcon
-                      cardNumber={item.card.cardNumber}
-                      brand={item.card.brand}
-                      width={44}
-                    />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-mono text-sm font-medium text-card-foreground">
-                      {item.card.cardNumber}
-                    </p>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {item.card.brand} · expires {item.card.expiryDate}
-                    </p>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
+          <DefaultCardPicker cards={cards} onSelect={setMainCard} />
         </SettingsCard>
 
         <SettingsCard

@@ -12,60 +12,174 @@ import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
+import AccountSuspendedPage from './pages/AccountSuspendedPage'
+import OnboardingSetPasswordPage from './pages/OnboardingSetPasswordPage'
+import RouteLoadingSpinner from './components/routing/RouteLoadingSpinner'
 import { getAuthRefreshToken, getAuthToken } from './utils/authStorage'
 import { useAuth } from './hooks/useAuth'
+import { useUserStatusGuard } from './hooks/useUserStatusGuard'
 import { useAppDispatch } from './store/hooks'
 import { clearAuthState } from './store/slices/authSlice'
 import { fetchReferenceDataOnce } from './store/slices/referenceDataSlice'
+import { getStatusHomePath } from './utils/resolveUserAccountStatus'
 
-function ProtectedRoute({ children }) {
-  const hasAccessToken = Boolean(getAuthToken())
-  const hasRefreshToken = Boolean(getAuthRefreshToken())
-  if (!hasAccessToken && !hasRefreshToken) {
+function hasAuthTokens() {
+  return Boolean(getAuthToken() || getAuthRefreshToken())
+}
+
+function StatusGatedRoute({ children }) {
+  const { isHydrated, isAuthenticated } = useAuth()
+  const { status, isLoading } = useUserStatusGuard()
+
+  if (!hasAuthTokens()) {
     return <Navigate to="/login" replace />
   }
+
+  if (isLoading) {
+    return <RouteLoadingSpinner />
+  }
+
+  if (!isHydrated || !isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (status === 'suspended') {
+    return <Navigate to="/account/suspended" replace />
+  }
+
+  if (status === 'invited') {
+    return <Navigate to="/onboarding/set-password" replace />
+  }
+
+  if (status !== 'active') {
+    return <Navigate to="/login" replace />
+  }
+
   return children
+}
+
+function ProtectedRoute({ children }) {
+  return <StatusGatedRoute>{children}</StatusGatedRoute>
 }
 
 function AdminRoute({ children }) {
-  const { isHydrated, isAuthenticated, isAdmin } = useAuth()
+  const { isAdmin } = useAuth()
 
-  if (!isHydrated) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    )
+  return (
+    <StatusGatedRoute>
+      {!isAdmin ? <Navigate to="/dashboard" replace /> : children}
+    </StatusGatedRoute>
+  )
+}
+
+function StaffRoute({ children }) {
+  const { isStaff } = useAuth()
+
+  return (
+    <StatusGatedRoute>
+      {!isStaff ? <Navigate to="/dashboard" replace /> : children}
+    </StatusGatedRoute>
+  )
+}
+
+function AccountSuspendedRoute({ children }) {
+  const { isHydrated, isAuthenticated } = useAuth()
+  const { status, isLoading } = useUserStatusGuard()
+
+  if (!hasAuthTokens()) {
+    return <Navigate to="/login" replace />
   }
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (!isAdmin) return <Navigate to="/dashboard" replace />
+  if (isLoading) {
+    return <RouteLoadingSpinner />
+  }
+
+  if (!isHydrated || !isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (status === 'active') {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  if (status === 'invited') {
+    return <Navigate to="/onboarding/set-password" replace />
+  }
+
+  if (status !== 'suspended') {
+    return <Navigate to="/login" replace />
+  }
 
   return children
 }
 
-function StaffRoute({ children }) {
-  const { isHydrated, isAuthenticated, isStaff } = useAuth()
+function OnboardingRoute({ children }) {
+  const { isHydrated, isAuthenticated } = useAuth()
+  const { status, isLoading } = useUserStatusGuard()
 
-  if (!isHydrated) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    )
+  if (!hasAuthTokens()) {
+    return <Navigate to="/login" replace />
   }
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (!isStaff) return <Navigate to="/dashboard" replace />
+  if (isLoading) {
+    return <RouteLoadingSpinner />
+  }
+
+  if (!isHydrated || !isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (status === 'active') {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  if (status === 'suspended') {
+    return <Navigate to="/account/suspended" replace />
+  }
+
+  if (status !== 'invited') {
+    return <Navigate to="/login" replace />
+  }
 
   return children
 }
 
 function PublicOnlyRoute({ children }) {
-  if (getAuthToken() || getAuthRefreshToken()) {
-    return <Navigate to="/dashboard" replace />
+  const { isHydrated, isAuthenticated } = useAuth()
+  const { status, isLoading } = useUserStatusGuard()
+
+  if (!hasAuthTokens()) {
+    return children
   }
+
+  if (isLoading) {
+    return <RouteLoadingSpinner />
+  }
+
+  if (isHydrated && isAuthenticated) {
+    return <Navigate to={getStatusHomePath(status)} replace />
+  }
+
   return children
+}
+
+function AuthenticatedLandingRedirect() {
+  const { isHydrated, isAuthenticated } = useAuth()
+  const { status, isLoading } = useUserStatusGuard()
+
+  if (!hasAuthTokens()) {
+    return <LandingPage />
+  }
+
+  if (isLoading) {
+    return <RouteLoadingSpinner />
+  }
+
+  if (isHydrated && isAuthenticated) {
+    return <Navigate to={getStatusHomePath(status)} replace />
+  }
+
+  return <LandingPage />
 }
 
 export default function App() {
@@ -86,16 +200,25 @@ export default function App() {
   return (
     <Routes>
       {/* Standalone full-screen pages — no app shell */}
-      <Route
-        path="/"
-        element={
-          getAuthToken() || getAuthRefreshToken()
-            ? <Navigate to="/dashboard" replace />
-            : <LandingPage />
-        }
-      />
+      <Route path="/" element={<AuthenticatedLandingRedirect />} />
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+      <Route
+        path="/account/suspended"
+        element={
+          <AccountSuspendedRoute>
+            <AccountSuspendedPage />
+          </AccountSuspendedRoute>
+        }
+      />
+      <Route
+        path="/onboarding/set-password"
+        element={
+          <OnboardingRoute>
+            <OnboardingSetPasswordPage />
+          </OnboardingRoute>
+        }
+      />
 
       {/* App shell routes */}
       <Route element={<Layout />}>

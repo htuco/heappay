@@ -26,7 +26,7 @@ export default function LoginNavButton() {
           <button
             type="button"
             aria-label="Open profile menu"
-            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full shadow-md shadow-primary/25 ring-2 ring-background transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 focus-visible:outline-none"
+            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full shadow-md shadow-primary/25 ring-2 ring-background transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <UserAvatar user={user} className="h-10 w-10 text-sm" />
           </button>
@@ -89,9 +89,21 @@ export default function LoginNavButton() {
 
           <div className="border-t border-border/60 px-5 py-3 text-center">
             <p className="text-xs text-muted-foreground">
-              <span className="cursor-pointer hover:text-foreground transition-colors">Privacy policy</span>
+              <button
+                type="button"
+                title="Coming soon"
+                className="cursor-pointer rounded-input transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+              >
+                Privacy policy
+              </button>
               <span className="mx-1.5 text-border">•</span>
-              <span className="cursor-pointer hover:text-foreground transition-colors">Terms of service</span>
+              <button
+                type="button"
+                title="Coming soon"
+                className="cursor-pointer rounded-input transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+              >
+                Terms of service
+              </button>
             </p>
           </div>
         </DropdownMenuContent>

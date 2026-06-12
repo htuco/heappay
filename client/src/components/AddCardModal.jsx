@@ -69,7 +69,7 @@ function FieldLabel({ htmlFor, children }) {
 }
 
 const inputClass =
-  "h-11 w-full rounded-input border border-border bg-background px-3.5 text-sm text-card-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
+  "h-11 w-full rounded-input border border-border bg-background px-3.5 text-sm text-card-foreground placeholder:text-muted-foreground transition-colors focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
 const inputErrorClass =
   "border-destructive focus:border-destructive focus:ring-destructive/20"
 const errorTextClass = "mt-1 text-xs font-medium text-destructive"

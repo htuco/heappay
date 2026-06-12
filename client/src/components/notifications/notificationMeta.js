@@ -35,6 +35,8 @@ export const NOTIFICATION_META = {
 	[CATEGORIES.CARD_UNBLOCKED]:      { accent: 'success',     Icon: CreditCard },
 	[CATEGORIES.CARD_EXPIRING]:       { accent: 'warning',     Icon: AlertTriangle },
 	[CATEGORIES.CARD_EXPIRED]:        { accent: 'destructive', Icon: AlertTriangle },
+	[CATEGORIES.CARD_BALANCE_SWEPT]:  { accent: 'success',     Icon: ArrowLeftRight },
+	[CATEGORIES.CARD_REMOVED]:        { accent: 'muted',       Icon: CreditCard },
 	[CATEGORIES.ACCOUNT_SUSPENDED]:   { accent: 'destructive', Icon: UserX },
 	[CATEGORIES.ACCOUNT_REACTIVATED]: { accent: 'success',     Icon: UserCheck },
 	[CATEGORIES.ACCOUNT_DEACTIVATED]: { accent: 'muted',       Icon: UserMinus },

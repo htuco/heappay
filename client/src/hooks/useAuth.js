@@ -4,6 +4,7 @@ import {
 	hydrateSession,
 	loginUser,
 	logoutUser,
+	refreshSession,
 	registerUser,
 	selectAuthError,
 	selectAuthStatus,
@@ -11,6 +12,7 @@ import {
 	updateProfileUser,
 	uploadProfileAvatarUser,
 } from '@/store/slices/authSlice'
+import { getAuthRefreshToken, getAuthToken } from '@/utils/authStorage'
 
 export function useAuth() {
 	const dispatch = useAppDispatch()
@@ -21,6 +23,16 @@ export function useAuth() {
 
 	useEffect(() => {
 		dispatch(hydrateSession())
+	}, [dispatch])
+
+	useEffect(() => {
+		const onFocus = () => {
+			if (getAuthToken() || getAuthRefreshToken()) {
+				dispatch(refreshSession())
+			}
+		}
+		window.addEventListener('focus', onFocus)
+		return () => window.removeEventListener('focus', onFocus)
 	}, [dispatch])
 
 	const login = useCallback(async ({ email, password, remember }) => {
