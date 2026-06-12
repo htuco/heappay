@@ -11,7 +11,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
-import { Modal } from '@/components/ui/modal'
+import { Modal, ModalTitle } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormBanner from '@/components/ui/FormBanner'
@@ -1088,6 +1088,7 @@ export default function PaymentWizard({
     >
       {isSuccess ? (
         <div className="px-6 pt-5 pb-6 sm:px-7 sm:pb-7">
+          <ModalTitle className="sr-only">Payment sent</ModalTitle>
           <div className="flex justify-end">
             <button
               type="button"
@@ -1117,12 +1118,9 @@ export default function PaymentWizard({
 
           <div className="flex min-h-128 flex-col px-6 pt-5 pb-6 sm:px-7 sm:pb-7">
             <header className="mb-5 flex items-start justify-between gap-3">
-              <h2
-                id="modal-title"
-                className="text-base font-semibold leading-tight text-card-foreground"
-              >
+              <ModalTitle className="text-base font-semibold leading-tight text-card-foreground">
                 {STEP_HEADINGS[step]}
-              </h2>
+              </ModalTitle>
               <button
                 type="button"
                 onClick={requestClose}
