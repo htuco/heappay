@@ -6,6 +6,7 @@ import logo from '@/assets/logo.png'
 import ToastStack from './ui/ToastStack'
 import NotificationPanel from './notifications/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
+import ChatWidget from './chat/ChatWidget'
 
 const PAGE_META = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Your financial overview.' },
@@ -88,6 +89,7 @@ export default function Layout() {
         </footer>
       </div>
       <ToastStack />
+      <ChatWidget />
     </div>
   )
 }

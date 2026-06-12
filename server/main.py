@@ -1,3 +1,8 @@
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -5,11 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from database import SessionLocal
 from exceptions import AppException
+from repositories.vector.knowledge import VectorRepository
 from routes import health, system
 from routes.card.card import router as card_router
 from routes.card.card_status import router as card_status_router
 from routes.card.card_type import router as card_type_router
+from routes.chat.chat import router as chat_router
 from routes.storage.images import router as storage_router
 from routes.transaction.transaction import router as transaction_router
 from routes.transaction.transaction_type import router as transaction_type_router
@@ -18,8 +26,29 @@ from routes.user.auth import router as auth_router
 from routes.user.user import router as users_router
 from routes.user.user_role import router as user_role_router
 from routes.user.user_status import router as user_status_router
+from services.embedding.embedding import EmbeddingService
 from jobs.scheduler import lifespan as transaction_processor_lifespan
 from settings import get_settings
+from tasks.knowledge_sync import KnowledgeSyncTask
+
+logger = logging.getLogger(__name__)
+
+
+def _run_knowledge_sync() -> None:
+    s = get_settings()
+    if not s.supabase_database_url or not s.cohere_api_key:
+        logger.warning("Knowledge sync skipped: SUPABASE_DATABASE_URL or COHERE_API_KEY not set")
+        return
+    db = SessionLocal()
+    try:
+        task = KnowledgeSyncTask(
+            db=db,
+            vector_repo=VectorRepository(s.supabase_database_url),
+            embedding_service=EmbeddingService(s.cohere_api_key),
+        )
+        task.run()
+    finally:
+        db.close()
 
 
 def create_app() -> FastAPI:
@@ -31,7 +60,6 @@ def create_app() -> FastAPI:
         "allow_methods": ["*"],
         "allow_headers": ["*"],
     }
-    # Vite may use 5173, 5174, etc. — regex covers local ports without listing each one.
     cors_kwargs["allow_origin_regex"] = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
     app.add_middleware(CORSMiddleware, **cors_kwargs)
 
@@ -72,7 +100,15 @@ def create_app() -> FastAPI:
     app.include_router(card_type_router)
     app.include_router(transaction_router)
     app.include_router(transaction_type_router)
+    app.include_router(chat_router)
     app.include_router(request_router)
+
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(_run_knowledge_sync, "interval", hours=1, id="knowledge_sync")
+    scheduler.start()
+    _run_knowledge_sync()
+
+
     return app
 
 

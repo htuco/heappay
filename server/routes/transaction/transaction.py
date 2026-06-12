@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -14,6 +14,7 @@ from schemas.transaction import (
     TransactionSummaryPoint,
     TransactionSummaryResponse,
 )
+from tasks.sync import run_sync_for_user
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.transaction.transaction import (
     CardNotFoundError,
@@ -289,6 +290,7 @@ def get_transaction(
 )
 def create_transaction(
     payload: TransactionCreate,
+    background_tasks: BackgroundTasks,
     user_id: int = Depends(get_current_user_id),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionResponse]:
@@ -314,6 +316,7 @@ def create_transaction(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
         ) from None
+    background_tasks.add_task(run_sync_for_user, user_id)
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction created successfully.",
