@@ -33,7 +33,6 @@ export default function RecoveryMethodPanel({ email, onChangePassword }) {
     <div className="space-y-3">
       <FormBanner variant="success" message={success} />
       <FormBanner variant="error" message={error} />
-
       <div className="rounded-surface border border-border bg-emphasis px-4 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 gap-3">

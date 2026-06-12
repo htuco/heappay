@@ -9,6 +9,8 @@ export const CATEGORIES = Object.freeze({
 	CARD_UNBLOCKED: 'card_unblocked',
 	CARD_EXPIRING: 'card_expiring',
 	CARD_EXPIRED: 'card_expired',
+	CARD_BALANCE_SWEPT: 'card_balance_swept',
+	CARD_REMOVED: 'card_removed',
 	ACCOUNT_SUSPENDED: 'account_suspended',
 	ACCOUNT_REACTIVATED: 'account_reactivated',
 	ACCOUNT_DEACTIVATED: 'account_deactivated',

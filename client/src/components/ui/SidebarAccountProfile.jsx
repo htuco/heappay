@@ -133,7 +133,6 @@ function AccountProfileModal({ user, open, onOpenChange, onOpenAvatarModal, bloc
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        overlayClassName="bg-slate-950/35 backdrop-blur-[3px]"
         closeButtonClassName="right-5 top-5 size-8 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
         className="max-h-[calc(100vh-2rem)] max-w-[580px] overflow-hidden border-border bg-popover p-0 shadow-xl shadow-slate-950/12"
         onPointerDownOutside={(e) => {

@@ -26,6 +26,7 @@ export function useTransactions({ cardId, pageSize = DEFAULT_PAGE_SIZE } = {}) {
   const [refreshKey, setRefreshKey] = useState(0)
 
   const refresh = useCallback(() => {
+    setPageState(1)
     setRefreshKey((k) => k + 1)
   }, [])
 

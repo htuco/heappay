@@ -34,7 +34,7 @@ export default function AuthTextInput({
 					value={value}
 					onChange={onChange}
 					disabled={disabled}
-					className={`h-14 w-full rounded-input border-2 bg-input text-sm font-normal text-foreground outline-none placeholder:text-foreground/90 focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200 ${isPassword ? 'pl-4 pr-12' : 'px-4'}`}
+					className={`h-14 w-full rounded-input border-2 bg-input text-sm font-normal text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-offset-0 disabled:opacity-50 transition-all duration-200 ${isPassword ? 'pl-4 pr-12' : 'px-4'}`}
 					style={{
 						borderColor: error ? 'var(--destructive)' : 'var(--accent)',
 						'--tw-ring-color': error ? 'var(--destructive)' : 'var(--accent)',

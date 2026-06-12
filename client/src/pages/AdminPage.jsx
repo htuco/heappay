@@ -31,23 +31,6 @@ export default function AdminPage() {
     cardStatuses,
   } = useAdminPageState()
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 rounded bg-muted" />
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-surface bg-muted" />
-          ))}
-        </div>
-        <div className="grid gap-4 xl:grid-cols-12">
-          <div className="h-96 rounded-surface bg-muted xl:col-span-7" />
-          <div className="h-96 rounded-surface bg-muted xl:col-span-5" />
-        </div>
-      </div>
-    )
-  }
-
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -60,8 +43,14 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <AdminKpiRow kpiTotals={kpiTotals} />
+      <AdminKpiRow kpiTotals={kpiTotals} isLoading={isLoading} />
 
+      {isLoading ? (
+        <div className="grid gap-4 xl:grid-cols-12 animate-pulse">
+          <div className="h-96 rounded-surface bg-muted xl:col-span-7" />
+          <div className="h-96 rounded-surface bg-muted xl:col-span-5" />
+        </div>
+      ) : (
       <section className="grid gap-4 xl:grid-cols-12">
         <AdminUsersPanel
           activeSection={activeSection}
@@ -101,8 +90,9 @@ export default function AdminPage() {
           setCardPage={cardsPanel.setCardPage}
         />
       </section>
+      )}
 
-      <AdminTransactionsPanel />
+      {!isLoading ? <AdminTransactionsPanel /> : null}
 
       <UserDetailsDialog
         selectedUser={selectedUser}
