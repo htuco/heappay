@@ -7,7 +7,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, AlertCircle } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { getApiErrorMessage } from '@/utils/api'
 
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +53,35 @@ function SingleTooltip({ active, payload, label }) {
 function ChartShimmer() {
   return (
     <div className="h-64 w-full animate-pulse rounded-surface bg-muted/60" />
+  )
+}
+
+function ChartErrorState({ error, onRetry }) {
+  const message = getApiErrorMessage(error, 'Could not load transaction data.')
+
+  return (
+    <div
+      role="alert"
+      className="flex h-64 items-center justify-center rounded-input border border-destructive/25 bg-destructive/10 p-5"
+    >
+      <div className="flex max-w-md flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
+        <AlertCircle className="h-8 w-8 shrink-0 text-destructive" aria-hidden="true" />
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-destructive">Could not load money flow</h3>
+            <p className="mt-1 text-sm leading-6 text-destructive/85">{message}</p>
+          </div>
+          {onRetry ? (
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onRetry}>
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground">Please refresh the page to try again.</p>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -96,28 +128,13 @@ export default function MoneyFlowPlaceholder({
           </h2>
           <p className="text-xs text-muted-foreground">Last 6 months</p>
         </div>
-
-        {error && onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Retry
-          </button>
-        )}
       </header>
 
       {/* Loading */}
       {isLoading && <ChartShimmer />}
 
       {/* Error */}
-      {!isLoading && error && (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-sm text-destructive">Could not load transaction data.</p>
-        </div>
-      )}
+      {!isLoading && error ? <ChartErrorState error={error} onRetry={onRetry} /> : null}
 
       {/* Empty state */}
       {!isLoading && !error && isEmpty && (

@@ -11,7 +11,7 @@ from services.request.request import (
     ForbiddenError,
     InsufficientBalanceError,
     NotRefundableError,
-    RefundAlreadyPendingError,
+    RefundAlreadyExistsError,
     RequestNotFoundError,
     RequestService,
     TransactionNotFoundError,
@@ -23,7 +23,14 @@ _NOT_FOUND = "Request not found."
 _TX_NOT_FOUND = "Transaction not found."
 _FORBIDDEN = "You do not have access to this resource."
 _NOT_REFUNDABLE = "This transaction cannot be refunded."
-_ALREADY_PENDING = "A refund request already exists for this transaction."
+# Status-aware messages for the "one refund per transaction" rule.
+_REFUND_EXISTS_BY_STATUS = {
+    "pending": "A refund request for this transaction is already under review.",
+    "approved": "This transaction has already been refunded.",
+    "declined": "A refund for this transaction was declined. That decision is final.",
+    "cancelled": "A refund request for this transaction was already cancelled.",
+}
+_REFUND_EXISTS_DEFAULT = "A refund request already exists for this transaction."
 _INSUFFICIENT_BALANCE = "Recipient card has insufficient balance to process the refund."
 
 
@@ -92,8 +99,9 @@ def create_refund_request(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN) from None
     except NotRefundableError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-    except RefundAlreadyPendingError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_ALREADY_PENDING) from None
+    except RefundAlreadyExistsError as exc:
+        detail = _REFUND_EXISTS_BY_STATUS.get(exc.status, _REFUND_EXISTS_DEFAULT)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail) from None
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund request submitted. The review team will process it.",

@@ -28,8 +28,10 @@ export default function QuickActions({ onSend, onTopUp, onAddNew }) {
       <div className="flex flex-col gap-2.5">
         {ACTIONS.map(({ label, icon: Icon, key, disabled }) => (
           disabled ? (
-            <div
+            <button
               key={label}
+              type="button"
+              disabled
               title="Coming soon"
               className="flex w-full items-center justify-between gap-3 rounded-input border border-border/70 bg-background px-3 py-2 text-sm font-semibold text-foreground opacity-50 cursor-not-allowed select-none"
             >
@@ -42,7 +44,7 @@ export default function QuickActions({ onSend, onTopUp, onAddNew }) {
               <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
                 Coming soon
               </span>
-            </div>
+            </button>
           ) : (
             <button
               key={label}

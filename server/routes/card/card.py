@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from tasks.sync import run_sync_for_user
 from repositories.card.card import CardRepository
 from routes.dependencies import UserContext, get_user_context, require_admin, require_staff
 from schemas.card import CardCreate, CardLookupResponse, CardPatch, CardResponse
@@ -16,6 +17,7 @@ from services.card.card import (
     CardStatusNotFoundError,
     CardTypeNotFoundError,
     DuplicateCardNumberError,
+    NoSweepDestinationError,
     UserNotFoundError,
 )
 from settings import get_settings
@@ -30,6 +32,9 @@ _DUPLICATE_CARD_NUMBER = "A card with this number is already registered."
 _CARD_BELONGS_TO_ANOTHER_ACCOUNT = "This card belongs to another account."
 _CARD_HAS_TRANSACTIONS = "This card cannot be permanently deleted because it has transaction history."
 _CARD_HAS_PENDING_TRANSACTIONS = "This card has a pending transaction. Wait for it to settle before removing the card."
+_CARD_NO_SWEEP_DESTINATION = (
+    "Cannot remove the only card while it has a balance. Add another card first."
+)
 _FORBIDDEN = "You do not have access to this card."
 _FORBIDDEN_OTHER_USER = "You cannot manage cards for other users."
 _NO_MAIN_CARD = "No main card set for this user."
@@ -195,6 +200,7 @@ def get_card(
 @router.post("", response_model=CardResponse, status_code=status.HTTP_201_CREATED)
 def create_card(
     payload: CardCreate,
+    background_tasks: BackgroundTasks,
     ctx: UserContext = Depends(get_user_context),
     service: CardService = Depends(get_card_service),
 ) -> CardResponse:
@@ -225,6 +231,7 @@ def create_card(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_TYPE_NOT_FOUND
         ) from None
+    background_tasks.add_task(run_sync_for_user, payload.user_id)
     return _to_response_with_pending(row, service)
 
 
@@ -280,6 +287,11 @@ def delete_card(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=_CARD_HAS_PENDING_TRANSACTIONS,
+        ) from None
+    except NoSweepDestinationError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_CARD_NO_SWEEP_DESTINATION,
         ) from None
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

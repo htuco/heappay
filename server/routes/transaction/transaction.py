@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -14,11 +14,14 @@ from schemas.transaction import (
     TransactionSummaryPoint,
     TransactionSummaryResponse,
 )
+from tasks.sync import run_sync_for_user
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.transaction.transaction import (
     CardNotFoundError,
     ForbiddenError,
     InsufficientBalanceError,
+    InvalidTransactionTransitionError,
+    ProcessingDelayNotElapsedError,
     TransactionNotFoundError,
     TransactionService,
     TransactionStatusNotFoundError,
@@ -34,6 +37,8 @@ _TYPE_NOT_FOUND = "Transaction type not found."
 _STATUS_NOT_FOUND = "Transaction status not found."
 _INSUFFICIENT_BALANCE = "Sender card has insufficient balance."
 _FORBIDDEN = "You do not have access to this resource."
+_INVALID_TRANSITION = "This status change is not allowed for the transaction."
+_PROCESSING_DELAY = "The transaction is still being processed. Try again shortly."
 
 
 def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService:
@@ -184,6 +189,14 @@ def patch_transaction_as_staff(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
         ) from None
+    except InvalidTransactionTransitionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_TRANSITION
+        ) from None
+    except ProcessingDelayNotElapsedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_PROCESSING_DELAY
+        ) from None
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction updated successfully.",
@@ -278,6 +291,7 @@ def get_transaction(
 def create_transaction(
     payload: TransactionCreate,
     response: Response,
+    background_tasks: BackgroundTasks,
     user_id: int = Depends(get_current_user_id),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionResponse]:
@@ -306,6 +320,7 @@ def create_transaction(
     response.status_code = (
         status.HTTP_201_CREATED if created else status.HTTP_200_OK
     )
+    background_tasks.add_task(run_sync_for_user, user_id)
     return ApiResponse[TransactionResponse](
         success=True,
         message=(
@@ -337,6 +352,14 @@ def patch_transaction(
     except ForbiddenError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
+    except InvalidTransactionTransitionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_TRANSITION
+        ) from None
+    except ProcessingDelayNotElapsedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_PROCESSING_DELAY
         ) from None
     return ApiResponse[TransactionResponse](
         success=True,
