@@ -18,12 +18,13 @@ from routes.user.auth import router as auth_router
 from routes.user.user import router as users_router
 from routes.user.user_role import router as user_role_router
 from routes.user.user_status import router as user_status_router
+from jobs.scheduler import lifespan as transaction_processor_lifespan
 from settings import get_settings
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI()
+    app = FastAPI(lifespan=transaction_processor_lifespan(settings))
     cors_kwargs: dict = {
         "allow_origins": settings.cors_origin_list,
         "allow_credentials": True,

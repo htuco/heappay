@@ -12,7 +12,7 @@ import {
   normalizeApiCard,
   normalizeApiCards,
 } from '@/utils/cardApiAdapter'
-import { subscribeDataChange } from '@/utils/dataEvents'
+import { DATA_CHANGE_KINDS, emitDataChange, subscribeDataChange } from '@/utils/dataEvents'
 
 const MIN_LOADING_MS = 2000
 
@@ -249,6 +249,7 @@ export function useWalletCards() {
 
       try {
         await deleteCardService(cardId)
+        emitDataChange(DATA_CHANGE_KINDS.CARD)
       } catch (err) {
         setCards(previousCards)
         const message = getApiErrorMessage(err, err?.message || 'Unable to remove card.')
