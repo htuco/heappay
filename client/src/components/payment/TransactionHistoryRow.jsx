@@ -58,7 +58,7 @@ const STATUS_STYLE = {
 function StatusPill({ label, variant }) {
   const cls = STATUS_STYLE[variant] ?? STATUS_STYLE.secondary
   return (
-    <span className={`inline-flex items-center rounded-input px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset leading-none ${cls}`}>
+    <span className={`inline-flex items-center rounded-chip px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset leading-none ${cls}`}>
       {label}
     </span>
   )

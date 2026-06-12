@@ -273,7 +273,7 @@ function TransferFlow({ transaction }) {
   if (!sender && !recipient) return null
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 px-4 py-4">
+    <div className="flex items-center gap-3 rounded-surface border border-border bg-muted/20 px-4 py-4">
       <PartyCard
         label="Sender"
         party={sender}
