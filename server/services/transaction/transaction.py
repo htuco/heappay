@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy.exc import IntegrityError
+
 from models.transaction import Transaction
 from repositories.transaction.transaction import TransactionRepository, TransactionStateError
 from schemas.transaction import TransactionCreate, TransactionPatch
@@ -121,7 +123,15 @@ class TransactionService:
             raise ForbiddenError()
         return row
 
-    def create(self, payload: TransactionCreate, *, user_id: int) -> Transaction:
+    def create(self, payload: TransactionCreate, *, user_id: int) -> tuple[Transaction, bool]:
+        """Create a transaction. Returns (row, created) where created is False on idempotent replay."""
+        if payload.idempotency_key:
+            existing = self._repo.get_by_idempotency_key(payload.idempotency_key)
+            if existing is not None:
+                if not self._user_participates(existing, user_id):
+                    raise ForbiddenError()
+                return existing, False
+
         if not self._repo.transaction_type_exists(payload.transaction_type_id):
             raise TransactionTypeNotFoundError()
 
@@ -154,15 +164,32 @@ class TransactionService:
             seconds=delay_seconds
         )
 
-        return self._repo.create_with_balance_update(
-            sender_card=sender_card,
-            recipient_card=recipient_card,
-            transaction_type_id=payload.transaction_type_id,
-            status_id=status_id,
-            amount=payload.amount,
-            note=payload.note,
-            processing_eligible_at=processing_eligible_at,
-        )
+        try:
+            row = self._repo.create_with_balance_update(
+                sender_card=sender_card,
+                recipient_card=recipient_card,
+                transaction_type_id=payload.transaction_type_id,
+                status_id=status_id,
+                amount=payload.amount,
+                note=payload.note,
+                processing_eligible_at=processing_eligible_at,
+                idempotency_key=payload.idempotency_key,
+            )
+            return row, True
+        except IntegrityError as exc:
+            self._repo.rollback()
+            if payload.idempotency_key and self._is_idempotency_violation(exc):
+                existing = self._repo.get_by_idempotency_key(payload.idempotency_key)
+                if existing is not None:
+                    if not self._user_participates(existing, user_id):
+                        raise ForbiddenError()
+                    return existing, False
+            raise
+
+    @staticmethod
+    def _is_idempotency_violation(exc: IntegrityError) -> bool:
+        message = str(exc.orig).lower()
+        return "idempotency" in message or "uq_transactions_idempotency_key" in message
 
     def patch(
         self, transaction_id: int, payload: TransactionPatch, *, user_id: int

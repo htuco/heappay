@@ -74,6 +74,7 @@ export const TRANSACTION_API_ERROR_CODES = Object.freeze({
  * @property {number} transaction_type_id
  * @property {number | string} amount         - Positive decimal (e.g. 100.00 or "100.00")
  * @property {string | null=} note
+ * @property {string | null=} idempotency_key - Safe retry key; same key returns existing transaction
  */
 
 /**
