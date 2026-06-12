@@ -77,6 +77,10 @@ class TransactionResponse(BaseModel):
     amount: Decimal
     note: str | None
     created_at: datetime
+    processing_eligible_at: datetime
+    processed_at: datetime | None = None
+    processed_by: str | None = None
+    deny_reason_code: str | None = None
     has_pending_refund: bool = False
     sender: TransactionPartyResponse | None = Field(
         default=None, validation_alias=AliasPath("sender_card")

@@ -22,6 +22,16 @@ import useTransactionDetail from '@/hooks/useTransactionDetail'
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
 const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Rejected', 4: 'Reversed' }
 const STATUS_VARIANT = { 1: 'warning', 2: 'success', 3: 'error', 4: 'secondary' }
+
+// Pre-check copy for the refund button when a refund already exists for this
+// transaction (a transaction can have at most one refund ever). `refund_status`
+// comes straight from the transaction detail response — no extra round-trip.
+const REFUND_STATUS_UI = {
+  pending: { button: 'Refund requested', note: 'Refund request created. The review team will process it.' },
+  approved: { button: 'Refund approved', note: 'This transaction has already been refunded.' },
+  declined: { button: 'Refund declined', note: 'A refund for this transaction was declined. That decision is final.' },
+  cancelled: { button: 'Refund cancelled', note: 'A previous refund request for this transaction was cancelled.' },
+}
 const CLOSE_ANIMATION_MS = 240
 const PANEL_ENTER_ANIMATION =
   'animate-[transaction-detail-slide-in_240ms_cubic-bezier(0.16,1,0.3,1)_both]'
@@ -363,7 +373,17 @@ function PanelBody({
   const transactionId = getTransactionId(detail)
   const sentByCurrentUser = isSentByCurrentUser(detail, ownedCardIds, currentUserId)
   const canCancel = isPending(detail) && sentByCurrentUser
-  const refundRequested = detail?.has_pending_refund || refundRequestedTransactionIds?.has(transactionId)
+  // A refund already exists for this transaction if the detail says so (any
+  // status — pending/approved/declined/cancelled) or it was just requested in
+  // this session. `refund_status` is authoritative when present; the optimistic
+  // set and has_pending_refund both imply "pending".
+  const existingRefundStatus =
+    detail?.refund_status ??
+    ((detail?.has_pending_refund || refundRequestedTransactionIds?.has(transactionId))
+      ? 'pending'
+      : null)
+  const refundRequested = existingRefundStatus !== null
+  const refundUi = existingRefundStatus ? REFUND_STATUS_UI[existingRefundStatus] : null
   const canRefund =
     isUserToUserTransaction(detail) &&
     isCompleted(detail) &&
@@ -445,11 +465,11 @@ function PanelBody({
               onClick={() => onRefund?.(detail)}
             >
               <RotateCcw className="mr-2 size-4" />
-              {refundRequested ? 'Refund requested' : 'Request refund'}
+              {refundUi ? refundUi.button : 'Request refund'}
             </Button>
-            {refundRequested && (
+            {refundUi && (
               <p className="col-span-2 -mt-1 text-center text-xs leading-5 text-muted-foreground">
-                Refund request created. The review team will process it.
+                {refundUi.note}
               </p>
             )}
           </>

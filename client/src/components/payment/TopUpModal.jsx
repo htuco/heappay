@@ -11,6 +11,7 @@ import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 import { listCards } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
@@ -292,7 +293,7 @@ export default function TopUpModal({
 
     try {
       const card = cards.find((c) => c.card_id === selectedCardId)
-      await transactionsService.create({
+      const created = await transactionsService.create({
         sender_card_id: null,
         recipient_card_id: selectedCardId,
         transaction_type_id: depositTypeId,
@@ -302,7 +303,11 @@ export default function TopUpModal({
 
       notify({
         type: 'success',
+        category: CATEGORIES.PAYMENT_RECEIVED,
         message: `${formatMoney(amountNum)} added to card ****${card.last_four}.`,
+        link: created?.transaction_id
+          ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
+          : { route: '/payments' },
       })
       emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
       onSuccess?.()

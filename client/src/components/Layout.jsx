@@ -4,7 +4,7 @@ import Navbar from './ui/navbar'
 import LoginNavButton from './ui/LoginNavButton'
 import logo from '@/assets/logo.png'
 import ToastStack from './ui/ToastStack'
-import NotificationPanel from './ui/NotificationPanel'
+import NotificationPanel from './notifications/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
 import ChatWidget from './chat/ChatWidget'
 

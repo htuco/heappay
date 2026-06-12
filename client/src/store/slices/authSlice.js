@@ -29,6 +29,25 @@ export const hydrateSession = createAsyncThunk(
   },
 )
 
+/** Re-fetch /auth/me (e.g. on window focus) so status_id changes apply without full reload. */
+export const refreshSession = createAsyncThunk(
+  'auth/refreshSession',
+  async (_, { rejectWithValue }) => {
+    const hasAccessToken = Boolean(getAuthToken())
+    const hasRefreshToken = Boolean(getAuthRefreshToken())
+
+    if (!hasAccessToken && !hasRefreshToken) {
+      return null
+    }
+
+    try {
+      return await authService.getMe()
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to refresh session.'))
+    }
+  },
+)
+
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password, remember }, { rejectWithValue }) => {
@@ -126,6 +145,13 @@ const authSlice = createSlice({
         state.user = null
         state.status = 'unauthenticated'
         state.error = action.payload ?? 'Failed to restore session.'
+      })
+      .addCase(refreshSession.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.user = action.payload
+          state.status = 'authenticated'
+        }
+        state.error = null
       })
       .addCase(loginUser.pending, (state) => {
         state.status = 'loading'

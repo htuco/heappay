@@ -7,6 +7,7 @@ from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
 from routes.storage.deps import get_supabase_image_storage_service
 from schemas.user.auth import (
+    AcceptInvitationRequest,
     AuthResponse,
     ChangePasswordRequest,
     DeactivateAccountRequest,
@@ -104,6 +105,39 @@ def change_password(
         raise InvalidInput("Could not update password.") from None
 
     return AuthResponse(success=True, message="Password updated successfully.", data=None)
+
+
+@router.post("/accept-invitation", response_model=AuthResponse)
+def accept_invitation(
+    payload: AcceptInvitationRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        token_data = service.accept_invitation(
+            user_id,
+            payload,
+            credentials.credentials,
+        )
+    except ValueError as exc:
+        if str(exc) == "NOT_INVITED":
+            raise InvalidInput(
+                "Only invited accounts can complete onboarding here.",
+            ) from None
+        raise InvalidInput("Could not complete invitation.") from None
+
+    return AuthResponse(
+        success=True,
+        message="Invitation accepted. Your account is now active.",
+        data=token_data,
+    )
 
 
 @router.post("/deactivate", response_model=AuthResponse)

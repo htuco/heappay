@@ -20,6 +20,8 @@ from services.transaction.transaction import (
     CardNotFoundError,
     ForbiddenError,
     InsufficientBalanceError,
+    InvalidTransactionTransitionError,
+    ProcessingDelayNotElapsedError,
     TransactionNotFoundError,
     TransactionService,
     TransactionStatusNotFoundError,
@@ -35,6 +37,8 @@ _TYPE_NOT_FOUND = "Transaction type not found."
 _STATUS_NOT_FOUND = "Transaction status not found."
 _INSUFFICIENT_BALANCE = "Sender card has insufficient balance."
 _FORBIDDEN = "You do not have access to this resource."
+_INVALID_TRANSITION = "This status change is not allowed for the transaction."
+_PROCESSING_DELAY = "The transaction is still being processed. Try again shortly."
 
 
 def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService:
@@ -185,6 +189,14 @@ def patch_transaction_as_staff(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
         ) from None
+    except InvalidTransactionTransitionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_TRANSITION
+        ) from None
+    except ProcessingDelayNotElapsedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_PROCESSING_DELAY
+        ) from None
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction updated successfully.",
@@ -332,6 +344,14 @@ def patch_transaction(
     except ForbiddenError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
+    except InvalidTransactionTransitionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_TRANSITION
+        ) from None
+    except ProcessingDelayNotElapsedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_PROCESSING_DELAY
         ) from None
     return ApiResponse[TransactionResponse](
         success=True,
