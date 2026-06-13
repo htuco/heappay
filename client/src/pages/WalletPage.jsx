@@ -73,7 +73,7 @@ export default function WalletPage() {
             highlight ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
           }`}
         >
-          <WalletSection className="h-full">
+          <WalletSection className="h-full" mobileChromeless>
             {cards.length === 0 && !isLoading ? (
               <div className="flex flex-col items-center gap-3 rounded-surface bg-muted/30 p-12 text-center">
                 <span className="rounded-surface bg-linear-to-br from-primary to-primary-light p-3.5 text-primary-foreground shadow-lg shadow-primary/30">

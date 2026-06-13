@@ -52,7 +52,7 @@ export default function DashboardPlaceholder({
   const showList = !isLoading && !errorText
 
   return (
-    <section className="flex h-full flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
+    <section className="flex h-full min-w-0 flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
       <header className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-card-foreground sm:text-lg">{title}</h2>
         <Link

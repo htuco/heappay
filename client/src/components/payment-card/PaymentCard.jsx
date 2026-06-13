@@ -1,9 +1,16 @@
+import { useEffect, useRef } from 'react'
 import Cards from 'react-credit-cards-2'
 
 import {
   formatExpiryDate,
   normalizeBrand,
 } from '@/utils/paymentCard.utils'
+
+// react-credit-cards-2 renders a fixed 290px-wide card that is only ever
+// resized with transform: scale(). Below md the CSS reads --rccs-scale to
+// fit the card to its container (see index.css).
+const RCCS_BASE_WIDTH = 290
+const RCCS_MAX_SCALE = 1.6
 
 const ISSUER_MAP = {
   amex: 'american-express',
@@ -32,6 +39,21 @@ export default function PaymentCard({
   className,
   onClick,
 }) {
+  const shellRef = useRef(null)
+
+  useEffect(() => {
+    const el = shellRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect?.width
+      if (!width) return
+      const scale = Math.min(RCCS_MAX_SCALE, width / RCCS_BASE_WIDTH)
+      el.style.setProperty('--rccs-scale', scale.toFixed(4))
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   const {
     cardHolderName = 'CARD HOLDER',
     cardNumber = '',
@@ -57,6 +79,7 @@ export default function PaymentCard({
 
   return (
     <article
+      ref={shellRef}
       className={classes}
       aria-disabled={isDisabled}
       onClick={cardAction}

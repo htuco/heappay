@@ -19,7 +19,7 @@ function DropdownMenuContent({ className, sideOffset = 6, ...props }) {
       <DropdownMenu.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-40 overflow-hidden rounded-surface border border-border bg-popover p-1 text-popover-foreground shadow-md shadow-black/5 dark:shadow-black/20",
+          "z-50 min-w-40 max-h-(--radix-dropdown-menu-content-available-height) overflow-y-auto rounded-surface border border-border bg-popover p-1 text-popover-foreground shadow-md shadow-black/5 dark:shadow-black/20",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
           className
         )}
@@ -33,7 +33,7 @@ function DropdownMenuItem({ className, inset, destructive, ...props }) {
   return (
     <DropdownMenu.Item
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-input px-2 py-1.5 text-sm font-medium outline-none transition-colors focus:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex min-h-11 md:min-h-0 cursor-pointer select-none items-center gap-2 rounded-input px-2 py-1.5 text-sm font-medium outline-none transition-colors touch-manipulation focus:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         inset && "pl-8",
         destructive && "text-destructive focus:bg-destructive/10",
         className
@@ -69,7 +69,7 @@ function DropdownMenuCheckboxItem({ className, children, checked, ...props }) {
   return (
     <DropdownMenu.CheckboxItem
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-input py-1.5 pl-8 pr-2 text-sm font-medium outline-none transition-colors focus:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex min-h-11 md:min-h-0 cursor-pointer select-none items-center rounded-input py-1.5 pl-8 pr-2 text-sm font-medium outline-none transition-colors touch-manipulation focus:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50",
         className
       )}
       checked={checked}
@@ -89,7 +89,7 @@ function DropdownMenuRadioItem({ className, children, ...props }) {
   return (
     <DropdownMenu.RadioItem
       className={cn(
-        "relative flex cursor-pointer select-none items-center rounded-input py-1.5 pl-8 pr-2 text-sm font-medium outline-none transition-colors focus:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex min-h-11 md:min-h-0 cursor-pointer select-none items-center rounded-input py-1.5 pl-8 pr-2 text-sm font-medium outline-none transition-colors touch-manipulation focus:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50",
         className
       )}
       {...props}
@@ -108,7 +108,7 @@ function DropdownMenuSubTrigger({ className, inset, children, ...props }) {
   return (
     <DropdownMenu.SubTrigger
       className={cn(
-        "flex cursor-pointer select-none items-center gap-2 rounded-input px-2 py-1.5 text-sm font-medium outline-none focus:bg-muted data-[state=open]:bg-muted [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex min-h-11 md:min-h-0 cursor-pointer select-none items-center gap-2 rounded-input px-2 py-1.5 text-sm font-medium outline-none touch-manipulation focus:bg-muted data-[state=open]:bg-muted [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         inset && "pl-8",
         className
       )}

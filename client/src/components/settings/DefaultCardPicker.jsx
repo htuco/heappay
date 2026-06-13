@@ -63,7 +63,7 @@ export default function DefaultCardPicker({ cards, onSelect }) {
           tabIndex={index === tabbableIndex ? 0 : -1}
           onClick={() => !item.isMain && onSelect(Number(item.id))}
           onKeyDown={(event) => handleKeyDown(event, index)}
-          className={`flex w-full items-center gap-3 rounded-input border p-3 text-left transition-colors focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${
+          className={`flex w-full items-center gap-3 rounded-input border p-3 text-left transition-colors touch-manipulation focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${
             item.isMain
               ? 'border-primary/40 bg-primary/5'
               : 'border-border bg-card hover:border-primary/30 hover:bg-muted/20'

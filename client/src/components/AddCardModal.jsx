@@ -69,7 +69,7 @@ function FieldLabel({ htmlFor, children }) {
 }
 
 const inputClass =
-  "h-11 w-full rounded-input border border-border bg-background px-3.5 text-sm text-card-foreground placeholder:text-muted-foreground transition-colors focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
+  "h-11 w-full rounded-input border border-border bg-background px-3.5 text-base md:text-sm text-card-foreground placeholder:text-muted-foreground transition-colors focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
 const inputErrorClass =
   "border-destructive focus:border-destructive focus:ring-destructive/20"
 const errorTextClass = "mt-1 text-xs font-medium text-destructive"
@@ -382,7 +382,7 @@ export default function AddCardModal({
                       setForm((f) => ({ ...f, cardType: type }))
                     }
                     className={cn(
-                      "flex-1 rounded-chip px-3 py-2 text-sm font-semibold capitalize transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      "flex-1 min-h-11 md:min-h-0 rounded-chip px-3 py-2 text-sm font-semibold capitalize transition-all duration-200 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       selected
                         ? "bg-card text-card-foreground shadow-sm ring-1 ring-border"
                         : "text-muted-foreground hover:text-card-foreground"

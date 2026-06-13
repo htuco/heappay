@@ -18,7 +18,7 @@ export function ModalTitle({ className, children, ...props }) {
 }
 
 const modalVariants = cva(
-  "bg-background border border-border/60 rounded-panel w-full max-h-[90vh] overflow-auto relative animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-16 duration-400 ease-modal-spring",
+  "bg-background border border-border/60 rounded-panel w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-auto relative animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-16 duration-400 ease-modal-spring",
   {
     variants: {
       size: {
@@ -77,7 +77,7 @@ const Modal = forwardRef(
 
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-xs animate-in fade-in-0 duration-200"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-3 sm:p-4 backdrop-blur-xs animate-in fade-in-0 duration-200"
         onClick={handleBackdropClick}
         role="dialog"
         aria-modal="true"
@@ -117,7 +117,7 @@ const Modal = forwardRef(
                   <button
                     type="button"
                     onClick={onClose}
-                    className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="shrink-0 inline-flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors touch-manipulation hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     aria-label="Close modal"
                   >
                     <X size={15} strokeWidth={2.5} />

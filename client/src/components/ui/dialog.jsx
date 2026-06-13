@@ -29,7 +29,7 @@ function DialogContent({ className, overlayClassName, closeButtonClassName, chil
       <DialogOverlay className={overlayClassName} />
       <Dialog.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-panel border border-border bg-popover p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.8)] dark:shadow-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-50 data-[state=open]:slide-in-from-bottom-16 data-[state=open]:duration-400 data-[state=open]:ease-modal-spring",
+          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-1.5rem)] sm:w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-panel border border-border bg-popover p-5 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.8)] dark:shadow-none max-h-[calc(100dvh-1.5rem)] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-50 data-[state=open]:slide-in-from-bottom-16 data-[state=open]:duration-400 data-[state=open]:ease-modal-spring",
           className
         )}
         {...props}
@@ -37,7 +37,7 @@ function DialogContent({ className, overlayClassName, closeButtonClassName, chil
         {children}
         <Dialog.Close
           className={cn(
-            "absolute right-5 top-5 inline-flex size-8.5 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+            "absolute right-3 top-3 inline-flex size-11 md:right-5 md:top-5 md:size-8.5 items-center justify-center rounded-full text-slate-500 transition-colors touch-manipulation hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
             closeButtonClassName,
           )}
         >

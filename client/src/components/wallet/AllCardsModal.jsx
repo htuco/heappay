@@ -537,7 +537,7 @@ export default function AllCardsModal({
               <p className="text-xs text-muted-foreground">
                 Add another card to expand your wallet.
               </p>
-              <div className="shrink-0">{addCardSlot}</div>
+              <div className="shrink-0 *:w-full sm:*:w-auto">{addCardSlot}</div>
             </>
           ) : null
         }

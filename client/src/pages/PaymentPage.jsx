@@ -48,7 +48,7 @@ function getTransactionId(transaction) {
 }
 
 const PAYMENT_DIALOG_CLOSE_BUTTON_CLASS =
-  'size-8 p-0 opacity-60 hover:opacity-100 dark:hover:bg-white/10'
+  'size-11 md:size-8 p-0 opacity-60 hover:opacity-100 dark:hover:bg-white/10'
 
 export default function PaymentPage() {
   const { notify } = useNotifications()

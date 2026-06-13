@@ -92,7 +92,7 @@ export default function RecipientPicker({
                 key={user.user_id}
                 type="button"
                 onClick={() => handleSelect(user)}
-                className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/40"
+                className="flex min-h-11 w-full items-center gap-3 px-3 py-3 text-left transition-colors touch-manipulation hover:bg-muted/40"
               >
                 <UserAvatar user={user} className="h-9 w-9 text-xs" />
                 <div className="min-w-0 flex-1">

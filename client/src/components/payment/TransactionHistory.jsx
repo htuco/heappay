@@ -116,9 +116,9 @@ export default function TransactionHistory({ onTransactionSelect, pageSize = 20 
     <div className="mx-auto max-w-5xl">
       {/* Filter toolbar */}
       {!error ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          {/* Search — grows to fill space */}
-          <div className="relative min-w-40 flex-1">
+        <div className="mb-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+          {/* Search — full row on phone, grows to fill space at md+ */}
+          <div className="relative md:min-w-40 md:flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
             <Input
               type="search"
@@ -130,57 +130,63 @@ export default function TransactionHistory({ onTransactionSelect, pageSize = 20 
             />
           </div>
 
-          <Input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            disabled={!hasTransactions && !isLoading}
-            className="h-8 w-auto rounded-input border-border/70 bg-background text-sm shadow-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          />
+          {/* Filters — two-up grid on phone, inline at md+ */}
+          <div className="grid grid-cols-2 gap-2 md:contents">
+            <Input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              disabled={!hasTransactions && !isLoading}
+              className="h-8 rounded-input border-border/70 bg-background text-sm shadow-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:w-auto"
+            />
 
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            disabled={!hasTransactions && !isLoading}
-            options={[{ value: 'all', label: 'All statuses' }, ...TRANSACTION_STATUS_OPTIONS]}
-            className="h-8 w-auto rounded-input border-border/70 bg-background py-0 text-sm shadow-none"
-          />
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              disabled={!hasTransactions && !isLoading}
+              options={[{ value: 'all', label: 'All statuses' }, ...TRANSACTION_STATUS_OPTIONS]}
+              className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
+            />
 
-          <Select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            disabled={!hasTransactions && !isLoading}
-            options={[{ value: 'all', label: 'All types' }, ...TRANSACTION_TYPE_OPTIONS]}
-            className="h-8 w-auto rounded-input border-border/70 bg-background py-0 text-sm shadow-none"
-          />
+            <Select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              disabled={!hasTransactions && !isLoading}
+              options={[{ value: 'all', label: 'All types' }, ...TRANSACTION_TYPE_OPTIONS]}
+              className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
+            />
 
-          <Select
-            value={dateSort}
-            onChange={(e) => setDateSort(e.target.value)}
-            disabled={!hasTransactions && !isLoading}
-            options={DATE_SORT_OPTIONS}
-            className="h-8 w-auto rounded-input border-border/70 bg-background py-0 text-sm shadow-none"
-          />
+            <Select
+              value={dateSort}
+              onChange={(e) => setDateSort(e.target.value)}
+              disabled={!hasTransactions && !isLoading}
+              options={DATE_SORT_OPTIONS}
+              className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
+            />
+          </div>
 
-          {isFilterActive ? (
-            <Button
-              variant="ghost"
-              className="h-8 gap-1 px-2.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-              onClick={clearFilters}
-            >
-              <X className="h-3 w-3" />
-              Clear
-            </Button>
-          ) : null}
+          {/* Clear + count — one row on phone, inline at md+ */}
+          <div className="flex items-center gap-2 md:contents">
+            {isFilterActive ? (
+              <Button
+                variant="ghost"
+                className="h-8 gap-1 px-2.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                onClick={clearFilters}
+              >
+                <X className="h-3 w-3" />
+                Clear
+              </Button>
+            ) : null}
 
-          {/* Transaction count — right-aligned in toolbar */}
-          {!isLoading ? (
-            <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-              {isFilterActive
-                ? `${filteredTransactions.length} of ${total} transactions`
-                : `${total} transaction${total !== 1 ? 's' : ''}`}
-            </span>
-          ) : null}
+            {/* Transaction count — right-aligned in toolbar */}
+            {!isLoading ? (
+              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                {isFilterActive
+                  ? `${filteredTransactions.length} of ${total} transactions`
+                  : `${total} transaction${total !== 1 ? 's' : ''}`}
+              </span>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

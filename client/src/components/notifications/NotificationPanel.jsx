@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell, MoreHorizontal, X } from 'lucide-react'
 import { useNotifications } from '@/context/NotificationContext'
 import { useNotificationNavigation } from '@/context/notifications/useNotificationNavigation'
@@ -20,6 +21,7 @@ export default function NotificationPanel() {
 	const [open, setOpen] = useState(false)
 	const [menuOpen, setMenuOpen] = useState(false)
 	const panelRef = useRef(null)
+	const sheetRef = useRef(null)
 	const menuRef = useRef(null)
 
 	const groups = useMemo(() => groupByDay(history), [history])
@@ -44,9 +46,10 @@ export default function NotificationPanel() {
 	useEffect(() => {
 		if (!open) return
 		const handler = (e) => {
-			if (panelRef.current && !panelRef.current.contains(e.target)) {
-				handleClose()
-			}
+			if (panelRef.current?.contains(e.target)) return
+			// The mobile sheet is portaled to <body>, outside panelRef
+			if (sheetRef.current?.contains(e.target)) return
+			handleClose()
 		}
 		document.addEventListener('mousedown', handler)
 		return () => document.removeEventListener('mousedown', handler)
@@ -171,7 +174,7 @@ export default function NotificationPanel() {
 					<button
 						type="button"
 						onClick={handleClose}
-						className="sm:hidden rounded-pill p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+						className="sm:hidden flex h-11 w-11 items-center justify-center rounded-pill text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-manipulation"
 						aria-label="Close notifications"
 					>
 						<X className="h-4 w-4" />
@@ -212,7 +215,7 @@ export default function NotificationPanel() {
 			<button
 				type="button"
 				onClick={handleToggle}
-				className="nav-pill relative p-2 rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+				className="nav-pill relative flex h-11 w-11 items-center justify-center rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground touch-manipulation md:h-auto md:w-auto md:p-2"
 				aria-label="Notifications"
 				aria-haspopup="dialog"
 				aria-expanded={open}
@@ -239,31 +242,35 @@ export default function NotificationPanel() {
 				</div>
 			)}
 
-			{/* Mobile bottom sheet */}
-			{open && (
-				<div className="sm:hidden fixed inset-0 z-50 flex flex-col animate-in fade-in-0 duration-200">
-					<div
-						className="flex-1 bg-overlay backdrop-blur-xs"
-						onClick={handleClose}
-						aria-hidden
-					/>
-					<div
-						className={cn(
-							'flex flex-col rounded-t-panel border-t border-border bg-popover',
-							'max-h-[85vh]',
-							SHEET_OPEN_CLASSES,
-						)}
-						role="dialog"
-						aria-modal="true"
-						aria-label="Notifications"
-					>
-						<div className="flex justify-center pt-2 pb-1">
-							<span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
+			{/* Mobile bottom sheet — portaled to <body> so the header's
+			    backdrop-blur doesn't become its fixed-position containing block */}
+			{open &&
+				createPortal(
+					<div className="sm:hidden fixed inset-0 z-50 flex flex-col animate-in fade-in-0 duration-200">
+						<div
+							className="flex-1 bg-overlay backdrop-blur-xs"
+							onClick={handleClose}
+							aria-hidden
+						/>
+						<div
+							ref={sheetRef}
+							className={cn(
+								'flex flex-col rounded-t-panel border-t border-border bg-popover',
+								'max-h-[85vh] pb-[env(safe-area-inset-bottom,0px)]',
+								SHEET_OPEN_CLASSES,
+							)}
+							role="dialog"
+							aria-modal="true"
+							aria-label="Notifications"
+						>
+							<div className="flex justify-center pt-2 pb-1">
+								<span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
+							</div>
+							{body}
 						</div>
-						{body}
-					</div>
-				</div>
-			)}
+					</div>,
+					document.body,
+				)}
 		</div>
 	)
 }

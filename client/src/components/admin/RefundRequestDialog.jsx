@@ -80,7 +80,7 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
         overlayClassName="bg-slate-950/35 backdrop-blur-[10px]"
-        closeButtonClassName="size-8 p-0 opacity-60 hover:opacity-100 dark:hover:bg-white/10"
+        closeButtonClassName="size-11 md:size-8 p-0 opacity-60 hover:opacity-100 dark:hover:bg-white/10"
         className="max-w-[28rem] rounded-[20px] border border-border bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10"
       >
         <div className="p-6">

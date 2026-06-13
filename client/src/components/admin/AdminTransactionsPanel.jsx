@@ -77,65 +77,72 @@ export default function AdminTransactionsPanel() {
       )}
 
       {!error && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="pb-2 pr-4 text-xs font-medium text-muted-foreground">Request</th>
-                <th className="pb-2 pr-4 text-xs font-medium text-muted-foreground">Transaction</th>
-                <th className="pb-2 pr-4 text-xs font-medium text-muted-foreground">Reason</th>
-                <th className="pb-2 pr-4 text-xs font-medium text-muted-foreground">Submitted</th>
-                <th className="pb-2 text-xs font-medium text-muted-foreground" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {isLoading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 5 }).map((__, j) => (
-                      <td key={j} className="py-3 pr-4">
-                        <div className="h-3 w-20 animate-pulse rounded bg-muted" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : requests.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                    No pending refund requests.
-                  </td>
-                </tr>
-              ) : (
-                requests.map((req) => (
-                  <tr key={req.request_id} className="group hover:bg-muted/30 transition-colors">
-                    <td className="py-3 pr-4 font-medium text-card-foreground">
-                      #{req.request_id}
-                    </td>
-                    <td className="py-3 pr-4 text-muted-foreground">
+        <div className="overflow-hidden rounded-2xl border border-border">
+          {/* Column headers — table layout at sm+, stacked cards below */}
+          {!isLoading && requests.length > 0 && (
+            <div className="hidden border-b border-border bg-muted/40 px-4 py-2.5 sm:grid sm:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)_160px_92px] sm:gap-x-4">
+              <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Request</span>
+              <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Transaction</span>
+              <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Reason</span>
+              <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Submitted</span>
+              <span />
+            </div>
+          )}
+
+          <div className="divide-y divide-border/60">
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="hidden px-4 py-3 sm:grid sm:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)_160px_92px] sm:items-center sm:gap-x-4"
+                >
+                  {Array.from({ length: 5 }).map((__, j) => (
+                    <div key={j} className="h-3 w-20 animate-pulse rounded bg-muted" />
+                  ))}
+                </div>
+              ))
+            ) : requests.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No pending refund requests.
+              </div>
+            ) : (
+              requests.map((req) => (
+                <div
+                  key={req.request_id}
+                  className="group flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-muted/30 sm:grid sm:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)_160px_92px] sm:items-center sm:gap-x-4 sm:gap-y-0"
+                >
+                  {/* Request + transaction: inline pair on mobile, separate columns at sm+ */}
+                  <div className="flex items-center justify-between gap-3 sm:contents">
+                    <span className="font-medium text-card-foreground">#{req.request_id}</span>
+                    <span className="text-muted-foreground">
+                      <span className="mr-1 text-xs uppercase tracking-wider text-muted-foreground/70 sm:hidden">Txn</span>
                       #{req.refund_detail?.transaction_id ?? '—'}
-                    </td>
-                    <td className="py-3 pr-4 max-w-[180px]">
-                      <span className="block truncate text-card-foreground" title={req.note ?? ''}>
-                        {req.note ?? <span className="text-muted-foreground italic">No reason</span>}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4 text-muted-foreground whitespace-nowrap">
-                      {formatDate(req.created_at)}
-                    </td>
-                    <td className="py-3 text-right">
-                      <Button
-                        variant="outline"
-                        className="h-7 rounded-lg border-border px-3 text-xs font-medium shadow-none opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setSelectedRequest(req)}
-                      >
-                        Review
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </span>
+                  </div>
+
+                  <div className="min-w-0">
+                    <span className="block truncate text-card-foreground" title={req.note ?? ''}>
+                      {req.note ?? <span className="italic text-muted-foreground">No reason</span>}
+                    </span>
+                  </div>
+
+                  <span className="text-xs text-muted-foreground sm:whitespace-nowrap">
+                    {formatDate(req.created_at)}
+                  </span>
+
+                  <div className="flex sm:justify-end">
+                    <Button
+                      variant="outline"
+                      className="h-9 w-full rounded-lg border-border px-3 text-xs font-medium shadow-none transition-opacity touch-manipulation sm:h-7 sm:w-auto sm:opacity-0 sm:group-hover:opacity-100"
+                      onClick={() => setSelectedRequest(req)}
+                    >
+                      Review
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 

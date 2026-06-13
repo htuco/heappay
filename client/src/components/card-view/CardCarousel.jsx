@@ -37,7 +37,7 @@ const CREATIVE_EFFECT = {
 }
 
 const CAROUSEL_STAGE_CLASS =
-  'relative mx-auto w-full max-w-4xl overflow-visible px-2 py-8 min-h-[290px] sm:min-h-[310px] md:min-h-[330px]'
+  'relative mx-auto w-full max-w-4xl overflow-visible px-0 py-4 min-h-[190px] sm:px-2 sm:py-8 sm:min-h-[310px] md:min-h-[330px]'
 
 function getPrefersReducedMotion() {
   if (typeof window === 'undefined') return false

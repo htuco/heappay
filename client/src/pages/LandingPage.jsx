@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import Cards from 'react-credit-cards-2'
 import 'react-credit-cards-2/dist/es/styles-compiled.css'
-import logo from '@/assets/logo.png'
+import BrandLogo from '@/components/ui/BrandLogo'
 import { Button } from '@/components/ui/button'
 import {
   CreditCard,
@@ -10,7 +10,6 @@ import {
   ArrowLeftRight,
   ShieldCheck,
   TrendingUp,
-  Zap,
   Globe,
   Bell,
   ChevronRight,
@@ -212,9 +211,8 @@ export default function LandingPage() {
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <div className="flex items-center gap-2.5">
-            <img src={logo} alt="Heap" className="h-7 w-auto" />
-            <span className="text-lg font-bold tracking-tight">Heap</span>
+          <div className="flex items-center">
+            <BrandLogo className="h-9 w-auto" />
           </div>
           <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground sm:flex">
             <a href="#features"      className="transition hover:text-foreground">Features</a>
@@ -226,7 +224,7 @@ export default function LandingPage() {
               type="button"
               onClick={toggle}
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+              className="inline-flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full text-muted-foreground transition touch-manipulation hover:bg-muted/60 hover:text-foreground"
             >
               {isDark ? <Sun className="h-4 w-4" strokeWidth={2} /> : <Moon className="h-4 w-4" strokeWidth={2} />}
             </button>
@@ -253,11 +251,6 @@ export default function LandingPage() {
 
           {/* ─ Left: copy ─ */}
           <div className="order-2 lg:order-1 space-y-8 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-chip border border-primary/30 bg-primary/8 px-3.5 py-1.5 text-xs font-semibold text-primary">
-              <Zap className="h-3.5 w-3.5" />
-              Live card previews · 11 card networks
-            </div>
-
             <h1 className="text-5xl font-extrabold leading-[1.07] tracking-tight sm:text-6xl md:text-7xl">
               Your wallet,<br />
               <RotatingWord
@@ -553,7 +546,7 @@ export default function LandingPage() {
               Your money and your information stay yours.
             </p>
           </div>
-          <Button asChild className="ml-auto shrink-0 rounded-full px-6 font-semibold">
+          <Button asChild className="shrink-0 rounded-full px-6 font-semibold sm:ml-auto">
             <Link to="/register">Get started free</Link>
           </Button>
         </div>
@@ -612,11 +605,10 @@ export default function LandingPage() {
       <footer className="border-t border-border/60 bg-background">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-xs text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Heap" className="h-5 w-auto opacity-60" />
-            <span className="font-semibold">Heap</span>
+            <BrandLogo className="h-7 w-auto opacity-60" />
             <span>© {new Date().getFullYear()}</span>
           </div>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             <a href="#features"     className="transition hover:text-foreground">Features</a>
             <a href="#how"          className="transition hover:text-foreground">How it works</a>
             <a href="#testimonials" className="transition hover:text-foreground">Reviews</a>

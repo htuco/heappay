@@ -200,7 +200,7 @@ function CardsTab({ userId }) {
 
   return (
     <div className="rounded-input border border-border overflow-hidden">
-      <div className="grid grid-cols-[1fr_88px_88px_88px] gap-4 border-b border-border bg-muted/30 px-4 py-2.5">
+      <div className="hidden grid-cols-[1fr_88px_88px_88px] gap-4 border-b border-border bg-muted/30 px-4 py-2.5 sm:grid">
         <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Card</span>
         <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Type</span>
         <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</span>
@@ -211,7 +211,10 @@ function CardsTab({ userId }) {
           const blocked = card.status_id === 2
           const type = typesById[card.card_type_id]
           return (
-            <div key={card.card_id} className="grid grid-cols-[1fr_88px_88px_88px] items-center gap-4 px-4 py-3">
+            <div
+              key={card.card_id}
+              className="flex flex-col gap-3 px-4 py-3 sm:grid sm:grid-cols-[1fr_88px_88px_88px] sm:items-center sm:gap-4"
+            >
               <div className="flex items-center gap-3 min-w-0">
                 <CardBrandIcon brand={type?.vendor} width={42} />
                 <div className="min-w-0">
@@ -219,22 +222,24 @@ function CardsTab({ userId }) {
                   <p className="text-xs text-muted-foreground truncate">{card.cardholder_name}</p>
                 </div>
               </div>
-              <span className="text-xs text-muted-foreground capitalize">{type?.type_name ?? '—'}</span>
-              <Badge variant={blocked ? 'error' : 'success'} className="w-fit">
-                {blocked ? 'Blocked' : 'Active'}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 w-full rounded-input text-xs shadow-none"
-                disabled={pendingId === card.card_id}
-                onClick={() => toggle(card)}
-              >
-                {pendingId === card.card_id
-                  ? <Loader2 className="size-3 animate-spin" />
-                  : blocked ? 'Unblock' : 'Block'
-                }
-              </Button>
+              <div className="flex items-center justify-between gap-3 sm:contents">
+                <span className="text-xs text-muted-foreground capitalize">{type?.type_name ?? '—'}</span>
+                <Badge variant={blocked ? 'error' : 'success'} className="w-fit">
+                  {blocked ? 'Blocked' : 'Active'}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-input px-3 text-xs shadow-none touch-manipulation sm:h-7 sm:w-full"
+                  disabled={pendingId === card.card_id}
+                  onClick={() => toggle(card)}
+                >
+                  {pendingId === card.card_id
+                    ? <Loader2 className="size-3 animate-spin" />
+                    : blocked ? 'Unblock' : 'Block'
+                  }
+                </Button>
+              </div>
             </div>
           )
         })}
@@ -316,27 +321,27 @@ function TransactionsTab({ userId }) {
 
   return (
     <div>
-      <div className="mb-3 grid grid-cols-3 gap-2">
+      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Select
           aria-label="Filter transactions by status"
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
           options={TX_STATUS_FILTER_OPTIONS}
-          className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+          className="h-9 border border-border bg-background px-2 py-1 text-xs shadow-none sm:h-8"
         />
         <Select
           aria-label="Filter transactions by type"
           value={typeFilter}
           onChange={(event) => setTypeFilter(event.target.value)}
           options={TX_TYPE_OPTIONS}
-          className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+          className="h-9 border border-border bg-background px-2 py-1 text-xs shadow-none sm:h-8"
         />
         <Select
           aria-label="Sort transactions"
           value={sort}
           onChange={(event) => setSort(event.target.value)}
           options={TX_SORT_OPTIONS}
-          className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+          className="h-9 border border-border bg-background px-2 py-1 text-xs shadow-none sm:h-8"
         />
       </div>
       {actionError && (
@@ -345,7 +350,7 @@ function TransactionsTab({ userId }) {
         </p>
       )}
       <div className="rounded-input border border-border overflow-hidden">
-        <div className="grid grid-cols-[28px_minmax(0,1fr)_78px_110px_90px_118px] gap-3 border-b border-border bg-muted/30 px-4 py-2">
+        <div className="hidden grid-cols-[28px_minmax(0,1fr)_78px_110px_90px_118px] gap-3 border-b border-border bg-muted/30 px-4 py-2 sm:grid">
           <span />
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Counterparty</span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Type</span>
@@ -363,27 +368,63 @@ function TransactionsTab({ userId }) {
             const isPendingStatusUpdate = pendingTransactionId === tx.transaction_id
             const counterparty = tx.sender?.full_name ?? tx.sender?.cardholder_name ?? tx.recipient?.full_name ?? '—'
             return (
-              <div key={tx.transaction_id} className="grid grid-cols-[28px_minmax(0,1fr)_78px_110px_90px_118px] items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors">
-                <div className={`flex size-7 shrink-0 items-center justify-center rounded-input ${meta.bg}`}>
-                  <TxIcon className={`size-3.5 ${meta.color}`} strokeWidth={2} />
+              <div key={tx.transaction_id} className="px-4 py-2.5 transition-colors hover:bg-muted/30">
+                {/* Mobile — stacked card */}
+                <div className="flex flex-col gap-2.5 sm:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className={`flex size-7 shrink-0 items-center justify-center rounded-input ${meta.bg}`}>
+                        <TxIcon className={`size-3.5 ${meta.color}`} strokeWidth={2} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-foreground">{counterparty}</p>
+                        <p className="text-[11px] text-muted-foreground">{fmtDate(tx.created_at)}</p>
+                      </div>
+                    </div>
+                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{fmtAmount(tx.amount)}</p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pl-10">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{meta.label}</span>
+                      <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {isPendingStatusUpdate && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
+                      <Select
+                        aria-label="Set transaction status"
+                        value={String(tx.status_id)}
+                        onChange={(event) => updateStatus(tx, event.target.value)}
+                        options={TX_STATUS_OPTIONS}
+                        disabled={isPendingStatusUpdate}
+                        className="h-9 border border-border bg-background px-2 py-1 text-xs shadow-none touch-manipulation"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-foreground">{counterparty}</p>
-                  <p className="text-[11px] text-muted-foreground">{fmtDate(tx.created_at)}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">{meta.label}</span>
-                <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
-                <p className="text-right text-sm font-semibold tabular-nums text-foreground">{fmtAmount(tx.amount)}</p>
-                <div className="flex items-center gap-1.5">
-                  {isPendingStatusUpdate && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
-                  <Select
-                    aria-label="Set transaction status"
-                    value={String(tx.status_id)}
-                    onChange={(event) => updateStatus(tx, event.target.value)}
-                    options={TX_STATUS_OPTIONS}
-                    disabled={isPendingStatusUpdate}
-                    className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
-                  />
+
+                {/* Desktop — grid row */}
+                <div className="hidden grid-cols-[28px_minmax(0,1fr)_78px_110px_90px_118px] items-center gap-3 sm:grid">
+                  <div className={`flex size-7 shrink-0 items-center justify-center rounded-input ${meta.bg}`}>
+                    <TxIcon className={`size-3.5 ${meta.color}`} strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-foreground">{counterparty}</p>
+                    <p className="text-[11px] text-muted-foreground">{fmtDate(tx.created_at)}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{meta.label}</span>
+                  <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
+                  <p className="text-right text-sm font-semibold tabular-nums text-foreground">{fmtAmount(tx.amount)}</p>
+                  <div className="flex items-center gap-1.5">
+                    {isPendingStatusUpdate && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
+                    <Select
+                      aria-label="Set transaction status"
+                      value={String(tx.status_id)}
+                      onChange={(event) => updateStatus(tx, event.target.value)}
+                      options={TX_STATUS_OPTIONS}
+                      disabled={isPendingStatusUpdate}
+                      className="h-8 border border-border bg-background px-2 py-1 text-xs shadow-none"
+                    />
+                  </div>
                 </div>
               </div>
             )
@@ -428,7 +469,7 @@ function RefundsTab({ userId }) {
   return (
     <div>
       <div className="rounded-input border border-border overflow-hidden">
-        <div className="grid grid-cols-[1fr_100px_80px_88px] gap-3 border-b border-border bg-muted/30 px-4 py-2">
+        <div className="hidden grid-cols-[1fr_100px_80px_88px] gap-3 border-b border-border bg-muted/30 px-4 py-2 sm:grid">
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Transaction</span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Amount</span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Date</span>
@@ -438,14 +479,19 @@ function RefundsTab({ userId }) {
           {data.items.map((req) => {
             const statusMeta = REQUEST_STATUS[req.request_status_id] ?? REQUEST_STATUS[1]
             return (
-              <div key={req.request_id} className="grid grid-cols-[1fr_100px_80px_88px] items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors">
+              <div
+                key={req.request_id}
+                className="flex flex-col gap-2 px-4 py-2.5 transition-colors hover:bg-muted/30 sm:grid sm:grid-cols-[1fr_100px_80px_88px] sm:items-center sm:gap-3"
+              >
                 <div className="min-w-0">
                   <p className="text-sm text-foreground font-mono">Tx #{req.refund_detail?.transaction_id ?? '—'}</p>
                   <p className="text-[11px] text-muted-foreground truncate">{req.note ?? <span className="italic">No reason provided</span>}</p>
                 </div>
-                <p className="text-sm font-semibold tabular-nums text-foreground">{fmtAmount(req.refund_detail?.transaction_amount)}</p>
-                <p className="text-xs text-muted-foreground">{fmtDate(req.created_at)}</p>
-                <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
+                <div className="flex items-center justify-between gap-3 sm:contents">
+                  <p className="text-sm font-semibold tabular-nums text-foreground">{fmtAmount(req.refund_detail?.transaction_amount)}</p>
+                  <p className="text-xs text-muted-foreground sm:whitespace-nowrap">{fmtDate(req.created_at)}</p>
+                  <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
+                </div>
               </div>
             )
           })}
@@ -487,23 +533,25 @@ export default function UserDetailModal({ user, open, onOpenChange, rolesById, o
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
         style={{ '--tw-duration': '500ms' }}
-        closeButtonClassName="size-8 rounded-input p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+        closeButtonClassName="size-11 sm:size-8 rounded-input p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
         className="max-w-195 w-full rounded-input border border-border bg-popover p-0 shadow-lg data-[state=open]:ease-[cubic-bezier(0.34,1.56,0.64,1)] data-[state=open]:zoom-in-50 data-[state=open]:slide-in-from-bottom-16"
       >
         {/* Header */}
-        <div className="flex items-center gap-4 border-b border-border px-6 py-5 pr-16">
-          <UserAvatar
-            user={user}
-            className="size-11 text-sm ring-1 ring-border"
-            textClassName="text-sm"
-          />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-foreground leading-tight">
-              {user.first_name} {user.last_name}
-            </h2>
-            <p className="mt-0.5 text-sm text-muted-foreground truncate">{user.email}</p>
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-4 pr-14 sm:flex-row sm:items-center sm:gap-4 sm:px-6 sm:py-5 sm:pr-16">
+          <div className="flex min-w-0 items-center gap-3 sm:contents">
+            <UserAvatar
+              user={user}
+              className="size-11 text-sm ring-1 ring-border"
+              textClassName="text-sm"
+            />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-foreground leading-tight">
+                {user.first_name} {user.last_name}
+              </h2>
+              <p className="mt-0.5 text-sm text-muted-foreground truncate">{user.email}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             <Badge variant="secondary" className="capitalize text-xs">
               {rolesById[user.user_role_id] ?? `#${user.user_role_id}`}
             </Badge>
@@ -514,7 +562,7 @@ export default function UserDetailModal({ user, open, onOpenChange, rolesById, o
             <Button
               variant={isSuspended ? 'outline' : 'destructive'}
               size="sm"
-              className="h-7 rounded-input px-3 text-xs shadow-none"
+              className="ml-auto h-9 rounded-input px-3 text-xs shadow-none touch-manipulation sm:ml-0 sm:h-7"
               disabled={isToggling}
               onClick={toggleSuspend}
             >
@@ -544,7 +592,7 @@ export default function UserDetailModal({ user, open, onOpenChange, rolesById, o
         </div>
 
         {/* Tab content */}
-        <div className="h-150 overflow-y-auto p-6">
+        <div className="h-[55vh] overflow-y-auto p-4 sm:h-150 sm:p-6">
           {activeTab === 'Profile'      && <ProfileTab user={user} rolesById={rolesById} />}
           {activeTab === 'Cards'        && <CardsTab userId={user.user_id} />}
           {activeTab === 'Transactions' && <TransactionsTab userId={user.user_id} />}
