@@ -16,6 +16,11 @@ from settings import get_settings
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
+_CHAT_UNAVAILABLE = (
+    "The AI assistant is not configured on this server. "
+    "Please try again later or contact support."
+)
+
 
 def get_vector_repo() -> VectorRepository | None:
     s = get_settings()
@@ -49,6 +54,13 @@ def send_message(
     ctx: UserContext = Depends(get_user_context),
     service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
+    # Degrade visibly when the AI provider key is not configured, instead of
+    # letting an empty key surface as an opaque 500 from the Groq client.
+    if not get_settings().groq_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_CHAT_UNAVAILABLE,
+        )
     try:
         reply, history = service.send_message(ctx.user_id, payload.message, is_admin=ctx.is_admin)
     except GroqAPIError as exc:
