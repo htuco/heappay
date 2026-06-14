@@ -6,9 +6,24 @@ export const USER_CHIP_OPTIONS = [
 ]
 
 export const USER_SORT_OPTIONS = [
-  { label: 'Name (A-Z)', value: 'name-asc' },
-  { label: 'Role', value: 'role-asc' },
-  { label: 'Status', value: 'status-asc' },
+  { label: 'Sort by: Name', value: 'name-asc' },
+  { label: 'Sort by: Role', value: 'role-asc' },
+  { label: 'Sort by: Status', value: 'status-asc' },
+]
+
+export const USER_STATUS_FILTER_OPTIONS = [
+  { label: 'Status: All', value: 'all' },
+  { label: 'Active', value: 'active' },
+  { label: 'Suspended', value: 'suspended' },
+  { label: 'Inactive', value: 'inactive' },
+]
+
+export const USER_ROLE_FILTER_OPTIONS = [
+  { label: 'Role: All', value: 'all' },
+  { label: 'Admin', value: 'admin' },
+  { label: 'Manager', value: 'manager' },
+  { label: 'Support', value: 'support' },
+  { label: 'User', value: 'user' },
 ]
 
 export const CARD_STATUS_OPTIONS = [
@@ -23,5 +38,5 @@ export const CARD_SORT_OPTIONS = [
   { label: 'Brand', value: 'brand-asc' },
 ]
 
-export const USER_PAGE_SIZE = 6
+export const USER_PAGE_SIZE = 10
 export const CARD_PAGE_SIZE = 4
