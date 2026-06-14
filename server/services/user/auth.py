@@ -1,5 +1,8 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
+import secrets
 from typing import Optional
+from urllib.parse import urlencode
 
 import bcrypt
 import jwt
@@ -12,11 +15,14 @@ from schemas.user.auth import (
     ChangePasswordRequest,
     DeactivateAccountRequest,
     LoginRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     ProfileUpdateRequest,
     RegisterRequest,
     TokenResponse,
     UserResponse,
 )
+from services.user.password_reset_mailer import PasswordResetMailer
 from settings import get_settings
 
 
@@ -24,6 +30,7 @@ class UserAuthService:
     def __init__(self, repo: UserAuthRepository) -> None:
         self.repo = repo
         self.settings = get_settings()
+        self.password_reset_mailer = PasswordResetMailer(self.settings)
 
     def hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt(rounds=12)
@@ -80,6 +87,18 @@ class UserAuthService:
             return int(user_id)
         except InvalidTokenError:
             return None
+
+    def _hash_reset_token(self, token: str) -> str:
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def _build_password_reset_url(self, token: str) -> str:
+        separator = "&" if "?" in self.settings.password_reset_url else "?"
+        return f"{self.settings.password_reset_url}{separator}{urlencode({'token': token})}"
+
+    def _is_expired(self, value: datetime) -> bool:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value <= datetime.now(timezone.utc)
 
     def resolve_active_user_id(self, access_token: str) -> int | None:
         """Valid access JWT + existing user + not soft-deleted (deactivated)."""
@@ -177,6 +196,40 @@ class UserAuthService:
             raise ValueError("WRONG_CURRENT_PASSWORD")
         new_hash = self.hash_password(payload.new_password)
         self.repo.update_password_and_clear_refresh_token(user_id, new_hash)
+
+    def request_password_reset(self, payload: PasswordResetRequest) -> None:
+        user = self.repo.get_user_by_email(str(payload.email))
+        if user is None or user.deleted_at is not None:
+            return
+
+        token = secrets.token_urlsafe(48)
+        token_hash = self._hash_reset_token(token)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=self.settings.password_reset_token_expire_minutes
+        )
+        self.repo.create_password_reset_token(user.user_id, token_hash, expires_at)
+
+        try:
+            self.password_reset_mailer.send_reset_link(
+                user.email,
+                self._build_password_reset_url(token),
+            )
+        except Exception as exc:
+            raise ValueError("MAIL_DELIVERY_FAILED") from exc
+
+    def confirm_password_reset(self, payload: PasswordResetConfirmRequest) -> None:
+        token_hash = self._hash_reset_token(payload.token)
+        row = self.repo.get_password_reset_token(token_hash)
+        if row is None or row.used_at is not None or self._is_expired(row.expires_at):
+            raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
+
+        user = self.repo.get_user_by_id(row.user_id)
+        if user is None or user.deleted_at is not None:
+            raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
+
+        new_hash = self.hash_password(payload.new_password)
+        self.repo.update_password_and_clear_refresh_token(user.user_id, new_hash)
+        self.repo.mark_password_reset_tokens_used_for_user(user.user_id)
 
     def accept_invitation(
         self,

@@ -43,6 +43,22 @@ class ChangePasswordRequest(BaseModel):
         return self
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=512)
+    new_password: PasswordStr
+    confirm_password: PasswordStr
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "PasswordResetConfirmRequest":
+        if self.new_password != self.confirm_password:
+            raise ValueError("Passwords do not match.")
+        return self
+
+
 class AcceptInvitationRequest(BaseModel):
     """Set password for invited users (no current password)."""
 

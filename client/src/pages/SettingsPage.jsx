@@ -111,7 +111,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Account Recovery"
           icon={KeyRound}
-          description="Review the recovery method currently supported for your account."
+          description="Manage password recovery methods for your account."
         >
           <RecoveryMethodPanel
             email={user?.email}

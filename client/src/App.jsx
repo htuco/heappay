@@ -9,7 +9,9 @@ import SupportUsersPage from './pages/SupportUsersPage'
 import SupportTicketsPage from './pages/SupportTicketsPage'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PaymentPage from './pages/PaymentPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
@@ -206,6 +208,8 @@ export default function App() {
       <Route path="/" element={<AuthenticatedLandingRedirect />} />
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+      <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordPage /></PublicOnlyRoute>} />
+      <Route path="/reset-password" element={<PublicOnlyRoute><ResetPasswordPage /></PublicOnlyRoute>} />
       <Route
         path="/account/suspended"
         element={

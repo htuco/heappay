@@ -94,6 +94,20 @@ export async function changePassword({ currentPassword, newPassword }) {
 	return data
 }
 
+export async function requestPasswordReset({ email }) {
+	const { data } = await api.post('/auth/password-reset/request', { email })
+	return data
+}
+
+export async function confirmPasswordReset({ token, newPassword }) {
+	const { data } = await api.post('/auth/password-reset/confirm', {
+		token,
+		new_password: newPassword,
+		confirm_password: newPassword,
+	})
+	return data
+}
+
 /** Invited users: set password and move status to active (no current password). */
 export async function acceptInvitation({ newPassword }) {
 	const { data } = await api.post('/auth/accept-invitation', {

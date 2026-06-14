@@ -1,14 +1,38 @@
-import { CheckCircle2, KeyRound, Mail, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import { CheckCircle2, KeyRound, Mail, Send, ShieldCheck } from 'lucide-react'
 
 import ActionRow from '@/components/settings/ActionRow'
 import SettingRow from '@/components/settings/SettingRow'
 import { Button } from '@/components/ui/button'
+import FormBanner from '@/components/ui/FormBanner'
+import { requestPasswordReset } from '@/services/authService'
+import { getApiErrorMessage } from '@/utils/api'
 
 export default function RecoveryMethodPanel({ email, onChangePassword }) {
+  const [isSending, setIsSending] = useState(false)
+  const [success, setSuccess] = useState('')
+  const [error, setError] = useState('')
   const hasEmail = Boolean(email)
+
+  async function handleSendResetEmail() {
+    if (!hasEmail || isSending) return
+    setSuccess('')
+    setError('')
+    setIsSending(true)
+    try {
+      const response = await requestPasswordReset({ email })
+      setSuccess(response.message || 'If the email exists, a password reset link has been sent.')
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Could not send password reset email.'))
+    } finally {
+      setIsSending(false)
+    }
+  }
 
   return (
     <div className="space-y-3">
+      <FormBanner variant="success" message={success} />
+      <FormBanner variant="error" message={error} />
       <div className="rounded-surface border border-border bg-emphasis px-4 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 gap-3">
@@ -27,7 +51,7 @@ export default function RecoveryMethodPanel({ email, onChangePassword }) {
                 {hasEmail ? email : 'No account email loaded'}
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                This is the address used by the current backend for sign-in and account recovery.
+                Reset links are sent to the email address used for sign-in.
               </p>
             </div>
           </div>
@@ -36,11 +60,27 @@ export default function RecoveryMethodPanel({ email, onChangePassword }) {
       </div>
 
       <ActionRow
-        label="Supported recovery action"
-        value="Password change"
-        hint="The backend supports changing your password while signed in. Reset-link email delivery is tracked separately."
+        label="Send reset email"
+        value="Email link"
+        hint="Sends a time-limited password reset link to your account email."
         action={
-          <Button className="w-full sm:w-auto" onClick={onChangePassword}>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={handleSendResetEmail}
+            disabled={!hasEmail || isSending}
+          >
+            <Send className="h-4 w-4" />
+            {isSending ? 'Sending...' : 'Send Reset Email'}
+          </Button>
+        }
+      />
+
+      <ActionRow
+        label="Change current password"
+        value="Signed in"
+        hint="Use this when you know your current password."
+        action={
+          <Button variant="outline" className="w-full sm:w-auto" onClick={onChangePassword}>
             <KeyRound className="h-4 w-4" />
             Change Password
           </Button>
@@ -48,9 +88,9 @@ export default function RecoveryMethodPanel({ email, onChangePassword }) {
       />
 
       <SettingRow
-        label="Reset email link"
-        value="Backend pending"
-        hint="Tracked as AUTH-RECOVERY-001; no send-email button is shown until the API and mailer exist."
+        label="Additional verification"
+        value="Not enabled"
+        hint="MFA can be added later without changing the current email recovery method."
       />
     </div>
   )

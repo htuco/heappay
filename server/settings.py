@@ -22,6 +22,16 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
+    password_reset_token_expire_minutes: int = 30
+    password_reset_url: str = "http://localhost:5173/reset-password"
+
+    # Optional SMTP mail delivery for password reset links.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    mail_from: str = "no-reply@heap.local"
     groq_api_key: str = ""
     supabase_database_url: str = ""
     cohere_api_key: str = ""
