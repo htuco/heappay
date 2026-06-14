@@ -960,6 +960,8 @@ export default function PaymentWizard({
   const [cards, setCards] = useState([])
   const [txTypes, setTxTypes] = useState([])
   const [isLoadingRef, setIsLoadingRef] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [retryToken, setRetryToken] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const idempotencyKeyRef = useRef(null)
@@ -976,6 +978,7 @@ export default function PaymentWizard({
   useEffect(() => {
     if (!isOpen || !user) return
     setIsLoadingRef(true)
+    setLoadError('')
 
     Promise.all([
       listCards({ user_id: user.id, limit: 100 }),
@@ -995,9 +998,11 @@ export default function PaymentWizard({
           )
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setLoadError("Couldn't load your cards. Check your connection and try again.")
+      })
       .finally(() => setIsLoadingRef(false))
-  }, [isOpen, user])
+  }, [isOpen, user, retryToken])
 
   function resetAndClose() {
     setStep(0)
@@ -1149,6 +1154,18 @@ export default function PaymentWizard({
               {isLoadingRef ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : loadError ? (
+                <div className="space-y-3 py-8">
+                  <FormBanner variant="error" message={loadError} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-input"
+                    onClick={() => setRetryToken((t) => t + 1)}
+                  >
+                    Try again
+                  </Button>
                 </div>
               ) : step === 0 ? (
                 <StepFrom

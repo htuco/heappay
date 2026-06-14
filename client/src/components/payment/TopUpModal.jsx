@@ -255,6 +255,7 @@ export default function TopUpModal({
   useEffect(() => {
     if (!isOpen || !user) return
     setIsLoading(true)
+    setError('')
     Promise.all([
       listCards({ user_id: user.id, limit: 100 }),
       transactionTypesService.list(),
@@ -270,7 +271,9 @@ export default function TopUpModal({
         const deposit = types.find((t) => t.name === 'deposit')
         setDepositTypeId(deposit?.transaction_type_id ?? null)
       })
-      .catch(() => {})
+      .catch(() => {
+        setError("Couldn't load your cards. Check your connection and try again.")
+      })
       .finally(() => setIsLoading(false))
   }, [isOpen, user, initialCardId])
 
