@@ -38,6 +38,10 @@ class InsufficientBalanceError(Exception):
     """Recipient card does not have enough balance to reverse the payment."""
 
 
+class RequestStatusNotFoundError(Exception):
+    """Referenced request status does not exist."""
+
+
 REFUNDABLE_TYPE_NAME = "payment"
 COMPLETED_STATUS_NAME = "completed"
 
@@ -129,3 +133,23 @@ class RequestService:
 
     def get_pending_refund_for_transaction(self, transaction_id: int) -> Request | None:
         return self._repo.get_pending_refund_for_transaction(transaction_id)
+
+    def list_refunds(
+        self, *, limit: int = 50, offset: int = 0, status_id: int | None = None
+    ) -> tuple[list[Request], int]:
+        if status_id is not None and not self._repo.status_id_exists(status_id):
+            raise RequestStatusNotFoundError()
+        items = self._repo.list_refunds(limit=limit, offset=offset, status_id=status_id)
+        total = self._repo.count_refunds(status_id=status_id)
+        return items, total
+
+    def get_refund_stats(self) -> dict[str, int]:
+        """Refund-request counts by status, plus a total, for the staff overview."""
+        by_status = self._repo.refund_counts_by_status()
+        return {
+            "pending": by_status.get("pending", 0),
+            "approved": by_status.get("approved", 0),
+            "declined": by_status.get("declined", 0),
+            "cancelled": by_status.get("cancelled", 0),
+            "total": sum(by_status.values()),
+        }
