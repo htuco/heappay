@@ -82,10 +82,31 @@ class TransactionService:
         *,
         limit: int = 50,
         offset: int = 0,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
-        items = self._repo.list_all(limit=limit, offset=offset)
-        total = self._repo.count_all()
+        if status_id is not None and not self._repo.transaction_status_exists(status_id):
+            raise TransactionStatusNotFoundError()
+        if transaction_type_id is not None and not self._repo.transaction_type_exists(
+            transaction_type_id
+        ):
+            raise TransactionTypeNotFoundError()
+        items = self._repo.list_all(
+            limit=limit,
+            offset=offset,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            sort=sort,
+        )
+        total = self._repo.count_all(
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+        )
         return items, total
+
+    def get_platform_stats(self, *, months: int = 6) -> dict:
+        return self._repo.get_platform_stats(months=months)
 
     def get_summary_for_user(
         self,
@@ -122,6 +143,10 @@ class TransactionService:
         if not self._user_participates(row, user_id):
             raise ForbiddenError()
         return row
+
+    def get_by_id_staff(self, transaction_id: int) -> Transaction | None:
+        """(Staff) Fetch any transaction by id, with no ownership check."""
+        return self._repo.get_by_id(transaction_id)
 
     def create(self, payload: TransactionCreate, *, user_id: int) -> tuple[Transaction, bool]:
         """Create a transaction. Returns (row, created) where created is False on idempotent replay."""

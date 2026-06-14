@@ -11,6 +11,8 @@ from schemas.transaction import (
     TransactionPartyResponse,
     TransactionPatch,
     TransactionResponse,
+    TransactionStatsMonthlyPoint,
+    TransactionStatsResponse,
     TransactionSummaryPoint,
     TransactionSummaryResponse,
 )
@@ -103,11 +105,32 @@ def list_transactions(
 def list_all_transactions(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    status_id: int | None = Query(default=None, ge=1),
+    transaction_type_id: int | None = Query(default=None, ge=1),
+    sort: str = Query(
+        default="newest",
+        pattern="^(newest|oldest|amount_desc|amount_asc)$",
+    ),
     _: int = Depends(require_admin),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[Page[TransactionResponse]]:
     offset = (page - 1) * page_size
-    rows, total = service.list_all(limit=page_size, offset=offset)
+    try:
+        rows, total = service.list_all(
+            limit=page_size,
+            offset=offset,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            sort=sort,
+        )
+    except TransactionStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionTypeNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
+        ) from None
     items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
@@ -119,6 +142,39 @@ def list_all_transactions(
     )
     return ApiResponse[Page[TransactionResponse]](
         success=True, message=message, data=page_data
+    )
+
+
+@router.get(
+    "/stats",
+    response_model=ApiResponse[TransactionStatsResponse],
+    summary="(Admin) Platform-wide transaction statistics.",
+)
+def get_transaction_stats(
+    months: int = Query(default=6, ge=1, le=24),
+    _: int = Depends(require_admin),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[TransactionStatsResponse]:
+    raw = service.get_platform_stats(months=months)
+    data = TransactionStatsResponse(
+        monthly=[
+            TransactionStatsMonthlyPoint(
+                period=r["period"],
+                count=r["count"],
+                volume=r["volume"],
+            )
+            for r in raw["monthly"]
+        ],
+        by_status=raw["by_status"],
+        by_type=raw["by_type"],
+        total_count=raw["total_count"],
+        completed_volume=raw["completed_volume"],
+        months=raw["months"],
+    )
+    return ApiResponse[TransactionStatsResponse](
+        success=True,
+        message=f"Transaction stats for the last {months} month(s).",
+        data=data,
     )
 
 
@@ -200,6 +256,28 @@ def patch_transaction_as_staff(
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction updated successfully.",
+        data=_to_detail_response(row),
+    )
+
+
+@router.get(
+    "/{transaction_id}/staff",
+    response_model=ApiResponse[TransactionResponse],
+    summary="(Staff) Look up any transaction by id.",
+)
+def get_transaction_as_staff(
+    transaction_id: int,
+    _: int = Depends(require_staff),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[TransactionResponse]:
+    row = service.get_by_id_staff(transaction_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TRANSACTION_NOT_FOUND
+        )
+    return ApiResponse[TransactionResponse](
+        success=True,
+        message="Transaction retrieved successfully.",
         data=_to_detail_response(row),
     )
 

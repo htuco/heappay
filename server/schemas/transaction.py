@@ -43,6 +43,21 @@ class TransactionSummaryResponse(BaseModel):
     months: int
 
 
+class TransactionStatsMonthlyPoint(BaseModel):
+    period: str  # "YYYY-MM"
+    count: int
+    volume: Decimal
+
+
+class TransactionStatsResponse(BaseModel):
+    monthly: list[TransactionStatsMonthlyPoint]
+    by_status: dict[str, int]
+    by_type: dict[str, int]
+    total_count: int
+    completed_volume: Decimal
+    months: int
+
+
 class TransactionPartyResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
