@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from routes.dependencies import require_admin
 from schemas.user_roles import (
     UserRoleCreateRequest,
     UserRoleResponse,
@@ -32,7 +33,9 @@ def get_user_role(role_id: int, db: Session = Depends(get_db)) -> UserRoleRespon
 
 @router.post("", response_model=UserRoleResponse, status_code=status.HTTP_201_CREATED)
 def create_user_role(
-    payload: UserRoleCreateRequest, db: Session = Depends(get_db)
+    payload: UserRoleCreateRequest,
+    db: Session = Depends(get_db),
+    _: int = Depends(require_admin),
 ) -> UserRoleResponse:
     try:
         return user_role_service.create_user_role(db, payload.role_name)
@@ -52,7 +55,10 @@ def create_user_role(
     "/{role_id}", response_model=UserRoleResponse, status_code=status.HTTP_200_OK
 )
 def update_user_role(
-    role_id: int, payload: UserRoleUpdateRequest, db: Session = Depends(get_db)
+    role_id: int,
+    payload: UserRoleUpdateRequest,
+    db: Session = Depends(get_db),
+    _: int = Depends(require_admin),
 ) -> UserRoleResponse:
     try:
         return user_role_service.update_user_role(db, role_id, payload.role_name)
@@ -74,7 +80,11 @@ def update_user_role(
 
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user_role(role_id: int, db: Session = Depends(get_db)) -> Response:
+def delete_user_role(
+    role_id: int,
+    db: Session = Depends(get_db),
+    _: int = Depends(require_admin),
+) -> Response:
     try:
         user_role_service.delete_user_role(db, role_id)
     except user_role_service.UserRoleNotFoundError as exc:

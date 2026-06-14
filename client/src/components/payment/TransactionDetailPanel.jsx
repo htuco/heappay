@@ -18,10 +18,9 @@ import { Button } from '@/components/ui/button'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { useAuth } from '@/hooks/useAuth'
 import useTransactionDetail from '@/hooks/useTransactionDetail'
+import { getTransactionStatus } from '@/components/payment/transactionHistory.utils'
 
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
-const STATUS_LABEL = { 1: 'Pending', 2: 'Completed', 3: 'Rejected', 4: 'Reversed' }
-const STATUS_VARIANT = { 1: 'warning', 2: 'success', 3: 'error', 4: 'secondary' }
 
 // Pre-check copy for the refund button when a refund already exists for this
 // transaction (a transaction can have at most one refund ever). `refund_status`
@@ -76,8 +75,7 @@ function getStatusLabel(transaction) {
   return (
     transaction?.status?.name ??
     transaction?.status ??
-    STATUS_LABEL[transaction?.status_id] ??
-    'Unknown'
+    getTransactionStatus(Number(transaction?.status_id)).label
   )
 }
 
@@ -302,7 +300,7 @@ function DetailsSection({ transaction, currentUserId, ownedCardIds }) {
   const outgoing = isOutgoing(transaction, currentUserId, ownedCardIds)
   const counterparty = getCounterparty(transaction, currentUserId, ownedCardIds)
   const statusLabel = getStatusLabel(transaction)
-  const statusVariant = STATUS_VARIANT[transaction?.status_id] ?? 'secondary'
+  const statusVariant = getTransactionStatus(Number(transaction?.status_id)).variant
 
   return (
     <section>

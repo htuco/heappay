@@ -8,9 +8,12 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from database import SessionLocal
+from ratelimit import limiter
 from exceptions import AppException
 from repositories.vector.knowledge import VectorRepository
 from routes import health, system
@@ -62,6 +65,21 @@ def create_app() -> FastAPI:
     }
     cors_kwargs["allow_origin_regex"] = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
     app.add_middleware(CORSMiddleware, **cors_kwargs)
+
+    # Rate limiting (slowapi) — throttles the brute-forceable auth routes.
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "code": "RATE_LIMITED",
+                "message": "Too many attempts. Please wait a moment and try again.",
+                "details": None,
+            },
+        )
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

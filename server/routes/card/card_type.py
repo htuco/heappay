@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.card.card_type import CardTypeRepository
+from routes.dependencies import require_admin
 from schemas.card_type import CardTypeCreate, CardTypeResponse, CardTypeUpdate
 from services.card.card_type import (
     CardTypeInUseError,
@@ -45,6 +46,7 @@ def get_card_type(
 def create_card_type(
     payload: CardTypeCreate,
     service: CardTypeService = Depends(get_card_type_service),
+    _: int = Depends(require_admin),
 ) -> CardTypeResponse:
     try:
         row = service.create(payload.type_name, payload.vendor)
@@ -58,6 +60,7 @@ def update_card_type(
     card_type_id: int,
     payload: CardTypeUpdate,
     service: CardTypeService = Depends(get_card_type_service),
+    _: int = Depends(require_admin),
 ) -> CardTypeResponse:
     try:
         row = service.update(
@@ -76,6 +79,7 @@ def update_card_type(
 def delete_card_type(
     card_type_id: int,
     service: CardTypeService = Depends(get_card_type_service),
+    _: int = Depends(require_admin),
 ) -> Response:
     try:
         deleted = service.delete(card_type_id)

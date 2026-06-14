@@ -121,8 +121,9 @@ export default function LoginForm() {
 							/>
 							<button
 								type="button"
-								onClick={() => navigate('/forgot-password')}
-								className="inline-flex min-h-11 items-center text-sm font-medium text-primary touch-manipulation hover:underline md:min-h-0"
+								title="Coming soon"
+								disabled
+								className="inline-flex min-h-11 cursor-not-allowed items-center text-sm font-medium text-muted-foreground touch-manipulation md:min-h-0"
 							>
 								Forgot password
 							</button>

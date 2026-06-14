@@ -2,6 +2,7 @@ export const CATEGORIES = Object.freeze({
 	PAYMENT_SENT: 'payment_sent',
 	PAYMENT_RECEIVED: 'payment_received',
 	PAYMENT_SELF: 'payment_self',
+	PAYMENT_CANCELLED: 'payment_cancelled',
 	REFUND_REQUESTED: 'refund_requested',
 	REFUND_APPROVED: 'refund_approved',
 	REFUND_DECLINED: 'refund_declined',

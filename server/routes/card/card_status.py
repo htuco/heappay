@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.card.card_status import CardStatusRepository
+from routes.dependencies import require_admin
 from schemas.card_status import CardStatusCreate, CardStatusResponse, CardStatusUpdate
 from services.card.card_status import CardStatusService
 
@@ -32,6 +33,7 @@ def get_card_status(
 def create_card_status(
     payload: CardStatusCreate,
     service: CardStatusService = Depends(get_card_status_service),
+    _: int = Depends(require_admin),
 ) -> CardStatusResponse:
     return CardStatusResponse.model_validate(service.create(payload.status_name))
 
@@ -41,6 +43,7 @@ def update_card_status(
     card_status_id: int,
     payload: CardStatusUpdate,
     service: CardStatusService = Depends(get_card_status_service),
+    _: int = Depends(require_admin),
 ) -> CardStatusResponse:
     return CardStatusResponse.model_validate(
         service.update_name(card_status_id, payload.status_name)
@@ -51,6 +54,7 @@ def update_card_status(
 def delete_card_status(
     card_status_id: int,
     service: CardStatusService = Depends(get_card_status_service),
+    _: int = Depends(require_admin),
 ) -> Response:
     service.delete(card_status_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

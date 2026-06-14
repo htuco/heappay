@@ -16,6 +16,7 @@ import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import AccountSuspendedPage from './pages/AccountSuspendedPage'
 import OnboardingSetPasswordPage from './pages/OnboardingSetPasswordPage'
+import NotFoundPage from './pages/NotFoundPage'
 import RouteLoadingSpinner from './components/routing/RouteLoadingSpinner'
 import { getAuthRefreshToken, getAuthToken } from './utils/authStorage'
 import { useAuth } from './hooks/useAuth'
@@ -235,6 +236,9 @@ export default function App() {
         <Route path="/payments" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       </Route>
+
+      {/* Catch-all — any unmatched path renders a NotFound page instead of a blank screen */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

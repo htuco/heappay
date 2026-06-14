@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { chatService } from '@/services/chatService'
+import { getApiErrorMessage } from '@/utils/api'
 
 export function useChat() {
   const { user, isLoading: authLoading } = useAuth()
@@ -48,9 +49,13 @@ export function useChat() {
       setMessages(history)
     } catch (err) {
       console.error('Chat error:', err)
+      // Surface the server's specific reason when it has one (e.g. the assistant
+      // isn't configured, or the AI quota is exhausted) so the chat degrades
+      // visibly instead of always showing a generic failure.
+      const content = getApiErrorMessage(err, 'Sorry, something went wrong. Please try again.')
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Sorry, something went wrong. Please try again.', created_at: new Date().toISOString() },
+        { role: 'assistant', content, created_at: new Date().toISOString() },
       ])
     } finally {
       setIsSending(false)
