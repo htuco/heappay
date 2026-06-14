@@ -3,7 +3,7 @@ import {
   CreditCard,
   LayoutDashboard,
   Settings,
-  Shield,
+  ShieldUser,
   TicketCheck,
   Users,
 } from 'lucide-react'
@@ -14,7 +14,11 @@ export const MAIN_NAV_LINKS = [
   { name: 'Transactions', path: '/payments', icon: ArrowLeftRight },
 ]
 
-export const ADMIN_NAV_LINKS = [{ name: 'Admin', path: '/admin', icon: Shield }]
+export const ADMIN_NAV_LINKS = [
+  { name: 'Overview', path: '/admin', icon: LayoutDashboard },
+  { name: 'Users', path: '/admin/users', icon: ShieldUser },
+  { name: 'Transactions', path: '/admin/transactions', icon: ArrowLeftRight },
+]
 
 export const SUPPORT_NAV_LINKS = [
   { name: 'Users', path: '/support/users', icon: Users },

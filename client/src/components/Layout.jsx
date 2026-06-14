@@ -12,7 +12,9 @@ import ChatWidget from './chat/ChatWidget'
 const PAGE_META = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Your financial overview.' },
   '/wallet': { title: 'Wallet', subtitle: 'Manage your cards and balances.' },
-  '/admin': { title: 'Users', subtitle: 'Manage user accounts and roles.' },
+  '/admin': { title: 'Overview', subtitle: 'Monitor users, cards, and platform activity.' },
+  '/admin/users': { title: 'Users', subtitle: 'Search accounts, review access, and manage roles or status.' },
+  '/admin/transactions': { title: 'Transactions', subtitle: 'Every transaction across the platform, with filters and sorting.' },
   '/payments': { title: 'Transaction History', subtitle: 'All payments, transfers, and refunds on your account.' },
   '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
   '/support/users': { title: 'Users', subtitle: 'Manage user accounts and card access.' },

@@ -12,6 +12,7 @@ import {
 import transactionsService from '@/services/transactionsService'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
+import { REQUEST_STATUS_IDS, REQUEST_STATUS_META } from '@/utils/requestStatus'
 
 function formatAmount(amount) {
   const num = Number.parseFloat(amount ?? '0')
@@ -33,8 +34,11 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
 
   const tx = request?.refund_detail?.transaction_id
   const isBusy = isApproving || isDeclining
+  const isPending = request?.request_status_id === REQUEST_STATUS_IDS.pending
+  const statusMeta =
+    REQUEST_STATUS_META[request?.request_status_id] ?? REQUEST_STATUS_META[REQUEST_STATUS_IDS.pending]
 
-  const requesterLabel = request?.requester_name || `user #${request?.target_user_id ?? '?'}`
+  const requesterLabel = request?.requester_name || `user #${request?.requester_user_id ?? '?'}`
 
   async function handleApprove() {
     setIsApproving(true)
@@ -89,7 +93,9 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
               Refund Request #{request?.request_id ?? '—'}
             </DialogTitle>
             <DialogDescription className="mt-1 text-sm text-muted-foreground">
-              Review the details and approve or decline.
+              {isPending
+                ? 'Review the details and approve or decline.'
+                : 'This request has already been resolved.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -133,9 +139,15 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
               <span className="text-xs text-muted-foreground">Submitted</span>
               <span className="text-sm text-card-foreground">{formatDate(request?.created_at)}</span>
             </div>
+            {request?.resolved_at && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Resolved</span>
+                <span className="text-sm text-card-foreground">{formatDate(request.resolved_at)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Status</span>
-              <Badge variant="warning">Pending</Badge>
+              <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
             </div>
           </div>
 
@@ -153,25 +165,27 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
             <p className="mt-3 text-xs text-destructive">{error}</p>
           )}
 
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              className="h-11 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50 shadow-none"
-              disabled={isBusy}
-              onClick={handleDecline}
-            >
-              {isDeclining ? <Loader2 className="mr-2 size-4 animate-spin" /> : <XCircle className="mr-2 size-4" />}
-              {isDeclining ? 'Declining…' : 'Decline'}
-            </Button>
-            <Button
-              className="h-11 rounded-xl bg-primary text-primary-foreground shadow-none hover:bg-primary/90"
-              disabled={isBusy}
-              onClick={handleApprove}
-            >
-              {isApproving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <CheckCircle2 className="mr-2 size-4" />}
-              {isApproving ? 'Approving…' : 'Approve'}
-            </Button>
-          </div>
+          {isPending && (
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="h-11 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50 shadow-none"
+                disabled={isBusy}
+                onClick={handleDecline}
+              >
+                {isDeclining ? <Loader2 className="mr-2 size-4 animate-spin" /> : <XCircle className="mr-2 size-4" />}
+                {isDeclining ? 'Declining…' : 'Decline'}
+              </Button>
+              <Button
+                className="h-11 rounded-xl bg-primary text-primary-foreground shadow-none hover:bg-primary/90"
+                disabled={isBusy}
+                onClick={handleApprove}
+              >
+                {isApproving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <CheckCircle2 className="mr-2 size-4" />}
+                {isApproving ? 'Approving…' : 'Approve'}
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </DialogRoot>

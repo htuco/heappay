@@ -1,3 +1,14 @@
+/**
+ * Title-case a lookup label: "admin" → "Admin", "super_admin" → "Super Admin".
+ */
+export function titleCase(value) {
+  return String(value ?? '')
+    .split(/[._\s-]+/)
+    .filter(Boolean)
+    .map((chunk) => `${chunk[0].toUpperCase()}${chunk.slice(1)}`)
+    .join(' ')
+}
+
 export function deriveUsers(mockUsers) {
   return mockUsers.map((user, index) => {
     const namePart = user.email.split('@')[0]

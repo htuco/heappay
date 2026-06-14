@@ -50,11 +50,17 @@ function NavSection({ label, children, className = '' }) {
   )
 }
 
+const ROLE_SECTION_LABEL = {
+  admin: 'Management',
+  manager: 'Management',
+  support: 'Support',
+}
+
 export default function Navbar() {
   const user = useAppSelector(selectAuthUser)
   const role = user?.role_name
-  const isAdmin = role === 'admin'
   const roleLinks = getRoleNavLinks(role)
+  const sectionLabel = ROLE_SECTION_LABEL[role] ?? 'Staff'
 
   return (
     <nav className="flex h-full flex-col">
@@ -66,7 +72,7 @@ export default function Navbar() {
         </NavSection>
 
         {roleLinks.length > 0 && (
-          <NavSection label={isAdmin ? 'Management' : 'Staff'}>
+          <NavSection label={sectionLabel}>
             {roleLinks.map((item) => (
               <NavLinkItem key={item.path} item={item} />
             ))}
