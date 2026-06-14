@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from routes.dependencies import require_admin
 from schemas.user_statuses import MessageResponse, UserStatusCreate, UserStatusRead, UserStatusUpdate
 from services.user import user_status as user_status_service
 
@@ -29,7 +30,11 @@ def get_user_status(status_id: int, db: Session = Depends(get_db)):
     response_model=UserStatusRead,
     status_code=status.HTTP_201_CREATED,
 )
-def create_user_status(payload: UserStatusCreate, db: Session = Depends(get_db)):
+def create_user_status(
+    payload: UserStatusCreate,
+    db: Session = Depends(get_db),
+    _: int = Depends(require_admin),
+):
     try:
         return user_status_service.create_user_status(db, payload.status_name)
     except user_status_service.UserStatusValidationError as exc:
@@ -49,6 +54,7 @@ def update_user_status(
     status_id: int,
     payload: UserStatusUpdate,
     db: Session = Depends(get_db),
+    _: int = Depends(require_admin),
 ):
     try:
         return user_status_service.update_user_status(db, status_id, payload.status_name)
@@ -70,7 +76,11 @@ def update_user_status(
 
 
 @router.delete("/{status_id}", response_model=MessageResponse)
-def delete_user_status(status_id: int, db: Session = Depends(get_db)):
+def delete_user_status(
+    status_id: int,
+    db: Session = Depends(get_db),
+    _: int = Depends(require_admin),
+):
     try:
         user_status_service.delete_user_status(db, status_id)
     except user_status_service.UserStatusNotFoundError as exc:

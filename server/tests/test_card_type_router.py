@@ -4,6 +4,7 @@ import os
 from fastapi.testclient import TestClient
 
 from routes.card.card_type import get_card_type_service
+from routes.dependencies import require_admin
 from services.card.card_type import CardTypeInUseError, DuplicateCardTypeError
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
@@ -78,6 +79,7 @@ def _build_client() -> tuple[TestClient, FakeCardTypeService]:
     app = create_app()
     fake_service = FakeCardTypeService()
     app.dependency_overrides[get_card_type_service] = lambda: fake_service
+    app.dependency_overrides[require_admin] = lambda: 1
     client = TestClient(app)
     return client, fake_service
 
@@ -157,3 +159,23 @@ def test_delete_in_use_card_type_returns_409() -> None:
     response = client.delete("/card-types/1")
     assert response.status_code == 409
     assert response.json()["message"] == "Card type is in use and cannot be deleted"
+
+
+def _build_unauthenticated_client() -> TestClient:
+    """Client with the service stubbed but no admin override — exercises the guard."""
+    app = create_app()
+    app.dependency_overrides[get_card_type_service] = lambda: FakeCardTypeService()
+    return TestClient(app)
+
+
+def test_mutating_routes_require_auth() -> None:
+    client = _build_unauthenticated_client()
+    assert client.post("/card-types", json={"type_name": "x", "vendor": "y"}).status_code == 401
+    assert client.patch("/card-types/1", json={"type_name": "x"}).status_code == 401
+    assert client.delete("/card-types/1").status_code == 401
+
+
+def test_read_routes_stay_public() -> None:
+    client = _build_unauthenticated_client()
+    assert client.get("/card-types").status_code == 200
+    assert client.get("/card-types/1").status_code == 200
