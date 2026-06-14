@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import Layout from './components/Layout'
 import AdminPage from './pages/AdminPage'
+import AdminUsersPage from './pages/AdminUsersPage'
+import AdminTransactionsPage from './pages/AdminTransactionsPage'
 import SupportPage from './pages/SupportPage'
 import SupportUsersPage from './pages/SupportUsersPage'
 import SupportTicketsPage from './pages/SupportTicketsPage'
@@ -224,6 +226,8 @@ export default function App() {
       {/* App shell routes */}
       <Route element={<Layout />}>
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+        <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+        <Route path="/admin/transactions" element={<AdminRoute><AdminTransactionsPage /></AdminRoute>} />
         <Route path="/support" element={<StaffRoute><Navigate to="/support/users" replace /></StaffRoute>} />
         <Route path="/support/users" element={<StaffRoute><SupportUsersPage /></StaffRoute>} />
         <Route path="/support/tickets" element={<StaffRoute><SupportTicketsPage /></StaffRoute>} />

@@ -58,6 +58,9 @@ export const TRANSACTION_API_ERROR_CODES = Object.freeze({
  * @typedef {Object} ListTransactionsParams
  * @property {number=} page     - 1-based page number (default: 1)
  * @property {number=} pageSize - Items per page, 1–100 (default: 20)
+ * @property {number=} statusId
+ * @property {number=} transactionTypeId
+ * @property {string=} sort
  */
 
 /**
