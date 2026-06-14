@@ -7,7 +7,6 @@ import CardCarousel from '@/components/card-view/CardCarousel'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 import BalancePanel from '@/components/wallet/BalancePanel'
 import CardStatsRow from '@/components/wallet/CardStatsRow'
-import RecentTransactionsByCard from '@/components/wallet/RecentTransactionsByCard'
 import WalletSection from '@/components/wallet/WalletSection'
 import { useWalletCards } from '@/hooks/useWalletCards'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
@@ -143,12 +142,6 @@ export default function WalletPage() {
       </div>
 
       <CardStatsRow {...buildCardStatusOverviewProps(cards)} />
-
-      <RecentTransactionsByCard
-        cards={cards}
-        activeCardId={activeCard?.id}
-        isLoading={isLoading}
-      />
     </div>
   )
 }
