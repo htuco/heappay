@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Security, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Security, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from database import get_db
+from ratelimit import AUTH_RATE_LIMIT, limiter
 from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
 from routes.storage.deps import get_supabase_image_storage_service
@@ -30,7 +31,9 @@ def get_auth_service(db: Session = Depends(get_db)) -> UserAuthService:
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(AUTH_RATE_LIMIT)
 def register(
+    request: Request,
     payload: RegisterRequest,
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:
@@ -43,7 +46,9 @@ def register(
 
 
 @router.post("/login", response_model=AuthResponse)
+@limiter.limit(AUTH_RATE_LIMIT)
 def login(
+    request: Request,
     payload: LoginRequest,
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:
@@ -56,7 +61,9 @@ def login(
 
 
 @router.post("/refresh", response_model=AuthResponse)
+@limiter.limit(AUTH_RATE_LIMIT)
 def refresh(
+    request: Request,
     payload: RefreshRequest,
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:

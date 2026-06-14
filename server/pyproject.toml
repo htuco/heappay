@@ -21,6 +21,7 @@ dependencies = [
     "supabase>=2.30.0",
     "groq>=1.4.0",
     "numpy>=2.4.6",
+    "slowapi>=0.1.10",
 ]
 
 [dependency-groups]
