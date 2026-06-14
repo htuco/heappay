@@ -18,6 +18,14 @@ export const TRANSACTION_STATUS_OPTIONS = [
   { value: '4', label: 'Reversed' },
 ]
 
+// Cancelling a pending transaction moves it to the "Failed" status, which the
+// backend treats as a user-denied transition (the held amount is released back
+// to the sender). Resolve the id from the canonical status list above instead
+// of hardcoding a magic number.
+export const CANCELLED_TRANSACTION_STATUS_ID = Number(
+  TRANSACTION_STATUS_OPTIONS.find((option) => option.label === 'Failed')?.value,
+)
+
 export const TRANSACTION_TYPE_OPTIONS = [
   { value: '1', label: 'Deposit' },
   { value: '2', label: 'Payment' },
@@ -62,7 +70,10 @@ export function getTransactionType(typeId) {
   return option?.label ?? `Type ${typeId}`
 }
 
-export function transactionMatchesFilters(transaction, { date, status, type }) {
+// Date-only client-side filter. Status and transaction-type filtering are now
+// applied server-side (see useTransactions), so a match isn't hidden just
+// because it lives on another page.
+export function transactionMatchesFilters(transaction, { date }) {
   if (date) {
     const transactionDate = new Date(transaction.created_at)
     if (Number.isNaN(transactionDate.getTime())) return false
@@ -70,9 +81,6 @@ export function transactionMatchesFilters(transaction, { date, status, type }) {
     const transactionDateValue = formatTransactionDateInputValue(transactionDate)
     if (transactionDateValue !== date) return false
   }
-
-  if (status !== 'all' && String(transaction.status_id) !== status) return false
-  if (type !== 'all' && String(transaction.transaction_type_id) !== type) return false
 
   return true
 }

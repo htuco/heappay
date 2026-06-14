@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -46,26 +46,37 @@ function getTransactionMonthGroup(transaction) {
   }
 }
 
-export default function TransactionHistory({ onTransactionSelect, pageSize = 20 }) {
+export default function TransactionHistory({ onTransactionSelect, onRefreshReady, pageSize = 20 }) {
   const [lookupValue, setLookupValue] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [dateSort, setDateSort] = useState('newest')
 
+  // Status + type filter server-side so matches on other pages aren't hidden and
+  // the "X of N" count stays truthful. Date + search stay client-side (current page).
+  const statusId = statusFilter === 'all' ? undefined : Number(statusFilter)
+  const transactionTypeId = typeFilter === 'all' ? undefined : Number(typeFilter)
+
   const { transactions, isLoading, error, page, totalPages, total, setPage, refresh } =
-    useTransactions({ pageSize })
+    useTransactions({ pageSize, statusId, transactionTypeId })
+
+  // Expose the list refresh to the parent (PaymentPage) so actions that change a
+  // transaction's status — e.g. cancelling a pending payment — can refetch.
+  useEffect(() => {
+    onRefreshReady?.(refresh)
+  }, [onRefreshReady, refresh])
 
   const filteredTransactions = useMemo(() => {
     return transactions
       .filter((t) => transactionMatchesLookup(t, lookupValue))
-      .filter((t) => transactionMatchesFilters(t, { date: dateFilter, status: statusFilter, type: typeFilter }))
+      .filter((t) => transactionMatchesFilters(t, { date: dateFilter }))
       .sort((a, b) => {
         const aTime = new Date(a.created_at).getTime() || 0
         const bTime = new Date(b.created_at).getTime() || 0
         return dateSort === 'newest' ? bTime - aTime : aTime - bTime
       })
-  }, [transactions, lookupValue, dateFilter, statusFilter, typeFilter, dateSort])
+  }, [transactions, lookupValue, dateFilter, dateSort])
 
   const hasTransactions = transactions.length > 0
   const hasFiltered = filteredTransactions.length > 0

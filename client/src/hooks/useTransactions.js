@@ -12,9 +12,19 @@ const DEFAULT_PAGE_SIZE = 20
  * card appears as sender or recipient (the card must belong to the logged-in
  * user). When omitted, all of the user's transactions are returned.
  *
- * @param {{ cardId?: number, pageSize?: number }} [options]
+ * Status and transaction-type filtering are applied server-side (the list
+ * endpoints accept `status_id` / `transaction_type_id`), so filtering stays
+ * correct across pages. Date + free-text search remain client-side over the
+ * current page.
+ *
+ * @param {{ cardId?: number, pageSize?: number, statusId?: number, transactionTypeId?: number }} [options]
  */
-export function useTransactions({ cardId, pageSize = DEFAULT_PAGE_SIZE } = {}) {
+export function useTransactions({
+  cardId,
+  pageSize = DEFAULT_PAGE_SIZE,
+  statusId,
+  transactionTypeId,
+} = {}) {
   const { user, isLoading: authLoading } = useAuth()
 
   const [transactions, setTransactions] = useState([])
@@ -40,14 +50,20 @@ export function useTransactions({ cardId, pageSize = DEFAULT_PAGE_SIZE } = {}) {
     setPageState(nextPage)
   }, [])
 
-  // Reset to page 1 whenever cardId changes so we don't stay on a stale page.
-  const prevCardId = useRef(cardId)
+  // Reset to page 1 whenever a server-side query input changes so we don't stay
+  // on a stale page (e.g. page 3 of "all" after switching to a status with one page).
+  const prevQuery = useRef({ cardId, statusId, transactionTypeId })
   useEffect(() => {
-    if (prevCardId.current !== cardId) {
-      prevCardId.current = cardId
+    const prev = prevQuery.current
+    if (
+      prev.cardId !== cardId ||
+      prev.statusId !== statusId ||
+      prev.transactionTypeId !== transactionTypeId
+    ) {
+      prevQuery.current = { cardId, statusId, transactionTypeId }
       setPageState(1)
     }
-  }, [cardId])
+  }, [cardId, statusId, transactionTypeId])
 
   useEffect(() => {
     if (authLoading) return
@@ -64,6 +80,8 @@ export function useTransactions({ cardId, pageSize = DEFAULT_PAGE_SIZE } = {}) {
     setError(null)
 
     const params = { page, pageSize }
+    if (typeof statusId === 'number') params.statusId = statusId
+    if (typeof transactionTypeId === 'number') params.transactionTypeId = transactionTypeId
     const fetch =
       cardId != null
         ? transactionsService.listByCard(cardId, params)
@@ -86,7 +104,7 @@ export function useTransactions({ cardId, pageSize = DEFAULT_PAGE_SIZE } = {}) {
     return () => {
       cancelled = true
     }
-  }, [authLoading, user, cardId, page, pageSize, refreshKey])
+  }, [authLoading, user, cardId, page, pageSize, statusId, transactionTypeId, refreshKey])
 
   return {
     transactions,
