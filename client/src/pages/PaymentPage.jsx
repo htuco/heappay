@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { AlertTriangle, Loader2, MessageSquareText } from 'lucide-react'
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { CANCELLED_TRANSACTION_STATUS_ID } from '@/components/payment/transactionHistory.utils'
 import transactionsService from '@/services/transactionsService'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
@@ -62,6 +63,12 @@ export default function PaymentPage() {
   const [isSubmittingRefund, setIsSubmittingRefund] = useState(false)
   const [refundError, setRefundError] = useState(null)
   const [refundedTransactionIds, setRefundedTransactionIds] = useState(new Set())
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState(null)
+  const refreshHistoryRef = useRef(null)
+  const handleRefreshReady = useCallback((refresh) => {
+    refreshHistoryRef.current = refresh
+  }, [])
   const cancelTransactionId = getTransactionId(transactionToCancel)
   const refundTransactionId = getTransactionId(transactionToRefund)
   const isCancelConfirmed =
@@ -104,6 +111,7 @@ export default function PaymentPage() {
   function closeCancelPreview() {
     setTransactionToCancel(null)
     setCancelConfirmationId('')
+    setCancelError(null)
   }
 
   function closeRefundPreview() {
@@ -134,9 +142,36 @@ export default function PaymentPage() {
     }
   }
 
+  async function handleCancelTransaction() {
+    if (!isCancelConfirmed || isCancelling) return
+    setIsCancelling(true)
+    setCancelError(null)
+    try {
+      await transactionsService.patch(cancelTransactionId, {
+        status_id: CANCELLED_TRANSACTION_STATUS_ID,
+      })
+      notify({
+        type: 'success',
+        category: CATEGORIES.PAYMENT_CANCELLED,
+        message: 'Payment cancelled. The held amount was released back to your balance.',
+        link: { route: '/payments', modal: { kind: 'transaction', id: cancelTransactionId } },
+      })
+      closeCancelPreview()
+      closeSelectedTransaction()
+      refreshHistoryRef.current?.()
+    } catch (err) {
+      setCancelError(err?.message ?? 'Failed to cancel the payment. Please try again.')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
   return (
     <div>
-      <TransactionHistory onTransactionSelect={setSelectedTransaction} />
+      <TransactionHistory
+        onTransactionSelect={setSelectedTransaction}
+        onRefreshReady={handleRefreshReady}
+      />
       <TransactionDetailPanel
         open={Boolean(selectedTransaction)}
         transaction={selectedTransaction}
@@ -144,6 +179,7 @@ export default function PaymentPage() {
         onCancel={setTransactionToCancel}
         onRefund={setTransactionToRefund}
         refundRequestedTransactionIds={refundedTransactionIds}
+        isCancelling={isCancelling}
       />
       <DialogRoot
         open={Boolean(transactionToCancel)}
@@ -197,6 +233,12 @@ export default function PaymentPage() {
               </p>
             </div>
 
+            {cancelError && (
+              <p className="mt-4 text-xs leading-5 text-destructive" role="alert">
+                {cancelError}
+              </p>
+            )}
+
             <DialogFooter className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <DialogClose asChild>
                 <Button
@@ -208,10 +250,11 @@ export default function PaymentPage() {
               <Button
                 variant="outline"
                 className="h-11 rounded-input border-red-200 bg-white px-4 font-semibold text-red-600 shadow-none hover:border-red-300 hover:bg-red-50 hover:text-red-600 focus-visible:border-red-300 focus-visible:ring-red-500/15 disabled:border-red-100 disabled:bg-red-50/40 disabled:text-red-300 dark:border-red-400/30 dark:bg-transparent dark:text-red-300 dark:hover:border-red-400/50 dark:hover:bg-red-400/10"
-                disabled={!isCancelConfirmed}
-                onClick={closeCancelPreview}
+                disabled={!isCancelConfirmed || isCancelling}
+                onClick={handleCancelTransaction}
               >
-                Cancel payment
+                {isCancelling ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                {isCancelling ? 'Cancelling…' : 'Cancel payment'}
               </Button>
             </DialogFooter>
           </div>
