@@ -102,7 +102,7 @@ function CardStatusPill({ item }) {
   return <Badge variant="secondary" className="text-[11px] capitalize">{item.card.statusName || 'Inactive'}</Badge>
 }
 
-function CardRow({ item, isAdmin, onFreeze, onUnfreeze, pending }) {
+function CardRow({ item, canManageCards, onFreeze, onUnfreeze, pending }) {
   const frozen = isFrozen(item)
   const last4 = item.card.cardNumber?.slice(-4) ?? '••••'
 
@@ -122,7 +122,7 @@ function CardRow({ item, isAdmin, onFreeze, onUnfreeze, pending }) {
 
       <div className="flex items-center gap-2 self-end sm:self-auto">
         <CardStatusPill item={item} />
-        {isAdmin ? (
+        {canManageCards ? (
           <Button
             variant="outline"
             size="sm"
@@ -242,6 +242,10 @@ export default function UserDetailsDialog({
   onActivate,
   onDelete,
   isAdmin,
+  // Card freeze/unfreeze is a staff-level action (block/unblock is gated by
+  // require_staff on the API), so it stays available to support. Defaults to
+  // isAdmin to keep admin behavior unchanged for callers that don't pass it.
+  canManageCards = isAdmin,
 }) {
   const [selectedRoleId, setSelectedRoleId] = useState('')
   const [activeTab, setActiveTab] = useState('cards')
@@ -612,7 +616,7 @@ export default function UserDetailsDialog({
                   <CardRow
                     key={item.id}
                     item={item}
-                    isAdmin={isAdmin}
+                    canManageCards={canManageCards}
                     onFreeze={handleFreeze}
                     onUnfreeze={handleUnfreeze}
                     pending={pendingCardId === item.rawId}

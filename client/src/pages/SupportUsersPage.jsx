@@ -68,6 +68,7 @@ export default function SupportUsersPage() {
         onActivate={handleUserActivate}
         onDelete={handleUserDelete}
         isAdmin={false}
+        canManageCards
       />
     </div>
   )
