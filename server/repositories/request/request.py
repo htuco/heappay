@@ -131,6 +131,67 @@ class RequestRepository:
         )
         return int(self._db.execute(stmt).scalar_one())
 
+    def list_refunds(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        status_id: int | None = None,
+    ) -> list[Request]:
+        refund_type_id = self.get_type_id("refund")
+        stmt = select(Request).where(Request.request_type_id == refund_type_id)
+        if status_id is not None:
+            stmt = stmt.where(Request.request_status_id == status_id)
+        stmt = (
+            stmt.order_by(Request.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def count_refunds(self, *, status_id: int | None = None) -> int:
+        from sqlalchemy import func
+        refund_type_id = self.get_type_id("refund")
+        stmt = (
+            select(func.count())
+            .select_from(Request)
+            .where(Request.request_type_id == refund_type_id)
+        )
+        if status_id is not None:
+            stmt = stmt.where(Request.request_status_id == status_id)
+        return int(self._db.execute(stmt).scalar_one())
+
+    def refund_counts_by_status(self) -> dict[str, int]:
+        """Refund-request counts keyed by status name (every seeded status present)."""
+        from sqlalchemy import func
+        refund_type_id = self.get_type_id("refund")
+        stmt = (
+            select(
+                RequestStatus.name.label("name"),
+                func.count(Request.request_id).label("count"),
+            )
+            .select_from(RequestStatus)
+            .outerjoin(
+                Request,
+                (Request.request_status_id == RequestStatus.request_status_id)
+                & (Request.request_type_id == refund_type_id),
+            )
+            .group_by(RequestStatus.name)
+        )
+        return {
+            row["name"]: int(row["count"])
+            for row in self._db.execute(stmt).mappings().all()
+        }
+
+    def status_id_exists(self, status_id: int) -> bool:
+        from sqlalchemy import func
+        stmt = (
+            select(func.count())
+            .select_from(RequestStatus)
+            .where(RequestStatus.request_status_id == status_id)
+        )
+        return int(self._db.execute(stmt).scalar_one()) > 0
+
     # ── write ─────────────────────────────────────────────────────────────────
 
     def create_refund_request(

@@ -33,3 +33,11 @@ class RequestResponse(BaseModel):
     created_at: datetime
     resolved_at: datetime | None
     refund_detail: RefundRequestDetailResponse | None
+
+
+class RequestStatsResponse(BaseModel):
+    pending: int
+    approved: int
+    declined: int
+    cancelled: int
+    total: int

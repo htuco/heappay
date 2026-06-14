@@ -47,6 +47,7 @@ class _FakeTransaction:
         self.note = None
         self.idempotency_key = idempotency_key
         self.created_at = _NOW
+        self.processing_eligible_at = _NOW
         self.sender_card = _FakeCard(1)
         self.recipient_card = _FakeCard(2)
         self.refund_detail = None

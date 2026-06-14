@@ -5,7 +5,12 @@ from database import get_db
 from repositories.request.request import RequestRepository
 from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.pagination import Page
-from schemas.request import RefundRequestCreate, RefundRequestDetailResponse, RequestResponse
+from schemas.request import (
+    RefundRequestCreate,
+    RefundRequestDetailResponse,
+    RequestResponse,
+    RequestStatsResponse,
+)
 from schemas.response import ApiResponse
 from services.request.request import (
     ForbiddenError,
@@ -14,6 +19,7 @@ from services.request.request import (
     RefundAlreadyExistsError,
     RequestNotFoundError,
     RequestService,
+    RequestStatusNotFoundError,
     TransactionNotFoundError,
 )
 
@@ -21,6 +27,7 @@ router = APIRouter(prefix="/requests", tags=["requests"])
 
 _NOT_FOUND = "Request not found."
 _TX_NOT_FOUND = "Transaction not found."
+_STATUS_NOT_FOUND = "Request status not found."
 _FORBIDDEN = "You do not have access to this resource."
 _NOT_REFUNDABLE = "This transaction cannot be refunded."
 # Status-aware messages for the "one refund per transaction" rule.
@@ -206,5 +213,57 @@ def list_pending_refunds(
     return ApiResponse[Page[RequestResponse]](
         success=True,
         message=f"{total} pending refund request(s).",
+        data=data,
+    )
+
+
+@router.get(
+    "/stats",
+    response_model=ApiResponse[RequestStatsResponse],
+    summary="(Staff) Refund request counts by status.",
+)
+def get_request_stats(
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestStatsResponse]:
+    stats = service.get_refund_stats()
+    return ApiResponse[RequestStatsResponse](
+        success=True,
+        message="Refund request statistics.",
+        data=RequestStatsResponse(**stats),
+    )
+
+
+@router.get(
+    "",
+    response_model=ApiResponse[Page[RequestResponse]],
+    summary="(Staff) List refund requests, optionally filtered by status.",
+)
+def list_refunds(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    status_id: int | None = Query(default=None, ge=1),
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[Page[RequestResponse]]:
+    try:
+        items, total = service.list_refunds(
+            limit=page_size,
+            offset=(page - 1) * page_size,
+            status_id=status_id,
+        )
+    except RequestStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    data = Page[RequestResponse].build(
+        items=[_to_response(r) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return ApiResponse[Page[RequestResponse]](
+        success=True,
+        message=f"{total} refund request(s).",
         data=data,
     )
