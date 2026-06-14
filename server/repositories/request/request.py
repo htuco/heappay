@@ -222,6 +222,21 @@ class RequestRepository:
         self._db.refresh(req)
         return req
 
+    def lock_pending_request(self, request_id: int) -> Request | None:
+        """Lock the request row and return it only if still pending.
+
+        Returns ``None`` when the request has already been resolved so the
+        caller can reject a double approve/decline. The row lock makes the
+        check-then-act atomic against a concurrent approve/decline.
+        """
+        pending_id = self.get_status_id("pending")
+        request = self._db.scalars(
+            select(Request).where(Request.request_id == request_id).with_for_update()
+        ).first()
+        if request is None or request.request_status_id != pending_id:
+            return None
+        return request
+
     def approve_refund(self, request: Request) -> Request:
         """
         Atomically:

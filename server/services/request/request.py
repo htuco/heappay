@@ -42,6 +42,21 @@ class RequestStatusNotFoundError(Exception):
     """Referenced request status does not exist."""
 
 
+class RequestNotPendingError(Exception):
+    """The refund request has already been resolved (approved/declined/cancelled).
+
+    Guards against a double approve/decline — e.g. a double-click or two staff
+    acting on the same request at once — which would otherwise reverse the
+    balances twice.
+    """
+
+    def __init__(self, status: str | None) -> None:
+        self.status = status
+        super().__init__(
+            f"This refund request has already been resolved ({status})."
+        )
+
+
 REFUNDABLE_TYPE_NAME = "payment"
 COMPLETED_STATUS_NAME = "completed"
 
@@ -95,6 +110,16 @@ class RequestService:
         if request is None:
             raise RequestNotFoundError()
 
+        # Lock the request row and confirm it is still pending before touching
+        # any balances. This is the guard against a double approve — a
+        # double-click or two staff racing — which would otherwise reverse the
+        # money twice.
+        locked = self._repo.lock_pending_request(request_id)
+        if locked is None:
+            current = self._repo.status_name_for(request.request_status_id)
+            raise RequestNotPendingError(current)
+        request = locked
+
         # load original transaction
         detail = request.refund_detail
         if detail is None:
@@ -115,7 +140,16 @@ class RequestService:
         request = self._repo.get_by_id(request_id)
         if request is None:
             raise RequestNotFoundError()
-        return self._repo.decline_refund(request)
+
+        # Same pending guard as approve — a resolved request must not be
+        # declined again (it would re-stamp resolved_at and could race an
+        # in-flight approve).
+        locked = self._repo.lock_pending_request(request_id)
+        if locked is None:
+            current = self._repo.status_name_for(request.request_status_id)
+            raise RequestNotPendingError(current)
+
+        return self._repo.decline_refund(locked)
 
     def list_for_user(
         self, *, user_id: int, limit: int = 50, offset: int = 0

@@ -18,6 +18,7 @@ from services.request.request import (
     NotRefundableError,
     RefundAlreadyExistsError,
     RequestNotFoundError,
+    RequestNotPendingError,
     RequestService,
     RequestStatusNotFoundError,
     TransactionNotFoundError,
@@ -129,6 +130,8 @@ def approve_refund(
         req = service.approve_refund(request_id=request_id)
     except RequestNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
     except TransactionNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_TX_NOT_FOUND) from None
     except InsufficientBalanceError:
@@ -155,6 +158,8 @@ def decline_refund(
         req = service.decline_refund(request_id=request_id)
     except RequestNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund request declined.",
