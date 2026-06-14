@@ -212,6 +212,20 @@ export const transactionsService = {
 	},
 
 	/**
+	 * (Staff) Look up any transaction by id, with no ownership check.
+	 * @param {number} transactionId
+	 * @returns {Promise<import('@/types/transaction').Transaction>}
+	 */
+	async getByIdAsStaff(transactionId) {
+		try {
+			const { data } = await api.get(`/transactions/${transactionId}/staff`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * (Staff) List transactions for a specific user (paginated).
 	 * @param {number} userId
 	 * @param {{ page?: number, pageSize?: number, statusId?: number, transactionTypeId?: number, sort?: string }} [params]
@@ -292,6 +306,49 @@ export const transactionsService = {
 	async listPendingRefunds(params = {}) {
 		try {
 			const { data } = await api.get('/requests/refunds/pending', { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) List refund requests, optionally filtered by status (paginated).
+	 * @param {{ page?: number, pageSize?: number, statusId?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listRefunds(params = {}) {
+		try {
+			const { data } = await api.get('/requests', { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) Refund request counts by status.
+	 * @returns {Promise<{ pending: number, approved: number, declined: number, cancelled: number, total: number }>}
+	 */
+	async getRequestStats() {
+		try {
+			const { data } = await api.get('/requests/stats')
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) Platform-wide transaction stats for the admin overview.
+	 * @param {{ months?: number }} [params]
+	 * @returns {Promise<{ monthly: Array<{ period: string, count: number, volume: string }>, by_status: Record<string, number>, by_type: Record<string, number>, total_count: number, completed_volume: string, months: number }>}
+	 */
+	async getTransactionStats(params = {}) {
+		try {
+			const query = {}
+			if (typeof params.months === 'number') query.months = params.months
+			const { data } = await api.get('/transactions/stats', { params: query })
 			return data.data
 		} catch (error) {
 			throw mapTransactionApiError(error)

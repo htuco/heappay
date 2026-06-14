@@ -126,6 +126,28 @@ export const usersService = {
   },
 
   /**
+   * Same as `list`, but also returns the total row count for pagination
+   * (read from the `X-Total-Count` response header).
+   * @param {import('../types/user').ListUsersParams} [params]
+   * @returns {Promise<{ items: import('../types/user').User[], total: number }>}
+   */
+  async listWithTotal(params = {}) {
+    try {
+      const response = await api.get('/users', {
+        params: buildListUsersQuery(params),
+      })
+      const items = response.data ?? []
+      const headerTotal = Number.parseInt(response.headers?.['x-total-count'], 10)
+      return {
+        items,
+        total: Number.isFinite(headerTotal) ? headerTotal : items.length,
+      }
+    } catch (error) {
+      throw mapUserApiError(error)
+    }
+  },
+
+  /**
    * @param {number} userId
    * @param {{ includeDeleted?: boolean }} [options]
    * @returns {Promise<import('../types/user').User>}
