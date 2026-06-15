@@ -123,6 +123,7 @@ class CardResponse(BaseModel):
     masked_card_number: str
     expires_at: date
     balance: Decimal
+    reserved: Decimal = Decimal("0.00")
     cardholder_name: str | None = None
     created_at: datetime
     deleted_at: datetime | None = None
