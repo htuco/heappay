@@ -26,6 +26,25 @@ from services.user.password_reset_mailer import PasswordResetMailer
 from settings import get_settings
 
 
+def decode_access_token_subject(token: str) -> int | None:
+    """Decode a bearer token and return its `sub` user id if it is a valid access
+    token, otherwise ``None``. Pure JWT verification — no DB lookup — so it can be
+    reused outside a request/DB context (e.g. the rate-limiter key function)."""
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
+    except InvalidTokenError:
+        return None
+    if payload.get("type") != "access":
+        return None
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+    return int(user_id)
+
+
 class UserAuthService:
     def __init__(self, repo: UserAuthRepository) -> None:
         self.repo = repo
@@ -61,18 +80,7 @@ class UserAuthService:
         )
 
     def verify_access_token(self, token: str) -> Optional[int]:
-        try:
-            payload = jwt.decode(
-                token, self.settings.secret_key, algorithms=[self.settings.algorithm]
-            )
-            if payload.get("type") != "access":
-                return None
-            user_id: str = payload.get("sub")
-            if user_id is None:
-                return None
-            return int(user_id)
-        except InvalidTokenError:
-            return None
+        return decode_access_token_subject(token)
 
     def verify_refresh_token(self, token: str) -> Optional[int]:
         try:
