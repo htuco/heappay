@@ -54,9 +54,10 @@ class FakeTransactionRepository(TransactionRepository):
         self._pending_id = 1
         self._completed_id = 2
         self._failed_id = 3
+        self._cancelled_id = 5
 
     def get_status_id_by_name(self, name: str) -> int | None:
-        return {"pending": 1, "completed": 2, "failed": 3}.get(name)
+        return {"pending": 1, "completed": 2, "failed": 3, "cancelled": 5}.get(name)
 
     def get_card_for_update(self, card_id: int):
         return self._cards.get(card_id)
@@ -94,6 +95,17 @@ class FakeTransactionRepository(TransactionRepository):
         if tx.sender_card_id is not None:
             self._cards[tx.sender_card_id].balance += tx.amount
         tx.status_id = self._failed_id
+        tx.deny_reason_code = reason_code
+        tx.processed_by = processed_by
+        return tx
+
+    def cancel(self, transaction_id: int, *, reason_code: str, processed_by: str):
+        tx = self._txs[transaction_id]
+        if tx.status_id != self._pending_id:
+            raise TransactionStateError("not pending")
+        if tx.sender_card_id is not None:
+            self._cards[tx.sender_card_id].balance += tx.amount
+        tx.status_id = self._cancelled_id
         tx.deny_reason_code = reason_code
         tx.processed_by = processed_by
         return tx
@@ -150,6 +162,30 @@ def test_fail_restores_sender():
     repo.fail(tx.transaction_id, reason_code="TEST", processed_by="system")
     assert sender.balance == Decimal("100.00")
     assert recipient.balance == Decimal("50.00")
+
+
+def test_cancel_restores_sender_and_sets_cancelled():
+    repo = FakeTransactionRepository()
+    sender = repo.get_card_for_update(1)
+    recipient = repo.get_card_for_update(2)
+    tx = repo.create_with_balance_update(
+        sender_card=sender,
+        recipient_card=recipient,
+        transaction_type_id=2,
+        status_id=1,
+        amount=Decimal("30.00"),
+        note=None,
+        processing_eligible_at=datetime.now(timezone.utc),
+    )
+    cancelled = repo.cancel(
+        tx.transaction_id, reason_code="USER_CANCELLED", processed_by="user"
+    )
+    # Held funds released to the sender; recipient never credited.
+    assert sender.balance == Decimal("100.00")
+    assert recipient.balance == Decimal("50.00")
+    # Distinct status, distinct reason — not failed.
+    assert cancelled.status_id == 5
+    assert cancelled.deny_reason_code == "USER_CANCELLED"
 
 
 class FakeCardRepo:
