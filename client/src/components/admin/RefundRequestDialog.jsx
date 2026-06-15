@@ -85,7 +85,7 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
       <DialogContent
         overlayClassName="bg-slate-950/35 backdrop-blur-[10px]"
         closeButtonClassName="size-11 md:size-8 p-0 opacity-60 hover:opacity-100 dark:hover:bg-white/10"
-        className="max-w-[28rem] rounded-[20px] border border-border bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10"
+        className="max-w-[28rem] rounded-panel border border-border bg-popover p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] dark:border-white/10"
       >
         <div className="p-6">
           <DialogHeader className="mb-4 gap-0 pr-8">
@@ -100,7 +100,7 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
           </DialogHeader>
 
           {/* Original transaction info */}
-          <div className="rounded-[14px] border border-border bg-muted/30 px-4 py-3.5 space-y-2">
+          <div className="rounded-surface border border-border bg-muted/30 px-4 py-3.5 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Transaction</span>
               <span className="text-sm font-semibold text-card-foreground">#{tx ?? '—'}</span>
@@ -169,7 +169,7 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
             <div className="mt-5 grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
-                className="h-11 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50 shadow-none"
+                className="h-11 rounded-input border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50 shadow-none"
                 disabled={isBusy}
                 onClick={handleDecline}
               >
@@ -177,7 +177,7 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
                 {isDeclining ? 'Declining…' : 'Decline'}
               </Button>
               <Button
-                className="h-11 rounded-xl bg-primary text-primary-foreground shadow-none hover:bg-primary/90"
+                className="h-11 rounded-input bg-primary text-primary-foreground shadow-none hover:bg-primary/90"
                 disabled={isBusy}
                 onClick={handleApprove}
               >

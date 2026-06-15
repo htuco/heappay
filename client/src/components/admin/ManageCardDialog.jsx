@@ -17,8 +17,8 @@ import { getCardStatus, getStatusBadgeVariant } from '@/utils/admin.utils'
 
 function DetailRow({ icon, label, value }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-border bg-background/70 p-3">
-      <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+    <div className="flex items-start gap-3 rounded-surface border border-border bg-background/70 p-3">
+      <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-input bg-muted text-muted-foreground">
         {icon}
       </span>
       <div className="min-w-0">
@@ -122,9 +122,9 @@ function ManageCardDialogBody({ card, onUpdate, onDelete, isAdmin, cardStatuses 
         </section>
 
         <section className="flex flex-col px-5 py-6 sm:px-6">
-          <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="rounded-surface border border-border bg-background p-4">
             <div className="flex items-start gap-3">
-              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-input bg-muted text-muted-foreground">
                 <ShieldCheck className="size-4" />
               </span>
               <div>
@@ -150,13 +150,13 @@ function ManageCardDialogBody({ card, onUpdate, onDelete, isAdmin, cardStatuses 
             </div>
 
             {!isAdmin && (
-              <p className="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              <p className="mt-3 rounded-surface border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
                 Admin access is required to change card status or delete this card.
               </p>
             )}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/25 p-4">
+          <div className="mt-4 rounded-surface border border-dashed border-border bg-muted/25 p-4">
             <p className="text-sm font-semibold text-card-foreground">Before saving</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Status changes apply immediately. Deleting permanently removes the card from the system and cannot be undone. Cards with transaction history cannot be deleted.
@@ -164,7 +164,7 @@ function ManageCardDialogBody({ card, onUpdate, onDelete, isAdmin, cardStatuses 
           </div>
 
           {error && (
-            <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="mt-4 rounded-surface border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
             </p>
           )}

@@ -93,7 +93,7 @@ function UserCardsDrawer({ userId, onClose }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3 mt-1">
+    <div className="rounded-surface border border-border bg-muted/30 px-4 py-3 mt-1">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Cards</p>
         <button
@@ -121,7 +121,7 @@ function UserCardsDrawer({ userId, onClose }) {
           {cards.map((card) => (
             <div
               key={card.card_id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5"
+              className="flex items-center justify-between gap-3 rounded-surface border border-border bg-card px-3 py-2.5"
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium text-card-foreground">{card.masked_card_number}</p>
@@ -131,7 +131,7 @@ function UserCardsDrawer({ userId, onClose }) {
                 <Badge variant={cardStatusVariant(card.status_id)}>{cardStatusLabel(card.status_id)}</Badge>
                 <Button
                   variant="outline"
-                  className="h-7 rounded-lg px-2.5 text-xs shadow-none"
+                  className="h-7 rounded-input px-2.5 text-xs shadow-none"
                   disabled={pendingCardId === card.card_id}
                   onClick={() => toggleBlock(card)}
                 >
@@ -219,7 +219,7 @@ function UsersTab() {
         />
         <Button
           variant="outline"
-          className="h-9 rounded-xl text-xs shadow-none"
+          className="h-9 rounded-input text-xs shadow-none"
           onClick={() => load(page)}
           disabled={isLoading}
         >
@@ -229,7 +229,7 @@ function UsersTab() {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="rounded-2xl border border-border overflow-hidden">
+      <div className="rounded-surface border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
             <tr className="text-left">
@@ -283,7 +283,7 @@ function UsersTab() {
                       <div className="flex items-center gap-2 justify-end">
                         <Button
                           variant="outline"
-                          className="h-7 rounded-lg px-2.5 text-xs shadow-none"
+                          className="h-7 rounded-input px-2.5 text-xs shadow-none"
                           onClick={() => setExpandedUserId(
                             expandedUserId === user.user_id ? null : user.user_id
                           )}
@@ -293,7 +293,7 @@ function UsersTab() {
                         </Button>
                         <Button
                           variant={user.status_id === 3 ? 'outline' : 'outline'}
-                          className={`h-7 rounded-lg px-2.5 text-xs shadow-none ${
+                          className={`h-7 rounded-input px-2.5 text-xs shadow-none ${
                             user.status_id === 3
                               ? 'border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950'
                               : 'border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50'
@@ -331,7 +331,7 @@ function UsersTab() {
           <Button
             variant="outline"
             size="sm"
-            className="rounded-xl text-xs shadow-none"
+            className="rounded-input text-xs shadow-none"
             disabled={page <= 1 || isLoading}
             onClick={() => load(page - 1)}
           >
@@ -341,7 +341,7 @@ function UsersTab() {
           <Button
             variant="outline"
             size="sm"
-            className="rounded-xl text-xs shadow-none"
+            className="rounded-input text-xs shadow-none"
             disabled={page >= totalPages || isLoading}
             onClick={() => load(page + 1)}
           >
@@ -396,7 +396,7 @@ function TicketsTab() {
         </div>
         <Button
           variant="outline"
-          className="h-8 rounded-xl text-xs shadow-none"
+          className="h-8 rounded-input text-xs shadow-none"
           onClick={() => load(page)}
           disabled={isLoading}
         >
@@ -406,7 +406,7 @@ function TicketsTab() {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="rounded-2xl border border-border overflow-x-auto">
+      <div className="rounded-surface border border-border overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
             <tr className="text-left">
@@ -453,7 +453,7 @@ function TicketsTab() {
                   <td className="px-4 py-3 text-right">
                     <Button
                       variant="outline"
-                      className="h-7 rounded-lg px-3 text-xs shadow-none opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-7 rounded-input px-3 text-xs shadow-none opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => setSelectedRequest(req)}
                     >
                       Review
@@ -471,7 +471,7 @@ function TicketsTab() {
           <Button
             variant="outline"
             size="sm"
-            className="rounded-xl text-xs shadow-none"
+            className="rounded-input text-xs shadow-none"
             disabled={page <= 1 || isLoading}
             onClick={() => load(page - 1)}
           >
@@ -481,7 +481,7 @@ function TicketsTab() {
           <Button
             variant="outline"
             size="sm"
-            className="rounded-xl text-xs shadow-none"
+            className="rounded-input text-xs shadow-none"
             disabled={page >= totalPages || isLoading}
             onClick={() => load(page + 1)}
           >
@@ -513,7 +513,7 @@ export default function SupportPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <span className="flex size-9 items-center justify-center rounded-input bg-primary/10 text-primary">
           <Shield className="size-5" strokeWidth={2} />
         </span>
         <div>
@@ -523,14 +523,14 @@ export default function SupportPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 rounded-xl bg-muted/50 p-1 w-fit">
+      <div className="flex gap-1 rounded-input bg-muted/50 p-1 w-fit">
         {TABS.map((tab) => {
           const Icon = tab.icon
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-input px-4 py-2 text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'bg-card text-card-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -544,7 +544,7 @@ export default function SupportPage() {
       </div>
 
       {/* Tab content */}
-      <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+      <div className="rounded-panel border border-border bg-card p-5 shadow-sm">
         {activeTab === 'users' && <UsersTab />}
         {activeTab === 'tickets' && <TicketsTab />}
       </div>
