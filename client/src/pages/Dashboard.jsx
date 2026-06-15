@@ -99,7 +99,12 @@ function PaymentCardError() {
 export default function DashboardPage() {
   const { user } = useAuth()
   const { cards, isLoading, error, refetch } = useDashboardCards()
-  const { formattedBalance, isLoading: balanceLoading } = useTotalBalance()
+  const {
+    formattedBalance,
+    formattedReserved,
+    hasReserved,
+    isLoading: balanceLoading,
+  } = useTotalBalance()
   const {
     chartData,
     isLoading: summaryLoading,
@@ -179,6 +184,8 @@ export default function DashboardPage() {
         <div className="min-w-0">
           <TotalBalanceWidget
             totalBalance={formattedBalance}
+            reservedBalance={formattedReserved}
+            hasReserved={hasReserved}
             monthlyGrowth={monthlyGrowth}
             monthlyAmount={monthlyAmount}
             isLoading={balanceLoading || summaryLoading}
