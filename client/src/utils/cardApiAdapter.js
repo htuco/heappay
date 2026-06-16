@@ -30,6 +30,7 @@ export function normalizeApiCard(card, typesById, statusesById, holderName) {
     id: String(card.card_id),
     source: card,
     balance: card.balance ?? '0.00',
+    reserved: card.reserved ?? '0.00',
     isMain: card.is_main ?? false,
     hasPending: card.has_pending ?? false,
     card: {

@@ -43,7 +43,9 @@ function initialsFor(name) {
 }
 
 function isFrozen(item) {
-  return item.card.statusName === 'blocked'
+  // A frozen card carries the real 'frozen' status name (cardApiAdapter exposes
+  // it as item.card.status). The backend freeze action sets this status by name.
+  return item.card.status === 'frozen'
 }
 
 function roleBadgeClass(role) {

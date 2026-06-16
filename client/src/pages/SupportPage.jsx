@@ -14,7 +14,7 @@ import { blockCard, listCards, unblockCard } from '@/services/cardsService'
 import transactionsService from '@/services/transactionsService'
 import usersService from '@/services/usersService'
 import { useAppSelector } from '@/store/hooks'
-import { selectUserRoles } from '@/store/slices/referenceDataSlice'
+import { selectCardStatuses, selectUserRoles } from '@/store/slices/referenceDataSlice'
 
 const USERS_PAGE_SIZE = 10
 const TICKETS_PAGE_SIZE = 10
@@ -66,10 +66,23 @@ function UserCardsDrawer({ userId, onClose }) {
 
   useEffect(() => { load() }, [load])
 
-  async function toggleBlock(card) {
+  // Resolve status ids by name — ids are not stable across environments, and
+  // "freeze" is the support action (sets the card to the 'frozen' status).
+  const cardStatuses = useAppSelector(selectCardStatuses)
+  const statusNameById = useMemo(
+    () =>
+      Object.fromEntries(
+        (cardStatuses ?? []).map((s) => [s.card_status_id, s.status_name]),
+      ),
+    [cardStatuses],
+  )
+
+  const isFrozen = (card) => statusNameById[card.status_id] === 'frozen'
+
+  async function toggleFreeze(card) {
     setPendingCardId(card.card_id)
     try {
-      const updated = card.status_id === 3
+      const updated = isFrozen(card)
         ? await unblockCard(card.card_id)
         : await blockCard(card.card_id)
       setCards((prev) => prev.map((c) => c.card_id === updated.card_id ? updated : c))
@@ -81,14 +94,16 @@ function UserCardsDrawer({ userId, onClose }) {
   }
 
   const cardStatusLabel = (statusId) => {
-    if (statusId === 1) return 'Active'
-    if (statusId === 3) return 'Blocked'
-    return 'Inactive'
+    const name = statusNameById[statusId]
+    if (name) return name.charAt(0).toUpperCase() + name.slice(1)
+    return statusId === 1 ? 'Active' : 'Inactive'
   }
 
   const cardStatusVariant = (statusId) => {
-    if (statusId === 1) return 'success'
-    if (statusId === 3) return 'destructive'
+    const name = statusNameById[statusId]
+    if (name === 'active') return 'success'
+    if (name === 'expired' || name === 'cancelled') return 'destructive'
+    if (name === 'frozen') return 'warning'
     return 'warning'
   }
 
@@ -133,11 +148,11 @@ function UserCardsDrawer({ userId, onClose }) {
                   variant="outline"
                   className="h-7 rounded-input px-2.5 text-xs shadow-none"
                   disabled={pendingCardId === card.card_id}
-                  onClick={() => toggleBlock(card)}
+                  onClick={() => toggleFreeze(card)}
                 >
                   {pendingCardId === card.card_id
                     ? <Loader2 className="size-3 animate-spin" />
-                    : card.status_id === 3 ? 'Unblock' : 'Block'
+                    : isFrozen(card) ? 'Unfreeze' : 'Freeze'
                   }
                 </Button>
               </div>

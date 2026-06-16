@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy.exc import IntegrityError
 
 from models.card import Card
@@ -72,8 +74,23 @@ class CardService:
     def get_by_id(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=False)
 
+    def set_status_by_name(self, card_id: int, status_name: str) -> Card:
+        """Set a card's status by resolving the status id by name.
+
+        Status ids are not stable across environments, so callers (block/unblock)
+        must never hardcode a numeric id.
+        """
+        status_id = self._repo.get_status_id_by_name(status_name)
+        if status_id is None:
+            raise CardStatusNotFoundError()
+        return self.patch(card_id, CardPatch(status_id=status_id))
+
     def pending_card_ids_for_user(self, user_id: int) -> set[int]:
         return self._repo.pending_card_ids_for_user(user_id)
+
+    def reserved_by_card_for_user(self, user_id: int) -> dict[int, Decimal]:
+        """Per-card reserved (held) amount for the user's cards, keyed by card_id."""
+        return self._repo.reserved_by_card_for_user(user_id)
 
     def get_by_id_including_deleted(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=True)

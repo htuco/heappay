@@ -16,14 +16,16 @@ export const TRANSACTION_STATUS_OPTIONS = [
   { value: '2', label: 'Completed' },
   { value: '3', label: 'Failed' },
   { value: '4', label: 'Reversed' },
+  { value: '5', label: 'Cancelled' },
 ]
 
-// Cancelling a pending transaction moves it to the "Failed" status, which the
-// backend treats as a user-denied transition (the held amount is released back
-// to the sender). Resolve the id from the canonical status list above instead
-// of hardcoding a magic number.
+// Cancelling a pending transaction moves it to the dedicated "Cancelled" status,
+// which the backend treats as a user-initiated cancel (the held amount is
+// released back to the sender, distinct from a processor-driven "Failed").
+// Resolve the id from the canonical status list above instead of hardcoding a
+// magic number.
 export const CANCELLED_TRANSACTION_STATUS_ID = Number(
-  TRANSACTION_STATUS_OPTIONS.find((option) => option.label === 'Failed')?.value,
+  TRANSACTION_STATUS_OPTIONS.find((option) => option.label === 'Cancelled')?.value,
 )
 
 export const TRANSACTION_TYPE_OPTIONS = [
@@ -62,6 +64,7 @@ export function getTransactionStatus(statusId, hasPendingRefund = false) {
   if (statusId === 2) return { label: 'Completed', variant: 'success' }
   if (statusId === 3) return { label: 'Failed', variant: 'error' }
   if (statusId === 4) return { label: 'Reversed', variant: 'secondary' }
+  if (statusId === 5) return { label: 'Cancelled', variant: 'secondary' }
   return { label: `Status ${statusId}`, variant: 'secondary' }
 }
 

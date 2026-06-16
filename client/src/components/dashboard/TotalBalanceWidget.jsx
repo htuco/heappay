@@ -1,8 +1,32 @@
 import { useState } from 'react'
-import { ArrowUpRight, Eye, EyeOff, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, Eye, EyeOff, HelpCircle, TrendingUp } from 'lucide-react'
+
+function ReservedHelp() {
+  return (
+    <span className="group relative inline-flex align-middle">
+      <button
+        type="button"
+        className="ml-1 inline-flex size-4 items-center justify-center rounded-full text-white/60 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        aria-label="What is reserved balance?"
+      >
+        <HelpCircle className="size-3.5" strokeWidth={2} />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-56 -translate-x-1/2 rounded-input bg-slate-900 px-3 py-2 text-left text-xs font-normal leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        Reserved is money held for transactions you&apos;ve sent that haven&apos;t
+        completed yet. It&apos;s already been deducted from your balance and will be
+        released back if the transfer is returned.
+      </span>
+    </span>
+  )
+}
 
 export default function TotalBalanceWidget({
   totalBalance = '$0.00',
+  reservedBalance = null,
+  hasReserved = false,
   currency = 'USD',
   monthlyGrowth = null,
   monthlyAmount = null,
@@ -50,7 +74,17 @@ export default function TotalBalanceWidget({
             <p className="tabular text-4xl font-bold tracking-tight leading-none text-white sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl">
               {visibleBalance}
             </p>
-            <p className="mt-3 lg:mt-2 xl:mt-3 text-sm font-medium text-white/80">{currency}</p>
+            <p className="mt-3 lg:mt-2 xl:mt-3 text-sm font-medium text-white/80">
+              {currency}
+              {hasReserved ? (
+                <span className="tabular font-normal text-white/60">
+                  {' · '}
+                  {isBalanceVisible ? reservedBalance : '••••'}
+                  {' reserved'}
+                  <ReservedHelp />
+                </span>
+              ) : null}
+            </p>
           </>
         )}
       </div>

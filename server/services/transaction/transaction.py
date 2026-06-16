@@ -283,8 +283,14 @@ class TransactionService:
         pending_id = self._repo.get_status_id_by_name("pending")
         completed_id = self._repo.get_status_id_by_name("completed")
         failed_id = self._repo.get_status_id_by_name("failed")
+        cancelled_id = self._repo.get_status_id_by_name("cancelled")
 
-        if pending_id is None or completed_id is None or failed_id is None:
+        if (
+            pending_id is None
+            or completed_id is None
+            or failed_id is None
+            or cancelled_id is None
+        ):
             raise TransactionStatusNotFoundError()
         if row.status_id != pending_id:
             raise InvalidTransactionTransitionError()
@@ -295,6 +301,16 @@ class TransactionService:
             if new_status_id == completed_id:
                 return self._repo.complete(
                     row.transaction_id, processed_by=processed_by
+                )
+            if new_status_id == cancelled_id:
+                # User/owner-initiated cancel of a pending transaction. Releases the
+                # sender's held funds (same reversal as fail) but stamps the distinct
+                # 'cancelled' status so it doesn't read as a processor failure.
+                reason = "STAFF_CANCELLED" if processed_by == "staff" else "USER_CANCELLED"
+                return self._repo.cancel(
+                    row.transaction_id,
+                    reason_code=reason,
+                    processed_by=processed_by,
                 )
             if new_status_id == failed_id:
                 reason = "STAFF_DENIED" if processed_by == "staff" else "USER_DENIED"

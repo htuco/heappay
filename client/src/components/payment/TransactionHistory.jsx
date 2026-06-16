@@ -9,6 +9,8 @@ import TransactionHistoryErrorState from '@/components/payment/TransactionHistor
 import TransactionHistoryRow from '@/components/payment/TransactionHistoryRow'
 import TransactionHistorySkeleton from '@/components/payment/TransactionHistorySkeleton'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useDashboardCards } from '@/hooks/useDashboardCards'
+import { formatBrandLabel } from '@/utils/paymentCard.utils'
 import {
   TRANSACTION_STATUS_OPTIONS,
   TRANSACTION_TYPE_OPTIONS,
@@ -51,15 +53,29 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [cardFilter, setCardFilter] = useState('all')
   const [dateSort, setDateSort] = useState('newest')
+
+  // Card options come from the user's own cards. Scoping by card is applied
+  // server-side via the hook's `cardId`, so the "X of N" count stays truthful.
+  const { cards } = useDashboardCards()
+  const cardOptions = useMemo(
+    () =>
+      (cards ?? []).map((card) => ({
+        value: card.id,
+        label: `${formatBrandLabel(card.card?.brand)} ···· ${card.source?.last_four ?? '????'}`,
+      })),
+    [cards],
+  )
 
   // Status + type filter server-side so matches on other pages aren't hidden and
   // the "X of N" count stays truthful. Date + search stay client-side (current page).
   const statusId = statusFilter === 'all' ? undefined : Number(statusFilter)
   const transactionTypeId = typeFilter === 'all' ? undefined : Number(typeFilter)
+  const cardId = cardFilter === 'all' ? undefined : Number(cardFilter)
 
   const { transactions, isLoading, error, page, totalPages, total, setPage, refresh } =
-    useTransactions({ pageSize, statusId, transactionTypeId })
+    useTransactions({ pageSize, statusId, transactionTypeId, cardId })
 
   // Expose the list refresh to the parent (PaymentPage) so actions that change a
   // transaction's status — e.g. cancelling a pending payment — can refetch.
@@ -113,13 +129,19 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     return groups
   }, [filteredTransactions])
   const isFilterActive =
-    lookupValue.trim() || dateFilter || statusFilter !== 'all' || typeFilter !== 'all' || dateSort !== 'newest'
+    lookupValue.trim() ||
+    dateFilter ||
+    statusFilter !== 'all' ||
+    typeFilter !== 'all' ||
+    cardFilter !== 'all' ||
+    dateSort !== 'newest'
 
   function clearFilters() {
     setLookupValue('')
     setDateFilter('')
     setStatusFilter('all')
     setTypeFilter('all')
+    setCardFilter('all')
     setDateSort('newest')
   }
 
@@ -166,6 +188,15 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
               options={[{ value: 'all', label: 'All types' }, ...TRANSACTION_TYPE_OPTIONS]}
               className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
             />
+
+            {cardOptions.length > 1 ? (
+              <Select
+                value={cardFilter}
+                onChange={(e) => setCardFilter(e.target.value)}
+                options={[{ value: 'all', label: 'All cards' }, ...cardOptions]}
+                className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
+              />
+            ) : null}
 
             <Select
               value={dateSort}
