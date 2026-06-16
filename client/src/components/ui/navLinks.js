@@ -18,6 +18,7 @@ export const ADMIN_NAV_LINKS = [
   { name: 'Overview', path: '/admin', icon: LayoutDashboard },
   { name: 'Users', path: '/admin/users', icon: ShieldUser },
   { name: 'Transactions', path: '/admin/transactions', icon: ArrowLeftRight },
+  { name: 'Requests', path: '/admin/requests', icon: TicketCheck },
 ]
 
 export const SUPPORT_NAV_LINKS = [
@@ -27,7 +28,7 @@ export const SUPPORT_NAV_LINKS = [
 
 export const SETTINGS_NAV_LINK = { name: 'Settings', path: '/settings', icon: Settings }
 
-export const STAFF_ROLES = new Set(['admin', 'manager', 'support'])
+export const STAFF_ROLES = new Set(['admin', 'support'])
 
 export function getRoleNavLinks(role) {
   const isAdmin = role === 'admin'
