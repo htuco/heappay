@@ -12,7 +12,12 @@ import { formatBrandLabel } from '@/utils/paymentCard.utils'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
-import { listCards } from '@/services/cardsService'
+import { listCards, getCard } from '@/services/cardsService'
+import {
+  getFundRequest,
+  getNexusFundingEnabled,
+  requestFundTopUp,
+} from '@/services/nexusService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
@@ -20,6 +25,7 @@ import { createIdempotencyKey } from '@/utils/idempotency'
 
 const QUICK_AMOUNTS = [10, 25, 50, 100]
 const SUCCESS_HOLD_MS = 1200
+const NEXUS_POLL_MS = 3000
 
 function formatAmount(value) {
   const cleaned = value.replace(/[^\d.]/g, '')
@@ -147,6 +153,7 @@ function TopUpLeftPanel({
   amountNum,
   maskCard,
   resolveBrand,
+  useNexusCopy = false,
 }) {
   const hasAmount = !isNaN(amountNum) && amountNum > 0
   const projectedBalance = selectedCard
@@ -191,12 +198,33 @@ function TopUpLeftPanel({
 
         <div className="mt-auto rounded-surface border border-border/60 bg-card/60 p-4">
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Funds will be available on the selected card as soon as the deposit
-            is processed.
+            {useNexusCopy
+              ? 'Your request is sent to the treasury. Funds appear on this card after operator approval.'
+              : 'Funds will be available on the selected card as soon as the deposit is processed.'}
           </p>
         </div>
       </div>
     </>
+  )
+}
+
+function PendingState({ amount, cardLastFour, statusMessage }) {
+  return (
+    <div className="flex flex-col items-center gap-6 py-6 text-center">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Funding request submitted
+        </p>
+        <p className="tabular-nums text-3xl font-bold tracking-tight text-card-foreground">
+          {formatMoney(amount)}
+        </p>
+        {cardLastFour && (
+          <p className="text-sm text-muted-foreground">to card ****{cardLastFour}</p>
+        )}
+        <p className="max-w-sm text-sm text-muted-foreground">{statusMessage}</p>
+      </div>
+    </div>
   )
 }
 
@@ -249,6 +277,8 @@ export default function TopUpModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(null)
+  const [nexusEnabled, setNexusEnabled] = useState(false)
+  const [pendingRequest, setPendingRequest] = useState(null)
   const amountInputRef = useRef(null)
   const idempotencyKeyRef = useRef(null)
 
@@ -259,10 +289,12 @@ export default function TopUpModal({
     Promise.all([
       listCards({ user_id: user.id, limit: 100 }),
       transactionTypesService.list(),
+      getNexusFundingEnabled(),
     ])
-      .then(([raw, types]) => {
+      .then(([raw, types, nexusActive]) => {
         const active = raw.filter((c) => !c.deleted_at)
         setCards(active)
+        setNexusEnabled(nexusActive)
         if (initialCardId && active.some((c) => c.card_id === initialCardId)) {
           setSelectedCardId(initialCardId)
         } else if (active.length === 1) {
@@ -282,49 +314,136 @@ export default function TopUpModal({
     setAmount('')
     setError('')
     setSuccess(null)
+    setPendingRequest(null)
     idempotencyKeyRef.current = null
     onClose()
   }
 
-  async function handleSubmit() {
-    const amountNum = parseFloat(amount)
-    if (!selectedCardId || isNaN(amountNum) || amountNum <= 0) return
+  useEffect(() => {
+    if (!pendingRequest || !isOpen) return undefined
+
+    let cancelled = false
+    const targetBalance = pendingRequest.initialBalance + pendingRequest.amount
+
+    async function pollFundingStatus() {
+      while (!cancelled) {
+        try {
+          const [request, card] = await Promise.all([
+            getFundRequest(pendingRequest.requestId),
+            getCard(pendingRequest.cardId),
+          ])
+
+          if (request.status === 'rejected') {
+            setError('Funding request was rejected by the treasury.')
+            setPendingRequest(null)
+            return
+          }
+
+          if (Number(card.balance) >= targetBalance - 0.001) {
+            notify({
+              type: 'success',
+              category: CATEGORIES.PAYMENT_RECEIVED,
+              message: `${formatMoney(pendingRequest.amount)} added to card ****${pendingRequest.cardLastFour}.`,
+              link: { route: '/wallet' },
+            })
+            emitDataChange(DATA_CHANGE_KINDS.CARD)
+            onSuccess?.()
+            setSuccess({
+              amount: pendingRequest.amount,
+              cardLastFour: pendingRequest.cardLastFour,
+            })
+            setPendingRequest(null)
+            setTimeout(handleClose, SUCCESS_HOLD_MS)
+            return
+          }
+
+          setPendingRequest((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  statusMessage:
+                    request.status === 'approved' || request.status === 'completed'
+                      ? 'Approved — adding funds to your card…'
+                      : 'Waiting for operator approval…',
+                }
+              : prev
+          )
+        } catch {
+          // Keep polling through transient network errors.
+        }
+
+        await new Promise((resolve) => {
+          setTimeout(resolve, NEXUS_POLL_MS)
+        })
+      }
+    }
+
+    pollFundingStatus()
+    return () => {
+      cancelled = true
+    }
+  }, [pendingRequest, isOpen, notify, onSuccess])
+
+  async function handleNexusSubmit(amountNum, card) {
+    const created = await requestFundTopUp(selectedCardId, amountNum)
+    setPendingRequest({
+      requestId: created.id,
+      amount: amountNum,
+      cardId: selectedCardId,
+      cardLastFour: card.last_four,
+      initialBalance: Number(card.balance) || 0,
+      statusMessage: 'Waiting for operator approval…',
+    })
+  }
+
+  async function handleLegacySubmit(amountNum, card) {
     if (!depositTypeId) {
       setError('Deposit is not available right now. Please try again later.')
       return
     }
-    if (isSubmitting) return
-
-    setError('')
-    setIsSubmitting(true)
 
     if (!idempotencyKeyRef.current) {
       idempotencyKeyRef.current = createIdempotencyKey()
     }
 
+    const created = await transactionsService.create({
+      sender_card_id: null,
+      recipient_card_id: selectedCardId,
+      transaction_type_id: depositTypeId,
+      amount: amountNum.toFixed(2),
+      note: null,
+      idempotency_key: idempotencyKeyRef.current,
+    })
+
+    notify({
+      type: 'success',
+      category: CATEGORIES.PAYMENT_RECEIVED,
+      message: `${formatMoney(amountNum)} added to card ****${card.last_four}.`,
+      link: created?.transaction_id
+        ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
+        : { route: '/payments' },
+    })
+    emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
+    onSuccess?.()
+    setSuccess({ amount: amountNum, cardLastFour: card.last_four })
+    setTimeout(handleClose, SUCCESS_HOLD_MS)
+  }
+
+  async function handleSubmit() {
+    const amountNum = parseFloat(amount)
+    if (!selectedCardId || isNaN(amountNum) || amountNum <= 0) return
+    if (isSubmitting) return
+
+    setError('')
+    setIsSubmitting(true)
+
     try {
       const card = cards.find((c) => c.card_id === selectedCardId)
-      const created = await transactionsService.create({
-        sender_card_id: null,
-        recipient_card_id: selectedCardId,
-        transaction_type_id: depositTypeId,
-        amount: amountNum.toFixed(2),
-        note: null,
-        idempotency_key: idempotencyKeyRef.current,
-      })
-
-      notify({
-        type: 'success',
-        category: CATEGORIES.PAYMENT_RECEIVED,
-        message: `${formatMoney(amountNum)} added to card ****${card.last_four}.`,
-        link: created?.transaction_id
-          ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
-          : { route: '/payments' },
-      })
-      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
-      onSuccess?.()
-      setSuccess({ amount: amountNum, cardLastFour: card.last_four })
-      setTimeout(handleClose, SUCCESS_HOLD_MS)
+      if (nexusEnabled) {
+        await handleNexusSubmit(amountNum, card)
+      } else {
+        await handleLegacySubmit(amountNum, card)
+      }
     } catch (err) {
       setError(err?.message || 'Top-up failed. Please try again.')
     } finally {
@@ -341,7 +460,23 @@ export default function TopUpModal({
   const amountNum = parseFloat(amount)
   const amountInvalid = amount !== '' && (isNaN(amountNum) || amountNum <= 0)
   const canSubmit =
-    selectedCardId && !isNaN(amountNum) && amountNum > 0 && !isSubmitting
+    selectedCardId &&
+    !isNaN(amountNum) &&
+    amountNum > 0 &&
+    !isSubmitting &&
+    !pendingRequest
+
+  if (pendingRequest) {
+    return (
+      <Modal isOpen={isOpen} onClose={handleClose} title="" size="default">
+        <PendingState
+          amount={pendingRequest.amount}
+          cardLastFour={pendingRequest.cardLastFour}
+          statusMessage={pendingRequest.statusMessage}
+        />
+      </Modal>
+    )
+  }
 
   // Success state uses the classic Modal shell — no split needed.
   if (success) {
@@ -369,6 +504,7 @@ export default function TopUpModal({
           amountNum={amountNum}
           maskCard={maskCard}
           resolveBrand={resolveBrand}
+          useNexusCopy={nexusEnabled}
         />
       }
       footer={
@@ -383,12 +519,12 @@ export default function TopUpModal({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Adding funds…
+                {nexusEnabled ? 'Submitting request…' : 'Adding funds…'}
               </>
             ) : (
               <>
                 <ArrowDownToLine className="mr-2 h-4 w-4" />
-                Add Funds
+                {nexusEnabled ? 'Request Funds' : 'Add Funds'}
               </>
             )}
           </Button>

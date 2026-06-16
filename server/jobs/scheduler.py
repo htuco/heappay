@@ -29,8 +29,24 @@ async def _scheduled_tasks_loop(interval_seconds: int) -> None:
                 "cards_skipped_pending=%(cards_skipped_pending)d "
                 "cards_skipped_no_destination=%(cards_skipped_no_destination)d "
                 "processed=%(processed)d allowed=%(allowed)d denied=%(denied)d "
-                "skipped=%(skipped)d errors=%(errors)d",
-                stats,
+                "skipped=%(skipped)d errors=%(errors)d "
+                "nexus_claimed=%(nexus_claimed)d nexus_skipped=%(nexus_skipped)d "
+                "nexus_errors=%(nexus_errors)d",
+                {
+                    "cards_expired": stats.get("cards_expired", 0),
+                    "cards_skipped_pending": stats.get("cards_skipped_pending", 0),
+                    "cards_skipped_no_destination": stats.get(
+                        "cards_skipped_no_destination", 0
+                    ),
+                    "processed": stats.get("processed", 0),
+                    "allowed": stats.get("allowed", 0),
+                    "denied": stats.get("denied", 0),
+                    "skipped": stats.get("skipped", 0),
+                    "errors": stats.get("errors", 0),
+                    "nexus_claimed": stats.get("nexus_claimed", 0),
+                    "nexus_skipped": stats.get("nexus_skipped", 0),
+                    "nexus_errors": stats.get("nexus_errors", 0),
+                },
             )
         except Exception:
             logger.exception("scheduled tasks failed")

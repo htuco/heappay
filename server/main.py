@@ -24,6 +24,7 @@ from routes.chat.chat import router as chat_router
 from routes.storage.images import router as storage_router
 from routes.transaction.transaction import router as transaction_router
 from routes.transaction.transaction_type import router as transaction_type_router
+from routes.nexus.funding import router as nexus_funding_router
 from routes.request.request import router as request_router
 from routes.user.auth import router as auth_router
 from routes.user.user import router as users_router
@@ -120,6 +121,7 @@ def create_app() -> FastAPI:
     app.include_router(transaction_type_router)
     app.include_router(chat_router)
     app.include_router(request_router)
+    app.include_router(nexus_funding_router)
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(_run_knowledge_sync, "interval", hours=1, id="knowledge_sync")
