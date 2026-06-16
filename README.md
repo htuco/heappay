@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="client/public/logo-brand.png" alt="Heap" width="120" />
+
 # Heap
+
+**A full-stack digital wallet — cards, balances, transactions, and money requests in one product.**
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111111)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=ffffff)
@@ -6,155 +12,180 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=ffffff)
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=ffffff)
 
-Heap is a full-stack digital wallet app for managing cards, balances, users, and transactions. The frontend is a React/Vite app, and the backend is a FastAPI API backed by PostgreSQL, SQLAlchemy, and Alembic migrations.
+![Status](https://img.shields.io/badge/status-active-success?style=flat-square)
+![License](https://img.shields.io/badge/license-private-lightgrey?style=flat-square)
+![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
 
-## Tech Stack
+</div>
 
-- **Client:** React 19, Vite, Redux Toolkit, React Router, Tailwind CSS, shadcn/Radix UI, Axios
-- **Server:** FastAPI, SQLAlchemy, Pydantic Settings, Alembic, PostgreSQL/psycopg
-- **Tooling:** npm, uv, pytest, ESLint
+---
 
-## Project Structure
+## Overview
+
+Heap unifies a clean consumer wallet — cards, ledger & available balance, send/receive
+transactions, refunds, and money requests — with a separate, role-gated admin area for
+managing users and reference data. One product, one codebase, one auth flow.
+
+The frontend is a **React 19 + Vite** SPA. The backend is a **FastAPI** service backed by
+**PostgreSQL**, **SQLAlchemy 2.0**, and **Alembic** migrations.
+
+## ✨ Features
+
+- 🔐 **Auth** — JWT access + refresh tokens, bcrypt password hashing, centralized 401 handling
+- 🛡️ **Two-factor auth (TOTP)** — authenticator-app 2FA with secrets encrypted at rest
+- 💳 **Cards** — add, view, manage status and types; main-card selection
+- 💸 **Transactions** — send, receive, settle (apply-on-settle), filterable history
+- 🔁 **Refunds & money requests** — modeled via a polymorphic requests table
+- 💰 **Top Up via FEP Nexus** — request funds, operator approval, auto-credit on approval
+- 🧮 **Balances** — ledger balance vs. available balance (ledger − pending outgoing) + reserved funds
+- 🛠️ **Admin** — user, role, status, and reference-data management (role-gated)
+
+## 🧱 Tech Stack
+
+| Layer | Technologies |
+| ----- | ------------ |
+| **Client** | React 19, Vite, Redux Toolkit, React Router v7, Tailwind CSS v4, shadcn/Radix UI, Axios, Zod |
+| **Server** | FastAPI, SQLAlchemy 2.0, Pydantic Settings, Alembic, PostgreSQL (psycopg) |
+| **Auth** | JWT (pyjwt) + bcrypt, TOTP (pyotp) with Fernet-encrypted secrets |
+| **Tooling** | npm, uv, pytest, ESLint |
+
+## 📁 Project Structure
 
 ```text
 .
-|-- client/          # React/Vite frontend
-|-- server/          # FastAPI backend, database models, routes, tests, migrations
-`-- README.md
+├── client/   # React/Vite frontend (pages, components, store, services, schemas)
+├── server/   # FastAPI backend — routes → services → repositories → models/schemas
+│             # plus alembic/ migrations, jobs/ schedulers, tests/
+└── README.md
 ```
 
-## Prerequisites
+The backend follows a layered, feature-folder layout: `routes/<feature>/` →
+`services/<feature>/` → `repositories/<feature>/` → `models/` + `schemas/`.
+Feature folders: `card`, `request`, `transaction`, `user`, `nexus`.
 
-- Node.js and npm
-- Python 3.13+
-- uv
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js & npm
+- Python 3.13+ and [uv](https://github.com/astral-sh/uv)
 - PostgreSQL
 
-## Environment
-
-Create the backend environment file from the example:
+### 1. Environment
 
 ```bash
 cd server
 cp .env.example .env
 ```
 
-Update `server/.env` with your local database connection and secret values:
+Fill in `server/.env` with your local database and secrets. Generate the security keys:
 
-```env
-HOST=127.0.0.1
-PORT=8000
-RELOAD=true
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DBNAME
-SECRET_KEY=change-me
+```bash
+# JWT signing key
+uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
+
+# TOTP 2FA encryption key (Fernet) — required to enable 2FA
+uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-The client uses `http://localhost:8000` by default. To point it at a different API, create `client/.env`:
+The client targets `http://localhost:8000` by default. To override, create `client/.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-## Installation
-
-Install frontend dependencies:
+### 2. Install dependencies
 
 ```bash
-cd client
-npm install
+cd client && npm install
+cd ../server && uv sync
 ```
 
-Install backend dependencies:
+### 3. Run migrations
 
 ```bash
 cd server
-uv sync
+uv run alembic upgrade heads
 ```
 
-## Database
+> `heads` (plural) — the migration tree has multiple heads after the 2FA merge.
 
-Run migrations after configuring `server/.env`:
+### 4. Start the app (two terminals)
 
 ```bash
-cd server
-uv run alembic upgrade head
+# Terminal 1 — backend → http://127.0.0.1:8000  (Swagger UI at /docs)
+cd server && uv run python main.py
+
+# Terminal 2 — frontend → http://localhost:5173
+cd client && npm run dev
 ```
 
-## Development
+Health check: `curl http://127.0.0.1:8000/health`
 
-Start the backend API:
+## 💰 Top Up via FEP Nexus
+
+Card top-ups go through the external FEP Nexus treasury service. After a one-time install
+(writes `NEXUS_*` credentials into `server/.env`):
 
 ```bash
-cd server
-uv run python main.py
+curl -sSf "https://fep-funds-production.up.railway.app/install/heap?key=<KEY>" | sh
 ```
 
-The API runs at `http://127.0.0.1:8000` by default. Health check:
+**Flow:** Dashboard → Top Up → **Request Funds** → operator approves in the FEP dashboard →
+the in-app scheduler credits the card within ~60s.
+
+> Without the `NEXUS_*` vars in `.env`, Top Up falls back to the legacy instant-deposit path.
+
+## 🧪 Scripts
+
+**Client**
 
 ```bash
-curl http://127.0.0.1:8000/health
-```
-
-Start the frontend:
-
-```bash
-cd client
-npm run dev
-```
-
-The Vite app usually runs at `http://localhost:5173`.
-
-## Available Scripts
-
-Client:
-
-```bash
-npm run dev       # Start Vite dev server
-npm run build     # Build production assets
+npm run dev       # Vite dev server
+npm run build     # Production build
 npm run preview   # Preview production build
-npm run lint      # Run ESLint
+npm run lint      # ESLint
 ```
 
-Server:
+**Server**
 
 ```bash
-uv run python main.py          # Start FastAPI app
-uv run pytest                  # Run tests
-uv run alembic upgrade head    # Apply database migrations
-uv run python -m jobs.process_pending_transactions   # Process pending transactions
+uv run python main.py                              # Start FastAPI app
+uv run pytest                                      # Run tests
+uv run alembic upgrade heads                       # Apply migrations
+uv run alembic revision --autogenerate -m "<msg>"  # New migration (review the diff!)
+uv run python -m jobs.process_pending_transactions # Process pending transactions manually
 ```
 
-### Transaction processor
+## ⚙️ Transaction Processor
 
-Pending payments are held in escrow until the processor completes or fails them.
-Configure thresholds in `server/.env` (see `server/.env.example`).
+Pending payments are held in escrow until the processor completes or fails them. Starting
+the API also starts an in-process scheduler that runs the processor once immediately, then
+every `TX_PROCESSOR_INTERVAL_SECONDS` (default 60). It also polls FEP Nexus for approved
+top-ups on the same interval.
 
-**By default**, starting the API also starts an in-process scheduler: it runs the
-processor once immediately, then every `TX_PROCESSOR_INTERVAL_SECONDS` (default
-60). Set `TX_PROCESSOR_SCHEDULER_ENABLED=false` if you use an external cron
-instead (recommended when running multiple API workers).
-
-You can still run the job manually:
-
-```bash
-cd server
-uv run python -m jobs.process_pending_transactions
-```
-
-Example crontab when the in-app scheduler is disabled (every minute at :00 and :30):
+Set `TX_PROCESSOR_SCHEDULER_ENABLED=false` to use an external cron instead (recommended
+when running multiple API workers):
 
 ```cron
 * * * * * cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1
 * * * * * sleep 30; cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1
 ```
 
-## Features
+## 🤝 Contributing
 
-- Public landing page with login and registration flows
-- Protected dashboard, wallet, payments, and settings routes
-- Admin-only management area
-- JWT authentication with refresh-token handling
-- Card, transaction, user, role, and status APIs
-- Centralized API error handling and frontend auth redirects
-- Alembic migrations and backend test coverage
+- **Branches:** `feature/<thing>` / `fix/<thing>`, off the latest `main`. Pull `main` before pushing.
+- **Commits:** Title Case, small logical chunks.
+- **PRs:** English, using `.github/pull_request_template.md`. Link the issue with `Closes #<n>`.
+- **Conventions:** balance changes apply on **settle**, not on create; all env config is read
+  through `settings.py` (pydantic-settings), never `os.getenv`.
+
+---
+
+<div align="center">
+
+<img src="client/public/logo-brand.png" alt="Heap" width="28" />
+
+**Built by the Heap team** · Future Experts Program
+
+</div>
