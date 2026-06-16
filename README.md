@@ -1,20 +1,10 @@
 <div align="center">
 
-<img src="client/public/logo-brand.png" alt="Heap" width="120" />
-
-# Heap
+<img src="client/public/heappay-logo.png" alt="HeapPay" width="320" />
 
 **A full-stack digital wallet — cards, balances, transactions, and money requests in one product.**
 
-![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111111)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=ffffff)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.136-009688?style=for-the-badge&logo=fastapi&logoColor=ffffff)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=ffffff)
-![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=ffffff)
-
-![Status](https://img.shields.io/badge/status-active-success?style=flat-square)
-![License](https://img.shields.io/badge/license-private-lightgrey?style=flat-square)
-![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111111) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=ffffff) ![FastAPI](https://img.shields.io/badge/FastAPI-0.136-009688?style=for-the-badge&logo=fastapi&logoColor=ffffff) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=ffffff) ![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=ffffff)
 
 </div>
 
@@ -22,25 +12,25 @@
 
 ## Overview
 
-Heap unifies a clean consumer wallet — cards, ledger & available balance, send/receive
+HeapPay unifies a clean consumer wallet — cards, ledger & available balance, send/receive
 transactions, refunds, and money requests — with a separate, role-gated admin area for
 managing users and reference data. One product, one codebase, one auth flow.
 
 The frontend is a **React 19 + Vite** SPA. The backend is a **FastAPI** service backed by
 **PostgreSQL**, **SQLAlchemy 2.0**, and **Alembic** migrations.
 
-## ✨ Features
+## Features
 
-- 🔐 **Auth** — JWT access + refresh tokens, bcrypt password hashing, centralized 401 handling
-- 🛡️ **Two-factor auth (TOTP)** — authenticator-app 2FA with secrets encrypted at rest
-- 💳 **Cards** — add, view, manage status and types; main-card selection
-- 💸 **Transactions** — send, receive, settle (apply-on-settle), filterable history
-- 🔁 **Refunds & money requests** — modeled via a polymorphic requests table
-- 💰 **Top Up via FEP Nexus** — request funds, operator approval, auto-credit on approval
-- 🧮 **Balances** — ledger balance vs. available balance (ledger − pending outgoing) + reserved funds
-- 🛠️ **Admin** — user, role, status, and reference-data management (role-gated)
+- **Auth** — JWT access + refresh tokens, bcrypt password hashing, centralized 401 handling
+- **Two-factor auth (TOTP)** — authenticator-app 2FA with secrets encrypted at rest
+- **Cards** — add, view, manage status and types; main-card selection
+- **Transactions** — send, receive, settle (apply-on-settle), filterable history
+- **Refunds & money requests** — modeled via a polymorphic requests table
+- **Top Up via FEP Nexus** — request funds, operator approval, auto-credit on approval
+- **Balances** — ledger balance vs. available balance (ledger − pending outgoing) + reserved funds
+- **Admin** — user, role, status, and reference-data management (role-gated)
 
-## 🧱 Tech Stack
+## Tech Stack
 
 | Layer | Technologies |
 | ----- | ------------ |
@@ -49,7 +39,7 @@ The frontend is a **React 19 + Vite** SPA. The backend is a **FastAPI** service 
 | **Auth** | JWT (pyjwt) + bcrypt, TOTP (pyotp) with Fernet-encrypted secrets |
 | **Tooling** | npm, uv, pytest, ESLint |
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 .
@@ -63,7 +53,7 @@ The backend follows a layered, feature-folder layout: `routes/<feature>/` →
 `services/<feature>/` → `repositories/<feature>/` → `models/` + `schemas/`.
 Feature folders: `card`, `request`, `transaction`, `user`, `nexus`.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -122,7 +112,7 @@ cd client && npm run dev
 
 Health check: `curl http://127.0.0.1:8000/health`
 
-## 💰 Top Up via FEP Nexus
+## Top Up via FEP Nexus
 
 Card top-ups go through the external FEP Nexus treasury service. After a one-time install
 (writes `NEXUS_*` credentials into `server/.env`):
@@ -136,7 +126,7 @@ the in-app scheduler credits the card within ~60s.
 
 > Without the `NEXUS_*` vars in `.env`, Top Up falls back to the legacy instant-deposit path.
 
-## 🧪 Scripts
+## Scripts
 
 **Client**
 
@@ -157,7 +147,7 @@ uv run alembic revision --autogenerate -m "<msg>"  # New migration (review the d
 uv run python -m jobs.process_pending_transactions # Process pending transactions manually
 ```
 
-## ⚙️ Transaction Processor
+## Transaction Processor
 
 Pending payments are held in escrow until the processor completes or fails them. Starting
 the API also starts an in-process scheduler that runs the processor once immediately, then
@@ -172,19 +162,11 @@ when running multiple API workers):
 * * * * * sleep 30; cd /path/to/heap/server && uv run python -m jobs.process_pending_transactions >> /var/log/heap-tx-processor.log 2>&1
 ```
 
-## 🤝 Contributing
-
-- **Branches:** `feature/<thing>` / `fix/<thing>`, off the latest `main`. Pull `main` before pushing.
-- **Commits:** Title Case, small logical chunks.
-- **PRs:** English, using `.github/pull_request_template.md`. Link the issue with `Closes #<n>`.
-- **Conventions:** balance changes apply on **settle**, not on create; all env config is read
-  through `settings.py` (pydantic-settings), never `os.getenv`.
-
 ---
 
 <div align="center">
 
-<img src="client/public/logo-brand.png" alt="Heap" width="28" />
+<img src="client/public/heap-logo.png" alt="Heap" width="160" />
 
 **Built by the Heap team** · Future Experts Program
 
