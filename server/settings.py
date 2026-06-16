@@ -63,6 +63,15 @@ class Settings(BaseSettings):
     nexus_secret_key: str = ""
     nexus_project: str = ""
 
+    @computed_field
+    @property
+    def nexus_enabled(self) -> bool:
+        return bool(
+            self.nexus_url.strip()
+            and self.nexus_secret_key.strip()
+            and self.nexus_project.strip()
+        )
+
     # Refund processor (phase 2 — disabled by default)
     refund_processor_enabled: bool = False
     refund_min_processing_delay_seconds: int = 3

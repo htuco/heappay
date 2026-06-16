@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from jobs.nexus_claim import apply_nexus_request_credit
 from repositories.card.card import CardRepository
 from routes.dependencies import get_current_user_id
 from schemas.nexus import FundRequestCreate, FundRequestResponse
@@ -100,6 +101,7 @@ async def create_fund_request(
 async def get_fund_request(
     request_id: str,
     _: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
     service: NexusFundingService = Depends(get_nexus_funding_service),
 ) -> ApiResponse[FundRequestResponse]:
     try:
@@ -114,6 +116,8 @@ async def get_fund_request(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Funding request not found."
         )
+
+    await apply_nexus_request_credit(db, raw)
 
     return ApiResponse[FundRequestResponse](
         success=True,
