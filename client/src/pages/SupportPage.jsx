@@ -179,8 +179,7 @@ function UsersTab() {
   const [total, setTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [pendingUserId, setPendingUserId] = useState(null)
-  const [expandedUserId, setExpandedUserId] = useState(null)
+    const [expandedUserId, setExpandedUserId] = useState(null)
   const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE))
 
   const load = useCallback(async (p = 1, q = search) => {
@@ -209,19 +208,6 @@ function UsersTab() {
     load(1, e.target.value)
   }
 
-  async function toggleSuspend(user) {
-    setPendingUserId(user.user_id)
-    try {
-      const updated = user.status_id === 3
-        ? await usersService.activate(user.user_id)
-        : await usersService.suspend(user.user_id)
-      setUsers((prev) => prev.map((u) => u.user_id === updated.user_id ? updated : u))
-    } catch {
-      // silently ignore
-    } finally {
-      setPendingUserId(null)
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -305,21 +291,6 @@ function UsersTab() {
                         >
                           <CreditCard className="size-3 mr-1" />
                           Cards
-                        </Button>
-                        <Button
-                          variant={user.status_id === 3 ? 'outline' : 'outline'}
-                          className={`h-7 rounded-input px-2.5 text-xs shadow-none ${
-                            user.status_id === 3
-                              ? 'border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950'
-                              : 'border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50'
-                          }`}
-                          disabled={pendingUserId === user.user_id}
-                          onClick={() => toggleSuspend(user)}
-                        >
-                          {pendingUserId === user.user_id
-                            ? <Loader2 className="size-3 animate-spin" />
-                            : user.status_id === 3 ? 'Activate' : 'Suspend'
-                          }
                         </Button>
                       </div>
                     </td>

@@ -156,10 +156,10 @@ def delete_user(
 
 # ─── Suspend / Activate (staff) ───────────────────────────────────────────────
 
-@router.post("/{user_id}/suspend", response_model=UserResponse, summary="(Staff) Suspend a user account.")
+@router.post("/{user_id}/suspend", response_model=UserResponse, summary="(Admin) Suspend a user account.")
 def suspend_user(
     user_id: int,
-    _: int = Depends(require_staff),
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -169,10 +169,10 @@ def suspend_user(
     return UserResponse.model_validate(row)
 
 
-@router.post("/{user_id}/activate", response_model=UserResponse, summary="(Staff) Activate a user account.")
+@router.post("/{user_id}/activate", response_model=UserResponse, summary="(Admin) Activate a user account.")
 def activate_user(
     user_id: int,
-    _: int = Depends(require_staff),
+    _: int = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:

@@ -39,6 +39,7 @@ function normalizeCards(rawCards, cardTypesById, cardStatusesById, usersByNumeri
         expiryDate: card.expires_at,
         brand: (cardTypesById[card.card_type_id]?.vendor ?? '').toLowerCase(),
         statusName,
+        status: statusName,
         isActive: statusName === 'active',
         isDisabled: DISABLED_CARD_STATUSES.has(statusName),
       },

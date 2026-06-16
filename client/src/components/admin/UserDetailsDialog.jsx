@@ -503,16 +503,18 @@ export default function UserDetailsDialog({
           {isAdmin ? 'Danger Zone' : 'Account Actions'}
         </SplitModalContextLabel>
         <div className={`grid gap-2 ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 border-warning/40 text-xs text-warning shadow-none hover:bg-warning/10"
-            disabled={statusAction}
-            onClick={handleStatusToggle}
-          >
-            <UserMinus className="size-3.5" aria-hidden />
-            {isSuspended ? 'Activate' : 'Suspend'}
-          </Button>
+          {typeof onSuspend === 'function' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 border-warning/40 text-xs text-warning shadow-none hover:bg-warning/10"
+              disabled={statusAction}
+              onClick={handleStatusToggle}
+            >
+              <UserMinus className="size-3.5" aria-hidden />
+              {isSuspended ? 'Activate' : 'Suspend'}
+            </Button>
+          )}
           {isAdmin ? (
             <Button
               variant="outline"
