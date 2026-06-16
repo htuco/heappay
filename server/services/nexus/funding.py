@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal
 
 import nexus
@@ -21,13 +22,19 @@ class ForbiddenError(Exception):
     """Caller does not own the card."""
 
 
-def is_nexus_configured() -> bool:
+def sync_nexus_env() -> None:
+    """Expose Nexus settings to nexus.py (reads os.environ)."""
     settings = get_settings()
-    return bool(
-        settings.nexus_url.strip()
-        and settings.nexus_secret_key.strip()
-        and settings.nexus_project.strip()
-    )
+    if settings.nexus_url:
+        os.environ["NEXUS_URL"] = settings.nexus_url
+    if settings.nexus_secret_key:
+        os.environ["NEXUS_SECRET_KEY"] = settings.nexus_secret_key
+    if settings.nexus_project:
+        os.environ["NEXUS_PROJECT"] = settings.nexus_project
+
+
+def is_nexus_configured() -> bool:
+    return get_settings().nexus_enabled
 
 
 class NexusFundingService:
@@ -39,6 +46,8 @@ class NexusFundingService:
     ) -> dict:
         if not is_nexus_configured():
             raise NexusNotConfiguredError()
+
+        sync_nexus_env()
 
         card = self._cards.get_by_id(card_id)
         if card is None:
@@ -58,4 +67,5 @@ class NexusFundingService:
     async def get_request(self, request_id: str) -> dict | None:
         if not is_nexus_configured():
             raise NexusNotConfiguredError()
+        sync_nexus_env()
         return await nexus.get_request(request_id)
