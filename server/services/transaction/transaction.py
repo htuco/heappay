@@ -40,8 +40,21 @@ class ProcessingDelayNotElapsedError(Exception):
     """The transaction is still within the minimum processing delay window."""
 
 
+class CardFrozenError(Exception):
+    """A frozen card cannot send or receive money.
+
+    ``side`` is "sender" or "recipient" so the route can return a precise
+    message.
+    """
+
+    def __init__(self, side: str) -> None:
+        self.side = side
+        super().__init__(f"The {side} card is frozen.")
+
+
 class TransactionService:
     DEFAULT_STATUS = "pending"
+    FROZEN_CARD_STATUS = "frozen"
 
     def __init__(self, repo: TransactionRepository) -> None:
         self._repo = repo
@@ -180,6 +193,15 @@ class TransactionService:
             # Deposit (no sender) must target the caller's own card
             if recipient_card.user_id != user_id:
                 raise ForbiddenError()
+
+        # A frozen card can neither send nor receive money. Resolve the status
+        # id by name (ids are not stable across environments).
+        frozen_status_id = self._repo.get_card_status_id_by_name(self.FROZEN_CARD_STATUS)
+        if frozen_status_id is not None:
+            if sender_card is not None and sender_card.status_id == frozen_status_id:
+                raise CardFrozenError("sender")
+            if recipient_card.status_id == frozen_status_id:
+                raise CardFrozenError("recipient")
 
         if sender_card is not None and sender_card.balance < payload.amount:
             raise InsufficientBalanceError()

@@ -570,3 +570,9 @@ class TransactionRepository:
             TransactionStatus.name == name
         )
         return self._db.execute(stmt).scalar_one_or_none()
+
+    def get_card_status_id_by_name(self, name: str) -> int | None:
+        from models.card_status import CardStatus
+
+        stmt = select(CardStatus.card_status_id).where(CardStatus.status_name == name)
+        return self._db.execute(stmt).scalar_one_or_none()

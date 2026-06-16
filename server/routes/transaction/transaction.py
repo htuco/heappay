@@ -20,6 +20,7 @@ from schemas.transaction import (
 from tasks.sync import run_sync_for_user
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.transaction.transaction import (
+    CardFrozenError,
     CardNotFoundError,
     ForbiddenError,
     InsufficientBalanceError,
@@ -40,6 +41,8 @@ _TYPE_NOT_FOUND = "Transaction type not found."
 _STATUS_NOT_FOUND = "Transaction status not found."
 _INSUFFICIENT_BALANCE = "Sender card has insufficient balance."
 _FORBIDDEN = "You do not have access to this resource."
+_SENDER_CARD_FROZEN = "This card is frozen and can't be used to send money."
+_RECIPIENT_CARD_FROZEN = "The recipient's card is frozen and can't receive money."
 _INVALID_TRANSITION = "This status change is not allowed for the transaction."
 _PROCESSING_DELAY = "The transaction is still being processed. Try again shortly."
 
@@ -393,6 +396,11 @@ def create_transaction(
     except InsufficientBalanceError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_INSUFFICIENT_BALANCE
+        ) from None
+    except CardFrozenError as exc:
+        detail = _SENDER_CARD_FROZEN if exc.side == "sender" else _RECIPIENT_CARD_FROZEN
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=detail
         ) from None
     except ForbiddenError:
         raise HTTPException(
