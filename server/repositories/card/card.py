@@ -281,6 +281,34 @@ class CardRepository:
         )
         return set(self._db.scalars(stmt).all())
 
+    def reserved_by_card_for_user(self, user_id: int) -> dict[int, Decimal]:
+        """Per-card reserved (held) amount: sum of pending outgoing transaction
+        amounts where one of the user's cards is the sender. Keyed by card_id.
+
+        This is the read-time derivation of escrow holds — funds are debited from
+        the sender on create and only released on complete/fail, so a card's
+        ``balance`` is already net of these holds (it is Available). Reserved makes
+        the in-flight amount visible without changing the balance math.
+        """
+        stmt = (
+            select(
+                Card.card_id,
+                func.coalesce(func.sum(Transaction.amount), Decimal("0")),
+            )
+            .join(Transaction, Transaction.sender_card_id == Card.card_id)
+            .join(
+                TransactionStatus,
+                Transaction.status_id == TransactionStatus.transaction_status_id,
+            )
+            .where(
+                Card.user_id == user_id,
+                Card.deleted_at.is_(None),
+                TransactionStatus.name == "pending",
+            )
+            .group_by(Card.card_id)
+        )
+        return {card_id: amount for card_id, amount in self._db.execute(stmt).all()}
+
     def list_expired_for_soft_delete(self, *, limit: int) -> list[Card]:
         """Non-deleted cards whose expires_at is before today."""
         stmt = (
@@ -328,6 +356,10 @@ class CardRepository:
             CardStatus.card_status_id == status_id
         )
         return self._db.execute(stmt).first() is not None
+
+    def get_status_id_by_name(self, name: str) -> int | None:
+        stmt = select(CardStatus.card_status_id).where(CardStatus.status_name == name)
+        return self._db.execute(stmt).scalar_one_or_none()
 
     def card_type_exists(self, card_type_id: int) -> bool:
         stmt = select(CardType.card_type_id).where(CardType.card_type_id == card_type_id)

@@ -7,6 +7,9 @@ import CardCarousel from '@/components/card-view/CardCarousel'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 import BalancePanel from '@/components/wallet/BalancePanel'
 import CardStatsRow from '@/components/wallet/CardStatsRow'
+import RecentTransactionsByCard from '@/components/wallet/RecentTransactionsByCard'
+import WalletQuickActions from '@/components/wallet/WalletQuickActions'
+import WalletSecurityNote from '@/components/wallet/WalletSecurityNote'
 import WalletSection from '@/components/wallet/WalletSection'
 import { useWalletCards } from '@/hooks/useWalletCards'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
@@ -141,7 +144,22 @@ export default function WalletPage() {
         </div>
       </div>
 
-      <CardStatsRow {...buildCardStatusOverviewProps(cards)} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="space-y-6 lg:col-span-8">
+          <CardStatsRow {...buildCardStatusOverviewProps(cards)} />
+          {activeCard ? (
+            <RecentTransactionsByCard cardId={activeCard.id} />
+          ) : null}
+        </div>
+        <div className="space-y-6 lg:col-span-4">
+          <WalletQuickActions
+            onAddCard={addCard}
+            isAddingCard={isSaving}
+            addCardError={saveError}
+          />
+          <WalletSecurityNote />
+        </div>
+      </div>
     </div>
   )
 }

@@ -18,7 +18,7 @@ import { blockCard, listCards, unblockCard } from '@/services/cardsService'
 import transactionsService from '@/services/transactionsService'
 import usersService from '@/services/usersService'
 import { useAppSelector } from '@/store/hooks'
-import { selectCardTypes } from '@/store/slices/referenceDataSlice'
+import { selectCardStatuses, selectCardTypes } from '@/store/slices/referenceDataSlice'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -170,6 +170,16 @@ function CardsTab({ userId }) {
     () => Object.fromEntries((cardTypes ?? []).map((t) => [t.card_type_id, t])),
     [cardTypes],
   )
+  // Resolve the frozen status by name — ids are not stable across environments,
+  // and "freeze" is the support action that sets a card to the 'frozen' status.
+  const cardStatuses = useAppSelector(selectCardStatuses)
+  const statusNameById = useMemo(
+    () =>
+      Object.fromEntries(
+        (cardStatuses ?? []).map((s) => [s.card_status_id, s.status_name]),
+      ),
+    [cardStatuses],
+  )
   const [cards, setCards] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -183,10 +193,12 @@ function CardsTab({ userId }) {
       .finally(() => setIsLoading(false))
   }, [userId])
 
+  const isCardFrozen = (card) => statusNameById[card.status_id] === 'frozen'
+
   async function toggle(card) {
     setPendingId(card.card_id)
     try {
-      const updated = card.status_id === 2
+      const updated = isCardFrozen(card)
         ? await unblockCard(card.card_id)
         : await blockCard(card.card_id)
       setCards((prev) => prev.map((c) => c.card_id === updated.card_id ? updated : c))
@@ -208,7 +220,7 @@ function CardsTab({ userId }) {
       </div>
       <div className="divide-y divide-border/60">
         {cards.map((card) => {
-          const blocked = card.status_id === 2
+          const frozen = isCardFrozen(card)
           const type = typesById[card.card_type_id]
           return (
             <div
@@ -224,8 +236,8 @@ function CardsTab({ userId }) {
               </div>
               <div className="flex items-center justify-between gap-3 sm:contents">
                 <span className="text-xs text-muted-foreground capitalize">{type?.type_name ?? '—'}</span>
-                <Badge variant={blocked ? 'error' : 'success'} className="w-fit">
-                  {blocked ? 'Blocked' : 'Active'}
+                <Badge variant={frozen ? 'warning' : 'success'} className="w-fit">
+                  {frozen ? 'Frozen' : 'Active'}
                 </Badge>
                 <Button
                   variant="outline"
@@ -236,7 +248,7 @@ function CardsTab({ userId }) {
                 >
                   {pendingId === card.card_id
                     ? <Loader2 className="size-3 animate-spin" />
-                    : blocked ? 'Unblock' : 'Block'
+                    : frozen ? 'Unfreeze' : 'Freeze'
                   }
                 </Button>
               </div>

@@ -499,6 +499,45 @@ class TransactionRepository:
         self._db.refresh(row)
         return row
 
+    def cancel(
+        self,
+        transaction_id: int,
+        *,
+        reason_code: str,
+        processed_by: str,
+    ) -> Transaction:
+        """Cancel a pending transaction at the owner's request.
+
+        Releases the held funds back to the sender (escrow only ever debited the
+        sender on create, so there is nothing to claw back from the recipient) and
+        stamps the distinct ``cancelled`` status so a user cancel reads differently
+        from a processor-driven ``failed``.
+        """
+        pending_id = self.get_status_id_by_name("pending")
+        cancelled_id = self.get_status_id_by_name("cancelled")
+        if pending_id is None or cancelled_id is None:
+            raise TransactionStateError("Required transaction status not found.")
+
+        row = self._get_transaction_for_update(transaction_id)
+        if row is None:
+            raise TransactionStateError("Transaction not found.")
+        if row.status_id != pending_id:
+            raise TransactionStateError("Transaction is not pending.")
+
+        if row.sender_card_id is not None:
+            sender_card = self.get_card_for_update(row.sender_card_id)
+            if sender_card is None:
+                raise TransactionStateError("Sender card not found.")
+            sender_card.balance = sender_card.balance + row.amount
+
+        row.status_id = cancelled_id
+        row.processed_at = datetime.now(timezone.utc)
+        row.processed_by = processed_by
+        row.deny_reason_code = reason_code
+        self._db.commit()
+        self._db.refresh(row)
+        return row
+
     def _get_transaction_for_update(self, transaction_id: int) -> Transaction | None:
         stmt = (
             select(Transaction)

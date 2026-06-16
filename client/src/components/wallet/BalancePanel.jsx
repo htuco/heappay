@@ -17,6 +17,9 @@ export default function BalancePanel({
 }) {
 	const hasCard = !!activeCard
 	const balance = formatBalance(activeCard?.balance)
+	const reservedAmount = Number(activeCard?.reserved ?? 0)
+	const hasReserved = !Number.isNaN(reservedAmount) && reservedAmount > 0
+	const reserved = formatBalance(activeCard?.reserved)
 	const cardNumber = activeCard?.card?.cardNumber ?? '—'
 
 	return (
@@ -48,6 +51,12 @@ export default function BalancePanel({
 						<p className="tabular mt-1 text-4xl font-bold leading-tight sm:text-5xl">
 							${balance}
 						</p>
+						{hasReserved ? (
+							<p className="mt-2 inline-flex items-center gap-1.5 rounded-chip bg-white/15 px-2.5 py-1 text-xs font-medium text-primary-foreground/90 backdrop-blur">
+								<span className="text-primary-foreground/70">Reserved</span>
+								<span className="tabular font-semibold">${reserved}</span>
+							</p>
+						) : null}
 					</>
 				) : (
 					<>

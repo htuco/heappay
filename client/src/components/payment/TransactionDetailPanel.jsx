@@ -370,7 +370,9 @@ function PanelBody({
   const animationClass = isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
   const transactionId = getTransactionId(detail)
   const sentByCurrentUser = isSentByCurrentUser(detail, ownedCardIds, currentUserId)
-  const canCancel = isPending(detail) && sentByCurrentUser
+  // Action buttons only render when a handler is wired — lets the panel be opened
+  // read-only (e.g. from the wallet's per-card activity list).
+  const canCancel = typeof onCancel === 'function' && isPending(detail) && sentByCurrentUser
   // A refund already exists for this transaction if the detail says so (any
   // status — pending/approved/declined/cancelled) or it was just requested in
   // this session. `refund_status` is authoritative when present; the optimistic
@@ -383,6 +385,7 @@ function PanelBody({
   const refundRequested = existingRefundStatus !== null
   const refundUi = existingRefundStatus ? REFUND_STATUS_UI[existingRefundStatus] : null
   const canRefund =
+    typeof onRefund === 'function' &&
     isUserToUserTransaction(detail) &&
     isCompleted(detail) &&
     isPaymentTransaction(detail) &&

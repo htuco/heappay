@@ -71,7 +71,7 @@ export default function useAdminPageState() {
   const kpiTotals = useMemo(() => {
     const allCards = usersWithCards.flatMap((user) => user.cards)
     const frozenCards = allCards.filter(
-      (item) => item.card.statusName === 'blocked' || item.card.isDisabled
+      (item) => item.card.status === 'frozen' || item.card.isDisabled
     ).length
     return {
       totalUsers: usersWithCards.length,

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
@@ -44,7 +46,7 @@ def get_card_service(db: Session = Depends(get_db)) -> CardService:
     return CardService(CardRepository(db))
 
 
-def _to_response(row, *, has_pending: bool = False) -> CardResponse:
+def _to_response(row, *, has_pending: bool = False, reserved: Decimal = Decimal("0.00")) -> CardResponse:
     return CardResponse(
         card_id=row.card_id,
         user_id=row.user_id,
@@ -54,6 +56,7 @@ def _to_response(row, *, has_pending: bool = False) -> CardResponse:
         masked_card_number=f"{'*' * 12}{row.last_four}",
         expires_at=row.expires_at,
         balance=row.balance,
+        reserved=reserved,
         cardholder_name=row.cardholder_name,
         created_at=row.created_at,
         deleted_at=row.deleted_at,
@@ -69,7 +72,12 @@ def _require_owner_or_staff(card_user_id: int, ctx: UserContext) -> None:
 
 def _to_response_with_pending(row, service: CardService) -> CardResponse:
     pending_ids = service.pending_card_ids_for_user(row.user_id)
-    return _to_response(row, has_pending=row.card_id in pending_ids)
+    reserved = service.reserved_by_card_for_user(row.user_id)
+    return _to_response(
+        row,
+        has_pending=row.card_id in pending_ids,
+        reserved=reserved.get(row.card_id, Decimal("0.00")),
+    )
 
 
 # ─── Lookup (any authenticated user) ─────────────────────────────────────────
@@ -123,10 +131,19 @@ def list_cards(
         offset=offset,
     )
     pending_ids: set[int] = set()
+    reserved_by_card: dict[int, Decimal] = {}
     user_ids = {r.user_id for r in rows}
     for uid in user_ids:
         pending_ids.update(service.pending_card_ids_for_user(uid))
-    return [_to_response(r, has_pending=r.card_id in pending_ids) for r in rows]
+        reserved_by_card.update(service.reserved_by_card_for_user(uid))
+    return [
+        _to_response(
+            r,
+            has_pending=r.card_id in pending_ids,
+            reserved=reserved_by_card.get(r.card_id, Decimal("0.00")),
+        )
+        for r in rows
+    ]
 
 
 # ─── List (deleted) ───────────────────────────────────────────────────────────
@@ -319,7 +336,7 @@ def hard_delete_card(
 
 # ─── Restore ──────────────────────────────────────────────────────────────────
 
-@router.post("/{card_id}/block", response_model=CardResponse, summary="(Staff) Block a card.")
+@router.post("/{card_id}/block", response_model=CardResponse, summary="(Staff) Freeze a card.")
 def block_card(
     card_id: int,
     _: int = Depends(require_staff),
@@ -328,13 +345,13 @@ def block_card(
     if service.get_by_id(card_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
     try:
-        row = service.patch(card_id, CardPatch(status_id=3))
+        row = service.set_status_by_name(card_id, "frozen")
     except (CardNotFoundError, CardStatusNotFoundError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND) from None
-    return _to_response(row)
+    return _to_response_with_pending(row, service)
 
 
-@router.post("/{card_id}/unblock", response_model=CardResponse, summary="(Staff) Unblock a card.")
+@router.post("/{card_id}/unblock", response_model=CardResponse, summary="(Staff) Unfreeze a card.")
 def unblock_card(
     card_id: int,
     _: int = Depends(require_staff),
@@ -343,10 +360,10 @@ def unblock_card(
     if service.get_by_id(card_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND)
     try:
-        row = service.patch(card_id, CardPatch(status_id=1))
+        row = service.set_status_by_name(card_id, "active")
     except (CardNotFoundError, CardStatusNotFoundError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND) from None
-    return _to_response(row)
+    return _to_response_with_pending(row, service)
 
 
 @router.post("/{card_id}/restore", response_model=CardResponse)

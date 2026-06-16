@@ -78,6 +78,9 @@ class FakeCardService:
     def pending_card_ids_for_user(self, user_id: int) -> set[int]:
         return set()
 
+    def reserved_by_card_for_user(self, user_id: int) -> dict:
+        return {}
+
     def create(self, payload):
         raise NotImplementedError
 

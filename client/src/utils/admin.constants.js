@@ -26,11 +26,14 @@ export const USER_ROLE_FILTER_OPTIONS = [
   { label: 'User', value: 'user' },
 ]
 
+// Values match the real seeded card status names (cardApiAdapter normalizes a
+// card's status to status_name: active / frozen / expired / cancelled).
 export const CARD_STATUS_OPTIONS = [
   { label: 'All statuses', value: 'all' },
   { label: 'Active', value: 'active' },
-  { label: 'Disabled', value: 'disabled' },
-  { label: 'Inactive', value: 'inactive' },
+  { label: 'Frozen', value: 'frozen' },
+  { label: 'Expired', value: 'expired' },
+  { label: 'Cancelled', value: 'cancelled' },
 ]
 
 export const CARD_SORT_OPTIONS = [
