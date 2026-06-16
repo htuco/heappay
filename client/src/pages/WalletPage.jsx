@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CreditCard } from 'lucide-react'
+import { CreditCard, Snowflake } from 'lucide-react'
 
 import AddCardModal from '@/components/AddCardModal'
 import CardCarousel from '@/components/card-view/CardCarousel'
@@ -57,6 +57,12 @@ export default function WalletPage() {
   const safeIndex = cards.length > 0 ? Math.min(activeIndex, cards.length - 1) : 0
   const activeCard = cards[safeIndex]
 
+  const mainCard = cards.find((c) => c.isMain) ?? null
+  const mainCardFrozen = mainCard?.card?.status === 'frozen'
+  const hasActiveAlternative = cards.some(
+    (c) => !c.isMain && c.card?.status === 'active',
+  )
+
   return (
     <div className="space-y-6">
       {error ? (
@@ -65,6 +71,28 @@ export default function WalletPage() {
           className="rounded-panel border border-destructive/30 bg-destructive/10 px-5 py-4 text-sm text-destructive shadow-sm"
         >
           {error}
+        </div>
+      ) : null}
+
+      {mainCardFrozen ? (
+        <div
+          role="alert"
+          className="flex flex-col gap-2 rounded-panel border border-warning/40 bg-warning/10 px-5 py-4 text-sm text-warning-foreground shadow-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-2.5">
+            <Snowflake className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+            <p className="text-card-foreground">
+              <span className="font-semibold">Your main card is frozen.</span>{' '}
+              {mainCard?.hasPendingUnfreeze
+                ? 'An unfreeze request is under review.'
+                : 'Request to activate it'}
+              {!mainCard?.hasPendingUnfreeze && hasActiveAlternative
+                ? ', or set another card as your main from Manage Cards.'
+                : !mainCard?.hasPendingUnfreeze
+                ? ' from Manage Cards.'
+                : ''}
+            </p>
+          </div>
         </div>
       ) : null}
 

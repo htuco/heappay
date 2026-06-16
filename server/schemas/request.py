@@ -20,11 +20,26 @@ class RefundRequestDetailResponse(BaseModel):
     recipient_name: str | None = None
 
 
+class CardFreezeRequestCreate(BaseModel):
+    card_id: int = Field(gt=0)
+    note: str | None = Field(default=None, max_length=255)
+
+
+class CardFreezeRequestDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    request_id: int
+    card_id: int
+    card_last_four: str | None = None
+    cardholder_name: str | None = None
+
+
 class RequestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     request_id: int
     request_type_id: int
+    request_type_name: str | None = None
     request_status_id: int
     requester_user_id: int
     requester_name: str | None = None
@@ -33,6 +48,7 @@ class RequestResponse(BaseModel):
     created_at: datetime
     resolved_at: datetime | None
     refund_detail: RefundRequestDetailResponse | None
+    card_freeze_detail: CardFreezeRequestDetailResponse | None = None
 
 
 class RequestStatsResponse(BaseModel):

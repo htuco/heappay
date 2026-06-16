@@ -33,6 +33,8 @@ export function normalizeApiCard(card, typesById, statusesById, holderName) {
     reserved: card.reserved ?? '0.00',
     isMain: card.is_main ?? false,
     hasPending: card.has_pending ?? false,
+    hasPendingFreeze: card.has_pending_freeze ?? false,
+    hasPendingUnfreeze: card.has_pending_unfreeze ?? false,
     card: {
       cardHolderName: card.cardholder_name || holderName || 'Card holder',
       cardNumber: maskCardNumber(card.masked_card_number, { brand }),

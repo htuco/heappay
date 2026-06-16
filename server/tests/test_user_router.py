@@ -9,6 +9,7 @@ from services.user.user import (
     DuplicateEmailError,
     InvalidUserRoleError,
     InvalidUserStatusError,
+    UserHasPendingTransactionError,
     UserNotFoundError,
 )
 
@@ -273,3 +274,17 @@ def test_delete_missing_user_returns_404() -> None:
     response = client.delete("/users/999")
     assert response.status_code == 404
     assert response.json()["message"] == "User not found"
+
+
+def test_delete_user_with_pending_transaction_returns_409() -> None:
+    client, fake_service = _build_client()
+
+    def _raise(_user_id: int) -> None:
+        raise UserHasPendingTransactionError()
+
+    fake_service.delete_user = _raise  # type: ignore[assignment]
+    response = client.delete("/users/1")
+    assert response.status_code == 409
+    assert "pending" in response.json()["message"].lower()
+    # the user must NOT be soft-deleted when the guard trips
+    assert fake_service._rows[1].deleted_at is None

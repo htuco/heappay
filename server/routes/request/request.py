@@ -6,6 +6,8 @@ from repositories.request.request import RequestRepository
 from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.pagination import Page
 from schemas.request import (
+    CardFreezeRequestCreate,
+    CardFreezeRequestDetailResponse,
     RefundRequestCreate,
     RefundRequestDetailResponse,
     RequestResponse,
@@ -13,7 +15,12 @@ from schemas.request import (
 )
 from schemas.response import ApiResponse
 from services.request.request import (
+    CardAlreadyFrozenError,
+    CardNotFoundError,
+    CardNotFrozenError,
+    CardStatusNotFoundError,
     ForbiddenError,
+    FreezeRequestAlreadyPendingError,
     InsufficientBalanceError,
     NotRefundableError,
     RefundAlreadyExistsError,
@@ -40,6 +47,12 @@ _REFUND_EXISTS_BY_STATUS = {
 }
 _REFUND_EXISTS_DEFAULT = "A refund request already exists for this transaction."
 _INSUFFICIENT_BALANCE = "Recipient card has insufficient balance to process the refund."
+_CARD_NOT_FOUND = "Card not found."
+_CARD_ALREADY_FROZEN = "This card is already frozen."
+_CARD_NOT_FROZEN = "This card is not frozen."
+_FREEZE_PENDING = "A freeze request for this card is already under review."
+_UNFREEZE_PENDING = "An unfreeze request for this card is already under review."
+_CARD_STATUS_NOT_FOUND = "The frozen card status is not configured."
 
 
 def get_request_service(db: Session = Depends(get_db)) -> RequestService:
@@ -71,9 +84,27 @@ def _to_response(req) -> RequestResponse:
             sender_name=sender_name,
             recipient_name=recipient_name,
         )
+
+    freeze_detail = None
+    card_freeze = getattr(req, "card_freeze_detail", None)
+    if card_freeze is not None:
+        card = card_freeze.card
+        freeze_detail = CardFreezeRequestDetailResponse(
+            request_id=card_freeze.request_id,
+            card_id=card_freeze.card_id,
+            card_last_four=card.last_four if card is not None else None,
+            cardholder_name=card.cardholder_name if card is not None else None,
+        )
+
+    request_type_name = None
+    req_type = getattr(req, "request_type", None)
+    if req_type is not None:
+        request_type_name = req_type.name
+
     return RequestResponse(
         request_id=req.request_id,
         request_type_id=req.request_type_id,
+        request_type_name=request_type_name,
         request_status_id=req.request_status_id,
         requester_user_id=req.requester_user_id,
         requester_name=_user_name(req.requester),
@@ -82,6 +113,7 @@ def _to_response(req) -> RequestResponse:
         created_at=req.created_at,
         resolved_at=req.resolved_at,
         refund_detail=detail,
+        card_freeze_detail=freeze_detail,
     )
 
 
@@ -164,6 +196,207 @@ def decline_refund(
         success=True,
         message="Refund request declined.",
         data=_to_response(req),
+    )
+
+
+@router.post(
+    "/card-freeze",
+    response_model=ApiResponse[RequestResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_card_freeze_request(
+    payload: CardFreezeRequestCreate,
+    user_id: int = Depends(get_current_user_id),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.request_card_freeze(
+            card_id=payload.card_id,
+            note=payload.note,
+            user_id=user_id,
+        )
+    except CardNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND) from None
+    except ForbiddenError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN) from None
+    except CardAlreadyFrozenError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_CARD_ALREADY_FROZEN) from None
+    except FreezeRequestAlreadyPendingError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_FREEZE_PENDING) from None
+    except CardStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_CARD_STATUS_NOT_FOUND
+        ) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Freeze request submitted. The review team will process it.",
+        data=_to_response(req),
+    )
+
+
+@router.post(
+    "/{request_id}/approve-freeze",
+    response_model=ApiResponse[RequestResponse],
+)
+def approve_card_freeze(
+    request_id: int,
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.approve_card_freeze(request_id=request_id)
+    except RequestNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    except CardStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_CARD_STATUS_NOT_FOUND
+        ) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Freeze approved. The card is now frozen.",
+        data=_to_response(req),
+    )
+
+
+@router.post(
+    "/{request_id}/decline-freeze",
+    response_model=ApiResponse[RequestResponse],
+)
+def decline_card_freeze(
+    request_id: int,
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.decline_card_freeze(request_id=request_id)
+    except RequestNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Freeze request declined.",
+        data=_to_response(req),
+    )
+
+
+@router.post(
+    "/card-unfreeze",
+    response_model=ApiResponse[RequestResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_card_unfreeze_request(
+    payload: CardFreezeRequestCreate,
+    user_id: int = Depends(get_current_user_id),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.request_card_unfreeze(
+            card_id=payload.card_id,
+            note=payload.note,
+            user_id=user_id,
+        )
+    except CardNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND) from None
+    except ForbiddenError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN) from None
+    except CardNotFrozenError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_CARD_NOT_FROZEN) from None
+    except FreezeRequestAlreadyPendingError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_UNFREEZE_PENDING) from None
+    except CardStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_CARD_STATUS_NOT_FOUND
+        ) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Unfreeze request submitted. The review team will process it.",
+        data=_to_response(req),
+    )
+
+
+@router.post(
+    "/{request_id}/approve-unfreeze",
+    response_model=ApiResponse[RequestResponse],
+)
+def approve_card_unfreeze(
+    request_id: int,
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.approve_card_unfreeze(request_id=request_id)
+    except RequestNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    except CardStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_CARD_STATUS_NOT_FOUND
+        ) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Unfreeze approved. The card is now active.",
+        data=_to_response(req),
+    )
+
+
+@router.post(
+    "/{request_id}/decline-unfreeze",
+    response_model=ApiResponse[RequestResponse],
+)
+def decline_card_unfreeze(
+    request_id: int,
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.decline_card_unfreeze(request_id=request_id)
+    except RequestNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Unfreeze request declined.",
+        data=_to_response(req),
+    )
+
+
+@router.get(
+    "/freezes",
+    response_model=ApiResponse[Page[RequestResponse]],
+    summary="(Staff) List card freeze requests, optionally filtered by status.",
+)
+def list_freezes(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    status_id: int | None = Query(default=None, ge=1),
+    _: int = Depends(require_staff),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[Page[RequestResponse]]:
+    try:
+        items, total = service.list_freezes(
+            limit=page_size,
+            offset=(page - 1) * page_size,
+            status_id=status_id,
+        )
+    except RequestStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    data = Page[RequestResponse].build(
+        items=[_to_response(r) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return ApiResponse[Page[RequestResponse]](
+        success=True,
+        message=f"{total} card freeze request(s).",
+        data=data,
     )
 
 

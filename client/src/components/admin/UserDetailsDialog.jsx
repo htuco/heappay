@@ -51,7 +51,6 @@ function isFrozen(item) {
 function roleBadgeClass(role) {
   const styles = {
     admin: 'border-primary/30 bg-primary/10 text-primary',
-    manager: 'border-info/30 bg-info/10 text-info',
     support: 'border-warning/30 bg-warning/10 text-warning',
   }
   return styles[role] ?? 'border-border bg-muted/50 text-muted-foreground'
@@ -335,6 +334,9 @@ export default function UserDetailsDialog({
 
   const roleOptions = userRoles.map((r) => ({ value: String(r.role_id), label: titleCase(r.role_name) }))
   const isSuspended = selectedUser?.status === 'suspended' || selectedUser?.status === 'inactive'
+  // "Save changes" only persists the role, so it's meaningful only when the
+  // selected role differs from the user's current one.
+  const isRoleDirty = String(selectedRoleId) !== String(selectedUser?.roleId ?? '')
 
   async function runAction(fn, arg, onError) {
     setError('')
@@ -530,7 +532,10 @@ export default function UserDetailsDialog({
         </div>
         {isAdmin && confirmDelete ? (
           <div className="space-y-2 rounded-input border border-destructive/30 bg-background/60 p-2.5">
-            <p className="text-xs text-card-foreground">Permanently delete this user? This cannot be undone.</p>
+            <p className="text-xs text-card-foreground">
+              Deactivate this user? Their account is soft-deleted and can be restored later.
+              Users with a pending transaction can&apos;t be deleted until it settles.
+            </p>
             <div className="flex gap-2">
               <Button
                 variant="destructive"
@@ -565,7 +570,7 @@ export default function UserDetailsDialog({
           Close
         </Button>
         {isAdmin ? (
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || !isRoleDirty}>
             {isSaving ? 'Saving…' : 'Save changes'}
           </Button>
         ) : null}

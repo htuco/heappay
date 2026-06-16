@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import AdminPage from './pages/AdminPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminTransactionsPage from './pages/AdminTransactionsPage'
+import AdminRequestsPage from './pages/AdminRequestsPage'
 import SupportPage from './pages/SupportPage'
 import SupportUsersPage from './pages/SupportUsersPage'
 import SupportTicketsPage from './pages/SupportTicketsPage'
@@ -232,6 +233,7 @@ export default function App() {
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
         <Route path="/admin/transactions" element={<AdminRoute><AdminTransactionsPage /></AdminRoute>} />
+        <Route path="/admin/requests" element={<AdminRoute><AdminRequestsPage /></AdminRoute>} />
         <Route path="/support" element={<StaffRoute><Navigate to="/support/users" replace /></StaffRoute>} />
         <Route path="/support/users" element={<StaffRoute><SupportUsersPage /></StaffRoute>} />
         <Route path="/support/tickets" element={<StaffRoute><SupportTicketsPage /></StaffRoute>} />

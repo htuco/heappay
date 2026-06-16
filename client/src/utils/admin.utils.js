@@ -18,7 +18,7 @@ export function deriveUsers(mockUsers) {
       .map((chunk) => `${chunk[0].toUpperCase()}${chunk.slice(1)}`)
       .join(' ')
 
-    const role = index % 10 === 0 ? 'admin' : index % 3 === 0 ? 'manager' : 'user'
+    const role = index % 10 === 0 ? 'admin' : index % 3 === 0 ? 'support' : 'user'
 
     return {
       id: `user-${index + 1}`,
@@ -42,7 +42,7 @@ export function getCardStatus(card) {
 
 export function getRoleBadgeVariant(role) {
   if (role === 'admin') return 'info'
-  if (role === 'manager') return 'secondary'
+  if (role === 'support') return 'secondary'
   return 'outline'
 }
 

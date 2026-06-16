@@ -281,6 +281,39 @@ class CardRepository:
         )
         return set(self._db.scalars(stmt).all())
 
+    def pending_freeze_card_ids_for_user(
+        self, user_id: int, *, type_name: str = "card_freeze"
+    ) -> set[int]:
+        """Set of card_ids (owned by user) with a pending freeze/unfreeze request.
+
+        Used to surface a 'Freeze requested' / 'Unfreeze requested' state on the
+        card so the user can't queue a second request. Resolves the request
+        type/status by name since their ids are not stable across environments.
+        """
+        from models.card_freeze_request_detail import CardFreezeRequestDetail
+        from models.request import Request
+        from models.request_status import RequestStatus
+        from models.request_type import RequestType
+
+        stmt = (
+            select(CardFreezeRequestDetail.card_id)
+            .join(Request, Request.request_id == CardFreezeRequestDetail.request_id)
+            .join(Card, Card.card_id == CardFreezeRequestDetail.card_id)
+            .join(RequestType, Request.request_type_id == RequestType.request_type_id)
+            .join(
+                RequestStatus,
+                Request.request_status_id == RequestStatus.request_status_id,
+            )
+            .where(
+                Card.user_id == user_id,
+                Card.deleted_at.is_(None),
+                RequestType.name == type_name,
+                RequestStatus.name == "pending",
+            )
+            .distinct()
+        )
+        return set(self._db.scalars(stmt).all())
+
     def reserved_by_card_for_user(self, user_id: int) -> dict[int, Decimal]:
         """Per-card reserved (held) amount: sum of pending outgoing transaction
         amounts where one of the user's cards is the sender. Keyed by card_id.

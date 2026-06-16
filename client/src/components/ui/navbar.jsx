@@ -52,7 +52,6 @@ function NavSection({ label, children, className = '' }) {
 
 const ROLE_SECTION_LABEL = {
   admin: 'Management',
-  manager: 'Management',
   support: 'Support',
 }
 

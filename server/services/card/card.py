@@ -92,6 +92,14 @@ class CardService:
         """Per-card reserved (held) amount for the user's cards, keyed by card_id."""
         return self._repo.reserved_by_card_for_user(user_id)
 
+    def pending_freeze_card_ids_for_user(self, user_id: int) -> set[int]:
+        """Card ids owned by the user that have a pending freeze request."""
+        return self._repo.pending_freeze_card_ids_for_user(user_id)
+
+    def pending_unfreeze_card_ids_for_user(self, user_id: int) -> set[int]:
+        """Card ids owned by the user that have a pending unfreeze request."""
+        return self._repo.pending_freeze_card_ids_for_user(user_id, type_name="card_unfreeze")
+
     def get_by_id_including_deleted(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=True)
 

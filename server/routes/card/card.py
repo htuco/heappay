@@ -46,7 +46,14 @@ def get_card_service(db: Session = Depends(get_db)) -> CardService:
     return CardService(CardRepository(db))
 
 
-def _to_response(row, *, has_pending: bool = False, reserved: Decimal = Decimal("0.00")) -> CardResponse:
+def _to_response(
+    row,
+    *,
+    has_pending: bool = False,
+    reserved: Decimal = Decimal("0.00"),
+    has_pending_freeze: bool = False,
+    has_pending_unfreeze: bool = False,
+) -> CardResponse:
     return CardResponse(
         card_id=row.card_id,
         user_id=row.user_id,
@@ -62,6 +69,8 @@ def _to_response(row, *, has_pending: bool = False, reserved: Decimal = Decimal(
         deleted_at=row.deleted_at,
         is_main=row.is_main,
         has_pending=has_pending,
+        has_pending_freeze=has_pending_freeze,
+        has_pending_unfreeze=has_pending_unfreeze,
     )
 
 
@@ -73,10 +82,14 @@ def _require_owner_or_staff(card_user_id: int, ctx: UserContext) -> None:
 def _to_response_with_pending(row, service: CardService) -> CardResponse:
     pending_ids = service.pending_card_ids_for_user(row.user_id)
     reserved = service.reserved_by_card_for_user(row.user_id)
+    freeze_ids = service.pending_freeze_card_ids_for_user(row.user_id)
+    unfreeze_ids = service.pending_unfreeze_card_ids_for_user(row.user_id)
     return _to_response(
         row,
         has_pending=row.card_id in pending_ids,
         reserved=reserved.get(row.card_id, Decimal("0.00")),
+        has_pending_freeze=row.card_id in freeze_ids,
+        has_pending_unfreeze=row.card_id in unfreeze_ids,
     )
 
 
@@ -132,15 +145,21 @@ def list_cards(
     )
     pending_ids: set[int] = set()
     reserved_by_card: dict[int, Decimal] = {}
+    freeze_ids: set[int] = set()
+    unfreeze_ids: set[int] = set()
     user_ids = {r.user_id for r in rows}
     for uid in user_ids:
         pending_ids.update(service.pending_card_ids_for_user(uid))
         reserved_by_card.update(service.reserved_by_card_for_user(uid))
+        freeze_ids.update(service.pending_freeze_card_ids_for_user(uid))
+        unfreeze_ids.update(service.pending_unfreeze_card_ids_for_user(uid))
     return [
         _to_response(
             r,
             has_pending=r.card_id in pending_ids,
             reserved=reserved_by_card.get(r.card_id, Decimal("0.00")),
+            has_pending_freeze=r.card_id in freeze_ids,
+            has_pending_unfreeze=r.card_id in unfreeze_ids,
         )
         for r in rows
     ]

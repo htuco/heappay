@@ -16,3 +16,4 @@ from models.request_type import RequestType  # noqa: F401
 from models.request_status import RequestStatus  # noqa: F401
 from models.request import Request  # noqa: F401
 from models.refund_request_detail import RefundRequestDetail  # noqa: F401
+from models.card_freeze_request_detail import CardFreezeRequestDetail  # noqa: F401

@@ -57,8 +57,30 @@ class RequestNotPendingError(Exception):
         )
 
 
+class CardNotFoundError(Exception):
+    """Referenced card does not exist."""
+
+
+class CardAlreadyFrozenError(Exception):
+    """The card is already frozen, so a freeze request is pointless."""
+
+
+class CardNotFrozenError(Exception):
+    """The card is not frozen, so an unfreeze request is pointless."""
+
+
+class FreezeRequestAlreadyPendingError(Exception):
+    """A pending freeze request already exists for this card (one at a time)."""
+
+
+class CardStatusNotFoundError(Exception):
+    """The 'frozen' card status is not seeded."""
+
+
 REFUNDABLE_TYPE_NAME = "payment"
 COMPLETED_STATUS_NAME = "completed"
+FROZEN_CARD_STATUS_NAME = "frozen"
+ACTIVE_CARD_STATUS_NAME = "active"
 
 
 class RequestService:
@@ -151,6 +173,130 @@ class RequestService:
 
         return self._repo.decline_refund(locked)
 
+    # ── card freeze requests ────────────────────────────────────────────────
+
+    def request_card_freeze(
+        self,
+        *,
+        card_id: int,
+        note: str | None,
+        user_id: int,
+    ) -> Request:
+        # the card must exist and belong to the requester
+        owner_id = self._repo.card_owner_id(card_id)
+        if owner_id is None:
+            raise CardNotFoundError()
+        if owner_id != user_id:
+            raise ForbiddenError()
+
+        # already frozen → nothing to request
+        card = self._repo.get_card_for_update(card_id)
+        frozen_id = self._repo.get_card_status_id_by_name(FROZEN_CARD_STATUS_NAME)
+        if frozen_id is None:
+            raise CardStatusNotFoundError()
+        if card is not None and card.status_id == frozen_id:
+            raise CardAlreadyFrozenError()
+
+        # one pending freeze request per card at a time
+        existing = self._repo.get_pending_freeze_for_card(card_id)
+        if existing is not None:
+            raise FreezeRequestAlreadyPendingError()
+
+        return self._repo.create_freeze_request(
+            requester_user_id=user_id,
+            card_id=card_id,
+            note=note,
+        )
+
+    def approve_card_freeze(self, *, request_id: int) -> Request:
+        request = self._repo.get_by_id(request_id)
+        if request is None:
+            raise RequestNotFoundError()
+
+        # Same pending guard as refunds — a resolved request must not re-run the
+        # freeze (idempotency against a double approve / two staff racing).
+        locked = self._repo.lock_pending_request(request_id)
+        if locked is None:
+            current = self._repo.status_name_for(request.request_status_id)
+            raise RequestNotPendingError(current)
+        request = locked
+
+        if request.card_freeze_detail is None:
+            raise RequestNotFoundError()
+
+        frozen_id = self._repo.get_card_status_id_by_name(FROZEN_CARD_STATUS_NAME)
+        if frozen_id is None:
+            raise CardStatusNotFoundError()
+
+        return self._repo.approve_freeze(request, target_status_id=frozen_id)
+
+    def request_card_unfreeze(
+        self,
+        *,
+        card_id: int,
+        note: str | None,
+        user_id: int,
+    ) -> Request:
+        owner_id = self._repo.card_owner_id(card_id)
+        if owner_id is None:
+            raise CardNotFoundError()
+        if owner_id != user_id:
+            raise ForbiddenError()
+
+        # only a frozen card can be unfrozen
+        card = self._repo.get_card_for_update(card_id)
+        frozen_id = self._repo.get_card_status_id_by_name(FROZEN_CARD_STATUS_NAME)
+        if frozen_id is None:
+            raise CardStatusNotFoundError()
+        if card is not None and card.status_id != frozen_id:
+            raise CardNotFrozenError()
+
+        existing = self._repo.get_pending_freeze_for_card(card_id, type_name="card_unfreeze")
+        if existing is not None:
+            raise FreezeRequestAlreadyPendingError()
+
+        return self._repo.create_freeze_request(
+            requester_user_id=user_id,
+            card_id=card_id,
+            note=note,
+            type_name="card_unfreeze",
+        )
+
+    def approve_card_unfreeze(self, *, request_id: int) -> Request:
+        request = self._repo.get_by_id(request_id)
+        if request is None:
+            raise RequestNotFoundError()
+
+        locked = self._repo.lock_pending_request(request_id)
+        if locked is None:
+            current = self._repo.status_name_for(request.request_status_id)
+            raise RequestNotPendingError(current)
+        request = locked
+
+        if request.card_freeze_detail is None:
+            raise RequestNotFoundError()
+
+        active_id = self._repo.get_card_status_id_by_name(ACTIVE_CARD_STATUS_NAME)
+        if active_id is None:
+            raise CardStatusNotFoundError()
+
+        return self._repo.approve_freeze(request, target_status_id=active_id)
+
+    def decline_card_unfreeze(self, *, request_id: int) -> Request:
+        return self.decline_card_freeze(request_id=request_id)
+
+    def decline_card_freeze(self, *, request_id: int) -> Request:
+        request = self._repo.get_by_id(request_id)
+        if request is None:
+            raise RequestNotFoundError()
+
+        locked = self._repo.lock_pending_request(request_id)
+        if locked is None:
+            current = self._repo.status_name_for(request.request_status_id)
+            raise RequestNotPendingError(current)
+
+        return self._repo.decline_freeze(locked)
+
     def list_for_user(
         self, *, user_id: int, limit: int = 50, offset: int = 0
     ) -> tuple[list[Request], int]:
@@ -175,6 +321,15 @@ class RequestService:
             raise RequestStatusNotFoundError()
         items = self._repo.list_refunds(limit=limit, offset=offset, status_id=status_id)
         total = self._repo.count_refunds(status_id=status_id)
+        return items, total
+
+    def list_freezes(
+        self, *, limit: int = 50, offset: int = 0, status_id: int | None = None
+    ) -> tuple[list[Request], int]:
+        if status_id is not None and not self._repo.status_id_exists(status_id):
+            raise RequestStatusNotFoundError()
+        items = self._repo.list_freezes(limit=limit, offset=offset, status_id=status_id)
+        total = self._repo.count_freezes(status_id=status_id)
         return items, total
 
     def get_refund_stats(self) -> dict[str, int]:

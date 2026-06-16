@@ -15,7 +15,7 @@ from services.user.auth import UserAuthService
 bearer_scheme = HTTPBearer(auto_error=False)
 
 ADMIN_ROLE_NAME = "admin"
-STAFF_ROLE_NAMES = {"admin", "manager", "support"}
+STAFF_ROLE_NAMES = {"admin", "support"}
 
 
 @dataclass
@@ -81,7 +81,7 @@ def require_staff(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> int:
-    """Authorize admin, manager, or support. Returns user_id; raises 403 otherwise."""
+    """Authorize admin or support. Returns user_id; raises 403 otherwise."""
     stmt = (
         select(UserRole.role_name)
         .join(User, User.user_role_id == UserRole.role_id)

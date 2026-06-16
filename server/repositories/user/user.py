@@ -22,11 +22,11 @@ class UserRepository:
     def list_users(
         self,
         *,
-        q: str | None,
-        email: str | None,
-        status_id: int | None,
-        user_role_id: int | None,
-        include_deleted: bool,
+        q: str | None = None,
+        email: str | None = None,
+        status_id: int | None = None,
+        user_role_id: int | None = None,
+        include_deleted: bool = False,
         limit: int,
         offset: int,
     ) -> list[User]:
@@ -126,3 +126,37 @@ class UserRepository:
         row.deleted_at = now
         row.modified_at = now
         self._db.commit()
+
+    def has_pending_transaction(self, user_id: int) -> bool:
+        """True if the user has any transaction in the 'pending' status.
+
+        Covers both directions — a transaction this user sent (their card is the
+        sender) or received (their card is the recipient) — so a delete cannot
+        strand in-flight money. The status is resolved by name, not a hardcoded
+        id, since status ids are not stable across environments.
+        """
+        from sqlalchemy import func
+        from models.transaction import Transaction
+        from models.transaction_status import TransactionStatus
+
+        pending_id = self._db.execute(
+            select(TransactionStatus.transaction_status_id).where(
+                TransactionStatus.name == "pending"
+            )
+        ).scalar_one_or_none()
+        if pending_id is None:
+            return False
+
+        user_card_ids = select(Card.card_id).where(Card.user_id == user_id)
+        stmt = (
+            select(func.count())
+            .select_from(Transaction)
+            .where(
+                Transaction.status_id == pending_id,
+                or_(
+                    Transaction.sender_card_id.in_(user_card_ids),
+                    Transaction.recipient_card_id.in_(user_card_ids),
+                ),
+            )
+        )
+        return int(self._db.execute(stmt).scalar_one()) > 0

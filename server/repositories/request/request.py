@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from models.card import Card
+from models.card_freeze_request_detail import CardFreezeRequestDetail
 from models.refund_request_detail import RefundRequestDetail
 from models.request import Request
 from models.request_status import RequestStatus
@@ -309,6 +310,122 @@ class RequestRepository:
         self._db.commit()
         self._db.refresh(request)
         return request
+
+    # ── card freeze requests ────────────────────────────────────────────────
+
+    def get_pending_freeze_for_card(
+        self, card_id: int, *, type_name: str = "card_freeze"
+    ) -> Request | None:
+        """Return the pending freeze/unfreeze request for a card, if one exists."""
+        pending_id = self.get_status_id("pending")
+        type_id = self.get_type_id(type_name)
+        stmt = (
+            select(Request)
+            .join(
+                CardFreezeRequestDetail,
+                CardFreezeRequestDetail.request_id == Request.request_id,
+            )
+            .where(
+                CardFreezeRequestDetail.card_id == card_id,
+                Request.request_status_id == pending_id,
+                Request.request_type_id == type_id,
+            )
+        )
+        return self._db.scalars(stmt).first()
+
+    def create_freeze_request(
+        self,
+        *,
+        requester_user_id: int,
+        card_id: int,
+        note: str | None,
+        type_name: str = "card_freeze",
+    ) -> Request:
+        type_id = self.get_type_id(type_name)
+        pending_status_id = self.get_status_id("pending")
+
+        req = Request(
+            request_type_id=type_id,
+            request_status_id=pending_status_id,
+            requester_user_id=requester_user_id,
+            note=note,
+        )
+        self._db.add(req)
+        self._db.flush()
+
+        detail = CardFreezeRequestDetail(request_id=req.request_id, card_id=card_id)
+        self._db.add(detail)
+        self._db.commit()
+        self._db.refresh(req)
+        return req
+
+    def list_freezes(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        status_id: int | None = None,
+        type_names: tuple[str, ...] = ("card_freeze", "card_unfreeze"),
+    ) -> list[Request]:
+        type_ids = [tid for tid in (self.get_type_id(n) for n in type_names) if tid is not None]
+        stmt = select(Request).where(Request.request_type_id.in_(type_ids))
+        if status_id is not None:
+            stmt = stmt.where(Request.request_status_id == status_id)
+        stmt = stmt.order_by(Request.created_at.desc()).limit(limit).offset(offset)
+        return list(self._db.scalars(stmt).all())
+
+    def count_freezes(
+        self,
+        *,
+        status_id: int | None = None,
+        type_names: tuple[str, ...] = ("card_freeze", "card_unfreeze"),
+    ) -> int:
+        from sqlalchemy import func
+
+        type_ids = [tid for tid in (self.get_type_id(n) for n in type_names) if tid is not None]
+        stmt = (
+            select(func.count())
+            .select_from(Request)
+            .where(Request.request_type_id.in_(type_ids))
+        )
+        if status_id is not None:
+            stmt = stmt.where(Request.request_status_id == status_id)
+        return int(self._db.execute(stmt).scalar_one())
+
+    def approve_freeze(self, request: Request, *, target_status_id: int) -> Request:
+        """Set the target card to the given status and mark the request approved.
+
+        ``target_status_id`` is the frozen status for a freeze request, or the
+        active status for an unfreeze request.
+        """
+        detail = request.card_freeze_detail
+        card = self._db.scalars(
+            select(Card).where(Card.card_id == detail.card_id).with_for_update()
+        ).first()
+        if card is not None:
+            card.status_id = target_status_id
+
+        approved_status_id = self.get_status_id("approved")
+        request.request_status_id = approved_status_id
+        request.resolved_at = datetime.now(timezone.utc)
+
+        self._db.commit()
+        self._db.refresh(request)
+        return request
+
+    def decline_freeze(self, request: Request) -> Request:
+        declined_status_id = self.get_status_id("declined")
+        request.request_status_id = declined_status_id
+        request.resolved_at = datetime.now(timezone.utc)
+        self._db.commit()
+        self._db.refresh(request)
+        return request
+
+    def get_card_status_id_by_name(self, name: str) -> int | None:
+        from models.card_status import CardStatus
+
+        stmt = select(CardStatus.card_status_id).where(CardStatus.status_name == name)
+        return self._db.execute(stmt).scalar_one_or_none()
 
     def get_card_for_update(self, card_id: int) -> Card | None:
         return self._db.scalars(

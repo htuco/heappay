@@ -12,7 +12,7 @@ const PAGE_SIZE = 20
 // See useIncomingTransferWatcher: bound how far back a single poll walks while
 // still covering more new requests than can realistically arrive between polls.
 const MAX_PAGES = 5
-const STAFF_ROLES = new Set(['admin', 'support', 'manager'])
+const STAFF_ROLES = new Set(['admin', 'support'])
 
 /**
  * Pages forward (newest-first) collecting pending refunds with request_id >

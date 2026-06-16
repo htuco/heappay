@@ -24,6 +24,10 @@ class InvalidUserStatusError(Exception):
     """Provided user status ID does not exist."""
 
 
+class UserHasPendingTransactionError(Exception):
+    """User cannot be deleted while they have a pending (in-flight) transaction."""
+
+
 class UserService:
     def __init__(self, repo: UserRepository) -> None:
         self._repo = repo
@@ -160,5 +164,10 @@ class UserService:
         row = self._repo.get_by_id(user_id)
         if row is None:
             raise UserNotFoundError()
-        if row.deleted_at is None:
-            self._repo.soft_delete(row)
+        if row.deleted_at is not None:
+            return
+        # Block soft-delete while money is in flight — a pending transaction
+        # (sent or received) must settle or fail first.
+        if self._repo.has_pending_transaction(user_id):
+            raise UserHasPendingTransactionError()
+        self._repo.soft_delete(row)

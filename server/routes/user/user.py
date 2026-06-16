@@ -11,6 +11,7 @@ from services.user.user import (
     DuplicateEmailError,
     InvalidUserRoleError,
     InvalidUserStatusError,
+    UserHasPendingTransactionError,
     UserNotFoundError,
     UserService,
 )
@@ -22,6 +23,7 @@ _NOT_FOUND_DETAIL = "User not found"
 _DUPLICATE_EMAIL_DETAIL = "Email already exists"
 _INVALID_ROLE_DETAIL = "Invalid user_role_id"
 _INVALID_STATUS_DETAIL = "Invalid status_id"
+_PENDING_TX_DETAIL = "User has a pending transaction and cannot be deleted yet."
 
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
@@ -151,6 +153,8 @@ def delete_user(
         service.delete_user(user_id)
     except UserNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
+    except UserHasPendingTransactionError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_PENDING_TX_DETAIL) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

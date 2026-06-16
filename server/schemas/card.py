@@ -129,3 +129,5 @@ class CardResponse(BaseModel):
     deleted_at: datetime | None = None
     is_main: bool = False
     has_pending: bool = False
+    has_pending_freeze: bool = False
+    has_pending_unfreeze: bool = False
