@@ -1,8 +1,8 @@
 import { createElement, useState } from 'react'
 import { CreditCard, Plus } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 
 import AddCardModal from '@/components/AddCardModal'
+import PaymentWizard from '@/components/payment/PaymentWizard'
 
 const TILE_BASE =
   'flex items-center gap-3 rounded-input border border-border/70 bg-background px-3 py-3 text-left transition-all duration-200 touch-manipulation'
@@ -39,8 +39,8 @@ function ActionTile({ icon, title, subtitle, onClick }) {
  * the payments page.
  */
 export default function WalletQuickActions({ onAddCard, isAddingCard = false, addCardError = null }) {
-  const navigate = useNavigate()
   const [addCardOpen, setAddCardOpen] = useState(false)
+  const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
 
   return (
     <section className="rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
@@ -55,9 +55,9 @@ export default function WalletQuickActions({ onAddCard, isAddingCard = false, ad
         />
         <ActionTile
           icon={CreditCard}
-          title="Transfer"
+          title="Make Transaction"
           subtitle="Send money"
-          onClick={() => navigate('/payments')}
+          onClick={() => setPaymentWizardOpen(true)}
         />
       </div>
 
@@ -67,6 +67,13 @@ export default function WalletQuickActions({ onAddCard, isAddingCard = false, ad
         onSubmit={onAddCard}
         isSubmitting={isAddingCard}
         submitError={addCardError}
+      />
+
+      {/* No initialCardId — the wizard opens on the "Choose a card" step so the
+          user picks the source card here. */}
+      <PaymentWizard
+        isOpen={paymentWizardOpen}
+        onClose={() => setPaymentWizardOpen(false)}
       />
     </section>
   )

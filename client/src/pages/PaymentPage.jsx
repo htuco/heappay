@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import { AlertTriangle, Loader2, MessageSquareText } from 'lucide-react'
+import { AlertTriangle, Loader2, MessageSquareText, Send } from 'lucide-react'
 
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
+import PaymentWizard from '@/components/payment/PaymentWizard'
 import { Button } from '@/components/ui/button'
 import {
   DialogClose,
@@ -65,6 +66,7 @@ export default function PaymentPage() {
   const [refundedTransactionIds, setRefundedTransactionIds] = useState(new Set())
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState(null)
+  const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const refreshHistoryRef = useRef(null)
   const handleRefreshReady = useCallback((refresh) => {
     refreshHistoryRef.current = refresh
@@ -168,6 +170,24 @@ export default function PaymentPage() {
 
   return (
     <div>
+      <div className="mx-auto mb-4 flex max-w-5xl items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-card-foreground sm:text-xl">Transactions</h1>
+          <p className="text-sm text-muted-foreground">Review your activity or start a new transaction.</p>
+        </div>
+        <Button onClick={() => setPaymentWizardOpen(true)} className="shrink-0 gap-2">
+          <Send className="size-4" />
+          Send
+        </Button>
+      </div>
+
+      {/* No initialCardId — opens on the "Choose a card" step. */}
+      <PaymentWizard
+        isOpen={paymentWizardOpen}
+        onClose={() => setPaymentWizardOpen(false)}
+        onSuccess={() => refreshHistoryRef.current?.()}
+      />
+
       <TransactionHistory
         onTransactionSelect={setSelectedTransaction}
         onRefreshReady={handleRefreshReady}
