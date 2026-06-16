@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO)
 
@@ -125,11 +126,23 @@ def create_app() -> FastAPI:
     app.include_router(request_router)
     app.include_router(nexus_funding_router)
 
-    scheduler = BackgroundScheduler()
+    # coalesce + single-instance so a burst of reloads (uvicorn --reload) can't
+    # stack overlapping syncs on top of each other.
+    scheduler = BackgroundScheduler(
+        job_defaults={"coalesce": True, "max_instances": 1}
+    )
     scheduler.add_job(_run_knowledge_sync, "interval", hours=1, id="knowledge_sync")
+    # Run an initial sync shortly after boot on the scheduler's own thread rather
+    # than inline here — calling it inline blocks app startup (and, under uvicorn
+    # --reload, re-runs the full embed loop on every code change), which prevents
+    # the server from binding and makes the app look "stuck syncing".
+    scheduler.add_job(
+        _run_knowledge_sync,
+        "date",
+        run_date=datetime.now() + timedelta(seconds=5),
+        id="knowledge_sync_startup",
+    )
     scheduler.start()
-    _run_knowledge_sync()
-
 
     return app
 
