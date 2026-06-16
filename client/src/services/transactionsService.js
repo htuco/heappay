@@ -340,6 +340,107 @@ export const transactionsService = {
 	},
 
 	/**
+	 * Request that one of the user's own cards be frozen (e.g. lost/stolen).
+	 * Staff approve the request, which freezes the card.
+	 * @param {number} cardId
+	 * @param {string | null} [note]
+	 * @returns {Promise<object>}
+	 */
+	async requestCardFreeze(cardId, note = null) {
+		try {
+			const { data } = await api.post('/requests/card-freeze', { card_id: cardId, note })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) Approve a pending freeze request — sets the target card to frozen.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async approveCardFreeze(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/approve-freeze`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) Decline a pending freeze request.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async declineCardFreeze(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/decline-freeze`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) List card freeze + unfreeze requests, optionally filtered by status.
+	 * @param {{ page?: number, pageSize?: number, statusId?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listCardFreezes(params = {}) {
+		try {
+			const { data } = await api.get('/requests/freezes', { params: buildPageParams(params) })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Request that one of the user's own frozen cards be unfrozen.
+	 * @param {number} cardId
+	 * @param {string | null} [note]
+	 * @returns {Promise<object>}
+	 */
+	async requestCardUnfreeze(cardId, note = null) {
+		try {
+			const { data } = await api.post('/requests/card-unfreeze', { card_id: cardId, note })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) Approve a pending unfreeze request — sets the card back to active.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async approveCardUnfreeze(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/approve-unfreeze`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Staff) Decline a pending unfreeze request.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async declineCardUnfreeze(requestId) {
+		try {
+			const { data } = await api.post(`/requests/${requestId}/decline-unfreeze`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * (Admin) Platform-wide transaction stats for the admin overview.
 	 * @param {{ months?: number }} [params]
 	 * @returns {Promise<{ monthly: Array<{ period: string, count: number, volume: string }>, by_status: Record<string, number>, by_type: Record<string, number>, total_count: number, completed_volume: string, months: number }>}

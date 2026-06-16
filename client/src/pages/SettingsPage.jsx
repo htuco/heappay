@@ -18,6 +18,7 @@ import ProfileSection from '@/components/settings/ProfileSection'
 import SettingsHero from '@/components/settings/SettingsHero'
 import Toggle from '@/components/settings/Toggle'
 import DefaultCardPicker from '@/components/settings/DefaultCardPicker'
+import AllCardsModal from '@/components/wallet/AllCardsModal'
 import { Button } from '@/components/ui/button'
 
 const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
@@ -32,7 +33,7 @@ export default function SettingsPage() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
   const { user } = useAuth()
-  const { cards, setMainCard } = useWalletCards()
+  const { cards, setMainCard, removeCard } = useWalletCards()
   const { preference: themePreference, isDark, setTheme } = useTheme()
 
   const [draftTheme, setDraftTheme] = useState(themePreference)
@@ -106,6 +107,20 @@ export default function SettingsPage() {
           description="The card pre-selected for Top Up, Pay, and Transfer actions."
         >
           <DefaultCardPicker cards={cards} onSelect={setMainCard} />
+          {cards.length > 0 && (
+            <div className="mt-4 border-t border-border/60 pt-4">
+              <AllCardsModal
+                items={cards}
+                triggerLabel="Manage cards"
+                triggerVariant="outline"
+                onSetMain={setMainCard}
+                onRemove={removeCard}
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Set your main card, remove a card, or request a freeze if a card is lost or stolen.
+              </p>
+            </div>
+          )}
         </SettingsCard>
 
         <SettingsCard

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreditCard, MoreVertical, ShieldCheck, Star, Trash2 } from 'lucide-react'
+import { CreditCard, MoreVertical, ShieldCheck, Snowflake, Star, Sun, Trash2 } from 'lucide-react'
 
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import SplitModal, {
@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
 import { getApiErrorMessage } from '@/utils/api'
+import transactionsService from '@/services/transactionsService'
+import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -54,13 +56,26 @@ function MainBadge() {
   )
 }
 
-function WalletCardListItem({ item, onRequestSetMain, onRequestRemove }) {
+function WalletCardListItem({ item, onRequestSetMain, onRequestRemove, onRequestFreeze, onRequestUnfreeze }) {
   const card = item.card ?? {}
   const brandLabel = formatBrandLabel(card.brand) || 'Card'
   const maskedNumber = getMaskedNumber(card)
   const expiry = formatExpiryDate(card.expiryDate)
   const balance = formatMoney(item.balance)
   const disabledLabel = card.isDisabled ? STATUS_LABELS[card.status] : null
+  const isFrozen = card.status === 'frozen'
+  const freezeRequested = Boolean(item.hasPendingFreeze)
+  const unfreezeRequested = Boolean(item.hasPendingUnfreeze)
+  // Freeze can be requested on any non-frozen card the user owns (including the
+  // main one — the card most likely to be lost/stolen). A frozen card can
+  // instead request an unfreeze.
+  const canFreeze = Boolean(onRequestFreeze) && !isFrozen
+  const canUnfreeze = Boolean(onRequestUnfreeze) && isFrozen
+  const hasMenu =
+    (onRequestSetMain && !item.isMain) ||
+    (onRequestRemove && !item.isMain) ||
+    canFreeze ||
+    canUnfreeze
 
   const containerClasses = [
     'group relative flex items-center gap-4 rounded-surface border bg-card p-4 transition-colors',
@@ -112,7 +127,87 @@ function WalletCardListItem({ item, onRequestSetMain, onRequestRemove }) {
         </div>
       </div>
 
-      {item.isMain ? (
+      {hasMenu ? (
+        <DropdownMenuRoot>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label="Card actions"
+              className="shrink-0 self-center text-muted-foreground hover:text-card-foreground"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {onRequestSetMain && !item.isMain && !card.isDisabled && (
+              <DropdownMenuItem onSelect={() => onRequestSetMain(item)}>
+                <Star className="h-4 w-4" />
+                Set as main
+              </DropdownMenuItem>
+            )}
+            {canFreeze && (
+              <DropdownMenuItem
+                disabled={freezeRequested}
+                onSelect={() => {
+                  if (freezeRequested) return
+                  onRequestFreeze(item)
+                }}
+              >
+                <Snowflake className="h-4 w-4" />
+                <span className="flex flex-1 flex-col">
+                  <span>{freezeRequested ? 'Freeze requested' : 'Request freeze'}</span>
+                  {freezeRequested && (
+                    <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
+                      Under review
+                    </span>
+                  )}
+                </span>
+              </DropdownMenuItem>
+            )}
+            {canUnfreeze && (
+              <DropdownMenuItem
+                disabled={unfreezeRequested}
+                onSelect={() => {
+                  if (unfreezeRequested) return
+                  onRequestUnfreeze(item)
+                }}
+              >
+                <Sun className="h-4 w-4" />
+                <span className="flex flex-1 flex-col">
+                  <span>{unfreezeRequested ? 'Unfreeze requested' : 'Request unfreeze'}</span>
+                  {unfreezeRequested && (
+                    <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
+                      Under review
+                    </span>
+                  )}
+                </span>
+              </DropdownMenuItem>
+            )}
+            {onRequestRemove && !item.isMain && (
+              <DropdownMenuItem
+                destructive
+                disabled={item.hasPending}
+                onSelect={() => {
+                  if (item.hasPending) return
+                  onRequestRemove(item)
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="flex flex-1 flex-col">
+                  <span>Remove from wallet</span>
+                  {item.hasPending && (
+                    <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
+                      Pending transaction
+                    </span>
+                  )}
+                </span>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenuRoot>
+      ) : (
         <Button
           type="button"
           size="icon-sm"
@@ -123,50 +218,6 @@ function WalletCardListItem({ item, onRequestSetMain, onRequestRemove }) {
         >
           <MoreVertical className="h-4 w-4" />
         </Button>
-      ) : (
-        (onRequestSetMain || onRequestRemove) && (
-          <DropdownMenuRoot>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Card actions"
-                className="shrink-0 self-center text-muted-foreground hover:text-card-foreground"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {onRequestSetMain && !card.isDisabled && (
-                <DropdownMenuItem onSelect={() => onRequestSetMain(item)}>
-                  <Star className="h-4 w-4" />
-                  Set as main
-                </DropdownMenuItem>
-              )}
-              {onRequestRemove && (
-                <DropdownMenuItem
-                  destructive
-                  disabled={item.hasPending}
-                  onSelect={() => {
-                    if (item.hasPending) return
-                    onRequestRemove(item)
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="flex flex-1 flex-col">
-                    <span>Remove from wallet</span>
-                    {item.hasPending && (
-                      <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
-                        Pending transaction
-                      </span>
-                    )}
-                  </span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenuRoot>
-        )
       )}
     </li>
   )
@@ -337,6 +388,111 @@ function RemoveCardConfirmDialog({ isOpen, onClose, onConfirm, candidate, isSubm
   )
 }
 
+function FreezeCardConfirmDialog({ isOpen, onClose, onConfirm, candidate, isSubmitting, reason, onReasonChange }) {
+  if (!candidate) return null
+  const candidateCard = candidate.card ?? {}
+  const candidateLabel = formatBrandLabel(candidateCard.brand) || 'this card'
+  const candidateMasked = getMaskedNumber(candidateCard)
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Request a card freeze?"
+      subtitle="We'll review your request and freeze this card to block new payments. Use this if your card is lost or stolen."
+    >
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 rounded-surface border border-warning/30 bg-warning/5 p-3">
+          <span className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded-chip border border-border/70 bg-background">
+            <CardBrandIcon
+              brand={candidateCard.brand}
+              cardNumber={candidateCard.cardNumber}
+              width={36}
+            />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-card-foreground">
+              {candidateLabel}
+            </p>
+            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+              {candidateMasked}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="freeze-reason" className="text-xs font-medium text-muted-foreground">
+            Reason <span className="text-muted-foreground/60">(optional)</span>
+          </label>
+          <textarea
+            id="freeze-reason"
+            value={reason}
+            onChange={(e) => onReasonChange(e.target.value.slice(0, 255))}
+            placeholder="e.g. Card lost or stolen, suspicious activity…"
+            rows={3}
+            maxLength={255}
+            className="w-full resize-none rounded-input border border-border bg-background px-3 py-2 text-sm text-card-foreground placeholder:text-muted-foreground/50 shadow-none focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="text-card-foreground"
+          >
+            Cancel
+          </Button>
+          <Button type="button" onClick={onConfirm} disabled={isSubmitting}>
+            <Snowflake className="h-3.5 w-3.5" />
+            {isSubmitting ? 'Requesting…' : 'Request freeze'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function UnfreezeCardConfirmDialog({ isOpen, onClose, onConfirm, candidate, isSubmitting }) {
+  if (!candidate) return null
+  const candidateCard = candidate.card ?? {}
+  const candidateLabel = formatBrandLabel(candidateCard.brand) || 'this card'
+  const candidateMasked = getMaskedNumber(candidateCard)
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Request to unfreeze this card?"
+      subtitle="We'll review your request and reactivate this card so it can send and receive money again."
+    >
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 rounded-surface border border-primary/30 bg-primary/5 p-3">
+          <span className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded-chip border border-border/70 bg-background">
+            <CardBrandIcon brand={candidateCard.brand} cardNumber={candidateCard.cardNumber} width={36} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-card-foreground">{candidateLabel}</p>
+            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{candidateMasked}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="text-card-foreground">
+            Cancel
+          </Button>
+          <Button type="button" onClick={onConfirm} disabled={isSubmitting}>
+            <Sun className="h-3.5 w-3.5" />
+            {isSubmitting ? 'Requesting…' : 'Request unfreeze'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 function SetMainConfirmDialog({ isOpen, onClose, onConfirm, candidate, currentPrimary, isSubmitting }) {
   if (!candidate) return null
   const candidateCard = candidate.card ?? {}
@@ -419,8 +575,13 @@ export default function AllCardsModal({
   const [isOpen, setIsOpen] = useState(false)
   const [pendingMainCard, setPendingMainCard] = useState(null)
   const [pendingRemoveCard, setPendingRemoveCard] = useState(null)
+  const [pendingFreezeCard, setPendingFreezeCard] = useState(null)
+  const [freezeReason, setFreezeReason] = useState('')
+  const [pendingUnfreezeCard, setPendingUnfreezeCard] = useState(null)
   const [isSubmittingMain, setIsSubmittingMain] = useState(false)
   const [isSubmittingRemove, setIsSubmittingRemove] = useState(false)
+  const [isSubmittingFreeze, setIsSubmittingFreeze] = useState(false)
+  const [isSubmittingUnfreeze, setIsSubmittingUnfreeze] = useState(false)
   const { notify } = useNotifications()
 
   const cards = Array.isArray(items) ? items : []
@@ -512,6 +673,83 @@ export default function AllCardsModal({
     }
   }
 
+  function requestFreeze(item) {
+    setFreezeReason('')
+    setPendingFreezeCard(item)
+  }
+
+  function cancelFreeze() {
+    if (isSubmittingFreeze) return
+    setPendingFreezeCard(null)
+  }
+
+  async function confirmFreeze() {
+    if (!pendingFreezeCard) {
+      setPendingFreezeCard(null)
+      return
+    }
+    const label = describeCard(pendingFreezeCard)
+    try {
+      setIsSubmittingFreeze(true)
+      await transactionsService.requestCardFreeze(
+        Number(pendingFreezeCard.id),
+        freezeReason.trim() || null,
+      )
+      setPendingFreezeCard(null)
+      // Refresh wallet cards so the action flips to "Freeze requested".
+      emitDataChange(DATA_CHANGE_KINDS.CARD)
+      notify({
+        type: 'success',
+        category: CATEGORIES.SYSTEM,
+        message: `Freeze requested for ${label}. Our team will review it shortly.`,
+        link: { route: '/wallet' },
+      })
+    } catch (err) {
+      notify({
+        type: 'error',
+        message: getApiErrorMessage(err, 'Unable to request a freeze for this card.'),
+      })
+    } finally {
+      setIsSubmittingFreeze(false)
+    }
+  }
+
+  function requestUnfreeze(item) {
+    setPendingUnfreezeCard(item)
+  }
+
+  function cancelUnfreeze() {
+    if (isSubmittingUnfreeze) return
+    setPendingUnfreezeCard(null)
+  }
+
+  async function confirmUnfreeze() {
+    if (!pendingUnfreezeCard) {
+      setPendingUnfreezeCard(null)
+      return
+    }
+    const label = describeCard(pendingUnfreezeCard)
+    try {
+      setIsSubmittingUnfreeze(true)
+      await transactionsService.requestCardUnfreeze(Number(pendingUnfreezeCard.id))
+      setPendingUnfreezeCard(null)
+      emitDataChange(DATA_CHANGE_KINDS.CARD)
+      notify({
+        type: 'success',
+        category: CATEGORIES.SYSTEM,
+        message: `Unfreeze requested for ${label}. Our team will review it shortly.`,
+        link: { route: '/wallet' },
+      })
+    } catch (err) {
+      notify({
+        type: 'error',
+        message: getApiErrorMessage(err, 'Unable to request an unfreeze for this card.'),
+      })
+    } finally {
+      setIsSubmittingUnfreeze(false)
+    }
+  }
+
   return (
     <>
       <Button
@@ -559,6 +797,8 @@ export default function AllCardsModal({
                   item={item}
                   onRequestSetMain={onSetMain ? requestSetMain : null}
                   onRequestRemove={onRemove ? requestRemove : null}
+                  onRequestFreeze={requestFreeze}
+                  onRequestUnfreeze={requestUnfreeze}
                 />
               ))}
             </ul>
@@ -581,6 +821,24 @@ export default function AllCardsModal({
         onConfirm={confirmRemove}
         candidate={pendingRemoveCard}
         isSubmitting={isSubmittingRemove}
+      />
+
+      <FreezeCardConfirmDialog
+        isOpen={Boolean(pendingFreezeCard)}
+        onClose={cancelFreeze}
+        onConfirm={confirmFreeze}
+        candidate={pendingFreezeCard}
+        isSubmitting={isSubmittingFreeze}
+        reason={freezeReason}
+        onReasonChange={setFreezeReason}
+      />
+
+      <UnfreezeCardConfirmDialog
+        isOpen={Boolean(pendingUnfreezeCard)}
+        onClose={cancelUnfreeze}
+        onConfirm={confirmUnfreeze}
+        candidate={pendingUnfreezeCard}
+        isSubmitting={isSubmittingUnfreeze}
       />
     </>
   )
