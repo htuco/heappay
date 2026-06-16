@@ -26,12 +26,20 @@ import httpx
 
 
 def _config():
-    # Read at call time so it works no matter when dotenv loads
-    return (
-        os.getenv("NEXUS_URL", "").rstrip("/"),
-        os.getenv("NEXUS_SECRET_KEY", ""),
-        os.getenv("NEXUS_PROJECT", ""),
-    )
+    # Prefer the app's pydantic-settings (loaded from .env); fall back to raw
+    # env vars so this file still works standalone outside the Heap app.
+    try:
+        from settings import get_settings
+
+        s = get_settings()
+        url = s.nexus_url or os.getenv("NEXUS_URL", "")
+        key = s.nexus_secret_key or os.getenv("NEXUS_SECRET_KEY", "")
+        project = s.nexus_project or os.getenv("NEXUS_PROJECT", "")
+    except Exception:
+        url = os.getenv("NEXUS_URL", "")
+        key = os.getenv("NEXUS_SECRET_KEY", "")
+        project = os.getenv("NEXUS_PROJECT", "")
+    return (url.rstrip("/"), key, project)
 
 
 def _headers(key):

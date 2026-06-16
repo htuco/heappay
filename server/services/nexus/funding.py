@@ -1,8 +1,8 @@
-import os
 from decimal import Decimal
 
 import nexus
 from repositories.card.card import CardRepository
+from settings import get_settings
 
 
 class NexusNotConfiguredError(Exception):
@@ -22,10 +22,11 @@ class ForbiddenError(Exception):
 
 
 def is_nexus_configured() -> bool:
+    settings = get_settings()
     return bool(
-        os.getenv("NEXUS_URL", "").strip()
-        and os.getenv("NEXUS_SECRET_KEY", "").strip()
-        and os.getenv("NEXUS_PROJECT", "").strip()
+        settings.nexus_url.strip()
+        and settings.nexus_secret_key.strip()
+        and settings.nexus_project.strip()
     )
 
 
