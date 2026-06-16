@@ -1,5 +1,5 @@
 import { createElement, useState } from 'react'
-import { CreditCard, HelpCircle, Plus, SlidersHorizontal } from 'lucide-react'
+import { CreditCard, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import AddCardModal from '@/components/AddCardModal'
@@ -21,20 +21,7 @@ function TileBody({ icon, title, subtitle }) {
   )
 }
 
-function ActionTile({ icon, title, subtitle, onClick, disabled }) {
-  if (disabled) {
-    return (
-      <button
-        type="button"
-        disabled
-        title="Coming soon"
-        className={`${TILE_BASE} cursor-not-allowed select-none opacity-50`}
-      >
-        <TileBody icon={icon} title={title} subtitle={subtitle} />
-      </button>
-    )
-  }
-
+function ActionTile({ icon, title, subtitle, onClick }) {
   return (
     <button
       type="button"
@@ -49,8 +36,7 @@ function ActionTile({ icon, title, subtitle, onClick, disabled }) {
 /**
  * Wallet-specific quick actions, shown under the Available Balance panel.
  * Add Card opens the shared AddCardModal (controlled here); Transfer routes to
- * the payments page. Card Limits and Help Center are not implemented yet and
- * render as disabled "coming soon" controls.
+ * the payments page.
  */
 export default function WalletQuickActions({ onAddCard, isAddingCard = false, addCardError = null }) {
   const navigate = useNavigate()
@@ -73,8 +59,6 @@ export default function WalletQuickActions({ onAddCard, isAddingCard = false, ad
           subtitle="Send money"
           onClick={() => navigate('/payments')}
         />
-        <ActionTile icon={SlidersHorizontal} title="Card Limits" subtitle="Manage limits" disabled />
-        <ActionTile icon={HelpCircle} title="Help Center" subtitle="Get support" disabled />
       </div>
 
       <AddCardModal
