@@ -32,6 +32,7 @@ from routes.user.user_role import router as user_role_router
 from routes.user.user_status import router as user_status_router
 from services.embedding.embedding import EmbeddingService
 from jobs.scheduler import lifespan as transaction_processor_lifespan
+from services.nexus.funding import sync_nexus_env
 from settings import get_settings
 from tasks.knowledge_sync import KnowledgeSyncTask
 
@@ -57,6 +58,7 @@ def _run_knowledge_sync() -> None:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    sync_nexus_env()
     app = FastAPI(lifespan=transaction_processor_lifespan(settings))
     cors_kwargs: dict = {
         "allow_origins": settings.cors_origin_list,
