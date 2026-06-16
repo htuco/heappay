@@ -52,10 +52,20 @@ export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password, remember }, { rejectWithValue }) => {
     try {
-      const user = await authService.login({ email, password, remember })
-      return user
+      return await authService.login({ email, password, remember })
     } catch (error) {
       return rejectWithValue(getApiErrorMessage(error, 'Login failed.'))
+    }
+  },
+)
+
+export const verifyTotpLogin = createAsyncThunk(
+  'auth/verifyTotpLogin',
+  async ({ partialToken, code, remember }, { rejectWithValue }) => {
+    try {
+      return await authService.verifyTotp({ partialToken, code, remember })
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Invalid authentication code.'))
     }
   },
 )
@@ -118,16 +128,21 @@ const authSlice = createSlice({
     user: null,
     status: 'idle',
     error: null,
+    totpPartialToken: null,
+    totpRemember: true,
   },
   reducers: {
-    /**
-     * Clears in-memory auth immediately (e.g. after deactivate clears storage).
-     * Dispatch before navigation so protected UI and admin controls unmount synchronously.
-     */
     clearAuthState: (state) => {
       state.user = null
       state.status = 'unauthenticated'
       state.error = null
+      state.totpPartialToken = null
+      state.totpRemember = true
+    },
+    clearTotpPending: (state) => {
+      state.status = 'unauthenticated'
+      state.error = null
+      state.totpPartialToken = null
     },
   },
   extraReducers: (builder) => {
@@ -158,14 +173,35 @@ const authSlice = createSlice({
         state.error = null
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        state.user = action.payload
-        state.status = 'authenticated'
-        state.error = null
+        if (action.payload?.requiresTotp) {
+          state.status = 'totp_pending'
+          state.totpPartialToken = action.payload.partialToken
+          state.totpRemember = action.payload.remember ?? true
+          state.error = null
+        } else {
+          state.user = action.payload
+          state.status = 'authenticated'
+          state.error = null
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.user = null
         state.status = 'unauthenticated'
         state.error = action.payload ?? 'Login failed.'
+      })
+      .addCase(verifyTotpLogin.pending, (state) => {
+        state.status = 'totp_pending'
+        state.error = null
+      })
+      .addCase(verifyTotpLogin.fulfilled, (state, action) => {
+        state.user = action.payload
+        state.status = 'authenticated'
+        state.error = null
+        state.totpPartialToken = null
+      })
+      .addCase(verifyTotpLogin.rejected, (state, action) => {
+        state.status = 'totp_pending'
+        state.error = action.payload ?? 'Invalid authentication code.'
       })
       .addCase(registerUser.pending, (state) => {
         state.status = 'loading'
@@ -214,11 +250,13 @@ const authSlice = createSlice({
   },
 })
 
-export const { clearAuthState } = authSlice.actions
+export const { clearAuthState, clearTotpPending } = authSlice.actions
 
 export const selectAuthState = (state) => state.auth
 export const selectAuthUser = (state) => state.auth.user
 export const selectAuthStatus = (state) => state.auth.status
 export const selectAuthError = (state) => state.auth.error
+export const selectTotpPartialToken = (state) => state.auth.totpPartialToken
+export const selectTotpRemember = (state) => state.auth.totpRemember
 
 export default authSlice.reducer

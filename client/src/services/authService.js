@@ -22,9 +22,37 @@ export async function register({ firstName, lastName, email, password }) {
 export async function login({ email, password, remember = true }) {
 	const { data } = await api.post('/auth/login', { email, password })
 	clearAuthSession()
+	if (data.data?.requires_totp) {
+		return { requiresTotp: true, partialToken: data.data.partial_token, remember }
+	}
 	writeAuthTokens(data.data.access_token, data.data.refresh_token, { remember })
 	setAuthUser(data.data.user, { remember })
 	return data.data.user
+}
+
+export async function verifyTotp({ partialToken, code, remember = true }) {
+	const { data } = await api.post('/auth/totp/verify', {
+		partial_token: partialToken,
+		code,
+	})
+	writeAuthTokens(data.data.access_token, data.data.refresh_token, { remember })
+	setAuthUser(data.data.user, { remember })
+	return data.data.user
+}
+
+export async function setupTotp() {
+	const { data } = await api.post('/auth/totp/setup')
+	return data.data
+}
+
+export async function confirmTotp({ code }) {
+	const { data } = await api.post('/auth/totp/confirm', { code })
+	return data
+}
+
+export async function disableTotp({ code }) {
+	const { data } = await api.delete('/auth/totp', { data: { code } })
+	return data
 }
 
 export async function getMe() {

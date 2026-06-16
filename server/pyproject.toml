@@ -22,6 +22,7 @@ dependencies = [
     "groq>=1.4.0",
     "numpy>=2.4.6",
     "slowapi>=0.1.10",
+    "pyotp>=2.9.0",
 ]
 
 [dependency-groups]

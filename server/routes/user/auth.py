@@ -19,6 +19,10 @@ from schemas.user.auth import (
     ProfileUpdateRequest,
     RefreshRequest,
     RegisterRequest,
+    TotpConfirmRequest,
+    TotpDisableRequest,
+    TotpLoginResponse,
+    TotpVerifyRequest,
 )
 from services.storage.supabase_image_storage import SupabaseImageStorageService
 from services.user.auth import UserAuthService
@@ -47,19 +51,107 @@ def register(
     return AuthResponse(success=True, message="Registration successful", data=token_response)
 
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login", response_model=TotpLoginResponse)
 @limiter.limit(AUTH_RATE_LIMIT)
 def login(
     request: Request,
     payload: LoginRequest,
     service: UserAuthService = Depends(get_auth_service),
-) -> AuthResponse:
+) -> TotpLoginResponse:
     try:
-        token_response = service.login(payload)
+        result = service.login(payload)
     except ValueError:
         raise Unauthorized("Invalid email or password.") from None
 
+    return TotpLoginResponse(success=True, message="Login successful", data=result)
+
+
+@router.post("/totp/verify", response_model=AuthResponse)
+@limiter.limit(AUTH_RATE_LIMIT)
+def totp_verify(
+    request: Request,
+    payload: TotpVerifyRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    """Second step of 2FA login — exchange partial_token + 6-digit code for real JWT tokens."""
+    try:
+        token_response = service.verify_totp_login(payload.partial_token, payload.code)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "INVALID_TOTP_CODE":
+            raise Unauthorized("Invalid authentication code.") from None
+        raise Unauthorized("Session expired. Please log in again.") from None
+
     return AuthResponse(success=True, message="Login successful", data=token_response)
+
+
+@router.post("/totp/setup", response_model=AuthResponse)
+def totp_setup(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    """Generate a TOTP secret and return the QR URI. 2FA is not active until /totp/confirm."""
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    setup = service.setup_totp(user_id)
+    return AuthResponse(success=True, message="Scan the QR code with your authenticator app.", data=setup)
+
+
+@router.post("/totp/confirm", response_model=AuthResponse)
+def totp_confirm(
+    payload: TotpConfirmRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    """Confirm 2FA setup by verifying the first code from the authenticator app."""
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        service.confirm_totp_setup(user_id, payload.code)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "INVALID_TOTP_CODE":
+            raise InvalidInput("Invalid code. Make sure your authenticator app is synced.") from None
+        raise InvalidInput("Could not activate 2FA.") from None
+
+    return AuthResponse(success=True, message="Two-factor authentication enabled.", data=None)
+
+
+@router.delete("/totp", response_model=AuthResponse)
+def totp_disable(
+    payload: TotpDisableRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    """Disable 2FA — requires a valid current TOTP code."""
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        service.disable_totp(user_id, payload.code)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "INVALID_TOTP_CODE":
+            raise InvalidInput("Invalid code.") from None
+        if msg == "TOTP_NOT_ENABLED":
+            raise InvalidInput("Two-factor authentication is not enabled.") from None
+        raise InvalidInput("Could not disable 2FA.") from None
+
+    return AuthResponse(success=True, message="Two-factor authentication disabled.", data=None)
 
 
 @router.post("/refresh", response_model=AuthResponse)

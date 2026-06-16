@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { CheckCircle2, KeyRound, Mail, Send, ShieldCheck } from 'lucide-react'
 
 import ActionRow from '@/components/settings/ActionRow'
-import SettingRow from '@/components/settings/SettingRow'
+import TwoFactorPanel from '@/components/settings/TwoFactorPanel'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import { requestPasswordReset } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
 
-export default function RecoveryMethodPanel({ email, onChangePassword }) {
+export default function RecoveryMethodPanel({ email, onChangePassword, totpEnabled = false, onTotpStatusChange }) {
   const [isSending, setIsSending] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
@@ -87,11 +87,7 @@ export default function RecoveryMethodPanel({ email, onChangePassword }) {
         }
       />
 
-      <SettingRow
-        label="Additional verification"
-        value="Not enabled"
-        hint="MFA can be added later without changing the current email recovery method."
-      />
+      <TwoFactorPanel enabled={totpEnabled} onStatusChange={onTotpStatusChange ?? (() => {})} />
     </div>
   )
 }
