@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     tx_pending_timeout_action: Literal["allow", "deny"] = "deny"
     tx_staff_bypass_delay: bool = False
 
+    # TOTP 2FA — Fernet key for encrypting totp_secret at rest
+    totp_encryption_key: str = ""
+
     # Refund processor (phase 2 — disabled by default)
     refund_processor_enabled: bool = False
     refund_min_processing_delay_seconds: int = 3

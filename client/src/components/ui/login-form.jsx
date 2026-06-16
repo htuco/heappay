@@ -2,8 +2,16 @@ import BrandLogo from '@/components/ui/BrandLogo'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { useAppSelector } from '@/store/hooks'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { selectUserStatuses } from '@/store/slices/referenceDataSlice'
+import {
+	clearTotpPending,
+	selectAuthError,
+	selectAuthStatus,
+	selectTotpPartialToken,
+	selectTotpRemember,
+	verifyTotpLogin,
+} from '@/store/slices/authSlice'
 import { getStatusHomePath, resolveUserAccountStatus } from '@/utils/resolveUserAccountStatus'
 import { loginSchema } from '@/schemas/loginSchema'
 import { getApiErrorMessage } from '@/utils/api'
@@ -14,27 +22,95 @@ import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 
-const INITIAL_FORM_STATE = {
-	email: '',
-	password: '',
-	rememberMe: false,
+const INITIAL_FORM_STATE = { email: '', password: '', rememberMe: false }
+
+function TotpStep({ onBack }) {
+	const dispatch = useAppDispatch()
+	const navigate = useNavigate()
+	const partialToken = useAppSelector(selectTotpPartialToken)
+	const remember = useAppSelector(selectTotpRemember)
+	const status = useAppSelector(selectAuthStatus)
+	const reduxError = useAppSelector(selectAuthError)
+	const userStatuses = useAppSelector(selectUserStatuses)
+	const [code, setCode] = useState('')
+	const [success, setSuccess] = useState(false)
+	const loading = status === 'loading'
+
+	const handleChange = (e) => {
+		const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+		setCode(val)
+		if (val.length === 6) submit(val)
+	}
+
+	const submit = async (value) => {
+		const result = await dispatch(verifyTotpLogin({ partialToken, code: value, remember }))
+		if (verifyTotpLogin.fulfilled.match(result)) {
+			setSuccess(true)
+			const user = result.payload
+			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
+			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 1200)
+		}
+	}
+
+	return (
+		<div className="space-y-6">
+			<AuthPageHeader
+				title="Two-step verification"
+				subtitle="Enter the 6-digit code from your authenticator app."
+				icon={<BrandLogo className="h-10 w-auto" />}
+				iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-12 w-auto"
+			/>
+
+			<div className="space-y-5">
+				<FormBanner variant="error" message={reduxError} />
+				{success && <FormBanner variant="success" message="Verified! Signing you in..." />}
+
+				<AuthTextInput
+					autoFocus
+					id="totp-code"
+					name="totp-code"
+					type="text"
+					inputMode="numeric"
+					label="Authentication code"
+					placeholder="000000"
+					value={code}
+					onChange={handleChange}
+					disabled={loading || success}
+					maxLength={6}
+				/>
+
+				<AuthButton type="button" disabled={loading || success || code.length !== 6} onClick={() => submit(code)}>
+					{loading ? 'Verifying...' : 'Verify'}
+				</AuthButton>
+
+				<button
+					type="button"
+					onClick={onBack}
+					className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+				>
+					Back to login
+				</button>
+			</div>
+		</div>
+	)
 }
 
 export default function LoginForm() {
 	const navigate = useNavigate()
+	const dispatch = useAppDispatch()
 	const { login, isLoading: loading } = useAuth()
+	const status = useAppSelector(selectAuthStatus)
 	const userStatuses = useAppSelector(selectUserStatuses)
 	const [form, setForm] = useState(INITIAL_FORM_STATE)
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
 	const [success, setSuccess] = useState(false)
 
+	const isTotpPending = status === 'totp_pending'
+
 	const handleChange = (e) => {
 		const { name, value, type, checked } = e.target
-		setForm(prev => ({
-			...prev,
-			[name]: type === 'checkbox' ? checked : value,
-		}))
+		setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
 	}
 
 	const handleSubmit = async (e) => {
@@ -42,35 +118,36 @@ export default function LoginForm() {
 		setError('')
 		setErrors({})
 
-		const result = loginSchema.safeParse({
-			email: form.email.trim(),
-			password: form.password,
-		})
-
+		const result = loginSchema.safeParse({ email: form.email.trim(), password: form.password })
 		if (!result.success) {
 			const fieldErrors = {}
-			result.error.issues.forEach(err => {
-				fieldErrors[err.path[0]] = err.message
-			})
+			result.error.issues.forEach(err => { fieldErrors[err.path[0]] = err.message })
 			setErrors(fieldErrors)
 			return
 		}
 
 		try {
-			const user = await login({
-				email: result.data.email,
-				password: result.data.password,
-				remember: form.rememberMe,
-			})
+			const user = await login({ email: result.data.email, password: result.data.password, remember: form.rememberMe })
+			if (user?.requiresTotp) return
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
 			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
-			const destination = getStatusHomePath(accountStatus)
-			setTimeout(() => navigate(destination, { replace: true }), 1500)
+			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 1500)
 		} catch (err) {
 			setError(getApiErrorMessage(err, 'Invalid email or password'))
 		}
 	}
+
+	if (isTotpPending) {
+		return (
+			<div className="flex items-center justify-center px-4 py-8 text-foreground min-h-svh sm:px-6 sm:py-10">
+				<div className="mx-auto w-full max-w-110 mt-5">
+					<TotpStep onBack={() => dispatch(clearTotpPending())} />
+				</div>
+			</div>
+		)
+	}
+
 	return (
 		<div className="flex items-center justify-center px-4 py-8 text-foreground min-h-svh sm:px-6 sm:py-10">
 			<div className="mx-auto w-full max-w-110 mt-5">
@@ -84,9 +161,8 @@ export default function LoginForm() {
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
 						<FormBanner variant="error" message={error} />
-						{success && (
-							<FormBanner variant="success" message="Login successful!" />
-						)}
+						{success && <FormBanner variant="success" message="Login successful!" />}
+
 						<AuthTextInput
 							id="email"
 							name="email"
@@ -129,10 +205,7 @@ export default function LoginForm() {
 							</button>
 						</div>
 
-						<AuthButton
-							type="submit"
-							disabled={loading}
-						>
+						<AuthButton type="submit" disabled={loading}>
 							{loading ? 'Logging in...' : 'Log in'}
 						</AuthButton>
 					</form>

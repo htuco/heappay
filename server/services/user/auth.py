@@ -20,10 +20,19 @@ from schemas.user.auth import (
     ProfileUpdateRequest,
     RegisterRequest,
     TokenResponse,
+    TotpRequiredResponse,
+    TotpSetupResponse,
     UserResponse,
 )
 from services.user.password_reset_mailer import PasswordResetMailer
 from settings import get_settings
+from utils.totp import (
+    build_totp_uri,
+    decrypt_secret,
+    encrypt_secret,
+    generate_totp_secret,
+    verify_totp_code,
+)
 
 
 def decode_access_token_subject(token: str) -> int | None:
@@ -143,6 +152,7 @@ class UserAuthService:
             role_name=role_name,
             billing_reminders_enabled=user.billing_reminders_enabled,
             avatar_url=resolve_avatar_url_for_client(raw_avatar, self.settings),
+            totp_enabled=user.totp_enabled,
         )
         return TokenResponse(
             access_token=access_token or self.create_access_token(user.user_id),
@@ -162,7 +172,25 @@ class UserAuthService:
         self.repo.save_refresh_token(user.user_id, refresh_token)
         return self._build_token_response(user.user_id, refresh_token)
 
-    def login(self, login_data: LoginRequest) -> TokenResponse:
+    def create_partial_token(self, user_id: int) -> str:
+        """Short-lived token issued after correct password when 2FA is enabled.
+        Can only be exchanged at /auth/totp/verify — not valid as an access token."""
+        expire = datetime.now(timezone.utc) + timedelta(minutes=5)
+        payload = {"sub": str(user_id), "exp": expire, "type": "totp_pending"}
+        return jwt.encode(payload, self.settings.secret_key, algorithm=self.settings.algorithm)
+
+    def verify_partial_token(self, token: str) -> int | None:
+        """Returns user_id if the partial token is valid and unexpired, else None."""
+        try:
+            payload = jwt.decode(token, self.settings.secret_key, algorithms=[self.settings.algorithm])
+            if payload.get("type") != "totp_pending":
+                return None
+            user_id = payload.get("sub")
+            return int(user_id) if user_id else None
+        except InvalidTokenError:
+            return None
+
+    def login(self, login_data: LoginRequest) -> TokenResponse | TotpRequiredResponse:
         user = self.repo.get_user_by_email(str(login_data.email))
         if not user or user.deleted_at is not None:
             raise ValueError("Invalid email or password")
@@ -170,9 +198,71 @@ class UserAuthService:
         if not self.verify_password(login_data.password, user.password_hash):
             raise ValueError("Invalid email or password")
 
+        if user.totp_enabled:
+            partial_token = self.create_partial_token(user.user_id)
+            return TotpRequiredResponse(partial_token=partial_token)
+
         refresh_token = self.create_refresh_token(user.user_id)
         self.repo.save_refresh_token(user.user_id, refresh_token)
         return self._build_token_response(user.user_id, refresh_token)
+
+    def verify_totp_login(self, partial_token: str, code: str) -> TokenResponse:
+        """Second step of 2FA login — validate partial token + TOTP code, issue real JWT."""
+        user_id = self.verify_partial_token(partial_token)
+        if user_id is None:
+            raise ValueError("INVALID_OR_EXPIRED_TOKEN")
+
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None or not user.totp_enabled or not user.totp_secret:
+            raise ValueError("INVALID_OR_EXPIRED_TOKEN")
+
+        plain_secret = decrypt_secret(user.totp_secret, self.settings.totp_encryption_key)
+        if not verify_totp_code(plain_secret, code):
+            raise ValueError("INVALID_TOTP_CODE")
+
+        refresh_token = self.create_refresh_token(user_id)
+        self.repo.save_refresh_token(user_id, refresh_token)
+        return self._build_token_response(user_id, refresh_token)
+
+    def setup_totp(self, user_id: int) -> TotpSetupResponse:
+        """Generate a new TOTP secret and persist it encrypted — 2FA is NOT enabled yet.
+        Returns the otpauth:// URI (for QR) and the plain secret (for manual entry)."""
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+
+        plain_secret = generate_totp_secret()
+        encrypted = encrypt_secret(plain_secret, self.settings.totp_encryption_key)
+        self.repo.save_totp_secret(user_id, encrypted)
+
+        uri = build_totp_uri(plain_secret, user.email)
+        return TotpSetupResponse(uri=uri, secret=plain_secret)
+
+    def confirm_totp_setup(self, user_id: int, code: str) -> None:
+        """Verify the first TOTP code from the authenticator app, then activate 2FA."""
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None or not user.totp_secret:
+            raise ValueError("TOTP_NOT_INITIALIZED")
+
+        plain_secret = decrypt_secret(user.totp_secret, self.settings.totp_encryption_key)
+        if not verify_totp_code(plain_secret, code):
+            raise ValueError("INVALID_TOTP_CODE")
+
+        self.repo.enable_totp(user_id)
+
+    def disable_totp(self, user_id: int, code: str) -> None:
+        """Disable 2FA — requires a valid current TOTP code to prevent abuse via stolen password."""
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if not user.totp_enabled or not user.totp_secret:
+            raise ValueError("TOTP_NOT_ENABLED")
+
+        plain_secret = decrypt_secret(user.totp_secret, self.settings.totp_encryption_key)
+        if not verify_totp_code(plain_secret, code):
+            raise ValueError("INVALID_TOTP_CODE")
+
+        self.repo.disable_totp(user_id)
 
     def refresh(self, refresh_token: str) -> TokenResponse | None:
         user_id = self.verify_refresh_token(refresh_token)

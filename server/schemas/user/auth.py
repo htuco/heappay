@@ -133,6 +133,7 @@ class UserResponse(BaseModel):
     role_name: str
     billing_reminders_enabled: bool = True
     avatar_url: str | None = None
+    totp_enabled: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -142,7 +143,41 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class TotpRequiredResponse(BaseModel):
+    """Returned by /login when the account has 2FA enabled. Frontend must follow up with /auth/totp/verify."""
+    requires_totp: bool = True
+    partial_token: str
+
+
+class TotpLoginResponse(BaseModel):
+    success: bool
+    message: str
+    data: TokenResponse | TotpRequiredResponse | None = None
+
+
+class TotpVerifyRequest(BaseModel):
+    """Second step of login — exchange partial_token + 6-digit code for real JWT tokens."""
+    partial_token: str
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class TotpSetupResponse(BaseModel):
+    """Returned when user initiates 2FA setup — contains URI for QR code and plain secret for manual entry."""
+    uri: str
+    secret: str
+
+
 class AuthResponse(BaseModel):
     success: bool
     message: str
-    data: TokenResponse | None = None
+    data: TokenResponse | TotpSetupResponse | None = None
+
+
+class TotpConfirmRequest(BaseModel):
+    """Confirm 2FA setup — user scans QR and sends first code to prove the app works."""
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class TotpDisableRequest(BaseModel):
+    """Disable 2FA — requires current TOTP code to prevent disabling via stolen password alone."""
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")

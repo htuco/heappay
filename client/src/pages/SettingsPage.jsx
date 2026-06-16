@@ -3,7 +3,7 @@ import { Bell, CreditCard, Eye, KeyRound, Paintbrush } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
-import { updateNotificationPreferences } from '@/store/slices/authSlice'
+import { refreshSession, updateNotificationPreferences } from '@/store/slices/authSlice'
 
 import { useWalletCards } from '@/hooks/useWalletCards'
 
@@ -116,6 +116,8 @@ export default function SettingsPage() {
           <RecoveryMethodPanel
             email={user?.email}
             onChangePassword={() => setIsChangePasswordOpen(true)}
+            totpEnabled={user?.totp_enabled ?? false}
+            onTotpStatusChange={() => dispatch(refreshSession())}
           />
         </SettingsCard>
 

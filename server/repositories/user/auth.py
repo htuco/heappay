@@ -214,3 +214,30 @@ class UserAuthRepository:
             )
         )
         self._db.commit()
+
+    def save_totp_secret(self, user_id: int, encrypted_secret: str) -> None:
+        """Store the encrypted TOTP secret without enabling 2FA yet."""
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(totp_secret=encrypted_secret, modified_at=datetime.now(timezone.utc))
+        )
+        self._db.commit()
+
+    def enable_totp(self, user_id: int) -> None:
+        """Activate 2FA after the user confirms their authenticator app works."""
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(totp_enabled=True, modified_at=datetime.now(timezone.utc))
+        )
+        self._db.commit()
+
+    def disable_totp(self, user_id: int) -> None:
+        """Deactivate 2FA and wipe the stored secret."""
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(totp_secret=None, totp_enabled=False, modified_at=datetime.now(timezone.utc))
+        )
+        self._db.commit()
