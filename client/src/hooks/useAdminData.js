@@ -15,6 +15,9 @@ function normalizeUsers(rawUsers, rolesById, userStatusesById) {
   return rawUsers.map((user) => ({
     id: user.user_id,
     fullName: `${user.first_name} ${user.last_name}`.trim(),
+    firstName: user.first_name,
+    lastName: user.last_name,
+    avatarUrl: user.avatar_url ?? null,
     email: user.email,
     role: rolesById[user.user_role_id]?.role_name ?? 'user',
     status: userStatusesById[user.status_id]?.status_name ?? 'active',

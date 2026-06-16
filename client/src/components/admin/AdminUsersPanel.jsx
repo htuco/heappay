@@ -10,39 +10,11 @@ import { titleCase } from '@/utils/admin.utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-
-const AVATAR_TONES = [
-  'bg-primary/15 text-primary',
-  'bg-success/15 text-success',
-  'bg-info/15 text-info',
-  'bg-warning/15 text-warning',
-  'bg-destructive/15 text-destructive',
-  'bg-secondary text-secondary-foreground',
-]
-
-function initialsFor(name) {
-  return (
-    String(name ?? '')
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('') || 'U'
-  )
-}
-
-// Deterministic per-user avatar colour so the same user always reads the same.
-function avatarTone(seed) {
-  const str = String(seed ?? '')
-  let hash = 0
-  for (let i = 0; i < str.length; i += 1) hash = (hash * 31 + str.charCodeAt(i)) >>> 0
-  return AVATAR_TONES[hash % AVATAR_TONES.length]
-}
+import SharedUserAvatar from '@/components/ui/UserAvatar'
 
 function RoleChip({ role }) {
   const styles = {
     admin: 'border-primary/30 bg-primary/10 text-primary',
-    manager: 'border-info/30 bg-info/10 text-info',
     support: 'border-warning/30 bg-warning/10 text-warning',
   }
   return (
@@ -71,9 +43,16 @@ function StatusPill({ status }) {
 
 function UserAvatar({ user }) {
   return (
-    <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${avatarTone(user.email || user.id)}`}>
-      {initialsFor(user.fullName)}
-    </span>
+    <SharedUserAvatar
+      user={{
+        first_name: user.firstName,
+        last_name: user.lastName,
+        full_name: user.fullName,
+        email: user.email,
+        avatar_url: user.avatarUrl,
+      }}
+      className="size-9 text-xs"
+    />
   )
 }
 
@@ -160,13 +139,11 @@ export default function AdminUsersPanel({
               <table className="w-full min-w-205 table-fixed text-left text-sm">
                 <thead className="border-b border-border/60 bg-muted/25 text-[11px] uppercase tracking-wider text-muted-foreground/70">
                   <tr>
-                    <th className="w-[26%] px-4 py-3 font-semibold">User</th>
-                    <th className="w-[12%] px-4 py-3 font-semibold">Role</th>
-                    <th className="w-[10%] px-4 py-3 font-semibold">Cards</th>
-                    <th className="w-[15%] px-4 py-3 font-semibold">Spend (MTD)</th>
-                    <th className="w-[13%] px-4 py-3 font-semibold">Last Active</th>
-                    <th className="w-[12%] px-4 py-3 font-semibold">Status</th>
-                    <th className="w-[12%] px-4 py-3 text-right font-semibold">Actions</th>
+                    <th className="w-[34%] px-4 py-3 font-semibold">User</th>
+                    <th className="w-[16%] px-4 py-3 font-semibold">Role</th>
+                    <th className="w-[14%] px-4 py-3 font-semibold">Cards</th>
+                    <th className="w-[18%] px-4 py-3 font-semibold">Status</th>
+                    <th className="w-[18%] px-4 py-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/45">
@@ -196,8 +173,6 @@ export default function AdminUsersPanel({
                         <span className="font-medium text-card-foreground tabular-nums">{user.cards.length}</span>{' '}
                         <span className="text-xs">Cards</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground tabular-nums">—</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">—</td>
                       <td className="px-4 py-3">
                         <StatusPill status={user.status} />
                       </td>
@@ -220,7 +195,7 @@ export default function AdminUsersPanel({
                   ))}
                   {emptyRows > 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-0">
+                      <td colSpan={5} className="p-0">
                         <div style={{ minHeight: `${emptyRows * 57}px` }} />
                       </td>
                     </tr>
