@@ -1,7 +1,8 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from ratelimit import TRANSACTION_RATE_LIMIT, limiter, user_id_key_func
 from repositories.transaction.transaction import TransactionRepository
 from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.pagination import Page
@@ -366,7 +367,9 @@ def get_transaction(
     response_model=ApiResponse[TransactionResponse],
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit(TRANSACTION_RATE_LIMIT, key_func=user_id_key_func)
 def create_transaction(
+    request: Request,
     payload: TransactionCreate,
     response: Response,
     background_tasks: BackgroundTasks,
