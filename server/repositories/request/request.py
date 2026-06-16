@@ -291,6 +291,7 @@ class RequestRepository:
             status_id=completed_id,
             amount=original_tx.amount,
             note=request.note,
+            processing_eligible_at=datetime.now(timezone.utc),
         )
         self._db.add(refund_tx)
 

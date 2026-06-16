@@ -15,8 +15,6 @@ export default function SupportUsersPage() {
     handleUserSave,
     handleCardBlock,
     handleCardUnblock,
-    handleUserSuspend,
-    handleUserActivate,
     handleUserDelete,
     userRoles,
   } = useAdminPageState()
@@ -64,8 +62,6 @@ export default function SupportUsersPage() {
         onSave={handleUserSave}
         onCardBlock={handleCardBlock}
         onCardUnblock={handleCardUnblock}
-        onSuspend={handleUserSuspend}
-        onActivate={handleUserActivate}
         onDelete={handleUserDelete}
         isAdmin={false}
         canManageCards
