@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # TOTP 2FA — Fernet key for encrypting totp_secret at rest
     totp_encryption_key: str = ""
 
+    # FEP Nexus funding integration (card top-ups via external treasury)
+    nexus_url: str = ""
+    nexus_secret_key: str = ""
+    nexus_project: str = ""
+
     # Refund processor (phase 2 — disabled by default)
     refund_processor_enabled: bool = False
     refund_min_processing_delay_seconds: int = 3
