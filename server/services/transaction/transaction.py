@@ -40,6 +40,10 @@ class ProcessingDelayNotElapsedError(Exception):
     """The transaction is still within the minimum processing delay window."""
 
 
+class DuplicatePaymentError(Exception):
+    """A similar payment was already submitted within the duplicate window."""
+
+
 class CardFrozenError(Exception):
     """A frozen card cannot send or receive money.
 
@@ -169,6 +173,17 @@ class TransactionService:
                 if not self._user_participates(existing, user_id):
                     raise ForbiddenError()
                 return existing, False
+
+        if payload.sender_card_id is not None:
+            window = get_settings().tx_duplicate_window_seconds
+            duplicate = self._repo.find_recent_duplicate(
+                sender_card_id=payload.sender_card_id,
+                recipient_card_id=payload.recipient_card_id,
+                amount=payload.amount,
+                window_seconds=window,
+            )
+            if duplicate is not None:
+                raise DuplicatePaymentError()
 
         if not self._repo.transaction_type_exists(payload.transaction_type_id):
             raise TransactionTypeNotFoundError()

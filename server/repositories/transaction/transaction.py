@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text
@@ -331,6 +331,32 @@ class TransactionRepository:
             .options(*self._party_load_options())
             .where(Transaction.idempotency_key == idempotency_key)
         )
+        return self._db.scalars(stmt).first()
+
+    def find_recent_duplicate(
+        self,
+        sender_card_id: int,
+        recipient_card_id: int,
+        amount: Decimal,
+        window_seconds: int,
+    ) -> Transaction | None:
+        """Return any non-failed/cancelled tx with the same sender, recipient, and amount
+        created within the duplicate window, or None if no such transaction exists."""
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+        excluded_statuses = ["failed", "cancelled"]
+        excluded_ids = [
+            sid
+            for name in excluded_statuses
+            if (sid := self.get_status_id_by_name(name)) is not None
+        ]
+        stmt = select(Transaction).where(
+            Transaction.sender_card_id == sender_card_id,
+            Transaction.recipient_card_id == recipient_card_id,
+            Transaction.amount == amount,
+            Transaction.created_at >= cutoff,
+        )
+        if excluded_ids:
+            stmt = stmt.where(Transaction.status_id.not_in(excluded_ids))
         return self._db.scalars(stmt).first()
 
     def rollback(self) -> None:

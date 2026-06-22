@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     tx_pending_max_age_minutes: int = 1440
     tx_pending_timeout_action: Literal["allow", "deny"] = "deny"
     tx_staff_bypass_delay: bool = False
+    tx_duplicate_window_seconds: int = 90
 
     # TOTP 2FA — Fernet key for encrypting totp_secret at rest
     totp_encryption_key: str = ""
