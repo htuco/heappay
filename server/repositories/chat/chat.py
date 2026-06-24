@@ -12,10 +12,12 @@ class ChatRepository:
         stmt = (
             select(ChatMessage)
             .where(ChatMessage.user_id == user_id)
-            .order_by(ChatMessage.created_at.asc())
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
             .limit(limit)
         )
-        return list(self._db.execute(stmt).scalars().all())
+        rows = list(self._db.execute(stmt).scalars().all())
+        rows.reverse()
+        return rows
 
     def save_message(self, user_id: int, role: str, content: str) -> ChatMessage:
         row = ChatMessage(user_id=user_id, role=role, content=content)

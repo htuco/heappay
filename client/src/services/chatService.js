@@ -1,8 +1,8 @@
 import api from '@/utils/api'
 
 export const chatService = {
-  async sendMessage(message) {
-    const { data } = await api.post('/chat/message', { message })
+  async sendMessage(message, agentMode = false) {
+    const { data } = await api.post('/chat/message', { message, agent_mode: agentMode })
     return data
   },
 
