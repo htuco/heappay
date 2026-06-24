@@ -601,7 +601,8 @@
     .animate-carousel-cycle-next-main,
     .animate-carousel-cycle-next-side,
     .animate-carousel-cycle-prev-main,
-    .animate-carousel-cycle-prev-side {
+    .animate-carousel-cycle-prev-side,
+    .shimmer {
       transition-duration: 0ms;
       animation-duration: 0ms;
     }

@@ -1,77 +1,101 @@
 import { Star, Wallet } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
+
 function formatBalance(value) {
-	const num = Number(value ?? 0)
-	if (Number.isNaN(num)) return '0.00'
-	return num.toLocaleString('en-US', {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	})
+  const num = Number(value ?? 0)
+  if (Number.isNaN(num)) return '0.00'
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 export default function BalancePanel({
-	activeCard,
-	isLoading = false,
-	addCardSlot,
-	manageCardsSlot,
+  activeCard,
+  isLoading = false,
+  addCardSlot,
+  manageCardsSlot,
+  embedded = false,
+  className,
 }) {
-	const hasCard = !!activeCard
-	const balance = formatBalance(activeCard?.balance)
-	const reservedAmount = Number(activeCard?.reserved ?? 0)
-	const hasReserved = !Number.isNaN(reservedAmount) && reservedAmount > 0
-	const reserved = formatBalance(activeCard?.reserved)
-	const cardNumber = activeCard?.card?.cardNumber ?? '—'
+  const hasCard = !!activeCard
+  const balance = formatBalance(activeCard?.balance)
+  const reservedAmount = Number(activeCard?.reserved ?? 0)
+  const hasReserved = !Number.isNaN(reservedAmount) && reservedAmount > 0
+  const reserved = formatBalance(activeCard?.reserved)
+  const cardNumber = activeCard?.card?.cardNumber ?? '—'
 
-	return (
-		<aside className="flex h-full flex-col justify-between gap-8 rounded-panel bg-linear-to-br from-primary via-primary to-primary-dark p-6 text-primary-foreground shadow-xl shadow-primary/30 sm:p-8">
-			<div>
-				<span className="inline-flex items-center gap-2 rounded-chip bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-					<Wallet className="h-3.5 w-3.5" strokeWidth={2.4} />
-					Active Balance
-				</span>
+  return (
+    <aside
+      className={cn(
+        'flex h-full flex-col justify-between gap-8 bg-linear-to-br from-primary via-primary to-primary-dark p-6 text-primary-foreground sm:p-8',
+        // Standalone it's a self-contained panel; embedded in the hero it fills
+        // its column flush (the hero owns the radius + clipping).
+        embedded ? 'rounded-none shadow-none' : 'rounded-panel shadow-xl shadow-primary/30',
+        className,
+      )}
+    >
+      <div>
+        <span className="inline-flex items-center gap-2 rounded-chip bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+          <Wallet className="h-3.5 w-3.5" strokeWidth={2.4} />
+          Active Balance
+        </span>
 
-				{isLoading ? (
-					<div className="mt-5 space-y-3">
-						<div className="shimmer h-3 w-32 rounded-full" />
-						<div className="shimmer h-12 w-48 rounded-input" />
-					</div>
-				) : hasCard ? (
-					<>
-						<div className="mt-5 flex items-center gap-2">
-							<p className="font-mono text-sm tracking-widest text-primary-foreground/80">
-								{cardNumber}
-							</p>
-							{activeCard?.isMain && (
-								<span className="inline-flex items-center gap-1 rounded-chip bg-white/20 px-2 py-0.5 text-xs font-semibold text-primary-foreground backdrop-blur">
-									<Star className="h-3 w-3 fill-primary-foreground" />
-									Main
-								</span>
-							)}
-						</div>
-						<p className="tabular mt-1 text-4xl font-bold leading-tight sm:text-5xl">
-							${balance}
-						</p>
-						{hasReserved ? (
-							<p className="mt-2 inline-flex items-center gap-1.5 rounded-chip bg-white/15 px-2.5 py-1 text-xs font-medium text-primary-foreground/90 backdrop-blur">
-								<span className="text-primary-foreground/70">Reserved</span>
-								<span className="tabular font-semibold">${reserved}</span>
-							</p>
-						) : null}
-					</>
-				) : (
-					<>
-						<p className="mt-5 text-sm text-primary-foreground/80">No active card</p>
-						<p className="tabular mt-1 text-4xl font-bold leading-tight sm:text-5xl">
-							$0.00
-						</p>
-					</>
-				)}
-			</div>
+        {isLoading ? (
+          <div className="mt-5 space-y-3">
+            <div className="shimmer h-3 w-32 rounded-full" />
+            <div className="shimmer h-12 w-48 rounded-input" />
+          </div>
+        ) : hasCard ? (
+          <>
+            <div className="mt-5 flex items-center gap-2">
+              <p className="font-mono text-sm tracking-widest text-primary-foreground/80">
+                {cardNumber}
+              </p>
+              {activeCard?.isMain && (
+                <span className="inline-flex items-center gap-1 rounded-chip bg-white/20 px-2 py-0.5 text-xs font-semibold text-primary-foreground backdrop-blur">
+                  <Star className="h-3 w-3 fill-primary-foreground" />
+                  Main
+                </span>
+              )}
+            </div>
+            <p
+              className="tabular mt-1 text-4xl font-bold leading-tight sm:text-5xl"
+              aria-live="polite"
+            >
+              ${balance}
+            </p>
+            {hasReserved ? (
+              <p
+                className="mt-2 inline-flex items-center gap-1.5 rounded-chip bg-white/15 px-2.5 py-1 text-xs font-medium text-primary-foreground/90 backdrop-blur"
+                title="Funds held for payments that haven't settled yet. They're subtracted from your available balance."
+              >
+                <span className="text-primary-foreground/70">Reserved</span>
+                <span className="tabular font-semibold">${reserved}</span>
+              </p>
+            ) : null}
+            {hasReserved ? (
+              <p className="mt-2 max-w-[40ch] text-xs leading-snug text-primary-foreground/70">
+                Reserved funds are held for pending payments and don&apos;t count toward your
+                available balance.
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <p className="mt-5 text-sm text-primary-foreground/80">No active card</p>
+            <p className="tabular mt-1 text-4xl font-bold leading-tight sm:text-5xl">
+              $0.00
+            </p>
+          </>
+        )}
+      </div>
 
-			<div className="flex flex-col gap-2">
-				{addCardSlot}
-				{manageCardsSlot}
-			</div>
-		</aside>
-	)
+      <div className="flex flex-col gap-2">
+        {addCardSlot}
+        {manageCardsSlot}
+      </div>
+    </aside>
+  )
 }
