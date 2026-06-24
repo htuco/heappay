@@ -18,6 +18,12 @@ const buttonVariants = cva(
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        // For placement on a saturated/primary surface (e.g. the balance panel).
+        // `inverse` reads as the solid CTA; `inverse-ghost` as the quiet companion.
+        inverse:
+          "bg-white text-primary shadow-sm hover:bg-white/90 focus-visible:ring-white/60",
+        "inverse-ghost":
+          "border-white/30 bg-white/10 text-primary-foreground backdrop-blur hover:bg-white/20 focus-visible:ring-white/60",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
