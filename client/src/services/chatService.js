@@ -6,12 +6,12 @@ export const chatService = {
     return data
   },
 
-  async getHistory() {
-    const { data } = await api.get('/chat/history')
+  async getHistory(agentMode = false) {
+    const { data } = await api.get('/chat/history', { params: { agent_mode: agentMode } })
     return data
   },
 
-  async clearHistory() {
-    await api.delete('/chat/history')
+  async clearHistory(agentMode = false) {
+    await api.delete('/chat/history', { params: { agent_mode: agentMode } })
   },
 }
