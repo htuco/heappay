@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2, MessageSquareText, Send } from 'lucide-react'
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
 import PaymentWizard from '@/components/payment/PaymentWizard'
+import RecurringPaymentList from '@/components/payment/RecurringPaymentList'
 import { Button } from '@/components/ui/button'
 import {
   DialogClose,
@@ -187,6 +188,10 @@ export default function PaymentPage() {
         onClose={() => setPaymentWizardOpen(false)}
         onSuccess={() => refreshHistoryRef.current?.()}
       />
+
+      <div className="mx-auto mb-6 max-w-5xl">
+        <RecurringPaymentList />
+      </div>
 
       <TransactionHistory
         onTransactionSelect={setSelectedTransaction}
