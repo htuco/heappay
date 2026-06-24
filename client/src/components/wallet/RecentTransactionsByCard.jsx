@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Receipt } from 'lucide-react'
+import { ArrowRight, Receipt, RotateCw } from 'lucide-react'
 
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistoryRow from '@/components/payment/TransactionHistoryRow'
+import { Button } from '@/components/ui/button'
 import { useTransactions } from '@/hooks/useTransactions'
 
 // Fixed-height body so the panel never reflows between loading / empty / rows.
@@ -50,7 +51,7 @@ function EmptyState() {
  */
 export default function RecentTransactionsByCard({ cardId, pageSize = 6 }) {
   const numericCardId = cardId != null ? Number(cardId) : undefined
-  const { transactions, total, isLoading, error } = useTransactions({
+  const { transactions, total, isLoading, error, refresh } = useTransactions({
     cardId: numericCardId,
     pageSize,
   })
@@ -66,7 +67,7 @@ export default function RecentTransactionsByCard({ cardId, pageSize = 6 }) {
             Recent Card Activity
           </h2>
           {!isLoading && !error ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground" aria-live="polite">
               {total > 0
                 ? `Showing ${transactions.length} of ${total} transaction${total !== 1 ? 's' : ''}`
                 : 'No activity yet'}
@@ -84,8 +85,14 @@ export default function RecentTransactionsByCard({ cardId, pageSize = 6 }) {
 
       <div className={`overflow-hidden rounded-input border border-border/80 bg-card ${BODY_HEIGHT} flex flex-col`}>
         {error ? (
-          <div className="flex h-full items-center justify-center px-4 py-8 text-center text-sm text-destructive">
-            Could not load this card&apos;s transactions.
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 py-8 text-center">
+            <p className="text-sm text-destructive">
+              Could not load this card&apos;s transactions.
+            </p>
+            <Button type="button" variant="outline" size="sm" onClick={refresh}>
+              <RotateCw className="size-3.5" strokeWidth={2} />
+              Try again
+            </Button>
           </div>
         ) : isLoading ? (
           <ActivitySkeleton rows={pageSize} />
