@@ -15,6 +15,8 @@ export const CATEGORIES = Object.freeze({
 	ACCOUNT_SUSPENDED: 'account_suspended',
 	ACCOUNT_REACTIVATED: 'account_reactivated',
 	ACCOUNT_DEACTIVATED: 'account_deactivated',
+	BILL_PAID: 'bill_paid',
+	BILL_FAILED: 'bill_failed',
 	SECURITY: 'security',
 	ADMIN_ACTION: 'admin_action',
 	SYSTEM: 'system',
