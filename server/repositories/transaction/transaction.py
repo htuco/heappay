@@ -571,6 +571,12 @@ class TransactionRepository:
         )
         return self._db.execute(stmt).scalar_one_or_none()
 
+    def get_type_id_by_name(self, name: str) -> int | None:
+        stmt = select(TransactionType.transaction_type_id).where(
+            TransactionType.name == name
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
     def get_card_status_id_by_name(self, name: str) -> int | None:
         from models.card_status import CardStatus
 

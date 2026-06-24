@@ -1,5 +1,6 @@
 import logging
 
+from cohere.errors import TooManyRequestsError
 from sqlalchemy.orm import Session
 
 from repositories.card.card import CardRepository
@@ -69,6 +70,9 @@ class KnowledgeSyncTask:
         for user in users:
             try:
                 self.sync_user(user.user_id)
+            except TooManyRequestsError:
+                logger.warning("Knowledge sync stopped early: Cohere rate limit reached.")
+                return
             except Exception:
                 logger.exception("Failed to sync user_id=%s", user.user_id)
 

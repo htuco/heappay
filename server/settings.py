@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     supabase_database_url: str = ""
     cohere_api_key: str = ""
+    gemini_api_key: str = ""
 
     # Supabase Storage (optional — required for /storage/images and POST /auth/me/avatar)
     supabase_url: str | None = None

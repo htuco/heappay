@@ -37,7 +37,7 @@ export function useChat() {
     }
   }, [authLoading, user])
 
-  const sendMessage = useCallback(async (text) => {
+  const sendMessage = useCallback(async (text, agentMode = false) => {
     const trimmed = text.trim()
     if (!trimmed) return
 
@@ -45,7 +45,7 @@ export function useChat() {
     setIsSending(true)
 
     try {
-      const { history } = await chatService.sendMessage(trimmed)
+      const { history } = await chatService.sendMessage(trimmed, agentMode)
       setMessages(history)
     } catch (err) {
       console.error('Chat error:', err)
