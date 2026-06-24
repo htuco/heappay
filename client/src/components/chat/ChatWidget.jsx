@@ -8,7 +8,7 @@ export default function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [agentMode, setAgentMode] = useState(false)
-  const { messages, isLoading, isSending, sendMessage, clearHistory } = useChat()
+  const { messages, isLoading, isSending, sendMessage, clearHistory } = useChat(agentMode)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function ChatWidget() {
     if (!input.trim() || isSending) return
     const text = input
     setInput('')
-    await sendMessage(text, agentMode)
+    await sendMessage(text)
   }
 
   const handleKeyDown = (e) => {

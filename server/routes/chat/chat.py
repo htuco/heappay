@@ -88,16 +88,21 @@ def send_message(
 
 @router.get("/history", response_model=list[ChatMessageOut])
 def get_history(
+    agent_mode: bool = False,
     ctx: UserContext = Depends(get_user_context),
     service: ChatService = Depends(get_chat_service),
 ) -> list[ChatMessageOut]:
-    return [ChatMessageOut.model_validate(m) for m in service.get_history(ctx.user_id)]
+    return [
+        ChatMessageOut.model_validate(m)
+        for m in service.get_history(ctx.user_id, agent_mode=agent_mode)
+    ]
 
 
 @router.delete("/history", status_code=status.HTTP_204_NO_CONTENT)
 def clear_history(
+    agent_mode: bool = False,
     ctx: UserContext = Depends(get_user_context),
     service: ChatService = Depends(get_chat_service),
 ) -> Response:
-    service.clear_history(ctx.user_id)
+    service.clear_history(ctx.user_id, agent_mode=agent_mode)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

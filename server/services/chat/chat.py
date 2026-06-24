@@ -250,7 +250,9 @@ class ChatService:
         if use_agent:
             self._agent_tools.begin_turn(user_id)
 
-        history = self._repo.get_history(user_id, limit=8) if use_agent else self._repo.get_history(user_id)
+        history = self._repo.get_history(
+            user_id, agent_mode=agent_mode, limit=8 if use_agent else 20
+        )
 
         system_content = self._build_system_message(user_id, message, is_admin, agent_mode=use_agent)
 
@@ -285,10 +287,10 @@ class ChatService:
             logger.exception("AI call failed for user_id=%s", user_id)
             raise
 
-        self._repo.save_message(user_id, "user", message)
-        self._repo.save_message(user_id, "assistant", reply)
+        self._repo.save_message(user_id, "user", message, agent_mode=agent_mode)
+        self._repo.save_message(user_id, "assistant", reply, agent_mode=agent_mode)
 
-        updated_history = self._repo.get_history(user_id)
+        updated_history = self._repo.get_history(user_id, agent_mode=agent_mode)
         return reply, updated_history
 
     def _run_agent_loop(self, messages: list[dict], user_id: int) -> str:
@@ -428,8 +430,8 @@ class ChatService:
 
         return reply or _AGENT_FALLBACK_REPLY
 
-    def get_history(self, user_id: int) -> list[ChatMessage]:
-        return self._repo.get_history(user_id)
+    def get_history(self, user_id: int, agent_mode: bool = False) -> list[ChatMessage]:
+        return self._repo.get_history(user_id, agent_mode=agent_mode)
 
-    def clear_history(self, user_id: int) -> None:
-        self._repo.clear_history(user_id)
+    def clear_history(self, user_id: int, agent_mode: bool = False) -> None:
+        self._repo.clear_history(user_id, agent_mode=agent_mode)
