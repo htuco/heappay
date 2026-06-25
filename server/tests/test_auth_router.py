@@ -15,6 +15,11 @@ from fastapi.testclient import TestClient  # noqa: E402
 from main import create_app  # noqa: E402
 from routes.user.auth import get_auth_service  # noqa: E402
 from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
+from schemas.user.biometric import (  # noqa: E402
+    BiometricCredentialResponse,
+    BiometricRegistrationOptionsResponse,
+    BiometricStatusResponse,
+)
 from utils.password_policy import PASSWORD_RULES_MESSAGE  # noqa: E402
 
 
@@ -78,6 +83,25 @@ class _FakeAuthService:
 
     def confirm_password_reset(self, _payload):
         return None
+
+    def get_biometric_status(self, _user_id):
+        return BiometricStatusResponse(enabled=False, credential_count=0)
+
+    def begin_biometric_registration(self, _user_id):
+        return BiometricRegistrationOptionsResponse(
+            challenge_id=7,
+            publicKey={"challenge": "abc", "rp": {"id": "localhost", "name": "Heap"}},
+        )
+
+    def complete_biometric_registration(self, _user_id, _payload):
+        return BiometricCredentialResponse(
+            credential_id="credential-1",
+            device_type="single_device",
+            backed_up=False,
+        )
+
+    def disable_biometric_authentication(self, _user_id):
+        return BiometricStatusResponse(enabled=False, credential_count=0)
 
 
 class _FakeAuthServiceAdmin:
@@ -201,6 +225,68 @@ def test_login_invalid_credentials_returns_401() -> None:
         json={"email": "bad@example.com", "password": "wrongpassword"},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# biometrics
+# ---------------------------------------------------------------------------
+
+
+def test_biometric_status_returns_enrolled_state() -> None:
+    client = _build_client()
+    resp = client.get(
+        "/auth/biometrics",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"enabled": False, "credential_count": 0}
+
+
+def test_biometric_registration_options_returns_public_key_options() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/registration/options",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["challenge_id"] == 7
+    assert resp.json()["publicKey"]["rp"]["name"] == "Heap"
+
+
+def test_biometric_registration_complete_returns_credential() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/registration/complete",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"challenge_id": 7, "credential": {"id": "credential-1"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["credential_id"] == "credential-1"
+
+
+def test_biometric_registration_complete_handles_expired_challenge() -> None:
+    class _ExpiredChallengeService(_FakeAuthService):
+        def complete_biometric_registration(self, _user_id, _payload):
+            raise ValueError("INVALID_OR_EXPIRED_BIOMETRIC_CHALLENGE")
+
+    client = _build_client(_ExpiredChallengeService())
+    resp = client.post(
+        "/auth/biometrics/registration/complete",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"challenge_id": 7, "credential": {"id": "credential-1"}},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Biometric enrollment expired. Try again."
+
+
+def test_biometric_disable_returns_disabled_status() -> None:
+    client = _build_client()
+    resp = client.delete(
+        "/auth/biometrics",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"enabled": False, "credential_count": 0}
 
 
 # ---------------------------------------------------------------------------
