@@ -38,7 +38,12 @@ function ActionTile({ icon, title, subtitle, onClick }) {
  * Add Card opens the shared AddCardModal (controlled here); Transfer routes to
  * the payments page.
  */
-export default function WalletQuickActions({ onAddCard, isAddingCard = false, addCardError = null }) {
+export default function WalletQuickActions({
+  onAddCard,
+  isAddingCard = false,
+  addCardError = null,
+  onClearAddCardError,
+}) {
   const [addCardOpen, setAddCardOpen] = useState(false)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
 
@@ -67,6 +72,7 @@ export default function WalletQuickActions({ onAddCard, isAddingCard = false, ad
         onSubmit={onAddCard}
         isSubmitting={isAddingCard}
         submitError={addCardError}
+        onClearSubmitError={onClearAddCardError}
       />
 
       {/* No initialCardId — the wizard opens on the "Choose a card" step so the

@@ -28,8 +28,9 @@ import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { createIdempotencyKey } from '@/utils/idempotency'
+import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
 
-const SEND_TYPE_NAMES = new Set(['payment'])
+const SEND_TYPE_NAMES = new Set(['payment', 'fine'])
 const AUTO_CLOSE_MS = 1200
 const QUICK_AMOUNTS = [10, 25, 50]
 
@@ -826,8 +827,8 @@ function StepReview({
           aria-hidden="true"
         />
         <span>
-          This transaction will be processed by the system in the shortest
-          possible time.
+          Sensitive payments (fines and amounts over $100) are held until you
+          confirm with your password or authenticator code.
         </span>
       </p>
 
@@ -964,6 +965,8 @@ export default function PaymentWizard({
   const [retryToken, setRetryToken] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [pendingApprovalTx, setPendingApprovalTx] = useState(null)
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   const idempotencyKeyRef = useRef(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
@@ -1008,6 +1011,8 @@ export default function PaymentWizard({
     setStep(0)
     setForm(INITIAL_FORM)
     setSubmitError('')
+    setPendingApprovalTx(null)
+    setApprovalModalOpen(false)
     idempotencyKeyRef.current = null
     setShowCloseConfirm(false)
     onClose()
@@ -1056,6 +1061,12 @@ export default function PaymentWizard({
         idempotency_key: idempotencyKeyRef.current,
       })
 
+      if (created?.awaiting_user_approval || created?.requires_user_approval) {
+        setPendingApprovalTx(created)
+        setApprovalModalOpen(true)
+        return
+      }
+
       setStep(3)
 
       const isSelfTransfer = form.recipientInfo.user_id === user?.id
@@ -1088,6 +1099,21 @@ export default function PaymentWizard({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function handleApprovalComplete() {
+    setApprovalModalOpen(false)
+    setStep(3)
+    notify({
+      type: 'success',
+      category: CATEGORIES.PAYMENT_SENT,
+      message: `${formatMoney(form.amount)} approved and will settle shortly.`,
+      link: pendingApprovalTx?.transaction_id
+        ? { route: '/payments', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
+        : { route: '/payments' },
+    })
+    emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
+    onSuccess?.()
   }
 
   const fromCard = cards.find((c) => c.card_id === form.fromCardId) ?? null
@@ -1250,6 +1276,26 @@ export default function PaymentWizard({
           </div>
         </div>
       )}
+
+      <PaymentApprovalModal
+        isOpen={approvalModalOpen}
+        onClose={() => {
+          setApprovalModalOpen(false)
+          notify({
+            type: 'info',
+            category: CATEGORIES.PAYMENT_SENT,
+            message: 'Payment is pending your approval. Open it from your history to confirm.',
+            link: pendingApprovalTx?.transaction_id
+              ? { route: '/payments', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
+              : { route: '/payments' },
+          })
+          emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
+          onSuccess?.()
+          resetAndClose()
+        }}
+        transaction={pendingApprovalTx}
+        onApproved={handleApprovalComplete}
+      />
     </Modal>
   )
 }

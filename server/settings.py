@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     tx_pending_max_age_minutes: int = 1440
     tx_pending_timeout_action: Literal["allow", "deny"] = "deny"
     tx_staff_bypass_delay: bool = False
+    # In-app approval (step-up) before settling sensitive / online payments.
+    tx_user_approval_above_amount: Decimal = Decimal("100.00")
+    tx_user_approval_timeout_minutes: int = 15
+    # Comma-separated transaction type names that always require user approval (e.g. fines).
+    tx_user_approval_type_names: str = "fine"
 
     # TOTP 2FA — Fernet key for encrypting totp_secret at rest
     totp_encryption_key: str = ""

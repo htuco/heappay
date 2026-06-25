@@ -268,6 +268,7 @@ export function useWalletCards() {
     isSaving,
     error,
     saveError,
+    clearSaveError: () => setSaveError(null),
     addCard,
     updateCard: updateWalletCard,
     setMainCard,

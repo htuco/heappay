@@ -375,6 +375,8 @@ class TransactionRepository:
         note: str | None,
         processing_eligible_at: datetime,
         idempotency_key: str | None = None,
+        requires_user_approval: bool = False,
+        user_approval_expires_at: datetime | None = None,
     ) -> Transaction:
         """
         Escrow create: hold funds on sender (if any); recipient is credited on complete().
@@ -392,6 +394,8 @@ class TransactionRepository:
             note=note,
             processing_eligible_at=processing_eligible_at,
             idempotency_key=idempotency_key,
+            requires_user_approval=requires_user_approval,
+            user_approval_expires_at=user_approval_expires_at,
         )
         self._db.add(row)
         self._commit()
@@ -550,6 +554,47 @@ class TransactionRepository:
         for key, value in changes.items():
             setattr(row, key, value)
         self._commit()
+        self._db.refresh(row)
+        return row
+
+    def get_transaction_type_name(self, transaction_type_id: int) -> str | None:
+        stmt = select(TransactionType.name).where(
+            TransactionType.transaction_type_id == transaction_type_id
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def approve_user_confirmation(
+        self,
+        transaction_id: int,
+        *,
+        approval_method: str,
+    ) -> Transaction:
+        """Record in-app user approval for a pending sensitive payment."""
+        pending_id = self.get_status_id_by_name("pending")
+        if pending_id is None:
+            raise TransactionStateError("Required transaction status not found.")
+
+        row = self._get_transaction_for_update(transaction_id)
+        if row is None:
+            raise TransactionStateError("Transaction not found.")
+        if row.status_id != pending_id:
+            raise TransactionStateError("Transaction is not pending.")
+        if not row.requires_user_approval:
+            raise TransactionStateError("Transaction does not require user approval.")
+        if row.user_approved_at is not None:
+            raise TransactionStateError("Transaction is already approved.")
+
+        now = datetime.now(timezone.utc)
+        expires = row.user_approval_expires_at
+        if expires is not None:
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if now > expires:
+                raise TransactionStateError("Approval window has expired.")
+
+        row.user_approved_at = now
+        row.user_approval_method = approval_method
+        self._db.commit()
         self._db.refresh(row)
         return row
 

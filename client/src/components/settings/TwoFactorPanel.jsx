@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { CheckCircle2, ShieldOff, Smartphone } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { CheckCircle2, ShieldOff, Smartphone, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import ActionRow from '@/components/settings/ActionRow'
@@ -7,33 +7,37 @@ import { confirmTotp, disableTotp, setupTotp } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
 
 function SetupModal({ onClose, onEnabled }) {
-  const [step, setStep] = useState('scan')
   const [setupData, setSetupData] = useState(null)
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-  const didStart = useRef(false)
 
-  async function startSetup() {
+  const startSetup = useCallback(async () => {
     setIsLoading(true)
     setError('')
+    setSetupData(null)
     try {
       const data = await setupTotp()
       setSetupData(data)
-      setStep('scan')
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Could not start 2FA setup.'))
+      setError(getApiErrorMessage(err, 'Could not start 2FA setup. Check that the API is running.'))
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    if (didStart.current) return
-    didStart.current = true
     startSetup()
-  }, [])
+  }, [startSetup])
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
   async function handleConfirm(e) {
     e.preventDefault()
@@ -58,19 +62,54 @@ function SetupModal({ onClose, onEnabled }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-sm rounded-panel border border-border bg-popover p-6 shadow-xl">
-        <h3 className="text-base font-semibold text-card-foreground mb-1">Set up authenticator app</h3>
-        <p className="text-sm text-muted-foreground mb-5">
-          Scan the QR code with Google Authenticator, Authy, or any TOTP app.
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="totp-setup-title"
+    >
+      <div className="relative w-full max-w-sm rounded-panel border border-border bg-popover p-6 shadow-xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <h3 id="totp-setup-title" className="pr-8 text-base font-semibold text-card-foreground mb-1">
+          Set up authenticator app
+        </h3>
+        <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+          Scan the QR code with Google Authenticator, Authy, or any TOTP app. Once active,
+          you can use codes to approve sensitive payments too.
         </p>
 
-        <FormBanner variant="error" message={error} />
+        {error ? (
+          <div className="mb-5">
+            <FormBanner variant="error" message={error} />
+          </div>
+        ) : null}
 
-        {setupData ? (
+        {isLoading ? (
+          <>
+            <div className="flex justify-center py-10">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+            <div className="mt-6 flex justify-end border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </>
+        ) : setupData ? (
           <>
             {/* QR code via Google Charts API replacement — use an inline QR URI display */}
-            <div className="mb-4 flex flex-col items-center gap-3">
+            <div className="mb-5 flex flex-col items-center gap-4">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(setupData.uri)}&size=180x180`}
                 alt="Scan with authenticator app"
@@ -93,7 +132,7 @@ function SetupModal({ onClose, onEnabled }) {
               </p>
             </div>
 
-            <form onSubmit={handleConfirm} className="space-y-4">
+            <form onSubmit={handleConfirm} className="mt-2 space-y-5 border-t border-border pt-5">
               <div className="space-y-1.5">
                 <label htmlFor="totp-confirm" className="text-sm font-medium text-card-foreground">
                   Enter the 6-digit code to confirm
@@ -127,8 +166,13 @@ function SetupModal({ onClose, onEnabled }) {
             </form>
           </>
         ) : (
-          <div className="flex justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <div className="mt-2 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row">
+            <Button type="button" className="flex-1" onClick={startSetup}>
+              Try again
+            </Button>
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              Cancel
+            </Button>
           </div>
         )}
       </div>
