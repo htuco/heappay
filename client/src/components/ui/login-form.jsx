@@ -134,7 +134,7 @@ export default function LoginForm() {
 			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
 			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 400)
 		} catch (err) {
-			setError(getApiErrorMessage(err, 'Invalid email or password'))
+			setError(getApiErrorMessage(err, 'Invalid email or password.'))
 		}
 	}
 

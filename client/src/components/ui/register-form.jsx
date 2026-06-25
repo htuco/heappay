@@ -20,6 +20,9 @@ const INITIAL_FORM_STATE = {
 	agreedToTerms: false,
 }
 
+const isDuplicateEmailMessage = (message) =>
+	message.toLowerCase().includes('account with this email already exists')
+
 export default function RegisterForm() {
 	const navigate = useNavigate()
 	const { register, isLoading: loading } = useAuth()
@@ -84,7 +87,11 @@ export default function RegisterForm() {
 			setForm(INITIAL_FORM_STATE)
 			setTimeout(() => navigate('/dashboard'), 1000)
 		} catch (err) {
-			setError(getApiErrorMessage(err, 'Registration failed.'))
+			const message = getApiErrorMessage(err, 'Could not create your account. Please try again.')
+			setError(message)
+			if (isDuplicateEmailMessage(message)) {
+				setErrors({ email: 'Use a different email or try logging in.' })
+			}
 		}
 	}
 

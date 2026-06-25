@@ -50,31 +50,90 @@ export const resetUnauthorizedHandler = () => {
 	unauthorizedHandler = defaultUnauthorizedHandler
 }
 
+const AUTH_ERROR_MESSAGES = [
+	{
+		match: (value) =>
+			value.includes('account with this email already exists') ||
+			value.includes('email already exists') ||
+			value.includes('email_not_available'),
+		message: 'An account with this email already exists.',
+	},
+	{
+		match: (value) => value.includes('invalid email or password'),
+		message: 'Invalid email or password.',
+	},
+	{
+		match: (value) => value.includes('current password is incorrect'),
+		message: 'Current password is incorrect.',
+	},
+	{
+		match: (value) => value.includes('password reset link is invalid or expired'),
+		message: 'Password reset link is invalid or expired.',
+	},
+	{
+		match: (value) => value.includes('could not send password reset email'),
+		message: 'Could not send password reset email. Check the address and try again.',
+	},
+]
+
+const mapApiErrorMessage = (message) => {
+	if (typeof message !== 'string') {
+		return ''
+	}
+
+	const trimmed = message.trim()
+	if (!trimmed) {
+		return ''
+	}
+
+	const lower = trimmed.toLowerCase()
+	const mapped = AUTH_ERROR_MESSAGES.find(({ match }) => match(lower))
+	return mapped?.message ?? trimmed
+}
+
+const getValidationMessage = (details) => {
+	if (!Array.isArray(details)) {
+		return ''
+	}
+
+	return details.find((detail) => typeof detail?.msg === 'string')?.msg ?? ''
+}
+
 export const getApiErrorMessage = (error, fallback = 'Something went wrong') => {
 	if (typeof error === 'string' && error.trim()) {
-		return error
+		return mapApiErrorMessage(error)
 	}
 
 	const data = error?.response?.data
+	const status = error?.response?.status
+	const detailMessage = getValidationMessage(data?.details) || getValidationMessage(data?.detail)
+
+	if (data?.code === 'VALIDATION_ERROR' && detailMessage) {
+		return mapApiErrorMessage(detailMessage)
+	}
 
 	if (typeof data?.message === 'string') {
-		return data.message
+		return mapApiErrorMessage(data.message)
 	}
 
 	if (typeof data?.detail === 'string') {
-		return data.detail
+		return mapApiErrorMessage(data.detail)
 	}
 
-	if (Array.isArray(data?.details) && data.details[0]?.msg) {
-		return data.details[0].msg
+	if (detailMessage) {
+		return mapApiErrorMessage(detailMessage)
 	}
 
-	if (Array.isArray(data?.detail) && data.detail[0]?.msg) {
-		return data.detail[0].msg
+	if (error?.request && !error?.response) {
+		return 'We could not reach the server. Check your connection and try again.'
+	}
+
+	if (status >= 500) {
+		return fallback
 	}
 
 	if (typeof error?.message === 'string') {
-		return error.message
+		return mapApiErrorMessage(error.message)
 	}
 
 	return fallback

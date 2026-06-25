@@ -54,7 +54,7 @@ export const loginUser = createAsyncThunk(
     try {
       return await authService.login({ email, password, remember })
     } catch (error) {
-      return rejectWithValue(getApiErrorMessage(error, 'Login failed.'))
+      return rejectWithValue(getApiErrorMessage(error, 'Could not log in. Please try again.'))
     }
   },
 )
@@ -77,7 +77,7 @@ export const registerUser = createAsyncThunk(
       const user = await authService.register({ firstName, lastName, email, password })
       return user
     } catch (error) {
-      return rejectWithValue(getApiErrorMessage(error, 'Registration failed.'))
+      return rejectWithValue(getApiErrorMessage(error, 'Could not create your account. Please try again.'))
     }
   },
 )
@@ -187,7 +187,7 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.user = null
         state.status = 'unauthenticated'
-        state.error = action.payload ?? 'Login failed.'
+        state.error = action.payload ?? 'Could not log in. Please try again.'
       })
       .addCase(verifyTotpLogin.pending, (state) => {
         state.status = 'totp_pending'
@@ -215,7 +215,7 @@ const authSlice = createSlice({
       .addCase(registerUser.rejected, (state, action) => {
         state.user = null
         state.status = 'unauthenticated'
-        state.error = action.payload ?? 'Registration failed.'
+        state.error = action.payload ?? 'Could not create your account. Please try again.'
       })
       .addCase(updateProfileUser.fulfilled, (state, action) => {
         state.user = action.payload
