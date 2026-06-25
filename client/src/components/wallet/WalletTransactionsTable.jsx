@@ -47,9 +47,9 @@ export function WalletTransactionsTableSkeleton({ rows = 8 }) {
         </div>
         <Skeleton className="h-4 w-16" />
       </div>
-      <div className="hidden border-y border-border/60 bg-muted/30 px-4 py-2 @[560px]/tbl:grid @[560px]/tbl:grid-cols-[28px_1fr_76px_84px_104px_84px] @[560px]/tbl:items-center @[560px]/tbl:gap-x-3">
+      <div className="hidden border-y border-border/60 bg-muted/30 px-4 py-2 @[560px]/tbl:grid @[560px]/tbl:grid-cols-[28px_1fr_84px_120px_84px_128px_92px] @[560px]/tbl:items-center @[560px]/tbl:gap-x-4">
         <span />
-        {['Description', 'Type', 'Status', 'Date', 'Amount'].map((label) => (
+        {['Description', 'Type', 'Category', 'Status', 'Date', 'Amount'].map((label) => (
           <span
             key={label}
             className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground last:text-right"
@@ -141,13 +141,16 @@ export default function WalletTransactionsTable({ cardId, card, pageSize = 8 }) 
 
       {/* Column header — mirrors TransactionHistoryRow desktop grid */}
       {hasTransactions && !error ? (
-        <div className="hidden border-y border-border/60 bg-muted/30 px-4 py-2 @[560px]/tbl:grid @[560px]/tbl:grid-cols-[28px_1fr_76px_84px_104px_84px] @[560px]/tbl:items-center @[560px]/tbl:gap-x-3">
+        <div className="hidden border-y border-border/60 bg-muted/30 px-4 py-2 @[560px]/tbl:grid @[560px]/tbl:grid-cols-[28px_1fr_84px_120px_84px_128px_92px] @[560px]/tbl:items-center @[560px]/tbl:gap-x-4">
           <span />
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Description
           </span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Type
+          </span>
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Category
           </span>
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Status
