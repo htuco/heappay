@@ -5,6 +5,7 @@ from models.card import Card  # noqa: F401
 from models.card_status import CardStatus  # noqa: F401
 from models.card_type import CardType  # noqa: F401
 from models.transaction import Transaction  # noqa: F401
+from models.transaction_category import TransactionCategory  # noqa: F401
 from models.transaction_status import TransactionStatus  # noqa: F401
 from models.transaction_type import TransactionType  # noqa: F401
 from models.user import User  # noqa: F401
@@ -18,3 +19,4 @@ from models.request import Request  # noqa: F401
 from models.refund_request_detail import RefundRequestDetail  # noqa: F401
 from models.card_freeze_request_detail import CardFreezeRequestDetail  # noqa: F401
 from models.payment_approval_event import PaymentApprovalEvent  # noqa: F401
+from models.recurring_payment import RecurringPayment  # noqa: F401

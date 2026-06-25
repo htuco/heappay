@@ -28,6 +28,10 @@ class TransactionStatusNotFoundError(Exception):
     """Transaction status does not exist."""
 
 
+class TransactionCategoryNotFoundError(Exception):
+    """Transaction category does not exist."""
+
+
 class InsufficientBalanceError(Exception):
     """Sender card does not have enough balance to cover the transaction."""
 
@@ -90,6 +94,7 @@ class TransactionService:
         offset: int = 0,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
         sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
         if status_id is not None and not self._repo.transaction_status_exists(status_id):
@@ -98,18 +103,24 @@ class TransactionService:
             transaction_type_id
         ):
             raise TransactionTypeNotFoundError()
+        if category_id is not None and not self._repo.transaction_category_exists(
+            category_id
+        ):
+            raise TransactionCategoryNotFoundError()
         items = self._repo.list_for_user(
             user_id=user_id,
             limit=limit,
             offset=offset,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
         total = self._repo.count_for_user(
             user_id=user_id,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
         )
         return items, total
 
@@ -120,6 +131,7 @@ class TransactionService:
         offset: int = 0,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
         sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
         if status_id is not None and not self._repo.transaction_status_exists(status_id):
@@ -128,16 +140,22 @@ class TransactionService:
             transaction_type_id
         ):
             raise TransactionTypeNotFoundError()
+        if category_id is not None and not self._repo.transaction_category_exists(
+            category_id
+        ):
+            raise TransactionCategoryNotFoundError()
         items = self._repo.list_all(
             limit=limit,
             offset=offset,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
         total = self._repo.count_all(
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
         )
         return items, total
 
@@ -151,6 +169,16 @@ class TransactionService:
         months: int = 6,
     ) -> list[dict]:
         return self._repo.get_summary_for_user(user_id=user_id, months=months)
+
+    def get_category_breakdown_for_user(
+        self,
+        *,
+        user_id: int,
+        months: int = 6,
+    ) -> list[dict]:
+        return self._repo.get_category_breakdown_for_user(
+            user_id=user_id, months=months
+        )
 
     def list_for_card(
         self,
@@ -206,6 +234,11 @@ class TransactionService:
 
         if not self._repo.transaction_type_exists(payload.transaction_type_id):
             raise TransactionTypeNotFoundError()
+
+        if payload.category_id is not None and not self._repo.transaction_category_exists(
+            payload.category_id
+        ):
+            raise TransactionCategoryNotFoundError()
 
         status_id = self._repo.get_status_id_by_name(self.DEFAULT_STATUS)
         if status_id is None:
@@ -263,6 +296,7 @@ class TransactionService:
                 amount=payload.amount,
                 note=payload.note,
                 processing_eligible_at=processing_eligible_at,
+                category_id=payload.category_id,
                 idempotency_key=payload.idempotency_key,
                 requires_user_approval=requires_approval,
                 user_approval_expires_at=approval_expires_at,
@@ -431,6 +465,16 @@ class TransactionService:
     ) -> Transaction:
         changes = payload.model_dump(exclude_unset=True)
         new_status_id = changes.pop("status_id", None)
+
+        # Validate a category change (set or clear). category_id is metadata only:
+        # it is applied via the plain update below and never touches status,
+        # balances, or the settle flow. A null clears it ("Uncategorised").
+        if "category_id" in changes:
+            category_id = changes["category_id"]
+            if category_id is not None and not self._repo.transaction_category_exists(
+                category_id
+            ):
+                raise TransactionCategoryNotFoundError()
 
         if new_status_id is not None:
             if not self._repo.transaction_status_exists(new_status_id):
