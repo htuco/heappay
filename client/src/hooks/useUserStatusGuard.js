@@ -2,10 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { refreshSession } from '@/store/slices/authSlice'
-import {
-  selectReferenceDatasetStatus,
-  selectUserStatuses,
-} from '@/store/slices/referenceDataSlice'
+import { selectUserStatuses } from '@/store/slices/referenceDataSlice'
 import { resolveUserAccountStatus } from '@/utils/resolveUserAccountStatus'
 
 /**
@@ -19,10 +16,8 @@ export function useUserStatusGuard() {
   const dispatch = useAppDispatch()
   const { user, isHydrated, isAuthenticated } = useAuth()
   const userStatuses = useAppSelector(selectUserStatuses)
-  const statusByDataset = useAppSelector(selectReferenceDatasetStatus)
   const refreshAttempted = useRef(false)
 
-  const statusesReady = statusByDataset.userStatuses === 'succeeded'
   const statusIdMissing =
     isHydrated && isAuthenticated && user != null && user.status_id == null
 
@@ -36,7 +31,8 @@ export function useUserStatusGuard() {
     dispatch(refreshSession())
   }, [statusIdMissing, dispatch])
 
-  const isLoading = !isHydrated || !statusesReady || statusIdMissing
+  // Do not block on reference data — resolveUserAccountStatus falls back to seeded ids.
+  const isLoading = !isHydrated || statusIdMissing
 
   const status = useMemo(() => {
     if (isLoading) {

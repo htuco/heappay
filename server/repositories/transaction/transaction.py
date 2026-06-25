@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text
@@ -333,6 +333,32 @@ class TransactionRepository:
         )
         return self._db.scalars(stmt).first()
 
+    def find_recent_duplicate(
+        self,
+        sender_card_id: int,
+        recipient_card_id: int,
+        amount: Decimal,
+        window_seconds: int,
+    ) -> Transaction | None:
+        """Return any non-failed/cancelled tx with the same sender, recipient, and amount
+        created within the duplicate window, or None if no such transaction exists."""
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+        excluded_statuses = ["failed", "cancelled"]
+        excluded_ids = [
+            sid
+            for name in excluded_statuses
+            if (sid := self.get_status_id_by_name(name)) is not None
+        ]
+        stmt = select(Transaction).where(
+            Transaction.sender_card_id == sender_card_id,
+            Transaction.recipient_card_id == recipient_card_id,
+            Transaction.amount == amount,
+            Transaction.created_at >= cutoff,
+        )
+        if excluded_ids:
+            stmt = stmt.where(Transaction.status_id.not_in(excluded_ids))
+        return self._db.scalars(stmt).first()
+
     def rollback(self) -> None:
         self._db.rollback()
 
@@ -375,6 +401,8 @@ class TransactionRepository:
         note: str | None,
         processing_eligible_at: datetime,
         idempotency_key: str | None = None,
+        requires_user_approval: bool = False,
+        user_approval_expires_at: datetime | None = None,
     ) -> Transaction:
         """
         Escrow create: hold funds on sender (if any); recipient is credited on complete().
@@ -392,6 +420,8 @@ class TransactionRepository:
             note=note,
             processing_eligible_at=processing_eligible_at,
             idempotency_key=idempotency_key,
+            requires_user_approval=requires_user_approval,
+            user_approval_expires_at=user_approval_expires_at,
         )
         self._db.add(row)
         self._commit()
@@ -553,6 +583,47 @@ class TransactionRepository:
         self._db.refresh(row)
         return row
 
+    def get_transaction_type_name(self, transaction_type_id: int) -> str | None:
+        stmt = select(TransactionType.name).where(
+            TransactionType.transaction_type_id == transaction_type_id
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def approve_user_confirmation(
+        self,
+        transaction_id: int,
+        *,
+        approval_method: str,
+    ) -> Transaction:
+        """Record in-app user approval for a pending sensitive payment."""
+        pending_id = self.get_status_id_by_name("pending")
+        if pending_id is None:
+            raise TransactionStateError("Required transaction status not found.")
+
+        row = self._get_transaction_for_update(transaction_id)
+        if row is None:
+            raise TransactionStateError("Transaction not found.")
+        if row.status_id != pending_id:
+            raise TransactionStateError("Transaction is not pending.")
+        if not row.requires_user_approval:
+            raise TransactionStateError("Transaction does not require user approval.")
+        if row.user_approved_at is not None:
+            raise TransactionStateError("Transaction is already approved.")
+
+        now = datetime.now(timezone.utc)
+        expires = row.user_approval_expires_at
+        if expires is not None:
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if now > expires:
+                raise TransactionStateError("Approval window has expired.")
+
+        row.user_approved_at = now
+        row.user_approval_method = approval_method
+        self._db.commit()
+        self._db.refresh(row)
+        return row
+
     def transaction_type_exists(self, transaction_type_id: int) -> bool:
         stmt = select(TransactionType.transaction_type_id).where(
             TransactionType.transaction_type_id == transaction_type_id
@@ -568,6 +639,12 @@ class TransactionRepository:
     def get_status_id_by_name(self, name: str) -> int | None:
         stmt = select(TransactionStatus.transaction_status_id).where(
             TransactionStatus.name == name
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def get_type_id_by_name(self, name: str) -> int | None:
+        stmt = select(TransactionType.transaction_type_id).where(
+            TransactionType.name == name
         )
         return self._db.execute(stmt).scalar_one_or_none()
 

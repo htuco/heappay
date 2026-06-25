@@ -3,14 +3,17 @@ from decimal import Decimal
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from schemas.money import MoneyAmount
+
 
 class TransactionCreate(BaseModel):
     sender_card_id: int | None = Field(default=None, gt=0)
     recipient_card_id: int = Field(gt=0)
     transaction_type_id: int = Field(gt=0)
-    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    amount: MoneyAmount
     note: str | None = Field(default=None, max_length=255)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
+    requires_approval: bool = False
 
     @model_validator(mode="after")
     def validate_sender_recipient_distinct(self) -> "TransactionCreate":
@@ -25,6 +28,33 @@ class TransactionCreate(BaseModel):
 class TransactionPatch(BaseModel):
     status_id: int | None = Field(default=None, gt=0)
     note: str | None = Field(default=None, max_length=255)
+
+
+class TransactionApproveRequest(BaseModel):
+    """Step-up verification before settling a sensitive pending payment."""
+
+    totp_code: str | None = Field(default=None, min_length=6, max_length=6)
+    password: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @model_validator(mode="after")
+    def require_one_credential(self) -> "TransactionApproveRequest":
+        if not self.totp_code and not self.password:
+            raise ValueError("Provide totp_code or password for step-up verification.")
+        if self.totp_code and self.password:
+            raise ValueError("Provide only one of totp_code or password.")
+        return self
+
+
+class PaymentApprovalEventResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    event_id: int
+    transaction_id: int
+    event_type: str
+    actor_user_id: int | None = None
+    verification_method: str | None = None
+    detail: str | None = None
+    created_at: datetime
 
 
 class TransactionSummaryPoint(BaseModel):
@@ -97,6 +127,11 @@ class TransactionResponse(BaseModel):
     processed_at: datetime | None = None
     processed_by: str | None = None
     deny_reason_code: str | None = None
+    requires_user_approval: bool = False
+    user_approval_expires_at: datetime | None = None
+    user_approved_at: datetime | None = None
+    user_approval_method: str | None = None
+    awaiting_user_approval: bool = False
     has_pending_refund: bool = False
     # Name of the existing refund request's status for this transaction, if any
     # (pending | approved | declined | cancelled). None when no refund exists.
@@ -123,4 +158,10 @@ class TransactionResponse(BaseModel):
                 status_name = getattr(status, "name", None)
                 if status_name is not None:
                     values.__dict__["refund_status"] = status_name
+
+        requires = getattr(values, "requires_user_approval", False)
+        approved_at = getattr(values, "user_approved_at", None)
+        status_id = getattr(values, "status_id", None)
+        if requires and approved_at is None and status_id == 1:
+            values.__dict__["awaiting_user_approval"] = True
         return values

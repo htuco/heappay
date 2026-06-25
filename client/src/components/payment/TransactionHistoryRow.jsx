@@ -141,7 +141,11 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
   const { user } = useAuth()
   const currentUserId = user?.user_id ?? user?.id
 
-  const status = getTransactionStatus(transaction.status_id, transaction.has_pending_refund)
+  const status = getTransactionStatus(
+    transaction.status_id,
+    transaction.has_pending_refund,
+    transaction.awaiting_user_approval,
+  )
   const type = getTransactionType(transaction.transaction_type_id)
   const { Icon, bg, color } = getDirectionMeta(transaction, currentUserId)
 

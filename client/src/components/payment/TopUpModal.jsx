@@ -22,17 +22,14 @@ import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { createIdempotencyKey } from '@/utils/idempotency'
+import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 
 const QUICK_AMOUNTS = [10, 25, 50, 100]
 const SUCCESS_HOLD_MS = 1200
 const NEXUS_POLL_MS = 3000
 
 function formatAmount(value) {
-  const cleaned = value.replace(/[^\d.]/g, '')
-  const parts = cleaned.split('.')
-  if (parts.length > 2) return parts[0] + '.' + parts.slice(1).join('')
-  if (parts[1]?.length > 2) return parts[0] + '.' + parts[1].slice(0, 2)
-  return cleaned
+  return sanitizeAmountInput(value)
 }
 
 function formatMoney(value) {
@@ -430,8 +427,10 @@ export default function TopUpModal({
   }
 
   async function handleSubmit() {
-    const amountNum = parseFloat(amount)
-    if (!selectedCardId || isNaN(amountNum) || amountNum <= 0) return
+    const normalizedAmount = normalizeAmountForSubmit(amount)
+    if (!selectedCardId || !normalizedAmount) return
+    const amountNum = Number(normalizedAmount)
+    if (isNaN(amountNum) || amountNum <= 0) return
     if (isSubmitting) return
 
     setError('')
@@ -449,6 +448,11 @@ export default function TopUpModal({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function handleAmountBlur() {
+    const normalized = normalizeAmountForSubmit(amount)
+    if (normalized) setAmount(normalized)
   }
 
   function applyQuickAmount(n) {
@@ -580,6 +584,7 @@ export default function TopUpModal({
                   type="text"
                   value={amount}
                   onChange={(e) => setAmount(formatAmount(e.target.value))}
+                  onBlur={handleAmountBlur}
                   placeholder="0.00"
                   inputMode="decimal"
                   aria-invalid={amountInvalid}

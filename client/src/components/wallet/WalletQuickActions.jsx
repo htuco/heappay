@@ -57,6 +57,7 @@ export default function WalletQuickActions({
   onAddCard,
   isAddingCard = false,
   addCardError = null,
+  onClearAddCardError,
   isLoading = false,
 }) {
   const [addCardOpen, setAddCardOpen] = useState(false)
@@ -98,6 +99,7 @@ export default function WalletQuickActions({
         onSubmit={onAddCard}
         isSubmitting={isAddingCard}
         submitError={addCardError}
+        onClearSubmitError={onClearAddCardError}
       />
 
       {/* No initialCardId — the wizard opens on the "Choose a card" step so the

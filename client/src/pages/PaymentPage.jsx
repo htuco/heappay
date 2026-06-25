@@ -198,6 +198,15 @@ export default function PaymentPage() {
         onClose={closeSelectedTransaction}
         onCancel={setTransactionToCancel}
         onRefund={setTransactionToRefund}
+        onApproved={(updated) => {
+          setSelectedTransaction(updated)
+          notify({
+            type: 'success',
+            category: CATEGORIES.PAYMENT_SENT,
+            message: 'Payment approved. It will settle shortly.',
+          })
+          refreshHistoryRef.current?.()
+        }}
         refundRequestedTransactionIds={refundedTransactionIds}
         isCancelling={isCancelling}
       />

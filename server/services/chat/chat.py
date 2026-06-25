@@ -1,7 +1,11 @@
+import json
 import logging
+import time
 from datetime import date
 
-from groq import Groq
+from google import genai
+from google.genai import errors as gemini_errors
+from groq import BadRequestError, Groq
 
 from models.chat_message import ChatMessage
 from repositories.card.card import CardRepository
@@ -9,11 +13,46 @@ from repositories.chat.chat import ChatRepository
 from repositories.transaction.transaction import TransactionRepository
 from repositories.user.user import UserRepository
 from repositories.vector.knowledge import VectorRepository
+from services.chat.agent_tools import TOOL_DEFS, AgentTools, gemini_tool_declarations
 from services.embedding.embedding import EmbeddingService
+from services.request.request import RequestService
+from services.transaction.transaction import TransactionService
 
 logger = logging.getLogger(__name__)
 
 _ROLE_MAP = {"model": "assistant"}
+
+_MAX_AGENT_STEPS = 5
+
+_GEMINI_MODEL = "gemini-2.5-flash"
+
+_GEMINI_RETRY_ATTEMPTS = 3
+_GEMINI_RETRY_CODES = {429, 503}
+
+_AGENT_FALLBACK_REPLY = "Sorry, I couldn't complete that. Could you rephrase or be more specific?"
+
+_ASK_MODE_REDIRECT = """\
+You are in "Chat" mode, which only ANSWERS questions — it cannot perform actions.
+If the user asks you to DO something that changes their account (send or transfer money, top up a card, freeze or unfreeze a card, request a refund), do NOT attempt it and never claim it was done. Briefly tell them, in their own language, to switch to "Actions" mode using the Chat / Actions toggle at the top of the assistant, and to make the request there.
+"""
+
+_ACTION_MODE_REDIRECT = """
+You are in "Actions" mode, which exists ONLY to perform actions on the user's account. If the user's request does not require performing an action — for example any general or how-to question (how a feature works, how to create a card), OR any informational question about their own data (their balance, their transactions, a spending summary) — do NOT answer it and do NOT call read-only tools to answer it. Briefly tell them, in their own language, to switch to "Chat" mode using the Chat / Actions toggle at the top of the assistant, where questions are answered. Only proceed when the user's intent is to actually perform an action (send money, freeze/unfreeze a card, request a refund); in that case you may use the read-only tools as needed to look up the IDs that action requires.
+"""
+
+_AGENT_SYSTEM_SUFFIX = """
+You can take actions on the user's behalf using the available tools.
+
+Rules:
+- For irreversible actions (send_money, request_card_freeze, create_refund_request): once you have looked up the required IDs, CALL the tool. The system does NOT execute it right away — it returns a "confirmation_required" response. When you get that, relay it to the user: state the exact integer IDs and the euro amount and ask them to confirm. When the user confirms in their next message, CALL THE SAME TOOL AGAIN with identical arguments to actually perform it. Only tell the user an action happened when the tool returns a success result (e.g. ok=true or a request_id) — never on a "confirmation_required" response.
+- Never guess IDs and never pass a placeholder. Use list_cards / search_transactions / find_recipient to look up card and transaction IDs first.
+- Tool results from EARLIER messages are NOT remembered. In the current turn, before calling an action tool, look up every ID again (e.g. call find_recipient again before send_money). Do not rely on an ID you found in a previous message.
+- When you ask the user to confirm an action, state the exact integer IDs in your confirmation message (e.g. "send 20€ from card_id=18 to card_id=22"). That way the IDs are still visible when they reply "yes".
+- Freezing/unfreezing a card and refunds are REQUESTS that an admin must approve. After calling those tools, tell the user the request was submitted and is pending approval — do NOT claim the card is already frozen/unfrozen or that the money was refunded.
+- A "top up" between the user's own cards is just a send_money from one of their cards to another (sender and recipient must be different cards). The sender card must not be frozen.
+- All amounts are in euros (€). The app does not use US dollars — do not convert currencies; treat the number the user gives as euros.
+- Take one step at a time and explain what you did after each action.
+"""
 
 
 class ChatService:
@@ -26,6 +65,9 @@ class ChatService:
         api_key: str,
         vector_repo: VectorRepository | None = None,
         embedding_service: EmbeddingService | None = None,
+        transaction_service: TransactionService | None = None,
+        request_service: RequestService | None = None,
+        gemini_api_key: str | None = None,
     ) -> None:
         self._repo = repo
         self._card_repo = card_repo
@@ -34,6 +76,18 @@ class ChatService:
         self._client = Groq(api_key=api_key)
         self._vector_repo = vector_repo
         self._embedding_service = embedding_service
+
+        self._gemini_client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
+
+        self._agent_tools: AgentTools | None = None
+        if transaction_service is not None and request_service is not None:
+            self._agent_tools = AgentTools(
+                card_repo=card_repo,
+                transaction_repo=transaction_repo,
+                user_repo=user_repo,
+                transaction_service=transaction_service,
+                request_service=request_service,
+            )
 
     def _format_cards(self, cards: list) -> list[str]:
         if not cards:
@@ -108,7 +162,38 @@ class ChatService:
 
         return "\n".join(lines)
 
-    def _build_system_message(self, user_id: int, message: str, is_admin: bool) -> str:
+    def _agent_id_reference(self, user_id: int) -> str:
+        cards = self._card_repo.list_all(user_id=user_id)
+        txns = self._transaction_repo.list_for_user(user_id=user_id, limit=10)
+
+        lines = [
+            "ID REFERENCE — use these exact integer IDs in tool calls. "
+            "Never invent an ID or pass a placeholder string.",
+            "Your cards:",
+        ]
+        if cards:
+            for c in cards:
+                status = c.status.status_name if c.status else "unknown"
+                lines.append(
+                    f"- card_id={c.card_id}: *{c.last_four}, balance {c.balance}€, status {status}"
+                )
+        else:
+            lines.append("- (none)")
+        lines.append("Your recent transactions:")
+        if txns:
+            for t in txns:
+                ttype = t.transaction_type.name if t.transaction_type else "transfer"
+                created = t.created_at.strftime("%Y-%m-%d")
+                lines.append(
+                    f"- transaction_id={t.transaction_id}: {created} {ttype} {t.amount}€"
+                )
+        else:
+            lines.append("- (none)")
+        return "\n".join(lines)
+
+    def _build_system_message(
+        self, user_id: int, message: str, is_admin: bool, agent_mode: bool = False
+    ) -> str:
         today = date.today().isoformat()
 
         if is_admin:
@@ -141,40 +226,212 @@ class ChatService:
                 "Be concise and friendly. Today's date is " + today + ".",
                 "",
             ]
-            context = self._user_context_from_vector(user_id, message) or self._user_context_from_repo(user_id)
-            lines.append(context)
+            if agent_mode:
+                lines.append(self._agent_id_reference(user_id))
+                lines.append(_AGENT_SYSTEM_SUFFIX)
+                lines.append(_ACTION_MODE_REDIRECT)
+            else:
+                lines.append(_ASK_MODE_REDIRECT)
+                context = self._user_context_from_vector(user_id, message) or self._user_context_from_repo(user_id)
+                lines.append(context)
 
         return "\n".join(lines)
 
-    def send_message(self, user_id: int, message: str, is_admin: bool = False) -> tuple[str, list[ChatMessage]]:
-        history = self._repo.get_history(user_id)
+    def send_message(
+        self,
+        user_id: int,
+        message: str,
+        is_admin: bool = False,
+        agent_mode: bool = False,
+    ) -> tuple[str, list[ChatMessage]]:
+        use_agent = agent_mode and not is_admin and self._agent_tools is not None
+        use_gemini_agent = use_agent and self._gemini_client is not None
 
-        system_content = self._build_system_message(user_id, message, is_admin)
-        messages = [{"role": "system", "content": system_content}]
-        messages += [
-            {"role": _ROLE_MAP.get(msg.role, msg.role), "content": msg.content}
-            for msg in history
-        ]
-        messages.append({"role": "user", "content": message})
+        if use_agent:
+            self._agent_tools.begin_turn(user_id)
+
+        history = self._repo.get_history(
+            user_id, agent_mode=agent_mode, limit=8 if use_agent else 20
+        )
+
+        system_content = self._build_system_message(user_id, message, is_admin, agent_mode=use_agent)
+
+        def _groq_messages() -> list[dict]:
+            msgs = [{"role": "system", "content": system_content}]
+            msgs += [
+                {"role": _ROLE_MAP.get(msg.role, msg.role), "content": msg.content}
+                for msg in history
+            ]
+            msgs.append({"role": "user", "content": message})
+            return msgs
 
         try:
-            response = self._client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messages,
-            )
+            if use_gemini_agent:
+                try:
+                    reply = self._run_agent_loop_gemini(system_content, history, message, user_id)
+                except gemini_errors.APIError as exc:
+                    logger.warning(
+                        "Gemini agent unavailable (code=%s) for user_id=%s; falling back to Groq agent",
+                        getattr(exc, "code", None), user_id,
+                    )
+                    reply = self._run_agent_loop(_groq_messages(), user_id)
+            elif use_agent:
+                reply = self._run_agent_loop(_groq_messages(), user_id)
+            else:
+                response = self._client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=_groq_messages(),
+                )
+                reply = response.choices[0].message.content
         except Exception:
-            logger.exception("Groq API call failed for user_id=%s", user_id)
+            logger.exception("AI call failed for user_id=%s", user_id)
             raise
-        reply = response.choices[0].message.content
 
-        self._repo.save_message(user_id, "user", message)
-        self._repo.save_message(user_id, "assistant", reply)
+        self._repo.save_message(user_id, "user", message, agent_mode=agent_mode)
+        self._repo.save_message(user_id, "assistant", reply, agent_mode=agent_mode)
 
-        updated_history = self._repo.get_history(user_id)
+        updated_history = self._repo.get_history(user_id, agent_mode=agent_mode)
         return reply, updated_history
 
-    def get_history(self, user_id: int) -> list[ChatMessage]:
-        return self._repo.get_history(user_id)
+    def _run_agent_loop(self, messages: list[dict], user_id: int) -> str:
+        reply = ""
+        for _ in range(_MAX_AGENT_STEPS):
+            try:
+                response = self._client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=messages,
+                    tools=TOOL_DEFS,
+                    tool_choice="auto",
+                )
+            except BadRequestError as exc:
+                body = getattr(exc, "body", None)
+                code = body.get("error", {}).get("code") if isinstance(body, dict) else None
+                if code == "tool_use_failed":
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Your last tool call was not in the correct function-calling "
+                            "format, so it was ignored. Do NOT write the call as text "
+                            "(no <function=...> tags). Either reply to the user in plain "
+                            "text, or emit a single properly-formatted tool call. When "
+                            "you need an ID, call find_recipient / list_cards / "
+                            "search_transactions first and use the exact integer it returns."
+                        ),
+                    })
+                    continue
+                raise
 
-    def clear_history(self, user_id: int) -> None:
-        self._repo.clear_history(user_id)
+            msg = response.choices[0].message
+            reply = msg.content or ""
+
+            if not msg.tool_calls:
+                break
+
+            messages.append({
+                "role": "assistant",
+                "content": msg.content,
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
+                    }
+                    for tc in msg.tool_calls
+                ],
+            })
+            for tc in msg.tool_calls:
+                result = self._agent_tools.execute(
+                    tc.function.name, tc.function.arguments, user_id=user_id
+                )
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result,
+                })
+
+        return reply or _AGENT_FALLBACK_REPLY
+
+    def _gemini_generate_with_retry(self, *, contents, config):
+        last_exc = None
+        for attempt in range(_GEMINI_RETRY_ATTEMPTS):
+            try:
+                return self._gemini_client.models.generate_content(
+                    model=_GEMINI_MODEL, contents=contents, config=config
+                )
+            except gemini_errors.APIError as exc:
+                if getattr(exc, "code", None) in _GEMINI_RETRY_CODES and attempt < _GEMINI_RETRY_ATTEMPTS - 1:
+                    last_exc = exc
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                raise
+        raise last_exc
+
+    def _run_agent_loop_gemini(
+        self, system_content: str, history: list[ChatMessage], message: str, user_id: int
+    ) -> str:
+        from google.genai import types
+
+        contents = [
+            types.Content(
+                role="model" if msg.role in ("assistant", "model") else "user",
+                parts=[types.Part.from_text(text=msg.content)],
+            )
+            for msg in history
+        ]
+        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
+
+        config = types.GenerateContentConfig(
+            system_instruction=system_content,
+            tools=gemini_tool_declarations(),
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+        )
+
+        reply = ""
+        for _ in range(_MAX_AGENT_STEPS):
+            response = self._gemini_generate_with_retry(contents=contents, config=config)
+            candidate = response.candidates[0]
+            parts = (candidate.content.parts or []) if candidate.content else []
+            function_calls = [p.function_call for p in parts if p.function_call]
+            text = "".join(p.text for p in parts if p.text)
+            if text:
+                reply = text
+
+            if function_calls:
+                contents.append(candidate.content)
+                response_parts = []
+                for fc in function_calls:
+                    result = self._agent_tools.execute(
+                        fc.name, json.dumps(dict(fc.args or {})), user_id=user_id
+                    )
+                    response_parts.append(
+                        types.Part.from_function_response(
+                            name=fc.name,
+                            response={"result": json.loads(result)},
+                        )
+                    )
+                contents.append(types.Content(role="user", parts=response_parts))
+                continue
+
+            if not reply:
+                contents.append(
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(
+                            text="Reply to the user now in plain text, summarising the result of the tools you called."
+                        )],
+                    )
+                )
+                continue
+
+            break
+
+        return reply or _AGENT_FALLBACK_REPLY
+
+    def get_history(self, user_id: int, agent_mode: bool = False) -> list[ChatMessage]:
+        return self._repo.get_history(user_id, agent_mode=agent_mode)
+
+    def clear_history(self, user_id: int, agent_mode: bool = False) -> None:
+        self._repo.clear_history(user_id, agent_mode=agent_mode)

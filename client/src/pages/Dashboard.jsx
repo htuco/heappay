@@ -120,7 +120,7 @@ export default function DashboardPage() {
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
   const [addCardOpen, setAddCardOpen] = useState(false)
-  const { addCard, isSaving, saveError } = useWalletCards()
+  const { addCard, isSaving, saveError, clearSaveError } = useWalletCards()
   const mainCard = cards.find((c) => c.isMain) ?? cards[0] ?? null
   const mainCardId = mainCard ? Number(mainCard.id) : null
   const primaryCard = mainCard
@@ -276,6 +276,7 @@ export default function DashboardPage() {
         }}
         isSubmitting={isSaving}
         submitError={saveError}
+        onClearSubmitError={clearSaveError}
       />
     </div>
   )

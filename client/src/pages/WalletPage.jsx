@@ -14,7 +14,7 @@ import { useWalletCards } from '@/hooks/useWalletCards'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
 
 export default function WalletPage() {
-  const { cards, isLoading, isSaving, error, saveError, addCard, setMainCard, removeCard } = useWalletCards()
+  const { cards, isLoading, isSaving, error, saveError, clearSaveError, addCard, setMainCard, removeCard } = useWalletCards()
   const [activeIndex, setActiveIndex] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const [highlight, setHighlight] = useState(false)
@@ -109,6 +109,7 @@ export default function WalletPage() {
             onAddCard={addCard}
             isAddingCard={isSaving}
             addCardError={saveError}
+            onClearAddCardError={clearSaveError}
             isLoading={isLoading && cards.length === 0}
           />
         </div>
@@ -127,6 +128,7 @@ export default function WalletPage() {
                   onSubmit={addCard}
                   isSubmitting={isSaving}
                   submitError={saveError}
+                  onClearSubmitError={clearSaveError}
                   triggerLabel="Add Card"
                   triggerVariant="default"
                   triggerClassName="h-11 w-full justify-center gap-2"
@@ -145,6 +147,7 @@ export default function WalletPage() {
                       onSubmit={addCard}
                       isSubmitting={isSaving}
                       submitError={saveError}
+                      onClearSubmitError={clearSaveError}
                       triggerLabel="Add new card"
                       triggerVariant="default"
                     />
@@ -182,6 +185,7 @@ export default function WalletPage() {
                 onSubmit={addCard}
                 isSubmitting={isSaving}
                 submitError={saveError}
+                onClearSubmitError={clearSaveError}
                 triggerLabel="Add Card"
                 triggerVariant="default"
               />

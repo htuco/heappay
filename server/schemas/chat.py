@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 class ChatRequest(BaseModel):
     message: str
+    agent_mode: bool = False
 
 
 class ChatMessageOut(BaseModel):

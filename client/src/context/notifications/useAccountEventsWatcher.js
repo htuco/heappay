@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useSelector } from 'react-redux'
+import { createSelector } from '@reduxjs/toolkit'
 import { getMe } from '@/services/authService'
 import { listCards } from '@/services/cardsService'
 import { CATEGORIES } from './categories'
@@ -9,10 +10,10 @@ import { useVisibilityInterval } from './useVisibilityInterval'
 const POLL_MS = 30_000
 const SELF_ACTION_WINDOW_MS = 5_000
 
-const selectRefStatuses = (state) => ({
-	userStatuses: state.referenceData?.userStatuses ?? [],
-	cardStatuses: state.referenceData?.cardStatuses ?? [],
-})
+const selectRefStatuses = createSelector(
+	[(state) => state.referenceData?.userStatuses ?? [], (state) => state.referenceData?.cardStatuses ?? []],
+	(userStatuses, cardStatuses) => ({ userStatuses, cardStatuses }),
+)
 
 function statusName(list, id, key) {
 	const entry = list.find((s) => s[key] === id)
