@@ -4,6 +4,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useChat } from '@/hooks/useChat'
 
+const SUGGESTIONS = {
+  chat: [
+    { label: "What's my balance?", prompt: "What's my balance?" },
+    { label: 'Recent transactions', prompt: 'Show my recent transactions' },
+    { label: 'Spending this month', prompt: 'How much did I spend this month?' },
+  ],
+  actions: [
+    { label: 'Send money', prompt: 'I want to send money' },
+    { label: 'Top up a card', prompt: 'I want to top up one of my cards' },
+    { label: 'Freeze a card', prompt: 'I want to freeze one of my cards' },
+    { label: 'Request a refund', prompt: 'I want to request a refund for a transaction' },
+  ],
+}
+
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
@@ -30,6 +44,14 @@ export default function ChatWidget() {
       handleSend()
     }
   }
+
+  const handleSuggestion = (prompt) => {
+    if (isSending) return
+    sendMessage(prompt)
+  }
+
+  const suggestions = agentMode ? SUGGESTIONS.actions : SUGGESTIONS.chat
+  const showSuggestions = !isLoading && !isSending && messages.length === 0
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
@@ -133,6 +155,21 @@ export default function ChatWidget() {
             )}
             <div ref={bottomRef} />
           </div>
+
+          {/* Suggestions */}
+          {showSuggestions && (
+            <div className="flex flex-wrap gap-1.5 px-4 pb-1 pt-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s.label}
+                  onClick={() => handleSuggestion(s.prompt)}
+                  className="text-xs rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Input */}
           <div className="flex gap-2 px-4 py-3 border-t border-border/60">
