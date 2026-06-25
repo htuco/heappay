@@ -653,3 +653,35 @@ class TransactionRepository:
 
         stmt = select(CardStatus.card_status_id).where(CardStatus.status_name == name)
         return self._db.execute(stmt).scalar_one_or_none()
+
+    def get_transaction_type_id_by_name(self, name: str) -> int | None:
+        stmt = select(TransactionType.transaction_type_id).where(TransactionType.name == name)
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def create_recurring_transaction(
+        self,
+        *,
+        sender_card: Card,
+        recipient_card: Card,
+        transaction_type_id: int,
+        status_id: int,
+        amount: Decimal,
+        note: str | None,
+        processing_eligible_at: datetime,
+        recurring_payment_id: int,
+    ) -> Transaction:
+        sender_card.balance = sender_card.balance - amount
+        row = Transaction(
+            sender_card_id=sender_card.card_id,
+            recipient_card_id=recipient_card.card_id,
+            transaction_type_id=transaction_type_id,
+            status_id=status_id,
+            amount=amount,
+            note=note,
+            processing_eligible_at=processing_eligible_at,
+            recurring_payment_id=recurring_payment_id,
+        )
+        self._db.add(row)
+        self._commit()
+        self._db.refresh(row)
+        return row

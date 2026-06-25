@@ -118,6 +118,7 @@ class TransactionResponse(BaseModel):
     transaction_id: int
     sender_card_id: int | None
     recipient_card_id: int
+    recurring_payment_id: int | None = None
     transaction_type_id: int
     status_id: int
     amount: Decimal

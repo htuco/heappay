@@ -51,6 +51,11 @@ class Transaction(Base):
     )
     user_approval_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
+    recurring_payment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("recurring_payments.recurring_payment_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     sender_card = relationship("Card", foreign_keys=[sender_card_id])
     recipient_card = relationship("Card", foreign_keys=[recipient_card_id])
     transaction_type = relationship("TransactionType", back_populates="transactions")

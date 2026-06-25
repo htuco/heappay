@@ -2,6 +2,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Landmark,
+  Repeat2,
   RotateCcw,
   ShieldAlert,
 } from 'lucide-react'
@@ -184,6 +185,12 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
           </div>
           <div className="mt-1 flex items-center gap-2">
             <StatusPill label={status.label} variant={status.variant} />
+            {transaction.recurring_payment_id != null && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground">
+                <Repeat2 className="size-3" />
+                Recurring
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">{formatTransactionDate(transaction.created_at)}</span>
           </div>
           {display.subtitle ? (
@@ -213,7 +220,15 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
         </div>
 
         {/* Type */}
-        <span className="truncate text-xs text-muted-foreground">{type}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="truncate text-xs text-muted-foreground">{type}</span>
+          {transaction.recurring_payment_id != null && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground/70">
+              <Repeat2 className="size-3 shrink-0" />
+              Recurring
+            </span>
+          )}
+        </div>
 
         {/* Status */}
         <div>
