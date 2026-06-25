@@ -223,6 +223,24 @@ def biometric_registration_complete(
         raise InvalidInput("Biometric enrollment failed. Try again.") from None
 
 
+@router.delete("/biometrics", response_model=BiometricStatusResponse)
+def biometric_disable(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> BiometricStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.disable_biometric_authentication(user_id)
+    except ValueError:
+        raise InvalidInput("Could not disable biometric authentication.") from None
+
+
 @router.post("/refresh", response_model=AuthResponse)
 @limiter.limit(AUTH_RATE_LIMIT)
 def refresh(

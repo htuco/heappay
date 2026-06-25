@@ -97,6 +97,11 @@ class _AuthRepo:
         self.credentials.append(row)
         return row
 
+    def delete_biometric_credentials(self, user_id: int):
+        before = len(self.credentials)
+        self.credentials = [row for row in self.credentials if row.user_id != user_id]
+        return before - len(self.credentials)
+
 
 def test_change_password_invalidates_existing_refresh_token() -> None:
     repo = _AuthRepo()
@@ -191,3 +196,23 @@ def test_complete_biometric_registration_rejects_expired_challenge() -> None:
         assert str(exc) == "INVALID_OR_EXPIRED_BIOMETRIC_CHALLENGE"
     else:  # pragma: no cover
         raise AssertionError("Expected expired biometric challenge to fail")
+
+
+def test_disable_biometric_authentication_removes_credentials() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    repo.create_biometric_credential(
+        user_id=repo.user.user_id,
+        credential_id="credential-id",
+        public_key=b"public-key",
+        sign_count=0,
+        aaguid=None,
+        device_type="single_device",
+        backed_up=False,
+    )
+
+    response = service.disable_biometric_authentication(repo.user.user_id)
+
+    assert response.enabled is False
+    assert response.credential_count == 0
+    assert repo.credentials == []

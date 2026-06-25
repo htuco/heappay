@@ -393,6 +393,14 @@ class UserAuthService:
             backed_up=row.backed_up,
         )
 
+    def disable_biometric_authentication(self, user_id: int) -> BiometricStatusResponse:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+
+        self.repo.delete_biometric_credentials(user_id)
+        return BiometricStatusResponse(enabled=False, credential_count=0)
+
     def refresh(self, refresh_token: str) -> TokenResponse | None:
         user_id = self.verify_refresh_token(refresh_token)
         if user_id is None:

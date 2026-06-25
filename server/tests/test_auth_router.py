@@ -100,6 +100,9 @@ class _FakeAuthService:
             backed_up=False,
         )
 
+    def disable_biometric_authentication(self, _user_id):
+        return BiometricStatusResponse(enabled=False, credential_count=0)
+
 
 class _FakeAuthServiceAdmin:
     def login(self, _payload):
@@ -274,6 +277,16 @@ def test_biometric_registration_complete_handles_expired_challenge() -> None:
     )
     assert resp.status_code == 400
     assert resp.json()["message"] == "Biometric enrollment expired. Try again."
+
+
+def test_biometric_disable_returns_disabled_status() -> None:
+    client = _build_client()
+    resp = client.delete(
+        "/auth/biometrics",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"enabled": False, "credential_count": 0}
 
 
 # ---------------------------------------------------------------------------

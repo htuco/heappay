@@ -73,6 +73,11 @@ export async function completeBiometricRegistration({ challengeId, credential })
 	return data
 }
 
+export async function disableBiometricAuthentication() {
+	const { data } = await api.delete('/auth/biometrics')
+	return data
+}
+
 export async function getMe() {
 	const { data } = await api.get('/auth/me')
 	const user = data.data.user

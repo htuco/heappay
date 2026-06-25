@@ -7,6 +7,7 @@ import FormBanner from '@/components/ui/FormBanner'
 import {
 	beginBiometricRegistration,
 	completeBiometricRegistration,
+	disableBiometricAuthentication,
 	getBiometricStatus,
 } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
@@ -27,6 +28,7 @@ export default function BiometricPanel() {
 	const [status, setStatus] = useState({ enabled: false, credential_count: 0 })
 	const [isLoadingStatus, setIsLoadingStatus] = useState(true)
 	const [isEnrolling, setIsEnrolling] = useState(false)
+	const [isDisabling, setIsDisabling] = useState(false)
 	const [success, setSuccess] = useState('')
 	const [error, setError] = useState('')
 
@@ -78,8 +80,28 @@ export default function BiometricPanel() {
 		}
 	}
 
+	async function handleDisable() {
+		if (isDisabling || !status.enabled) return
+		setSuccess('')
+		setError('')
+		setIsDisabling(true)
+
+		try {
+			const response = await disableBiometricAuthentication()
+			setStatus(response)
+			setSuccess(
+				'Biometric authentication is disabled. You can still use password, PIN, or authenticator fallback.',
+			)
+		} catch (err) {
+			setError(getApiErrorMessage(err, 'Could not disable biometric authentication.'))
+		} finally {
+			setIsDisabling(false)
+		}
+	}
+
 	const enabled = status.enabled
 	const statusLabel = isLoadingStatus ? 'Checking...' : enabled ? 'Enabled' : 'Disabled'
+	const isBusy = isLoadingStatus || isEnrolling || isDisabling
 
 	return (
 		<>
@@ -108,7 +130,7 @@ export default function BiometricPanel() {
 							</div>
 							<p className="mt-1 text-xs leading-5 text-muted-foreground">
 								{enabled
-									? 'This device can use biometrics after support is added to payment approval.'
+									? 'Biometric approval is enabled for your account. You can revoke it here.'
 									: 'Enroll this device now. Password, PIN, and authenticator fallback stay available.'}
 							</p>
 						</div>
@@ -121,17 +143,24 @@ export default function BiometricPanel() {
 				value={statusLabel}
 				hint={
 					enabled
-						? `${status.credential_count || 1} credential enrolled for this account.`
+						? `${status.credential_count || 1} credential enrolled. Disabling revokes server access, but you may still see the passkey in your device settings.`
 						: 'Use the secure biometric prompt on this device to enroll a passkey credential.'
 				}
 				action={
 					<Button
+						variant={enabled ? 'outline' : 'default'}
 						className="w-full sm:w-auto"
-						onClick={handleEnable}
-						disabled={isLoadingStatus || isEnrolling || enabled}
+						onClick={enabled ? handleDisable : handleEnable}
+						disabled={isBusy}
 					>
 						<Fingerprint className="h-4 w-4" />
-						{isEnrolling ? 'Scanning...' : enabled ? 'Enabled' : 'Enable'}
+						{isEnrolling
+							? 'Scanning...'
+							: isDisabling
+								? 'Disabling...'
+								: enabled
+									? 'Disable'
+									: 'Enable'}
 					</Button>
 				}
 			/>

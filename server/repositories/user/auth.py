@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -288,6 +288,13 @@ class UserAuthRepository:
             raise
         self._db.refresh(row)
         return row
+
+    def delete_biometric_credentials(self, user_id: int) -> int:
+        result = self._db.execute(
+            delete(BiometricCredential).where(BiometricCredential.user_id == user_id)
+        )
+        self._db.commit()
+        return result.rowcount or 0
 
     def save_totp_secret(self, user_id: int, encrypted_secret: str) -> None:
         """Store the encrypted TOTP secret without enabling 2FA yet."""
