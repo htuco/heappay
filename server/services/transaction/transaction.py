@@ -1,14 +1,29 @@
 from datetime import datetime, timedelta, timezone
+import base64
+import json
 
 import bcrypt
 from sqlalchemy.exc import IntegrityError
+from webauthn import (
+    generate_authentication_options,
+    options_to_json,
+    verify_authentication_response,
+)
+from webauthn.helpers.exceptions import WebAuthnException
+from webauthn.helpers.structs import PublicKeyCredentialDescriptor, UserVerificationRequirement
 
 from models.transaction import Transaction
 from repositories.payment_approval.payment_approval import PaymentApprovalRepository
 from repositories.transaction.category_rule import CategoryRuleRepository
 from repositories.transaction.transaction import TransactionRepository, TransactionStateError
 from repositories.user.auth import UserAuthRepository
-from schemas.transaction import TransactionApproveRequest, TransactionCreate, TransactionPatch
+from schemas.transaction import (
+    BiometricApprovalAssertion,
+    BiometricApprovalOptionsResponse,
+    TransactionApproveRequest,
+    TransactionCreate,
+    TransactionPatch,
+)
 from settings import get_settings
 from utils.totp import decrypt_secret, verify_totp_code
 
@@ -71,6 +86,15 @@ class CardFrozenError(Exception):
     def __init__(self, side: str) -> None:
         self.side = side
         super().__init__(f"The {side} card is frozen.")
+
+
+def _base64url_encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def _base64url_decode(value: str) -> bytes:
+    padded = value + "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(padded.encode("ascii"))
 
 
 class TransactionService:
@@ -346,19 +370,9 @@ class TransactionService:
             raise TransactionNotFoundError()
         if not self._user_is_sender(row, user_id):
             raise ForbiddenError()
-        if not row.requires_user_approval:
-            raise ApprovalRequiredError("This transaction does not require approval.")
-        if row.user_approved_at is not None:
-            raise ApprovalRequiredError("This payment has already been approved.")
+        self._ensure_approval_pending(row)
 
-        expires = row.user_approval_expires_at
-        if expires is not None:
-            if expires.tzinfo is None:
-                expires = expires.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) > expires:
-                raise ApprovalExpiredError()
-
-        method = self._verify_step_up(user_id, payload)
+        method = self._verify_step_up(transaction_id, user_id, payload)
 
         try:
             row = self._repo.approve_user_confirmation(
@@ -379,6 +393,63 @@ class TransactionService:
         )
         self._repo._db.commit()
         return row
+
+    @staticmethod
+    def _ensure_approval_pending(row: Transaction) -> None:
+        if not row.requires_user_approval:
+            raise ApprovalRequiredError("This transaction does not require approval.")
+        if row.user_approved_at is not None:
+            raise ApprovalRequiredError("This payment has already been approved.")
+
+        expires = row.user_approval_expires_at
+        if expires is not None:
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires:
+                raise ApprovalExpiredError()
+
+    def begin_biometric_approval(
+        self,
+        transaction_id: int,
+        *,
+        user_id: int,
+    ) -> BiometricApprovalOptionsResponse:
+        if self._auth_repo is None:
+            raise ApprovalRequiredError("Step-up verification is unavailable.")
+
+        row = self._repo.get_by_id(transaction_id)
+        if row is None:
+            raise TransactionNotFoundError()
+        if not self._user_is_sender(row, user_id):
+            raise ForbiddenError()
+        self._ensure_approval_pending(row)
+
+        credentials = self._auth_repo.list_biometric_credentials(user_id)
+        if not credentials:
+            raise ApprovalRequiredError("Biometric authentication is not enabled.")
+
+        options = generate_authentication_options(
+            rp_id=get_settings().webauthn_rp_id,
+            allow_credentials=[
+                PublicKeyCredentialDescriptor(id=_base64url_decode(credential.credential_id))
+                for credential in credentials
+            ],
+            user_verification=UserVerificationRequirement.REQUIRED,
+        )
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=get_settings().webauthn_registration_challenge_expire_minutes,
+        )
+        challenge = self._auth_repo.create_biometric_authentication_challenge(
+            user_id=user_id,
+            transaction_id=transaction_id,
+            challenge=_base64url_encode(options.challenge),
+            expires_at=expires_at,
+        )
+
+        return BiometricApprovalOptionsResponse(
+            challenge_id=challenge.challenge_id,
+            publicKey=json.loads(options_to_json(options)),
+        )
 
     def list_approval_events(self, transaction_id: int, *, user_id: int) -> list:
         row = self._repo.get_by_id(transaction_id)
@@ -440,13 +511,21 @@ class TransactionService:
                 return rule.category_id
         return None
 
-    def _verify_step_up(self, user_id: int, payload: TransactionApproveRequest) -> str:
+    def _verify_step_up(
+        self,
+        transaction_id: int,
+        user_id: int,
+        payload: TransactionApproveRequest,
+    ) -> str:
         if self._auth_repo is None:
             raise ApprovalRequiredError("Step-up verification is unavailable.")
 
         user = self._auth_repo.get_user_by_id(user_id)
         if not user or user.deleted_at is not None:
             raise ForbiddenError()
+
+        if payload.biometric:
+            return self._verify_biometric_approval(transaction_id, user_id, payload.biometric)
 
         settings = get_settings()
         if user.totp_enabled:
@@ -467,6 +546,60 @@ class TransactionService:
         ):
             raise ApprovalRequiredError("Incorrect password.")
         return "password"
+
+    def _verify_biometric_approval(
+        self,
+        transaction_id: int,
+        user_id: int,
+        payload: BiometricApprovalAssertion,
+    ) -> str:
+        credential_id = payload.credential.get("rawId") or payload.credential.get("id")
+        if not isinstance(credential_id, str):
+            raise ApprovalRequiredError("Biometric verification failed.")
+
+        credential = self._auth_repo.get_biometric_credential(user_id, credential_id)
+        if credential is None:
+            raise ApprovalRequiredError("Biometric credential is not enrolled.")
+
+        challenge = self._auth_repo.get_biometric_authentication_challenge(
+            user_id=user_id,
+            transaction_id=transaction_id,
+            challenge_id=payload.challenge_id,
+        )
+        if (
+            challenge is None
+            or challenge.used_at is not None
+            or self._is_expired(challenge.expires_at)
+        ):
+            raise ApprovalRequiredError("Biometric verification expired. Try again.")
+
+        settings = get_settings()
+        origins = settings.webauthn_origin_list or settings.cors_origin_list
+        try:
+            verified = verify_authentication_response(
+                credential=payload.credential,
+                expected_challenge=_base64url_decode(challenge.challenge),
+                expected_rp_id=settings.webauthn_rp_id,
+                expected_origin=origins,
+                credential_public_key=credential.public_key,
+                credential_current_sign_count=credential.sign_count,
+                require_user_verification=True,
+            )
+        except WebAuthnException as exc:
+            raise ApprovalRequiredError("Biometric verification failed.") from exc
+
+        self._auth_repo.mark_biometric_authentication_challenge_used(challenge.challenge_id)
+        self._auth_repo.update_biometric_credential_usage(
+            credential_row_id=credential.credential_row_id,
+            sign_count=verified.new_sign_count,
+        )
+        return "biometric"
+
+    @staticmethod
+    def _is_expired(value: datetime) -> bool:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value <= datetime.now(timezone.utc)
 
     def _user_is_sender(self, row: Transaction, user_id: int) -> bool:
         if row.sender_card_id is None:

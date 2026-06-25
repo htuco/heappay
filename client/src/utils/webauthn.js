@@ -41,7 +41,18 @@ function prepareCreationOptions(publicKey) {
 	}
 }
 
-function serializeCredential(credential) {
+function prepareRequestOptions(publicKey) {
+	return {
+		...publicKey,
+		challenge: base64UrlToArrayBuffer(publicKey.challenge),
+		allowCredentials: publicKey.allowCredentials?.map((credential) => ({
+			...credential,
+			id: base64UrlToArrayBuffer(credential.id),
+		})),
+	}
+}
+
+function serializeCreationCredential(credential) {
 	return {
 		id: credential.id,
 		rawId: arrayBufferToBase64Url(credential.rawId),
@@ -51,6 +62,24 @@ function serializeCredential(credential) {
 			clientDataJSON: arrayBufferToBase64Url(credential.response.clientDataJSON),
 			attestationObject: arrayBufferToBase64Url(credential.response.attestationObject),
 			transports: credential.response.getTransports?.() ?? [],
+		},
+		clientExtensionResults: credential.getClientExtensionResults?.() ?? {},
+	}
+}
+
+function serializeAssertionCredential(credential) {
+	return {
+		id: credential.id,
+		rawId: arrayBufferToBase64Url(credential.rawId),
+		type: credential.type,
+		authenticatorAttachment: credential.authenticatorAttachment,
+		response: {
+			clientDataJSON: arrayBufferToBase64Url(credential.response.clientDataJSON),
+			authenticatorData: arrayBufferToBase64Url(credential.response.authenticatorData),
+			signature: arrayBufferToBase64Url(credential.response.signature),
+			userHandle: credential.response.userHandle
+				? arrayBufferToBase64Url(credential.response.userHandle)
+				: null,
 		},
 		clientExtensionResults: credential.getClientExtensionResults?.() ?? {},
 	}
@@ -81,5 +110,33 @@ export async function createBiometricCredential(publicKey) {
 		throw new Error('Biometric enrollment was cancelled.')
 	}
 
-	return serializeCredential(credential)
+	return serializeCreationCredential(credential)
+}
+
+export function isWebAuthnAssertionAvailable() {
+	return Boolean(
+		typeof window !== 'undefined' &&
+			window.PublicKeyCredential &&
+			navigator.credentials?.get,
+	)
+}
+
+export async function getBiometricAssertion(publicKey) {
+	if (window.HeapNativeBiometrics?.getAssertion) {
+		return window.HeapNativeBiometrics.getAssertion(publicKey)
+	}
+
+	if (!isWebAuthnAssertionAvailable()) {
+		throw new Error('Biometric authentication is not available on this device or browser.')
+	}
+
+	const credential = await navigator.credentials.get({
+		publicKey: prepareRequestOptions(publicKey),
+	})
+
+	if (!credential) {
+		throw new Error('Biometric verification was cancelled.')
+	}
+
+	return serializeAssertionCredential(credential)
 }

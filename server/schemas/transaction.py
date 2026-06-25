@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, model_validator
 
@@ -36,18 +37,31 @@ class TransactionPatch(BaseModel):
     category_id: int | None = Field(default=None, gt=0)
 
 
+class BiometricApprovalAssertion(BaseModel):
+    challenge_id: int
+    credential: dict[str, Any]
+
+
+class BiometricApprovalOptionsResponse(BaseModel):
+    challenge_id: int
+    public_key: dict[str, Any] = Field(alias="publicKey")
+
+
 class TransactionApproveRequest(BaseModel):
     """Step-up verification before settling a sensitive pending payment."""
 
     totp_code: str | None = Field(default=None, min_length=6, max_length=6)
     password: str | None = Field(default=None, min_length=1, max_length=255)
+    biometric: BiometricApprovalAssertion | None = None
 
     @model_validator(mode="after")
     def require_one_credential(self) -> "TransactionApproveRequest":
-        if not self.totp_code and not self.password:
-            raise ValueError("Provide totp_code or password for step-up verification.")
-        if self.totp_code and self.password:
-            raise ValueError("Provide only one of totp_code or password.")
+        credentials = [self.totp_code, self.password, self.biometric]
+        provided = [credential for credential in credentials if credential]
+        if not provided:
+            raise ValueError("Provide a verification method for step-up verification.")
+        if len(provided) > 1:
+            raise ValueError("Provide only one verification method.")
         return self
 
 

@@ -9,6 +9,7 @@ from routes.dependencies import get_current_user_id, require_admin, require_staf
 from schemas.pagination import Page
 from schemas.response import ApiResponse
 from schemas.transaction import (
+    BiometricApprovalOptionsResponse,
     PaymentApprovalEventResponse,
     TransactionApproveRequest,
     TransactionCreate,
@@ -494,6 +495,41 @@ def create_transaction(
             else "Transaction already exists (idempotent replay)."
         ),
         data=_to_detail_response(row),
+    )
+
+
+@router.post(
+    "/{transaction_id}/approval/biometric/options",
+    response_model=ApiResponse[BiometricApprovalOptionsResponse],
+    summary="Start biometric verification for a sensitive pending payment.",
+)
+def biometric_approval_options(
+    transaction_id: int,
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[BiometricApprovalOptionsResponse]:
+    try:
+        options = service.begin_biometric_approval(transaction_id, user_id=user_id)
+    except TransactionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TRANSACTION_NOT_FOUND
+        ) from None
+    except ForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
+    except ApprovalExpiredError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_APPROVAL_EXPIRED
+        ) from None
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or _APPROVAL_REQUIRED
+        ) from None
+    return ApiResponse[BiometricApprovalOptionsResponse](
+        success=True,
+        message="Biometric verification started.",
+        data=options,
     )
 
 
