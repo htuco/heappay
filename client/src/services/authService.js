@@ -55,6 +55,24 @@ export async function disableTotp({ code }) {
 	return data
 }
 
+export async function getBiometricStatus() {
+	const { data } = await api.get('/auth/biometrics')
+	return data
+}
+
+export async function beginBiometricRegistration() {
+	const { data } = await api.post('/auth/biometrics/registration/options')
+	return data
+}
+
+export async function completeBiometricRegistration({ challengeId, credential }) {
+	const { data } = await api.post('/auth/biometrics/registration/complete', {
+		challenge_id: challengeId,
+		credential,
+	})
+	return data
+}
+
 export async function getMe() {
 	const { data } = await api.get('/auth/me')
 	const user = data.data.user

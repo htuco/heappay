@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CheckCircle2, KeyRound, Mail, Send, ShieldCheck } from 'lucide-react'
 
 import ActionRow from '@/components/settings/ActionRow'
+import BiometricPanel from '@/components/settings/BiometricPanel'
 import TwoFactorPanel from '@/components/settings/TwoFactorPanel'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
@@ -88,6 +89,7 @@ export default function RecoveryMethodPanel({ email, onChangePassword, totpEnabl
       />
 
       <TwoFactorPanel enabled={totpEnabled} onStatusChange={onTotpStatusChange ?? (() => {})} />
+      <BiometricPanel />
     </div>
   )
 }
