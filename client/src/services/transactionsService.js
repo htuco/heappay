@@ -212,9 +212,23 @@ export const transactionsService = {
 	},
 
 	/**
-	 * Confirm a sensitive pending payment with step-up verification (TOTP or password).
+	 * Start biometric verification for a sensitive pending payment.
 	 * @param {number} transactionId
-	 * @param {{ totp_code?: string, password?: string }} payload
+	 * @returns {Promise<{ challenge_id: number, publicKey: object }>}
+	 */
+	async beginBiometricApproval(transactionId) {
+		try {
+			const { data } = await api.post(`/transactions/${transactionId}/approval/biometric/options`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Confirm a sensitive pending payment with step-up verification.
+	 * @param {number} transactionId
+	 * @param {{ totp_code?: string, password?: string, biometric?: { challenge_id: number, credential: object } }} payload
 	 * @returns {Promise<import('@/types/transaction').Transaction>}
 	 */
 	async approve(transactionId, payload) {

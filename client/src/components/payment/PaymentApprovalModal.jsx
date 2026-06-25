@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Loader2, ShieldCheck } from 'lucide-react'
+import { Fingerprint, Loader2, ShieldCheck } from 'lucide-react'
 import { Modal, ModalTitle } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormBanner from '@/components/ui/FormBanner'
 import { useAuth } from '@/hooks/useAuth'
+import { getBiometricStatus } from '@/services/authService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
+import { getBiometricAssertion, isWebAuthnAssertionAvailable } from '@/utils/webauthn'
 
 function formatMoney(value) {
   const n = Number(value)
@@ -38,8 +40,10 @@ export default function PaymentApprovalModal({
   const totpEnabled = user?.totp_enabled ?? false
   const [totpCode, setTotpCode] = useState('')
   const [password, setPassword] = useState('')
+  const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isBiometricSubmitting, setIsBiometricSubmitting] = useState(false)
   const [countdown, setCountdown] = useState(null)
 
   const transactionId = transaction?.transaction_id ?? transaction?.id
@@ -58,6 +62,29 @@ export default function PaymentApprovalModal({
     const interval = window.setInterval(tick, 1000)
     return () => window.clearInterval(interval)
   }, [isOpen, expiresAt])
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadBiometricStatus() {
+      if (!isOpen) return
+      try {
+        const status = await getBiometricStatus()
+        if (!ignore) {
+          setBiometricEnabled(Boolean(status.enabled))
+        }
+      } catch {
+        if (!ignore) {
+          setBiometricEnabled(false)
+        }
+      }
+    }
+
+    loadBiometricStatus()
+    return () => {
+      ignore = true
+    }
+  }, [isOpen])
 
   async function handleApprove() {
     if (!transactionId || isSubmitting) return
@@ -78,9 +105,43 @@ export default function PaymentApprovalModal({
     }
   }
 
+  async function handleBiometricApprove() {
+    if (!transactionId || isBiometricSubmitting) return
+    setError('')
+
+    if (!window.HeapNativeBiometrics?.getAssertion && !isWebAuthnAssertionAvailable()) {
+      setError('Biometric authentication is not available on this device or browser.')
+      return
+    }
+
+    setIsBiometricSubmitting(true)
+    try {
+      const options = await transactionsService.beginBiometricApproval(transactionId)
+      const credential = await getBiometricAssertion(options.publicKey)
+      const updated = await transactionsService.approve(transactionId, {
+        biometric: {
+          challenge_id: options.challenge_id,
+          credential,
+        },
+      })
+      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
+      onApproved?.(updated)
+      onClose?.()
+    } catch (err) {
+      if (err?.name === 'NotAllowedError') {
+        setError('Biometric verification was cancelled or timed out. Use a fallback method or try again.')
+      } else {
+        setError(err?.message || 'Biometric approval failed. Use a fallback method or try again.')
+      }
+    } finally {
+      setIsBiometricSubmitting(false)
+    }
+  }
+
   const canSubmit = totpEnabled
     ? totpCode.length === 6
     : password.length > 0
+  const isBusy = isSubmitting || isBiometricSubmitting
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="default" className="max-w-sm">
@@ -117,12 +178,49 @@ export default function PaymentApprovalModal({
         </div>
 
         <div className="mt-5 space-y-3">
+          {biometricEnabled && (
+            <div className="rounded-surface border border-primary/20 bg-primary/5 p-3">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input bg-primary/10 text-primary">
+                  <Fingerprint className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-card-foreground">Use Face ID / fingerprint</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Approve this payment with your enrolled biometric credential.
+                  </p>
+                  <Button
+                    type="button"
+                    className="mt-3 w-full"
+                    onClick={handleBiometricApprove}
+                    disabled={isBusy}
+                    aria-busy={isBiometricSubmitting}
+                  >
+                    {isBiometricSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Waiting for biometric…
+                      </>
+                    ) : (
+                      <>
+                        <Fingerprint className="mr-2 h-4 w-4" />
+                        Approve with biometrics
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 text-sm font-medium text-card-foreground">
             <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
-            {totpEnabled ? 'Authenticator code' : 'Account password'}
+            {biometricEnabled ? 'Fallback verification' : totpEnabled ? 'Authenticator code' : 'Account password'}
           </div>
           <p className="text-xs text-muted-foreground">
-            {totpEnabled
+            {biometricEnabled
+              ? 'Biometrics are optional. You can still use your existing verification method.'
+              : totpEnabled
               ? 'Enter the 6-digit code from your authenticator app.'
               : 'Quick identity check with your login password. Turn on two-factor auth in Settings to approve with a code instead.'}
           </p>
@@ -135,7 +233,8 @@ export default function PaymentApprovalModal({
               placeholder="000000"
               value={totpCode}
               onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="max-w-[12rem] font-mono tracking-widest"
+              disabled={isBusy}
+              className="max-w-48 font-mono tracking-widest"
               aria-label="Authenticator code"
             />
           ) : (
@@ -145,6 +244,7 @@ export default function PaymentApprovalModal({
               placeholder="Your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isBusy}
               className="max-w-sm"
               aria-label="Account password"
             />
@@ -154,13 +254,13 @@ export default function PaymentApprovalModal({
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>
             Later
           </Button>
           <Button
             type="button"
             onClick={handleApprove}
-            disabled={!canSubmit || isSubmitting}
+            disabled={!canSubmit || isBusy}
             aria-busy={isSubmitting}
           >
             {isSubmitting ? (
