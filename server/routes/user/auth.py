@@ -24,6 +24,12 @@ from schemas.user.auth import (
     TotpLoginResponse,
     TotpVerifyRequest,
 )
+from schemas.user.biometric import (
+    BiometricCredentialResponse,
+    BiometricRegistrationCompleteRequest,
+    BiometricRegistrationOptionsResponse,
+    BiometricStatusResponse,
+)
 from services.storage.supabase_image_storage import SupabaseImageStorageService
 from services.user.auth import UserAuthService
 
@@ -152,6 +158,69 @@ def totp_disable(
         raise InvalidInput("Could not disable 2FA.") from None
 
     return AuthResponse(success=True, message="Two-factor authentication disabled.", data=None)
+
+
+@router.get("/biometrics", response_model=BiometricStatusResponse)
+def biometric_status(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> BiometricStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    return service.get_biometric_status(user_id)
+
+
+@router.post(
+    "/biometrics/registration/options",
+    response_model=BiometricRegistrationOptionsResponse,
+)
+def biometric_registration_options(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> BiometricRegistrationOptionsResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.begin_biometric_registration(user_id)
+    except ValueError:
+        raise InvalidInput("Could not start biometric enrollment.") from None
+
+
+@router.post(
+    "/biometrics/registration/complete",
+    response_model=BiometricCredentialResponse,
+)
+def biometric_registration_complete(
+    payload: BiometricRegistrationCompleteRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> BiometricCredentialResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.complete_biometric_registration(user_id, payload)
+    except ValueError as exc:
+        message = str(exc)
+        if message == "INVALID_OR_EXPIRED_BIOMETRIC_CHALLENGE":
+            raise InvalidInput("Biometric enrollment expired. Try again.") from None
+        if message == "BIOMETRIC_CREDENTIAL_ALREADY_EXISTS":
+            raise InvalidInput("This biometric credential is already enrolled.") from None
+        raise InvalidInput("Biometric enrollment failed. Try again.") from None
 
 
 @router.post("/refresh", response_model=AuthResponse)

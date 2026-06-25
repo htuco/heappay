@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
+import base64
 import hashlib
+import json
 import secrets
 from typing import Optional
 from urllib.parse import urlencode
@@ -7,9 +9,29 @@ from urllib.parse import urlencode
 import bcrypt
 import jwt
 from jwt.exceptions import InvalidTokenError
+from sqlalchemy.exc import IntegrityError
+from webauthn import (
+    generate_registration_options,
+    options_to_json,
+    verify_registration_response,
+)
+from webauthn.helpers.exceptions import InvalidRegistrationResponse
+from webauthn.helpers.structs import (
+    AuthenticatorAttachment,
+    AuthenticatorSelectionCriteria,
+    PublicKeyCredentialDescriptor,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
+)
 
 from repositories.user.auth import UserAuthRepository
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
+from schemas.user.biometric import (
+    BiometricCredentialResponse,
+    BiometricRegistrationCompleteRequest,
+    BiometricRegistrationOptionsResponse,
+    BiometricStatusResponse,
+)
 from schemas.user.auth import (
     AcceptInvitationRequest,
     ChangePasswordRequest,
@@ -52,6 +74,15 @@ def decode_access_token_subject(token: str) -> int | None:
     if user_id is None:
         return None
     return int(user_id)
+
+
+def _base64url_encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def _base64url_decode(value: str) -> bytes:
+    padded = value + "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(padded.encode("ascii"))
 
 
 class UserAuthService:
@@ -263,6 +294,104 @@ class UserAuthService:
             raise ValueError("INVALID_TOTP_CODE")
 
         self.repo.disable_totp(user_id)
+
+    def get_biometric_status(self, user_id: int) -> BiometricStatusResponse:
+        credentials = self.repo.list_biometric_credentials(user_id)
+        return BiometricStatusResponse(
+            enabled=bool(credentials),
+            credential_count=len(credentials),
+        )
+
+    def begin_biometric_registration(self, user_id: int) -> BiometricRegistrationOptionsResponse:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+
+        existing_credentials = self.repo.list_biometric_credentials(user_id)
+        exclude_credentials = [
+            PublicKeyCredentialDescriptor(id=_base64url_decode(row.credential_id))
+            for row in existing_credentials
+        ]
+
+        options = generate_registration_options(
+            rp_id=self.settings.webauthn_rp_id,
+            rp_name=self.settings.webauthn_rp_name,
+            user_id=str(user_id).encode("utf-8"),
+            user_name=user.email,
+            user_display_name=f"{user.first_name} {user.last_name}".strip() or user.email,
+            authenticator_selection=AuthenticatorSelectionCriteria(
+                authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+                resident_key=ResidentKeyRequirement.PREFERRED,
+                user_verification=UserVerificationRequirement.REQUIRED,
+            ),
+            exclude_credentials=exclude_credentials,
+        )
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=self.settings.webauthn_registration_challenge_expire_minutes,
+        )
+        challenge = self.repo.create_biometric_registration_challenge(
+            user_id,
+            _base64url_encode(options.challenge),
+            expires_at,
+        )
+
+        return BiometricRegistrationOptionsResponse(
+            challenge_id=challenge.challenge_id,
+            publicKey=json.loads(options_to_json(options)),
+        )
+
+    def complete_biometric_registration(
+        self,
+        user_id: int,
+        payload: BiometricRegistrationCompleteRequest,
+    ) -> BiometricCredentialResponse:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+
+        challenge = self.repo.get_biometric_registration_challenge(
+            user_id,
+            payload.challenge_id,
+        )
+        if (
+            challenge is None
+            or challenge.used_at is not None
+            or self._is_expired(challenge.expires_at)
+        ):
+            raise ValueError("INVALID_OR_EXPIRED_BIOMETRIC_CHALLENGE")
+
+        origins = self.settings.webauthn_origin_list or self.settings.cors_origin_list
+        try:
+            verified = verify_registration_response(
+                credential=payload.credential,
+                expected_challenge=_base64url_decode(challenge.challenge),
+                expected_rp_id=self.settings.webauthn_rp_id,
+                expected_origin=origins,
+                require_user_verification=True,
+            )
+        except InvalidRegistrationResponse as exc:
+            raise ValueError("INVALID_BIOMETRIC_REGISTRATION") from exc
+
+        credential_id = _base64url_encode(verified.credential_id)
+        try:
+            row = self.repo.create_biometric_credential(
+                user_id=user_id,
+                credential_id=credential_id,
+                public_key=verified.credential_public_key,
+                sign_count=verified.sign_count,
+                aaguid=verified.aaguid,
+                device_type=verified.credential_device_type.value,
+                backed_up=verified.credential_backed_up,
+            )
+        except IntegrityError as exc:
+            raise ValueError("BIOMETRIC_CREDENTIAL_ALREADY_EXISTS") from exc
+
+        self.repo.mark_biometric_registration_challenge_used(challenge.challenge_id)
+        return BiometricCredentialResponse(
+            credential_id=row.credential_id,
+            device_type=row.device_type,
+            backed_up=row.backed_up,
+        )
 
     def refresh(self, refresh_token: str) -> TokenResponse | None:
         user_id = self.verify_refresh_token(refresh_token)

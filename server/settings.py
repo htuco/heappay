@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # TOTP 2FA — Fernet key for encrypting totp_secret at rest
     totp_encryption_key: str = ""
 
+    # WebAuthn biometric enrollment.
+    webauthn_rp_id: str = "localhost"
+    webauthn_rp_name: str = "Heap"
+    webauthn_origins: str = "http://localhost:5173"
+    webauthn_registration_challenge_expire_minutes: int = 5
+
     # FEP Nexus funding integration (card top-ups via external treasury)
     nexus_url: str = ""
     nexus_secret_key: str = ""
@@ -89,6 +95,11 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @computed_field
+    @property
+    def webauthn_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.webauthn_origins.split(",") if o.strip()]
 
 
 @lru_cache
