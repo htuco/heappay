@@ -4,6 +4,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from models.biometric_authentication_challenge import BiometricAuthenticationChallenge
 from models.biometric_credential import BiometricCredential
 from models.biometric_registration_challenge import BiometricRegistrationChallenge
 from models.user_role import UserRole
@@ -225,6 +226,17 @@ class UserAuthRepository:
         )
         return list(self._db.scalars(stmt).all())
 
+    def get_biometric_credential(
+        self,
+        user_id: int,
+        credential_id: str,
+    ) -> BiometricCredential | None:
+        stmt = select(BiometricCredential).where(
+            BiometricCredential.user_id == user_id,
+            BiometricCredential.credential_id == credential_id,
+        )
+        return self._db.scalars(stmt).first()
+
     def create_biometric_registration_challenge(
         self,
         user_id: int,
@@ -295,6 +307,58 @@ class UserAuthRepository:
         )
         self._db.commit()
         return result.rowcount or 0
+
+    def create_biometric_authentication_challenge(
+        self,
+        *,
+        user_id: int,
+        transaction_id: int,
+        challenge: str,
+        expires_at: datetime,
+    ) -> BiometricAuthenticationChallenge:
+        row = BiometricAuthenticationChallenge(
+            user_id=user_id,
+            transaction_id=transaction_id,
+            challenge=challenge,
+            expires_at=expires_at,
+        )
+        self._db.add(row)
+        self._db.commit()
+        self._db.refresh(row)
+        return row
+
+    def get_biometric_authentication_challenge(
+        self,
+        *,
+        user_id: int,
+        transaction_id: int,
+        challenge_id: int,
+    ) -> BiometricAuthenticationChallenge | None:
+        stmt = select(BiometricAuthenticationChallenge).where(
+            BiometricAuthenticationChallenge.challenge_id == challenge_id,
+            BiometricAuthenticationChallenge.user_id == user_id,
+            BiometricAuthenticationChallenge.transaction_id == transaction_id,
+        )
+        return self._db.scalars(stmt).first()
+
+    def mark_biometric_authentication_challenge_used(self, challenge_id: int) -> None:
+        self._db.execute(
+            update(BiometricAuthenticationChallenge)
+            .where(BiometricAuthenticationChallenge.challenge_id == challenge_id)
+            .values(used_at=datetime.now(timezone.utc))
+        )
+
+    def update_biometric_credential_usage(
+        self,
+        *,
+        credential_row_id: int,
+        sign_count: int,
+    ) -> None:
+        self._db.execute(
+            update(BiometricCredential)
+            .where(BiometricCredential.credential_row_id == credential_row_id)
+            .values(sign_count=sign_count, last_used_at=datetime.now(timezone.utc))
+        )
 
     def save_totp_secret(self, user_id: int, encrypted_secret: str) -> None:
         """Store the encrypted TOTP secret without enabling 2FA yet."""

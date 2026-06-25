@@ -41,3 +41,7 @@ class User(Base):
         "BiometricRegistrationChallenge",
         back_populates="user",
     )
+    biometric_authentication_challenges = relationship(
+        "BiometricAuthenticationChallenge",
+        back_populates="user",
+    )

@@ -22,4 +22,5 @@ from models.card_freeze_request_detail import CardFreezeRequestDetail  # noqa: F
 from models.payment_approval_event import PaymentApprovalEvent  # noqa: F401
 from models.biometric_credential import BiometricCredential  # noqa: F401
 from models.biometric_registration_challenge import BiometricRegistrationChallenge  # noqa: F401
+from models.biometric_authentication_challenge import BiometricAuthenticationChallenge  # noqa: F401
 from models.recurring_payment import RecurringPayment  # noqa: F401
