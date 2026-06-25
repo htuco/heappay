@@ -1,4 +1,5 @@
 import api, { getApiErrorMessage } from '@/utils/api'
+import { normalizeAmountForSubmit } from '@/utils/amount'
 import { TRANSACTION_API_ERROR_CODES } from '@/types/transaction'
 
 const DETAIL_TO_ERROR_CODE = {
@@ -174,7 +175,17 @@ export const transactionsService = {
 	 */
 	async create(payload) {
 		try {
-			const { data } = await api.post('/transactions', payload)
+			const normalizedAmount = normalizeAmountForSubmit(payload.amount)
+			if (!normalizedAmount) {
+				throw {
+					code: TRANSACTION_API_ERROR_CODES.VALIDATION_ERROR,
+					message: 'Enter a valid amount with up to 2 decimal places.',
+				}
+			}
+			const { data } = await api.post('/transactions', {
+				...payload,
+				amount: normalizedAmount,
+			})
 			return data.data
 		} catch (error) {
 			throw mapTransactionApiError(error)

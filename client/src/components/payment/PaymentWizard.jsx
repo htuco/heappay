@@ -27,6 +27,7 @@ import { listCards, lookupCardByNumber } from '@/services/cardsService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
+import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 import { createIdempotencyKey } from '@/utils/idempotency'
 import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
 
@@ -39,11 +40,7 @@ function formatCardNumber(value) {
 }
 
 function formatAmount(value) {
-  const cleaned = value.replace(/[^\d.]/g, '')
-  const parts = cleaned.split('.')
-  if (parts.length > 2) return parts[0] + '.' + parts.slice(1).join('')
-  if (parts[1]?.length > 2) return parts[0] + '.' + parts[1].slice(0, 2)
-  return cleaned
+  return sanitizeAmountInput(value)
 }
 
 function formatMoney(value) {
@@ -543,6 +540,11 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
     amountInputRef.current?.focus()
   }
 
+  function handleAmountBlur() {
+    const normalized = normalizeAmountForSubmit(state.amount)
+    if (normalized) onChange('amount', normalized)
+  }
+
   const canProceed =
     state.recipientInfo &&
     !recipientError &&
@@ -682,6 +684,7 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
               type="text"
               value={state.amount}
               onChange={(e) => onChange('amount', formatAmount(e.target.value))}
+              onBlur={handleAmountBlur}
               placeholder="0.00"
               inputMode="decimal"
               aria-invalid={amountInvalid}
@@ -1052,11 +1055,17 @@ export default function PaymentWizard({
     }
 
     try {
+      const normalizedAmount = normalizeAmountForSubmit(form.amount)
+      if (!normalizedAmount) {
+        setSubmitError('Enter a valid amount with up to 2 decimal places.')
+        return
+      }
+
       const created = await transactionsService.create({
         sender_card_id: form.fromCardId,
         recipient_card_id: form.recipientInfo.card_id,
         transaction_type_id: form.txTypeId,
-        amount: form.amount,
+        amount: normalizedAmount,
         note: form.note || null,
         idempotency_key: idempotencyKeyRef.current,
       })

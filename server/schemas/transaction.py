@@ -3,12 +3,14 @@ from decimal import Decimal
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from schemas.money import MoneyAmount
+
 
 class TransactionCreate(BaseModel):
     sender_card_id: int | None = Field(default=None, gt=0)
     recipient_card_id: int = Field(gt=0)
     transaction_type_id: int = Field(gt=0)
-    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    amount: MoneyAmount
     note: str | None = Field(default=None, max_length=255)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
     requires_approval: bool = False
