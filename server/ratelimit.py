@@ -1,9 +1,7 @@
 """Shared rate limiter.
 
-A single `Limiter` instance keyed by client IP, used to throttle the
-brute-forceable auth routes (login / register / refresh). Imported by both the
-route modules (for the `@limiter.limit(...)` decorators) and `main.py` (to wire
-the handler + middleware).
+A single `Limiter` instance keyed by client IP by default. Route modules can
+override the key function for authenticated per-user budgets or global buckets.
 """
 
 from starlette.requests import Request
@@ -15,10 +13,17 @@ limiter = Limiter(key_func=get_remote_address)
 # Conservative defaults — enough to stop brute-forcing without tripping a normal
 # user who mistypes a password a few times.
 AUTH_RATE_LIMIT = "10/minute"
+DEFAULT_RATE_LIMIT_MESSAGE = "Too many attempts. Please wait a moment and try again."
 
 # Throttle authenticated transaction creation so a single user cannot spam the
 # endpoint. Keyed by user id (see `user_id_key_func`), not IP.
 TRANSACTION_RATE_LIMIT = "10/minute"
+
+CHAT_USER_RATE_LIMIT = "20/minute"
+CHAT_GLOBAL_RATE_LIMIT = "100/minute"
+CHAT_RATE_LIMIT_MESSAGE = (
+    "You are sending messages too quickly. Please wait a moment and try again."
+)
 
 
 def user_id_key_func(request: Request) -> str:
@@ -37,3 +42,8 @@ def user_id_key_func(request: Request) -> str:
         if user_id is not None:
             return f"user:{user_id}"
     return get_remote_address(request)
+
+
+def global_chat_key_func(request: Request) -> str:
+    """Single shared bucket for /chat/message across all callers."""
+    return "chat:global"
