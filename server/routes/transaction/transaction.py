@@ -27,6 +27,7 @@ from services.transaction.transaction import (
     ApprovalRequiredError,
     CardFrozenError,
     CardNotFoundError,
+    DuplicatePaymentError,
     ForbiddenError,
     InsufficientBalanceError,
     InvalidTransactionTransitionError,
@@ -50,6 +51,7 @@ _SENDER_CARD_FROZEN = "This card is frozen and can't be used to send money."
 _RECIPIENT_CARD_FROZEN = "The recipient's card is frozen and can't receive money."
 _INVALID_TRANSITION = "This status change is not allowed for the transaction."
 _PROCESSING_DELAY = "The transaction is still being processed. Try again shortly."
+_DUPLICATE_PAYMENT = "A similar payment to this recipient was already submitted. Please wait before trying again."
 _APPROVAL_REQUIRED = "Step-up verification failed or approval is not allowed."
 _APPROVAL_EXPIRED = "The approval window has expired. Cancel and try again."
 
@@ -411,6 +413,10 @@ def create_transaction(
         detail = _SENDER_CARD_FROZEN if exc.side == "sender" else _RECIPIENT_CARD_FROZEN
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=detail
+        ) from None
+    except DuplicatePaymentError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_PAYMENT
         ) from None
     except ForbiddenError:
         raise HTTPException(
