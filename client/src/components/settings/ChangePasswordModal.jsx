@@ -11,6 +11,7 @@ import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
 import { useAppDispatch } from '@/store/hooks'
 import { clearAuthState } from '@/store/slices/authSlice'
+import { PASSWORD_RULES_HINT } from '@/schemas/passwordSchema'
 
 const INITIAL_FORM = { currentPassword: '', newPassword: '', confirmPassword: '' }
 
@@ -108,7 +109,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 					name="newPassword"
 					type="password"
 					label="New Password"
-					placeholder="Minimum 8 characters"
+					placeholder="Create a strong password"
 					value={form.newPassword}
 					onChange={handleChange}
 					disabled={loading}
@@ -127,9 +128,9 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 					error={fieldErrors.confirmPassword}
 				/>
 
-				<p className="text-xs text-muted-foreground pt-1">
-					Password must be between 8 and 255 characters.
-				</p>
+				{!fieldErrors.newPassword && (
+					<p className="text-xs text-muted-foreground pt-1">{PASSWORD_RULES_HINT}</p>
+				)}
 
 				<div className="flex justify-end gap-2 pt-2">
 					<Button type="button" variant="outline" onClick={handleClose} disabled={loading}>

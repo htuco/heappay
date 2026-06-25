@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from main import create_app  # noqa: E402
 from routes.user.auth import get_auth_service  # noqa: E402
 from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
+from utils.password_policy import PASSWORD_RULES_MESSAGE  # noqa: E402
 
 
 _NOW = datetime.now(timezone.utc)
@@ -57,6 +58,9 @@ class _FakeAuthService:
     def logout(self, _token):
         return True
 
+    def resolve_active_user_id(self, _token):
+        return 42
+
     def get_me(self, _token):
         return _token_response()
 
@@ -65,6 +69,15 @@ class _FakeAuthService:
 
     def update_notification_preferences(self, _token, _enabled):
         return _token_response()
+
+    def change_password(self, _user_id, _payload):
+        return None
+
+    def request_password_reset(self, _payload):
+        return None
+
+    def confirm_password_reset(self, _payload):
+        return None
 
 
 class _FakeAuthServiceAdmin:
@@ -109,7 +122,7 @@ def test_register_returns_201_with_role_fields() -> None:
             "email": "new@example.com",
             "first_name": "New",
             "last_name": "User",
-            "password": "password123",
+            "password": "Password123!",
         },
     )
     assert resp.status_code == 201
@@ -126,12 +139,27 @@ def test_register_response_has_tokens() -> None:
             "email": "new@example.com",
             "first_name": "New",
             "last_name": "User",
-            "password": "password123",
+            "password": "Password123!",
         },
     )
     data = resp.json()["data"]
     assert "access_token" in data
     assert "refresh_token" in data
+
+
+def test_register_rejects_weak_password() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "password123",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +201,40 @@ def test_login_invalid_credentials_returns_401() -> None:
         json={"email": "bad@example.com", "password": "wrongpassword"},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# password strength
+# ---------------------------------------------------------------------------
+
+
+def test_change_password_rejects_weak_new_password() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/change-password",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_password": "OldPassword123!",
+            "new_password": "password123",
+            "confirm_password": "password123",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
+
+
+def test_password_reset_confirm_rejects_weak_new_password() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/password-reset/confirm",
+        json={
+            "token": "a" * 32,
+            "new_password": "password123",
+            "confirm_password": "password123",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
 
 
 # ---------------------------------------------------------------------------

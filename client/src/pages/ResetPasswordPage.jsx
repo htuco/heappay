@@ -11,6 +11,7 @@ import FormBanner from '@/components/ui/FormBanner'
 import { changePasswordSchema } from '@/schemas/changePasswordSchema'
 import { confirmPasswordReset } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
+import { PASSWORD_RULES_HINT } from '@/schemas/passwordSchema'
 
 const INITIAL_FORM = {
   currentPassword: 'reset-token',
@@ -93,12 +94,15 @@ export default function ResetPasswordPage() {
               name="newPassword"
               type="password"
               label="New password"
-              placeholder="Minimum 8 characters"
+              placeholder="Create a strong password"
               value={form.newPassword}
               onChange={handleChange}
               disabled={loading || Boolean(success)}
               error={fieldErrors.newPassword}
             />
+            {!fieldErrors.newPassword && (
+              <p className="text-xs text-muted-foreground">{PASSWORD_RULES_HINT}</p>
+            )}
 
             <AuthTextInput
               id="confirmPassword"
