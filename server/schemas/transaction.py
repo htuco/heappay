@@ -76,7 +76,8 @@ class TransactionSummaryResponse(BaseModel):
 class TransactionStatsMonthlyPoint(BaseModel):
     period: str  # "YYYY-MM"
     count: int
-    volume: Decimal
+    volume: Decimal | None = None
+    volume_hidden: bool = False
 
 
 class TransactionStatsResponse(BaseModel):
@@ -84,8 +85,9 @@ class TransactionStatsResponse(BaseModel):
     by_status: dict[str, int]
     by_type: dict[str, int]
     total_count: int
-    completed_volume: Decimal
+    completed_volume: Decimal | None = None
     months: int
+    amounts_hidden: bool = False
 
 
 class TransactionPartyResponse(BaseModel):
@@ -121,7 +123,8 @@ class TransactionResponse(BaseModel):
     recurring_payment_id: int | None = None
     transaction_type_id: int
     status_id: int
-    amount: Decimal
+    amount: Decimal | None = None
+    amount_hidden: bool = False
     note: str | None
     created_at: datetime
     processing_eligible_at: datetime

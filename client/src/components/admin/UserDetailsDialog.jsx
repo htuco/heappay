@@ -22,7 +22,7 @@ import { Select } from '@/components/ui/select'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { titleCase } from '@/utils/admin.utils'
 import transactionsService from '@/services/transactionsService'
-import { TX_STATUS_META, TX_TYPE_META, formatUsd } from '@/utils/transactionMeta'
+import { TX_STATUS_META, TX_TYPE_META, formatMonetaryValue } from '@/utils/transactionMeta'
 import { REQUEST_STATUS_META, REQUEST_STATUS_IDS } from '@/utils/requestStatus'
 
 const TABS = [
@@ -196,7 +196,9 @@ function TransactionRow({ tx }) {
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
-        <span className="text-sm font-semibold tabular-nums text-card-foreground">{formatUsd(tx.amount)}</span>
+        <span className="text-sm font-semibold tabular-nums text-card-foreground">
+          {formatMonetaryValue(tx.amount, { hidden: tx.amount_hidden })}
+        </span>
         <Badge variant={statusMeta.variant} className="text-[10px]">{statusMeta.label}</Badge>
       </div>
     </div>
@@ -205,7 +207,9 @@ function TransactionRow({ tx }) {
 
 function ActivityRow({ req }) {
   const meta = REQUEST_STATUS_META[req.request_status_id] ?? REQUEST_STATUS_META[REQUEST_STATUS_IDS.pending]
-  const amount = req.refund_detail?.transaction_amount
+  const detail = req.refund_detail
+  const amountHidden = Boolean(detail?.transaction_amount_hidden)
+  const amount = detail?.transaction_amount
   return (
     <div className="flex items-center gap-3 rounded-surface border border-border bg-card px-3 py-2.5">
       <div className="min-w-0 flex-1">
@@ -221,9 +225,9 @@ function ActivityRow({ req }) {
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
-        {amount ? (
+        {amount != null || amountHidden ? (
           <span className="text-sm font-semibold tabular-nums text-card-foreground">
-            {formatUsd(amount)}
+            {formatMonetaryValue(amount, { hidden: amountHidden })}
           </span>
         ) : null}
         <Badge variant={meta.variant} className="text-[10px]">{meta.label}</Badge>

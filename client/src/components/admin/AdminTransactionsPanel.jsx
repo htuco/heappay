@@ -17,8 +17,6 @@ const PAGE_SIZE = 20
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
-  { value: 'amount_desc', label: 'Highest amount' },
-  { value: 'amount_asc', label: 'Lowest amount' },
 ]
 
 const STATUS_CHIP = {
@@ -190,7 +188,7 @@ export default function AdminTransactionsPanel() {
                             {formatTransactionDate(tx.created_at)}
                           </td>
                           <td className="py-3 text-right text-xs font-semibold tabular-nums text-card-foreground">
-                            {formatTransactionAmount(tx.amount)}
+                            {formatTransactionAmount(tx)}
                           </td>
                         </tr>
                       )
