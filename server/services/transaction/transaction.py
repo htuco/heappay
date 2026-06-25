@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from models.transaction import Transaction
 from repositories.payment_approval.payment_approval import PaymentApprovalRepository
+from repositories.transaction.category_rule import CategoryRuleRepository
 from repositories.transaction.transaction import TransactionRepository, TransactionStateError
 from repositories.user.auth import UserAuthRepository
 from schemas.transaction import TransactionApproveRequest, TransactionCreate, TransactionPatch
@@ -81,10 +82,12 @@ class TransactionService:
         repo: TransactionRepository,
         approval_repo: PaymentApprovalRepository | None = None,
         auth_repo: UserAuthRepository | None = None,
+        category_rule_repo: "CategoryRuleRepository | None" = None,
     ) -> None:
         self._repo = repo
         self._approval_repo = approval_repo or PaymentApprovalRepository(repo._db)
         self._auth_repo = auth_repo
+        self._category_rule_repo = category_rule_repo or CategoryRuleRepository(repo._db)
 
     def list_for_user(
         self,
@@ -278,6 +281,17 @@ class TransactionService:
             seconds=delay_seconds
         )
 
+        # Auto-categorisation (Phase 2): only when the user did not pick a
+        # category. An explicit choice always wins — rules never override it.
+        category_id = payload.category_id
+        if category_id is None:
+            recipient_name = self._recipient_name(recipient_card)
+            category_id = self._resolve_auto_category(
+                user_id=user_id,
+                note=payload.note,
+                recipient_name=recipient_name,
+            )
+
         type_name = self._repo.get_transaction_type_name(payload.transaction_type_id) or ""
         requires_approval = self._requires_user_approval(payload, type_name)
         approval_expires_at = None
@@ -296,7 +310,7 @@ class TransactionService:
                 amount=payload.amount,
                 note=payload.note,
                 processing_eligible_at=processing_eligible_at,
-                category_id=payload.category_id,
+                category_id=category_id,
                 idempotency_key=payload.idempotency_key,
                 requires_user_approval=requires_approval,
                 user_approval_expires_at=approval_expires_at,
@@ -388,6 +402,43 @@ class TransactionService:
         if payload.amount >= settings.tx_user_approval_above_amount:
             return True
         return False
+
+    @staticmethod
+    def _recipient_name(recipient_card) -> str | None:
+        """Best-effort display name for the recipient, used for keyword matching."""
+        if recipient_card is None:
+            return None
+        user = getattr(recipient_card, "user", None)
+        if user is not None:
+            parts = [getattr(user, "first_name", None), getattr(user, "last_name", None)]
+            name = " ".join(p for p in parts if p).strip()
+            if name:
+                return name
+        return getattr(recipient_card, "cardholder_name", None)
+
+    def _resolve_auto_category(
+        self,
+        *,
+        user_id: int,
+        note: str | None,
+        recipient_name: str | None,
+    ) -> int | None:
+        """Return the category_id of the first matching keyword rule, or None.
+
+        Deterministic substring match (lowercased) on the note / recipient name.
+        Rules are pre-ordered by precedence (user rules before global, then
+        priority asc), so the first match wins. No ML, no MCC.
+        """
+        note_text = (note or "").lower()
+        recipient_text = (recipient_name or "").lower()
+        if not note_text and not recipient_text:
+            return None
+
+        for rule in self._category_rule_repo.list_applicable(user_id=user_id):
+            haystack = recipient_text if rule.match_field == "recipient_name" else note_text
+            if rule.keyword and rule.keyword.lower() in haystack:
+                return rule.category_id
+        return None
 
     def _verify_step_up(self, user_id: int, payload: TransactionApproveRequest) -> str:
         if self._auth_repo is None:
