@@ -17,13 +17,14 @@ const DEFAULT_PAGE_SIZE = 20
  * correct across pages. Date + free-text search remain client-side over the
  * current page.
  *
- * @param {{ cardId?: number, pageSize?: number, statusId?: number, transactionTypeId?: number }} [options]
+ * @param {{ cardId?: number, pageSize?: number, statusId?: number, transactionTypeId?: number, categoryId?: number }} [options]
  */
 export function useTransactions({
   cardId,
   pageSize = DEFAULT_PAGE_SIZE,
   statusId,
   transactionTypeId,
+  categoryId,
 } = {}) {
   const { user, isLoading: authLoading } = useAuth()
 
@@ -52,18 +53,19 @@ export function useTransactions({
 
   // Reset to page 1 whenever a server-side query input changes so we don't stay
   // on a stale page (e.g. page 3 of "all" after switching to a status with one page).
-  const prevQuery = useRef({ cardId, statusId, transactionTypeId })
+  const prevQuery = useRef({ cardId, statusId, transactionTypeId, categoryId })
   useEffect(() => {
     const prev = prevQuery.current
     if (
       prev.cardId !== cardId ||
       prev.statusId !== statusId ||
-      prev.transactionTypeId !== transactionTypeId
+      prev.transactionTypeId !== transactionTypeId ||
+      prev.categoryId !== categoryId
     ) {
-      prevQuery.current = { cardId, statusId, transactionTypeId }
+      prevQuery.current = { cardId, statusId, transactionTypeId, categoryId }
       setPageState(1)
     }
-  }, [cardId, statusId, transactionTypeId])
+  }, [cardId, statusId, transactionTypeId, categoryId])
 
   useEffect(() => {
     if (authLoading) return
@@ -82,6 +84,7 @@ export function useTransactions({
     const params = { page, pageSize }
     if (typeof statusId === 'number') params.statusId = statusId
     if (typeof transactionTypeId === 'number') params.transactionTypeId = transactionTypeId
+    if (typeof categoryId === 'number') params.categoryId = categoryId
     const fetch =
       cardId != null
         ? transactionsService.listByCard(cardId, params)
@@ -104,7 +107,7 @@ export function useTransactions({
     return () => {
       cancelled = true
     }
-  }, [authLoading, user, cardId, page, pageSize, statusId, transactionTypeId, refreshKey])
+  }, [authLoading, user, cardId, page, pageSize, statusId, transactionTypeId, categoryId, refreshKey])
 
   return {
     transactions,

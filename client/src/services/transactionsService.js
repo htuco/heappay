@@ -84,6 +84,7 @@ function buildPageParams(params = {}) {
 	if (typeof params.pageSize === 'number') query.page_size = params.pageSize
 	if (typeof params.statusId === 'number') query.status_id = params.statusId
 	if (typeof params.transactionTypeId === 'number') query.transaction_type_id = params.transactionTypeId
+	if (typeof params.categoryId === 'number') query.category_id = params.categoryId
 	if (typeof params.sort === 'string') query.sort = params.sort
 	return query
 }
@@ -100,6 +101,24 @@ export const transactionsService = {
 			const query = {}
 			if (typeof params.months === 'number') query.months = params.months
 			const { data } = await api.get('/transactions/summary', { params: query })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Outgoing spend grouped by category for the current user over the window.
+	 * Includes an "Uncategorised" bucket (category_id null) so segments reconcile
+	 * to total outgoing.
+	 * @param {{ months?: number }} [params]
+	 * @returns {Promise<{ items: Array<{ category_id: number | null, name: string, total: string, count: number }>, months: number }>}
+	 */
+	async summaryByCategory(params = {}) {
+		try {
+			const query = {}
+			if (typeof params.months === 'number') query.months = params.months
+			const { data } = await api.get('/transactions/summary/by-category', { params: query })
 			return data.data
 		} catch (error) {
 			throw mapTransactionApiError(error)

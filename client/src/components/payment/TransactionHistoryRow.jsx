@@ -8,9 +8,13 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/hooks/useAuth'
+import { useAppSelector } from '@/store/hooks'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import {
+  findCategoryById,
   formatTransactionAmount,
   formatTransactionDate,
+  getCategoryMeta,
   getTransactionStatus,
   getTransactionType,
 } from '@/components/payment/transactionHistory.utils'
@@ -61,6 +65,20 @@ function StatusPill({ label, variant }) {
   return (
     <span className={`inline-flex items-center rounded-chip px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset leading-none ${cls}`}>
       {label}
+    </span>
+  )
+}
+
+// Neutral pill with a per-category color dot + icon. Rendered only when the
+// transaction is categorised; null category shows nothing (Uncategorised reads
+// as the absence of a pill, consistent with the rest of the row).
+function CategoryPill({ category }) {
+  if (!category) return null
+  const { label, icon: Icon, color } = getCategoryMeta(category)
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-chip bg-muted/60 px-2 py-0.5 text-[11px] font-medium leading-none text-muted-foreground ring-1 ring-inset ring-border/60">
+      <Icon className="size-3 shrink-0" strokeWidth={2} style={{ color }} />
+      <span className="truncate">{label}</span>
     </span>
   )
 }
@@ -141,6 +159,8 @@ function getTransactionDisplay(transaction, currentUserId) {
 export default function TransactionHistoryRow({ transaction, onSelect }) {
   const { user } = useAuth()
   const currentUserId = user?.user_id ?? user?.id
+  const categories = useAppSelector(selectTransactionCategories)
+  const category = findCategoryById(transaction.category_id, categories)
 
   const status = getTransactionStatus(
     transaction.status_id,
@@ -148,7 +168,24 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
     transaction.awaiting_user_approval,
   )
   const type = getTransactionType(transaction.transaction_type_id)
-  const { Icon, bg, color } = getDirectionMeta(transaction, currentUserId)
+  const directionMeta = getDirectionMeta(transaction, currentUserId)
+
+  // When the transaction is categorised, the leading circle shows the category
+  // icon (in its color) instead of a generic arrow, with a small direction badge
+  // tucked in the corner so money-in/out stays readable. Uncategorised rows —
+  // including plain person-to-person sends — keep the directional/type arrow.
+  const categoryMeta = category ? getCategoryMeta(category) : null
+  const Icon = categoryMeta ? categoryMeta.icon : directionMeta.Icon
+  const bg = categoryMeta ? 'bg-muted' : directionMeta.bg
+  const color = categoryMeta ? '' : directionMeta.color
+  const iconStyle = categoryMeta ? { color: categoryMeta.color } : undefined
+  // Direction badge only for the in/out arrows (not the refund/withdrawal/
+  // chargeback type-exception icons, which already carry their own meaning).
+  const directionBadge =
+    categoryMeta &&
+    (directionMeta === DIRECTION_META.incoming || directionMeta === DIRECTION_META.outgoing)
+      ? directionMeta
+      : null
 
   const display = getTransactionDisplay(transaction, currentUserId)
 
@@ -168,8 +205,15 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
     >
       {/* ── Stacked (until the table container is wide enough for columns) ── */}
       <div className="flex items-center gap-3 @[560px]/tbl:hidden">
-        <div className={`flex size-8 shrink-0 items-center justify-center rounded-input ${bg} ${color}`}>
-          <Icon className="size-3.5" strokeWidth={2} />
+        <div className={`relative flex size-8 shrink-0 items-center justify-center rounded-input ${bg} ${color}`}>
+          <Icon className="size-3.5" strokeWidth={2} style={iconStyle} />
+          {directionBadge ? (
+            <span
+              className={`absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full border-2 border-card ${directionBadge.bg} ${directionBadge.color}`}
+            >
+              <directionBadge.Icon className="size-2" strokeWidth={2.6} />
+            </span>
+          ) : null}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
@@ -183,8 +227,9 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
               {formatTransactionAmount(transaction.amount)}
             </span>
           </div>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             <StatusPill label={status.label} variant={status.variant} />
+            <CategoryPill category={category} />
             {transaction.recurring_payment_id != null && (
               <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground">
                 <Repeat2 className="size-3" />
@@ -199,11 +244,21 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
         </div>
       </div>
 
-      {/* ── Wide (xl+) — grid mirrors header: [28px | 1fr | 96px | 88px | 148px | 100px] ── */}
-      <div className="hidden xl:grid xl:grid-cols-[28px_1fr_96px_88px_148px_100px] xl:items-center xl:gap-x-4">
+      {/* ── Wide — grid mirrors header:
+          [28px | 1fr | type | category | status | date | amount].
+          Keyed off the table's @container/tbl width so it pairs with the stacked
+          layout's @[560px]/tbl:hidden — exactly one layout shows at any width. ── */}
+      <div className="hidden @[560px]/tbl:grid @[560px]/tbl:grid-cols-[28px_1fr_84px_120px_84px_128px_92px] @[560px]/tbl:items-center @[560px]/tbl:gap-x-4">
         {/* Icon */}
-        <div className={`flex size-7 items-center justify-center rounded-input ${bg} ${color}`}>
-          <Icon className="size-3.5" strokeWidth={2} />
+        <div className={`relative flex size-7 items-center justify-center rounded-input ${bg} ${color}`}>
+          <Icon className="size-3.5" strokeWidth={2} style={iconStyle} />
+          {directionBadge ? (
+            <span
+              className={`absolute -bottom-1 -right-1 flex size-3 items-center justify-center rounded-full border-2 border-card ${directionBadge.bg} ${directionBadge.color}`}
+            >
+              <directionBadge.Icon className="size-1.5" strokeWidth={2.6} />
+            </span>
+          ) : null}
         </div>
 
         {/* Counterparty + description */}
@@ -220,13 +275,22 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
         </div>
 
         {/* Type */}
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <span className="truncate text-xs text-muted-foreground">{type}</span>
           {transaction.recurring_payment_id != null && (
             <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground/70">
               <Repeat2 className="size-3 shrink-0" />
               Recurring
             </span>
+          )}
+        </div>
+
+        {/* Category */}
+        <div className="min-w-0">
+          {category ? (
+            <CategoryPill category={category} />
+          ) : (
+            <span className="text-xs text-muted-foreground/60">Uncategorized</span>
           )}
         </div>
 

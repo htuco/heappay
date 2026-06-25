@@ -102,6 +102,7 @@ export default function MoneyFlowPlaceholder({
   isLoading = false,
   error = null,
   onRetry,
+  bare = false,
   // legacy fallback props
   points,
   labels,
@@ -120,7 +121,13 @@ export default function MoneyFlowPlaceholder({
   const isEmpty = useDual && chartData.length === 0
 
   return (
-    <section className="flex h-full min-w-0 flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6">
+    <section
+      className={
+        bare
+          ? 'flex h-full min-w-0 flex-col'
+          : 'flex h-full min-w-0 flex-col rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6'
+      }
+    >
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-card-foreground sm:text-lg">

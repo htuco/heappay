@@ -5,6 +5,7 @@ import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import DashboardPlaceholder from '@/components/dashboard/DashboardPlaceholder'
 import MoneyFlowPlaceholder from '@/components/dashboard/MoneyFlowPlaceholder'
+import SpendingByCategory from '@/components/dashboard/SpendingByCategory'
 import QuickActions from '@/components/dashboard/QuickActions'
 import DashboardLoadingOverlay from '@/components/dashboard/DashboardLoadingOverlay'
 import PaymentCard from '@/components/payment-card/PaymentCard'
@@ -214,15 +215,22 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Row 2: Money Flow (flexible) + Quick Actions (fixed 384px at lg, 464px at xl) */}
+      {/* Row 2: Money Flow + Spending by Category (50/50 within the graph column) +
+          Quick Actions (fixed 384px at lg, 464px at xl) on the right */}
       <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
-        <div className="min-w-0">
-          <MoneyFlowPlaceholder
-            chartData={chartData}
-            isLoading={summaryLoading}
-            error={summaryError}
-            onRetry={refreshSummary}
-          />
+        <div className="grid min-w-0 grid-cols-1 gap-5 rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border">
+          <div className="min-w-0 md:pr-6">
+            <MoneyFlowPlaceholder
+              chartData={chartData}
+              isLoading={summaryLoading}
+              error={summaryError}
+              onRetry={refreshSummary}
+              bare
+            />
+          </div>
+          <div className="min-w-0 md:pl-6">
+            <SpendingByCategory months={6} bare />
+          </div>
         </div>
         <div className="min-w-0">
           <QuickActions
