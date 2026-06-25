@@ -23,14 +23,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "chat_messages",
-        sa.Column("agent_mode", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+    op.execute(
+        """
+        ALTER TABLE chat_messages
+        ADD COLUMN IF NOT EXISTS agent_mode BOOLEAN NOT NULL DEFAULT false
+        """
     )
-    op.create_index(
-        "ix_chat_messages_user_mode",
-        "chat_messages",
-        ["user_id", "agent_mode", "created_at"],
+    op.execute(
+        """
+        CREATE INDEX IF NOT EXISTS ix_chat_messages_user_mode
+        ON chat_messages (user_id, agent_mode, created_at)
+        """
     )
 
 

@@ -48,7 +48,7 @@ function TotpStep({ onBack }) {
 			setSuccess(true)
 			const user = result.payload
 			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
-			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 1200)
+			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 400)
 		}
 	}
 
@@ -132,7 +132,7 @@ export default function LoginForm() {
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
 			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
-			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 1500)
+			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 400)
 		} catch (err) {
 			setError(getApiErrorMessage(err, 'Invalid email or password'))
 		}
