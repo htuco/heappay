@@ -10,10 +10,13 @@ import TransactionHistoryRow from '@/components/payment/TransactionHistoryRow'
 import TransactionHistorySkeleton from '@/components/payment/TransactionHistorySkeleton'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
+import { useAppSelector } from '@/store/hooks'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
 import {
   TRANSACTION_STATUS_OPTIONS,
   TRANSACTION_TYPE_OPTIONS,
+  buildCategoryOptions,
   getTransactionStatus,
   transactionMatchesFilters,
   transactionMatchesLookup,
@@ -54,7 +57,11 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [cardFilter, setCardFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [dateSort, setDateSort] = useState('newest')
+
+  const categories = useAppSelector(selectTransactionCategories)
+  const categoryOptions = useMemo(() => buildCategoryOptions(categories), [categories])
 
   // Card options come from the user's own cards. Scoping by card is applied
   // server-side via the hook's `cardId`, so the "X of N" count stays truthful.
@@ -73,9 +80,10 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
   const statusId = statusFilter === 'all' ? undefined : Number(statusFilter)
   const transactionTypeId = typeFilter === 'all' ? undefined : Number(typeFilter)
   const cardId = cardFilter === 'all' ? undefined : Number(cardFilter)
+  const categoryId = categoryFilter === 'all' ? undefined : Number(categoryFilter)
 
   const { transactions, isLoading, error, page, totalPages, total, setPage, refresh } =
-    useTransactions({ pageSize, statusId, transactionTypeId, cardId })
+    useTransactions({ pageSize, statusId, transactionTypeId, cardId, categoryId })
 
   // Expose the list refresh to the parent (PaymentPage) so actions that change a
   // transaction's status — e.g. cancelling a pending payment — can refetch.
@@ -134,6 +142,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     statusFilter !== 'all' ||
     typeFilter !== 'all' ||
     cardFilter !== 'all' ||
+    categoryFilter !== 'all' ||
     dateSort !== 'newest'
 
   function clearFilters() {
@@ -142,6 +151,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     setStatusFilter('all')
     setTypeFilter('all')
     setCardFilter('all')
+    setCategoryFilter('all')
     setDateSort('newest')
   }
 
@@ -198,6 +208,16 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
               />
             ) : null}
 
+            {categoryOptions.length > 0 ? (
+              <Select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                disabled={!hasTransactions && !isLoading}
+                options={[{ value: 'all', label: 'All categories' }, ...categoryOptions]}
+                className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
+              />
+            ) : null}
+
             <Select
               value={dateSort}
               onChange={(e) => setDateSort(e.target.value)}
@@ -250,14 +270,18 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
         </div>
       ) : null}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-input border border-border/80 bg-card shadow-sm">
+      {/* Table — @container/tbl so rows switch to the multi-column grid based on
+          the table's own width (matches the Wallet activity table). Without this
+          the row's @[560px]/tbl breakpoint has no container and both the stacked
+          and grid layouts render at once. */}
+      <div className="@container/tbl overflow-hidden rounded-input border border-border/80 bg-card shadow-sm">
         {/* Column headers */}
         {!error && !isLoading && hasFiltered ? (
-          <div className="hidden border-b border-border/60 bg-muted/30 px-4 py-2.5 sm:grid sm:grid-cols-[28px_1fr_96px_88px_148px_100px] sm:gap-x-4">
+          <div className="hidden border-b border-border/60 bg-muted/30 px-4 py-2.5 @[560px]/tbl:grid @[560px]/tbl:grid-cols-[28px_1fr_84px_120px_84px_128px_92px] @[560px]/tbl:gap-x-4">
             <span />
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Transaction</span>
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Type</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Category</span>
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Status</span>
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Date</span>
             <span className="text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Amount</span>

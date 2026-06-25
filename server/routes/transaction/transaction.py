@@ -12,6 +12,8 @@ from schemas.transaction import (
     PaymentApprovalEventResponse,
     TransactionApproveRequest,
     TransactionCreate,
+    CategoryBreakdownItem,
+    CategoryBreakdownResponse,
     TransactionPartyResponse,
     TransactionPatch,
     TransactionResponse,
@@ -32,6 +34,7 @@ from services.transaction.transaction import (
     InsufficientBalanceError,
     InvalidTransactionTransitionError,
     ProcessingDelayNotElapsedError,
+    TransactionCategoryNotFoundError,
     TransactionNotFoundError,
     TransactionService,
     TransactionStatusNotFoundError,
@@ -45,6 +48,7 @@ _TRANSACTION_NOT_FOUND = "Transaction not found."
 _CARD_NOT_FOUND = "One of the referenced cards was not found."
 _TYPE_NOT_FOUND = "Transaction type not found."
 _STATUS_NOT_FOUND = "Transaction status not found."
+_CATEGORY_NOT_FOUND = "Transaction category not found."
 _INSUFFICIENT_BALANCE = "Sender card has insufficient balance."
 _FORBIDDEN = "You do not have access to this resource."
 _SENDER_CARD_FROZEN = "This card is frozen and can't be used to send money."
@@ -92,13 +96,22 @@ def _to_detail_response(row) -> TransactionResponse:
 def list_transactions(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    category_id: int | None = Query(default=None, ge=1),
     user_id: int = Depends(get_current_user_id),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[Page[TransactionResponse]]:
     offset = (page - 1) * page_size
-    rows, total = service.list_for_user(
-        user_id=user_id, limit=page_size, offset=offset
-    )
+    try:
+        rows, total = service.list_for_user(
+            user_id=user_id,
+            limit=page_size,
+            offset=offset,
+            category_id=category_id,
+        )
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
+        ) from None
     items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
@@ -123,6 +136,7 @@ def list_all_transactions(
     page_size: int = Query(default=20, ge=1, le=100),
     status_id: int | None = Query(default=None, ge=1),
     transaction_type_id: int | None = Query(default=None, ge=1),
+    category_id: int | None = Query(default=None, ge=1),
     sort: str = Query(
         default="newest",
         pattern="^(newest|oldest|amount_desc|amount_asc)$",
@@ -137,6 +151,7 @@ def list_all_transactions(
             offset=offset,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
     except TransactionStatusNotFoundError:
@@ -146,6 +161,10 @@ def list_all_transactions(
     except TransactionTypeNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
@@ -205,6 +224,7 @@ def list_transactions_for_user(
     page_size: int = Query(default=10, ge=1, le=100),
     status_id: int | None = Query(default=None, ge=1),
     transaction_type_id: int | None = Query(default=None, ge=1),
+    category_id: int | None = Query(default=None, ge=1),
     sort: str = Query(
         default="newest",
         pattern="^(newest|oldest|amount_desc|amount_asc)$",
@@ -219,6 +239,7 @@ def list_transactions_for_user(
             offset=(page - 1) * page_size,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
     except TransactionStatusNotFoundError:
@@ -228,6 +249,10 @@ def list_transactions_for_user(
     except TransactionTypeNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
@@ -260,6 +285,10 @@ def patch_transaction_as_staff(
     except TransactionStatusNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     except InvalidTransactionTransitionError:
         raise HTTPException(
@@ -317,6 +346,33 @@ def get_transaction_summary(
         success=True,
         message=f"Transaction summary for the last {months} month(s).",
         data=TransactionSummaryResponse(points=points, months=months),
+    )
+
+
+@router.get(
+    "/summary/by-category",
+    response_model=ApiResponse[CategoryBreakdownResponse],
+    summary="Outgoing spend grouped by category for the current user.",
+)
+def get_transaction_category_breakdown(
+    months: int = Query(default=6, ge=1, le=24),
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[CategoryBreakdownResponse]:
+    raw = service.get_category_breakdown_for_user(user_id=user_id, months=months)
+    items = [
+        CategoryBreakdownItem(
+            category_id=r["category_id"],
+            name=r["name"] if r["name"] is not None else "Uncategorised",
+            total=r["total"],
+            count=r["count"],
+        )
+        for r in raw
+    ]
+    return ApiResponse[CategoryBreakdownResponse](
+        success=True,
+        message=f"Spending by category for the last {months} month(s).",
+        data=CategoryBreakdownResponse(items=items, months=months),
     )
 
 
@@ -404,6 +460,10 @@ def create_transaction(
     except TransactionStatusNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     except InsufficientBalanceError:
         raise HTTPException(
@@ -517,6 +577,10 @@ def patch_transaction(
     except TransactionStatusNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     except ForbiddenError:
         raise HTTPException(

@@ -28,6 +28,11 @@ class Transaction(Base):
     status_id: Mapped[int] = mapped_column(
         ForeignKey("transaction_statuses.transaction_status_id"), nullable=False
     )
+    # Nullable on purpose: a transaction with no category is "Uncategorised".
+    # Categorisation is optional both at create time and after the fact.
+    category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transaction_categories.transaction_category_id"), nullable=True
+    )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
@@ -60,6 +65,7 @@ class Transaction(Base):
     recipient_card = relationship("Card", foreign_keys=[recipient_card_id])
     transaction_type = relationship("TransactionType", back_populates="transactions")
     status = relationship("TransactionStatus", back_populates="transactions")
+    category = relationship("TransactionCategory", back_populates="transactions")
     refund_detail = relationship("RefundRequestDetail", back_populates="transaction", uselist=False)
     approval_events = relationship(
         "PaymentApprovalEvent",

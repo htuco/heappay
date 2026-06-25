@@ -16,11 +16,17 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
 import UserAvatar from '@/components/ui/UserAvatar'
 import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
 import { useAuth } from '@/hooks/useAuth'
+import { useAppSelector } from '@/store/hooks'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import useTransactionDetail from '@/hooks/useTransactionDetail'
-import { getTransactionStatus } from '@/components/payment/transactionHistory.utils'
+import {
+  buildCategoryOptions,
+  getTransactionStatus,
+} from '@/components/payment/transactionHistory.utils'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 
@@ -417,6 +423,60 @@ function ApprovalAuditSection({ transactionId, open }) {
   )
 }
 
+// Owner can re-categorise (or clear) a transaction after the fact. Category is
+// metadata: the PATCH carries only category_id and never touches status/balances.
+// Optimistic update — the select reflects the choice immediately and rolls back
+// if the API rejects it; emitDataChange refreshes the history list/pills.
+function CategorySection({ transactionId, currentCategoryId }) {
+  const categories = useAppSelector(selectTransactionCategories)
+  const options = buildCategoryOptions(categories)
+  const [value, setValue] = useState(
+    currentCategoryId != null ? String(currentCategoryId) : '',
+  )
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    setValue(currentCategoryId != null ? String(currentCategoryId) : '')
+  }, [currentCategoryId])
+
+  if (!transactionId || options.length === 0) return null
+
+  async function handleChange(nextValue) {
+    const previous = value
+    setValue(nextValue) // optimistic
+    setError(null)
+    setIsSaving(true)
+    const categoryId = nextValue === '' ? null : Number(nextValue)
+    try {
+      await transactionsService.patch(transactionId, { category_id: categoryId })
+      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
+    } catch (err) {
+      setValue(previous) // rollback
+      setError(err?.message ?? 'Could not update category.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <section>
+      <div className="mb-2 flex items-center gap-1.5">
+        <h3 className="text-sm font-semibold text-card-foreground">Category</h3>
+        {isSaving ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
+      </div>
+      <Select
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        disabled={isSaving}
+        options={[{ value: '', label: 'Uncategorised' }, ...options]}
+        className="h-10 rounded-input border-border bg-card shadow-none"
+      />
+      {error ? <p className="mt-1.5 text-xs text-destructive">{error}</p> : null}
+    </section>
+  )
+}
+
 function NotesSection({ value, onChange, placeholder = 'Add a few notes to help you later' }) {
   return (
     <section>
@@ -528,6 +588,12 @@ function PanelBody({
               currentUserId={currentUserId}
               ownedCardIds={ownedCardIds}
             />
+            {hasApiDetail && (
+              <CategorySection
+                transactionId={transactionId}
+                currentCategoryId={detail?.category_id}
+              />
+            )}
             {detail?.requires_user_approval && (
               <ApprovalAuditSection transactionId={transactionId} open={hasApiDetail} />
             )}
