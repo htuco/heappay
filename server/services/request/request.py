@@ -127,6 +127,13 @@ class RequestService:
             note=note,
         )
 
+    def get_refund_status(self, transaction_id: int) -> dict[str, object]:
+        existing = self._repo.get_any_refund_for_transaction(transaction_id)
+        if existing is None:
+            return {"exists": False}
+        status_name = self._repo.status_name_for(existing.request_status_id)
+        return {"exists": True, "request_id": existing.request_id, "status": status_name}
+
     def approve_refund(self, *, request_id: int) -> Request:
         request = self._repo.get_by_id(request_id)
         if request is None:

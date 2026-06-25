@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MessageCircle, Send, Trash2, X } from 'lucide-react'
+import { MessageCircle, Send, Trash2, X, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useChat } from '@/hooks/useChat'
@@ -7,7 +7,8 @@ import { useChat } from '@/hooks/useChat'
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
-  const { messages, isLoading, isSending, sendMessage, clearHistory } = useChat()
+  const [agentMode, setAgentMode] = useState(false)
+  const { messages, isLoading, isSending, sendMessage, clearHistory } = useChat(agentMode)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -35,25 +36,53 @@ export default function ChatWidget() {
       {open && (
         <div className="flex flex-col w-80 h-[480px] rounded-2xl border border-border/60 bg-card shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-card">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="h-4 w-4 text-primary" />
-              <span className="text-sm font-semibold text-foreground">heap Assistant</span>
+          <div className="flex flex-col border-b border-border/60 bg-card">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">heap Assistant</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={clearHistory}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                  title="Clear history"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={clearHistory}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                title="Clear history"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+
+            <div className="flex items-center gap-1 px-4 pb-3">
+              <div className="flex rounded-lg bg-muted/60 p-0.5 gap-0.5 w-full">
+                <button
+                  onClick={() => setAgentMode(false)}
+                  className={`flex-1 text-xs font-medium py-1 px-2 rounded-md transition-colors ${
+                    !agentMode
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setAgentMode(true)}
+                  className={`flex-1 flex items-center justify-center gap-1 text-xs font-medium py-1 px-2 rounded-md transition-colors ${
+                    agentMode
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Zap className="h-3 w-3" />
+                  Actions
+                </button>
+              </div>
             </div>
           </div>
 
@@ -69,7 +98,9 @@ export default function ChatWidget() {
               </div>
             ) : messages.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">
-                Ask me anything about your account, cards, or transactions.
+                {agentMode
+                  ? 'Send money, freeze a card, or request a refund — just ask.'
+                  : 'Ask me anything about your account, cards, or transactions.'}
               </p>
             ) : (
               messages.map((msg, i) => (
@@ -109,7 +140,7 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask me anything..."
+              placeholder={agentMode ? 'What do you want to do?' : 'Ask me anything...'}
               disabled={isSending}
               className="text-sm"
             />

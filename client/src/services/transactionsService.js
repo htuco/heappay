@@ -193,6 +193,35 @@ export const transactionsService = {
 	},
 
 	/**
+	 * Confirm a sensitive pending payment with step-up verification (TOTP or password).
+	 * @param {number} transactionId
+	 * @param {{ totp_code?: string, password?: string }} payload
+	 * @returns {Promise<import('@/types/transaction').Transaction>}
+	 */
+	async approve(transactionId, payload) {
+		try {
+			const { data } = await api.post(`/transactions/${transactionId}/approve`, payload)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Audit trail for in-app payment approval on a transaction.
+	 * @param {number} transactionId
+	 * @returns {Promise<Array<{ event_id: number, event_type: string, created_at: string, verification_method?: string, detail?: string }>>}
+	 */
+	async listApprovalEvents(transactionId) {
+		try {
+			const { data } = await api.get(`/transactions/${transactionId}/approval-events`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * Update the status or note of an existing transaction.
 	 * @param {number} transactionId
 	 * @param {import('@/types/transaction').PatchTransactionPayload} payload

@@ -21,7 +21,7 @@ const SECONDARY_CTA_CLASS =
   'h-11 w-full justify-center gap-2 rounded-surface border border-white/30 bg-white/10 text-sm font-medium text-primary-foreground backdrop-blur transition hover:bg-white/20 hover:text-primary-foreground'
 
 export default function WalletPage() {
-  const { cards, isLoading, isSaving, error, saveError, addCard, setMainCard, removeCard } = useWalletCards()
+  const { cards, isLoading, isSaving, error, saveError, clearSaveError, addCard, setMainCard, removeCard } = useWalletCards()
   const [activeIndex, setActiveIndex] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const [highlight, setHighlight] = useState(false)
@@ -119,6 +119,7 @@ export default function WalletPage() {
                   onSubmit={addCard}
                   isSubmitting={isSaving}
                   submitError={saveError}
+                  onClearSubmitError={clearSaveError}
                   triggerLabel="Add Card"
                   triggerClassName="mt-2 inline-flex h-11 items-center gap-1.5 rounded-input bg-linear-to-r from-primary to-primary-light px-4 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/40"
                   triggerVariant="ghost"
@@ -143,6 +144,7 @@ export default function WalletPage() {
                   onSubmit={addCard}
                   isSubmitting={isSaving}
                   submitError={saveError}
+                  onClearSubmitError={clearSaveError}
                   triggerLabel="Add Card"
                   triggerClassName={PRIMARY_CTA_CLASS}
                   triggerVariant="ghost"
@@ -161,6 +163,7 @@ export default function WalletPage() {
                       onSubmit={addCard}
                       isSubmitting={isSaving}
                       submitError={saveError}
+                      onClearSubmitError={clearSaveError}
                       triggerLabel="Add new card"
                       triggerVariant="default"
                     />
@@ -184,6 +187,7 @@ export default function WalletPage() {
             onAddCard={addCard}
             isAddingCard={isSaving}
             addCardError={saveError}
+            onClearAddCardError={clearSaveError}
           />
           <WalletSecurityNote />
         </div>
