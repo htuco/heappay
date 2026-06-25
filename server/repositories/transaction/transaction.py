@@ -45,6 +45,7 @@ class TransactionRepository:
         offset: int = 0,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
         sort: str = "newest",
     ) -> list[Transaction]:
         """List transactions where the user owns either the sender or recipient card."""
@@ -53,6 +54,7 @@ class TransactionRepository:
                 user_id,
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
+                category_id=category_id,
             )
             .options(*self._party_load_options())
             .order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["newest"]))
@@ -67,12 +69,14 @@ class TransactionRepository:
         user_id: int,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
     ) -> int:
         stmt = select(func.count()).select_from(
             self._filtered_user_transactions_stmt(
                 user_id,
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
+                category_id=category_id,
             ).subquery()
         )
         return int(self._db.execute(stmt).scalar_one())
@@ -84,12 +88,14 @@ class TransactionRepository:
         offset: int = 0,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
         sort: str = "newest",
     ) -> list[Transaction]:
         stmt = (
             self._filtered_all_transactions_stmt(
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
+                category_id=category_id,
             )
             .options(*self._party_load_options())
             .order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["newest"]))
@@ -103,11 +109,13 @@ class TransactionRepository:
         *,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
     ) -> int:
         stmt = select(func.count()).select_from(
             self._filtered_all_transactions_stmt(
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
+                category_id=category_id,
             ).subquery()
         )
         return int(self._db.execute(stmt).scalar_one())
@@ -117,12 +125,15 @@ class TransactionRepository:
         *,
         status_id: int | None,
         transaction_type_id: int | None,
+        category_id: int | None = None,
     ):
         stmt = select(Transaction)
         if status_id is not None:
             stmt = stmt.where(Transaction.status_id == status_id)
         if transaction_type_id is not None:
             stmt = stmt.where(Transaction.transaction_type_id == transaction_type_id)
+        if category_id is not None:
+            stmt = stmt.where(Transaction.category_id == category_id)
         return stmt
 
     def _user_transactions_stmt(self, user_id: int):
@@ -140,12 +151,15 @@ class TransactionRepository:
         *,
         status_id: int | None,
         transaction_type_id: int | None,
+        category_id: int | None = None,
     ):
         stmt = self._user_transactions_stmt(user_id)
         if status_id is not None:
             stmt = stmt.where(Transaction.status_id == status_id)
         if transaction_type_id is not None:
             stmt = stmt.where(Transaction.transaction_type_id == transaction_type_id)
+        if category_id is not None:
+            stmt = stmt.where(Transaction.category_id == category_id)
         return stmt
 
     def get_summary_for_user(
@@ -210,6 +224,56 @@ class TransactionRepository:
             .where(*filters)
             .group_by(period_col)
             .order_by(period_col.desc())
+        )
+
+        return [dict(r) for r in self._db.execute(stmt).mappings().all()]
+
+    def get_category_breakdown_for_user(
+        self,
+        *,
+        user_id: int,
+        months: int = 6,
+    ) -> list[dict]:
+        """
+        Aggregate outgoing spend per category for the given user over the window.
+
+        "Spending" = transactions where one of the user's cards is the **sender**
+        (money leaving). Incoming is excluded so the breakdown reconciles to total
+        outgoing. The Uncategorised bucket (category_id = NULL) is included so the
+        segments sum to total spend. Matches get_summary_for_user by counting only
+        completed transactions.
+        """
+        from models.transaction_category import TransactionCategory
+
+        user_card_ids = (
+            select(Card.card_id).where(Card.user_id == user_id).scalar_subquery()
+        )
+        since = func.now() - text(f"INTERVAL '{int(months)} months'")
+        completed_id = self.get_status_id_by_name("completed")
+
+        filters = [
+            Transaction.created_at >= since,
+            Transaction.sender_card_id.in_(user_card_ids),
+        ]
+        if completed_id is not None:
+            filters.append(Transaction.status_id == completed_id)
+
+        stmt = (
+            select(
+                Transaction.category_id.label("category_id"),
+                TransactionCategory.name.label("name"),
+                func.coalesce(func.sum(Transaction.amount), Decimal("0")).label("total"),
+                func.count(Transaction.transaction_id).label("count"),
+            )
+            .select_from(Transaction)
+            .outerjoin(
+                TransactionCategory,
+                Transaction.category_id
+                == TransactionCategory.transaction_category_id,
+            )
+            .where(*filters)
+            .group_by(Transaction.category_id, TransactionCategory.name)
+            .order_by(func.sum(Transaction.amount).desc())
         )
 
         return [dict(r) for r in self._db.execute(stmt).mappings().all()]
@@ -400,6 +464,7 @@ class TransactionRepository:
         amount: Decimal,
         note: str | None,
         processing_eligible_at: datetime,
+        category_id: int | None = None,
         idempotency_key: str | None = None,
         requires_user_approval: bool = False,
         user_approval_expires_at: datetime | None = None,
@@ -416,6 +481,7 @@ class TransactionRepository:
             recipient_card_id=recipient_card.card_id,
             transaction_type_id=transaction_type_id,
             status_id=status_id,
+            category_id=category_id,
             amount=amount,
             note=note,
             processing_eligible_at=processing_eligible_at,
@@ -633,6 +699,14 @@ class TransactionRepository:
     def transaction_status_exists(self, status_id: int) -> bool:
         stmt = select(TransactionStatus.transaction_status_id).where(
             TransactionStatus.transaction_status_id == status_id
+        )
+        return self._db.execute(stmt).first() is not None
+
+    def transaction_category_exists(self, category_id: int) -> bool:
+        from models.transaction_category import TransactionCategory
+
+        stmt = select(TransactionCategory.transaction_category_id).where(
+            TransactionCategory.transaction_category_id == category_id
         )
         return self._db.execute(stmt).first() is not None
 
