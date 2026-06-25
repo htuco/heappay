@@ -34,6 +34,7 @@ export const TRANSACTION_TYPE_OPTIONS = [
   { value: '3', label: 'Refund' },
   { value: '4', label: 'Withdrawal' },
   { value: '5', label: 'Chargeback' },
+  { value: '6', label: 'Fine' },
 ]
 
 export function formatTransactionAmount(amount) {
@@ -58,7 +59,10 @@ export function formatTransactionDateInputValue(value) {
   return `${year}-${month}-${day}`
 }
 
-export function getTransactionStatus(statusId, hasPendingRefund = false) {
+export function getTransactionStatus(statusId, hasPendingRefund = false, awaitingUserApproval = false) {
+  if (awaitingUserApproval && statusId === 1) {
+    return { label: 'Awaiting approval', variant: 'warning' }
+  }
   if (hasPendingRefund && statusId === 2) return { label: 'Refund Requested', variant: 'warning' }
   if (statusId === 1) return { label: 'Pending', variant: 'warning' }
   if (statusId === 2) return { label: 'Completed', variant: 'success' }

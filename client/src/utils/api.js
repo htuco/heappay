@@ -51,6 +51,10 @@ export const resetUnauthorizedHandler = () => {
 }
 
 export const getApiErrorMessage = (error, fallback = 'Something went wrong') => {
+	if (typeof error === 'string' && error.trim()) {
+		return error
+	}
+
 	const data = error?.response?.data
 
 	if (typeof data?.message === 'string') {

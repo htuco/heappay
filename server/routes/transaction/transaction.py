@@ -4,10 +4,13 @@ from sqlalchemy.orm import Session
 from database import get_db
 from ratelimit import TRANSACTION_RATE_LIMIT, limiter, user_id_key_func
 from repositories.transaction.transaction import TransactionRepository
+from repositories.user.auth import UserAuthRepository
 from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.pagination import Page
 from schemas.response import ApiResponse
 from schemas.transaction import (
+    PaymentApprovalEventResponse,
+    TransactionApproveRequest,
     TransactionCreate,
     TransactionPartyResponse,
     TransactionPatch,
@@ -20,6 +23,8 @@ from schemas.transaction import (
 from tasks.sync import run_sync_for_user
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.transaction.transaction import (
+    ApprovalExpiredError,
+    ApprovalRequiredError,
     CardFrozenError,
     CardNotFoundError,
     ForbiddenError,
@@ -45,10 +50,15 @@ _SENDER_CARD_FROZEN = "This card is frozen and can't be used to send money."
 _RECIPIENT_CARD_FROZEN = "The recipient's card is frozen and can't receive money."
 _INVALID_TRANSITION = "This status change is not allowed for the transaction."
 _PROCESSING_DELAY = "The transaction is still being processed. Try again shortly."
+_APPROVAL_REQUIRED = "Step-up verification failed or approval is not allowed."
+_APPROVAL_EXPIRED = "The approval window has expired. Cancel and try again."
 
 
 def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService:
-    return TransactionService(TransactionRepository(db))
+    return TransactionService(
+        TransactionRepository(db),
+        auth_repo=UserAuthRepository(db),
+    )
 
 
 def _card_to_party(card) -> TransactionPartyResponse | None:
@@ -418,6 +428,70 @@ def create_transaction(
             else "Transaction already exists (idempotent replay)."
         ),
         data=_to_detail_response(row),
+    )
+
+
+@router.post(
+    "/{transaction_id}/approve",
+    response_model=ApiResponse[TransactionResponse],
+    summary="Confirm a sensitive pending payment with step-up verification.",
+)
+def approve_transaction(
+    transaction_id: int,
+    payload: TransactionApproveRequest,
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[TransactionResponse]:
+    try:
+        row = service.approve(transaction_id, payload, user_id=user_id)
+    except TransactionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TRANSACTION_NOT_FOUND
+        ) from None
+    except ForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
+    except ApprovalExpiredError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_APPROVAL_EXPIRED
+        ) from None
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or _APPROVAL_REQUIRED
+        ) from None
+    return ApiResponse[TransactionResponse](
+        success=True,
+        message="Payment approved. It will settle shortly.",
+        data=_to_detail_response(row),
+    )
+
+
+@router.get(
+    "/{transaction_id}/approval-events",
+    response_model=ApiResponse[list[PaymentApprovalEventResponse]],
+    summary="Audit trail for in-app payment approval.",
+)
+def list_payment_approval_events(
+    transaction_id: int,
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[list[PaymentApprovalEventResponse]]:
+    try:
+        events = service.list_approval_events(transaction_id, user_id=user_id)
+    except TransactionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TRANSACTION_NOT_FOUND
+        ) from None
+    except ForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
+    items = [PaymentApprovalEventResponse.model_validate(e) for e in events]
+    return ApiResponse[list[PaymentApprovalEventResponse]](
+        success=True,
+        message=f"Retrieved {len(items)} approval event(s).",
+        data=items,
     )
 
 
