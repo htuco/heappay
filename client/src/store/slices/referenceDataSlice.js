@@ -3,6 +3,7 @@ import { userRolesService } from '@/services/userRolesService'
 import { userStatusesService } from '@/services/userStatusesService'
 import { cardStatusesService } from '@/services/cardStatusesService'
 import { cardTypesService } from '@/services/cardTypesService'
+import { transactionCategoriesService } from '@/services/transactionCategoriesService'
 import { getApiErrorMessage } from '@/utils/api'
 
 const DEFAULT_STATUS = Object.freeze({
@@ -10,6 +11,7 @@ const DEFAULT_STATUS = Object.freeze({
   userStatuses: 'idle',
   cardStatuses: 'idle',
   cardTypes: 'idle',
+  transactionCategories: 'idle',
 })
 
 const DEFAULT_ERRORS = Object.freeze({
@@ -17,6 +19,7 @@ const DEFAULT_ERRORS = Object.freeze({
   userStatuses: null,
   cardStatuses: null,
   cardTypes: null,
+  transactionCategories: null,
 })
 
 const isLoadedOrLoading = (value) => value === 'loading' || value === 'succeeded'
@@ -65,6 +68,19 @@ export const fetchCardTypes = createAsyncThunk(
   },
 )
 
+export const fetchTransactionCategories = createAsyncThunk(
+  'referenceData/fetchTransactionCategories',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await transactionCategoriesService.list()
+    } catch (error) {
+      return rejectWithValue(
+        getApiErrorMessage(error, 'Failed to load transaction categories.'),
+      )
+    }
+  },
+)
+
 export const fetchReferenceDataOnce = createAsyncThunk(
   'referenceData/fetchReferenceDataOnce',
   async (_, { dispatch, getState }) => {
@@ -77,6 +93,8 @@ export const fetchReferenceDataOnce = createAsyncThunk(
     if (!isLoadedOrLoading(statusByDataset.userRoles)) tasks.push(dispatch(fetchUserRoles()))
     if (!isLoadedOrLoading(statusByDataset.cardStatuses)) tasks.push(dispatch(fetchCardStatuses()))
     if (!isLoadedOrLoading(statusByDataset.cardTypes)) tasks.push(dispatch(fetchCardTypes()))
+    if (!isLoadedOrLoading(statusByDataset.transactionCategories))
+      tasks.push(dispatch(fetchTransactionCategories()))
 
     await Promise.all(tasks)
   },
@@ -89,6 +107,7 @@ const referenceDataSlice = createSlice({
     userStatuses: [],
     cardStatuses: [],
     cardTypes: [],
+    transactionCategories: [],
     statusByDataset: { ...DEFAULT_STATUS },
     errorByDataset: { ...DEFAULT_ERRORS },
   },
@@ -143,6 +162,19 @@ const referenceDataSlice = createSlice({
         state.statusByDataset.cardTypes = 'failed'
         state.errorByDataset.cardTypes = action.payload ?? 'Failed to load card types.'
       })
+      .addCase(fetchTransactionCategories.pending, (state) => {
+        state.statusByDataset.transactionCategories = 'loading'
+        state.errorByDataset.transactionCategories = null
+      })
+      .addCase(fetchTransactionCategories.fulfilled, (state, action) => {
+        state.transactionCategories = action.payload
+        state.statusByDataset.transactionCategories = 'succeeded'
+      })
+      .addCase(fetchTransactionCategories.rejected, (state, action) => {
+        state.statusByDataset.transactionCategories = 'failed'
+        state.errorByDataset.transactionCategories =
+          action.payload ?? 'Failed to load transaction categories.'
+      })
   },
 })
 
@@ -151,6 +183,8 @@ export const selectUserRoles = (state) => state.referenceData.userRoles
 export const selectUserStatuses = (state) => state.referenceData.userStatuses
 export const selectCardStatuses = (state) => state.referenceData.cardStatuses
 export const selectCardTypes = (state) => state.referenceData.cardTypes
+export const selectTransactionCategories = (state) =>
+  state.referenceData.transactionCategories
 export const selectReferenceDatasetStatus = (state) => state.referenceData.statusByDataset
 export const selectReferenceDatasetErrors = (state) => state.referenceData.errorByDataset
 

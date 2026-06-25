@@ -14,9 +14,13 @@ import {
 import { Modal, ModalTitle } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import FormBanner from '@/components/ui/FormBanner'
 import UserAvatar from '@/components/ui/UserAvatar'
 import RecipientPicker from '@/components/payment/RecipientPicker'
+import { buildCategoryOptions } from '@/components/payment/transactionHistory.utils'
+import { useAppSelector } from '@/store/hooks'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import { useAuth } from '@/hooks/useAuth'
 import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
@@ -472,6 +476,8 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
   const [recipientError, setRecipientError] = useState('')
   const debounceRef = useRef(null)
   const amountInputRef = useRef(null)
+  const categories = useAppSelector(selectTransactionCategories)
+  const categoryOptions = buildCategoryOptions(categories)
 
   const balance = fromCard ? Number(fromCard.balance) : null
   const amountNum = parseFloat(state.amount)
@@ -749,6 +755,22 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
         />
       </section>
 
+      {categoryOptions.length > 0 ? (
+        <section className="space-y-2">
+          <FieldLabel htmlFor="payment-category" hint="Optional">
+            Category
+          </FieldLabel>
+          <Select
+            id="payment-category"
+            value={state.categoryId != null ? String(state.categoryId) : ''}
+            onChange={(e) =>
+              onChange('categoryId', e.target.value === '' ? null : Number(e.target.value))
+            }
+            options={[{ value: '', label: 'No category' }, ...categoryOptions]}
+          />
+        </section>
+      ) : null}
+
       <WizardFooter>
         <Button variant="ghost" onClick={onBack}>
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -939,6 +961,7 @@ const INITIAL_FORM = {
   recipientInfo: null,
   amount: '',
   note: '',
+  categoryId: null,
 }
 
 const STEP_HEADINGS = [
@@ -1067,6 +1090,7 @@ export default function PaymentWizard({
         transaction_type_id: form.txTypeId,
         amount: normalizedAmount,
         note: form.note || null,
+        category_id: form.categoryId ?? null,
         idempotency_key: idempotencyKeyRef.current,
       })
 
