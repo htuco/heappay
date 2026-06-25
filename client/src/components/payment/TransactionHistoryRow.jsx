@@ -165,8 +165,8 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
       }
       className={`group px-4 py-2.5 transition-colors ${isSelectable ? 'cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/30' : ''}`}
     >
-      {/* ── Mobile ── */}
-      <div className="flex items-center gap-3 sm:hidden">
+      {/* ── Stacked (until the table container is wide enough for columns) ── */}
+      <div className="flex items-center gap-3 @[560px]/tbl:hidden">
         <div className={`flex size-8 shrink-0 items-center justify-center rounded-input ${bg} ${color}`}>
           <Icon className="size-3.5" strokeWidth={2} />
         </div>
@@ -192,8 +192,8 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
         </div>
       </div>
 
-      {/* ── Desktop — grid mirrors header: [28px | 1fr | 96px | 88px | 148px | 100px] ── */}
-      <div className="hidden sm:grid sm:grid-cols-[28px_1fr_96px_88px_148px_100px] sm:items-center sm:gap-x-4">
+      {/* ── Wide (xl+) — grid mirrors header: [28px | 1fr | 96px | 88px | 148px | 100px] ── */}
+      <div className="hidden xl:grid xl:grid-cols-[28px_1fr_96px_88px_148px_100px] xl:items-center xl:gap-x-4">
         {/* Icon */}
         <div className={`flex size-7 items-center justify-center rounded-input ${bg} ${color}`}>
           <Icon className="size-3.5" strokeWidth={2} />
