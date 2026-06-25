@@ -14,7 +14,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from database import SessionLocal
-from ratelimit import limiter
+from ratelimit import DEFAULT_RATE_LIMIT_MESSAGE, limiter
 from exceptions import AppException
 from repositories.vector.knowledge import VectorRepository
 from routes import health, system
@@ -77,11 +77,14 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RateLimitExceeded)
     async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        limit_text = str(getattr(exc.limit, "limit", ""))
+        detail = exc.detail if isinstance(exc.detail, str) else ""
+        message = detail if detail and detail != limit_text else DEFAULT_RATE_LIMIT_MESSAGE
         return JSONResponse(
             status_code=429,
             content={
                 "code": "RATE_LIMITED",
-                "message": "Too many attempts. Please wait a moment and try again.",
+                "message": message,
                 "details": None,
             },
         )
