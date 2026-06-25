@@ -11,7 +11,9 @@ from pydantic import (
     model_validator,
 )
 
+from utils.password_policy import StrongPasswordStr
 
+LoginPasswordStr = Annotated[str, Field(min_length=1, max_length=255)]
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
 
 
@@ -19,12 +21,12 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    password: PasswordStr
+    password: StrongPasswordStr
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: PasswordStr
+    password: LoginPasswordStr
 
 
 class RefreshRequest(BaseModel):
@@ -33,8 +35,8 @@ class RefreshRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(min_length=1)
-    new_password: PasswordStr
-    confirm_password: PasswordStr
+    new_password: StrongPasswordStr
+    confirm_password: StrongPasswordStr
 
     @model_validator(mode="after")
     def passwords_match(self) -> "ChangePasswordRequest":
@@ -49,8 +51,8 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetConfirmRequest(BaseModel):
     token: str = Field(min_length=32, max_length=512)
-    new_password: PasswordStr
-    confirm_password: PasswordStr
+    new_password: StrongPasswordStr
+    confirm_password: StrongPasswordStr
 
     @model_validator(mode="after")
     def passwords_match(self) -> "PasswordResetConfirmRequest":

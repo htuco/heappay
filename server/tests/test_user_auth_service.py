@@ -50,9 +50,9 @@ def test_change_password_invalidates_existing_refresh_token() -> None:
     repo = _AuthRepo()
     service = UserAuthService(repo)
     payload = ChangePasswordRequest(
-        current_password="old-password",
-        new_password="new-password",
-        confirm_password="new-password",
+        current_password="OldPassword123!",
+        new_password="NewPassword123!",
+        confirm_password="NewPassword123!",
     )
 
     with (
