@@ -9,6 +9,7 @@ import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
 import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import { getApiErrorMessage } from '@/utils/api'
 
 const INITIAL_FORM_STATE = {
 	firstName: '',
@@ -83,7 +84,7 @@ export default function RegisterForm() {
 			setForm(INITIAL_FORM_STATE)
 			setTimeout(() => navigate('/dashboard'), 1000)
 		} catch (err) {
-			setError(err?.response?.data?.message ?? 'Registration failed.')
+			setError(getApiErrorMessage(err, 'Registration failed.'))
 		}
 	}
 

@@ -72,8 +72,9 @@ export const fetchReferenceDataOnce = createAsyncThunk(
     const statusByDataset = state.referenceData.statusByDataset
     const tasks = []
 
-    if (!isLoadedOrLoading(statusByDataset.userRoles)) tasks.push(dispatch(fetchUserRoles()))
+    // User statuses gate route redirects — fetch first.
     if (!isLoadedOrLoading(statusByDataset.userStatuses)) tasks.push(dispatch(fetchUserStatuses()))
+    if (!isLoadedOrLoading(statusByDataset.userRoles)) tasks.push(dispatch(fetchUserRoles()))
     if (!isLoadedOrLoading(statusByDataset.cardStatuses)) tasks.push(dispatch(fetchCardStatuses()))
     if (!isLoadedOrLoading(statusByDataset.cardTypes)) tasks.push(dispatch(fetchCardTypes()))
 

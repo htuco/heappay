@@ -1,10 +1,12 @@
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+
+from schemas.money import MoneyAmount
 
 
 class FundRequestCreate(BaseModel):
-    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    amount: MoneyAmount
 
 
 class FundRequestResponse(BaseModel):

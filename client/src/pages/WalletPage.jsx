@@ -3,33 +3,26 @@ import { useSearchParams } from 'react-router-dom'
 import { CreditCard, Snowflake } from 'lucide-react'
 
 import AddCardModal from '@/components/AddCardModal'
-import CardCarousel from '@/components/card-view/CardCarousel'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
-import BalancePanel from '@/components/wallet/BalancePanel'
 import CardStatsRow from '@/components/wallet/CardStatsRow'
-import RecentTransactionsByCard from '@/components/wallet/RecentTransactionsByCard'
+import CardWidget from '@/components/wallet/CardWidget'
 import WalletQuickActions from '@/components/wallet/WalletQuickActions'
-import WalletSecurityNote from '@/components/wallet/WalletSecurityNote'
-import WalletSection from '@/components/wallet/WalletSection'
+import WalletTransactionsTable, {
+  WalletTransactionsTableSkeleton,
+} from '@/components/wallet/WalletTransactionsTable'
 import { useWalletCards } from '@/hooks/useWalletCards'
 import { buildCardStatusOverviewProps } from '@/utils/cardStatusOverview'
 
-const PRIMARY_CTA_CLASS =
-  'h-12 w-full justify-center gap-2 rounded-surface bg-white text-base font-semibold text-primary shadow-lg transition hover:-translate-y-0.5 hover:bg-white hover:text-primary hover:shadow-xl'
-
-const SECONDARY_CTA_CLASS =
-  'h-11 w-full justify-center gap-2 rounded-surface border border-white/30 bg-white/10 text-sm font-medium text-primary-foreground backdrop-blur transition hover:bg-white/20 hover:text-primary-foreground'
-
 export default function WalletPage() {
-  const { cards, isLoading, isSaving, error, saveError, addCard, setMainCard, removeCard } = useWalletCards()
+  const { cards, isLoading, isSaving, error, saveError, clearSaveError, addCard, setMainCard, removeCard } = useWalletCards()
   const [activeIndex, setActiveIndex] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const [highlight, setHighlight] = useState(false)
   const consumedCardParamRef = useRef(null)
   const walletSectionRef = useRef(null)
 
-  // Deep-link target from a notification: ?card=<id>. Scrolls the carousel
-  // to that card and flashes a ring around the wallet section.
+  // Deep-link target from a notification: ?card=<id>. Scrolls to that card and
+  // flashes a ring around the card widget.
   useEffect(() => {
     const param = searchParams.get('card')
     if (!param) return
@@ -62,6 +55,8 @@ export default function WalletPage() {
   const hasActiveAlternative = cards.some(
     (c) => !c.isMain && c.card?.status === 'active',
   )
+
+  const hasCards = cards.length > 0 || isLoading
 
   return (
     <div className="space-y-6">
@@ -96,46 +91,36 @@ export default function WalletPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      {/*
+        Desktop (lg+): two columns — transactions left (60%), rail right (40%).
+        Mobile/tablet (< lg): single column, ordered Quick Actions → Carousel
+        (card + balance) → Recent Activity → Card status. `order-*` reorders the
+        stack on small screens; reset to source order on lg with `lg:order-none`.
+      */}
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-5 lg:items-start lg:gap-6">
+        {/* Quick Actions — second on mobile (under the card), top of right rail on desktop */}
         <div
           ref={walletSectionRef}
-          className={`lg:col-span-8 rounded-panel transition-shadow duration-500 ${
-            highlight ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+          className={`order-2 lg:order-0 lg:col-span-2 lg:col-start-4 lg:row-start-1 ${
+            highlight ? 'rounded-panel ring-2 ring-primary ring-offset-2 ring-offset-background transition-shadow duration-500' : ''
           }`}
         >
-          <WalletSection className="h-full" mobileChromeless>
-            {cards.length === 0 && !isLoading ? (
-              <div className="flex flex-col items-center gap-3 rounded-surface bg-muted/30 p-12 text-center">
-                <span className="rounded-surface bg-linear-to-br from-primary to-primary-light p-3.5 text-primary-foreground shadow-lg shadow-primary/30">
-                  <CreditCard className="h-6 w-6" strokeWidth={2} />
-                </span>
-                <p className="text-base font-semibold text-card-foreground">
-                  No payment cards yet
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Add your first card to get started.
-                </p>
-                <AddCardModal
-                  onSubmit={addCard}
-                  isSubmitting={isSaving}
-                  submitError={saveError}
-                  triggerLabel="Add Card"
-                  triggerClassName="mt-2 inline-flex h-11 items-center gap-1.5 rounded-input bg-linear-to-r from-primary to-primary-light px-4 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/40"
-                  triggerVariant="ghost"
-                />
-              </div>
-            ) : (
-              <CardCarousel
-                items={cards}
-                activeIndex={safeIndex}
-                onChangeIndex={setActiveIndex}
-              />
-            )}
-          </WalletSection>
+          <WalletQuickActions
+            onAddCard={addCard}
+            isAddingCard={isSaving}
+            addCardError={saveError}
+            onClearAddCardError={clearSaveError}
+            isLoading={isLoading && cards.length === 0}
+          />
         </div>
-        <div className="lg:col-span-4">
-          <div className="h-full">
-            <BalancePanel
+
+        {/* Card widget (carousel + balance) — first on mobile, right rail on desktop */}
+        {hasCards ? (
+          <div className="order-1 lg:order-0 lg:col-span-2 lg:col-start-4 lg:row-start-2">
+            <CardWidget
+              cards={cards}
+              activeIndex={safeIndex}
+              onChangeIndex={setActiveIndex}
               activeCard={activeCard}
               isLoading={isLoading}
               addCardSlot={
@@ -143,17 +128,18 @@ export default function WalletPage() {
                   onSubmit={addCard}
                   isSubmitting={isSaving}
                   submitError={saveError}
+                  onClearSubmitError={clearSaveError}
                   triggerLabel="Add Card"
-                  triggerClassName={PRIMARY_CTA_CLASS}
-                  triggerVariant="ghost"
+                  triggerVariant="default"
+                  triggerClassName="h-11 w-full justify-center gap-2"
                 />
               }
               manageCardsSlot={
                 <AllCardsModal
                   items={cards}
                   triggerLabel="Manage Cards"
-                  triggerClassName={SECONDARY_CTA_CLASS}
-                  triggerVariant="ghost"
+                  triggerVariant="outline"
+                  triggerClassName="h-11 w-full justify-center gap-2"
                   onSetMain={setMainCard}
                   onRemove={removeCard}
                   addCardSlot={
@@ -161,6 +147,7 @@ export default function WalletPage() {
                       onSubmit={addCard}
                       isSubmitting={isSaving}
                       submitError={saveError}
+                      onClearSubmitError={clearSaveError}
                       triggerLabel="Add new card"
                       triggerVariant="default"
                     />
@@ -169,23 +156,50 @@ export default function WalletPage() {
               }
             />
           </div>
-        </div>
-      </div>
+        ) : null}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="space-y-6 lg:col-span-8">
-          <CardStatsRow {...buildCardStatusOverviewProps(cards)} />
-          {activeCard ? (
-            <RecentTransactionsByCard cardId={activeCard.id} />
-          ) : null}
+        {/* Recent activity — third on mobile, left 60% column (spanning rail rows)
+            on desktop. h-full lets the panel stretch to the rail's full height so
+            it isn't a short box against a taller right column. */}
+        <div className="order-3 flex lg:order-0 lg:col-span-3 lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:self-stretch">
+          {isLoading && !activeCard ? (
+            <WalletTransactionsTableSkeleton />
+          ) : activeCard ? (
+            <WalletTransactionsTable
+              cardId={activeCard.id}
+              card={{
+                ...activeCard.card,
+                last_four: activeCard.source?.last_four,
+              }}
+            />
+          ) : (
+            <section className="flex h-full min-h-96 w-full flex-col items-center justify-center gap-3 rounded-panel border border-border bg-card p-12 text-center shadow-sm">
+              <span className="rounded-surface bg-linear-to-br from-primary to-primary-light p-3.5 text-primary-foreground shadow-lg shadow-primary/30">
+                <CreditCard className="h-6 w-6" strokeWidth={2} />
+              </span>
+              <p className="text-base font-semibold text-card-foreground">No payment cards yet</p>
+              <p className="text-sm text-muted-foreground">
+                Add your first card to start tracking activity.
+              </p>
+              <AddCardModal
+                onSubmit={addCard}
+                isSubmitting={isSaving}
+                submitError={saveError}
+                onClearSubmitError={clearSaveError}
+                triggerLabel="Add Card"
+                triggerVariant="default"
+              />
+            </section>
+          )}
         </div>
-        <div className="space-y-6 lg:col-span-4">
-          <WalletQuickActions
-            onAddCard={addCard}
-            isAddingCard={isSaving}
-            addCardError={saveError}
+
+        {/* Card status — last on mobile, bottom of right rail on desktop */}
+        <div className="order-4 lg:order-0 lg:col-span-2 lg:col-start-4 lg:row-start-3">
+          <CardStatsRow
+            compact
+            isLoading={isLoading && cards.length === 0}
+            {...buildCardStatusOverviewProps(cards)}
           />
-          <WalletSecurityNote />
         </div>
       </div>
     </div>

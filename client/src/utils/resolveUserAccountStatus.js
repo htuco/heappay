@@ -2,6 +2,21 @@
 
 const KNOWN_STATUSES = new Set(['active', 'suspended', 'invited'])
 
+/** Baseline seed ids from server alembic — used until reference data loads. */
+const SEEDED_STATUS_BY_ID = Object.freeze({
+  1: 'active',
+  2: 'invited',
+  3: 'suspended',
+})
+
+function normalizeStatusName(name) {
+  const normalized = name?.trim().toLowerCase()
+  if (KNOWN_STATUSES.has(normalized)) {
+    return /** @type {AccountStatus} */ (normalized)
+  }
+  return 'unknown'
+}
+
 /**
  * Maps the authenticated user's status_id to a guard status using reference data.
  * Seed names: active, invited, suspended, deleted (see server alembic seed).
@@ -16,16 +31,11 @@ export function resolveUserAccountStatus(statusId, userStatuses) {
   }
 
   const match = userStatuses.find((row) => row.id === statusId)
-  if (!match?.status_name) {
-    return 'unknown'
+  if (match?.status_name) {
+    return normalizeStatusName(match.status_name)
   }
 
-  const normalized = match.status_name.trim().toLowerCase()
-  if (KNOWN_STATUSES.has(normalized)) {
-    return /** @type {AccountStatus} */ (normalized)
-  }
-
-  return 'unknown'
+  return SEEDED_STATUS_BY_ID[statusId] ?? 'unknown'
 }
 
 /**

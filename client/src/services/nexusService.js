@@ -1,4 +1,5 @@
 import api, { getApiErrorMessage } from '@/utils/api'
+import { normalizeAmountForSubmit } from '@/utils/amount'
 
 function unwrap(response) {
   const body = response?.data
@@ -24,8 +25,12 @@ export async function getNexusFundingEnabled() {
  */
 export async function requestFundTopUp(cardId, amount) {
   try {
+    const normalizedAmount = normalizeAmountForSubmit(amount)
+    if (!normalizedAmount) {
+      throw new Error('Enter a valid amount with up to 2 decimal places.')
+    }
     const { data } = await api.post(`/cards/${cardId}/fund-request`, {
-      amount: Number(amount).toFixed(2),
+      amount: normalizedAmount,
     })
     return unwrap({ data })
   } catch (error) {
