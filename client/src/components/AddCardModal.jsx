@@ -78,6 +78,7 @@ export default function AddCardModal({
   onSubmit,
   isSubmitting = false,
   submitError = null,
+  onClearSubmitError,
   triggerLabel = "Add New Card",
   triggerClassName,
   triggerVariant,
@@ -104,6 +105,12 @@ export default function AddCardModal({
       number: formatCardNumber(e.target.value, nextBrand),
       cvv: f.cvv.slice(0, nextBrand?.cvvLength ?? 3),
     }))
+    setErrors((prev) => {
+      if (!prev.number) return prev
+      const { number: _removed, ...rest } = prev
+      return rest
+    })
+    onClearSubmitError?.()
   }
 
   function handleExpiryChange(e) {

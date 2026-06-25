@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
 from models.transaction import Transaction
+from repositories.payment_approval.payment_approval import PaymentApprovalRepository
 from repositories.transaction.transaction import TransactionRepository, TransactionStateError
 from settings import Settings, get_settings
 
@@ -22,6 +23,8 @@ SELF_TRANSFER = "SELF_TRANSFER"
 AUTO_ALLOW = "AUTO_ALLOW"
 PENDING_TIMEOUT_ALLOW = "PENDING_TIMEOUT_ALLOW"
 PENDING_TIMEOUT_DENY = "PENDING_TIMEOUT_DENY"
+APPROVAL_TIMEOUT = "APPROVAL_TIMEOUT"
+AWAITING_USER_APPROVAL = "AWAITING_USER_APPROVAL"
 
 
 @dataclass(frozen=True)
@@ -35,9 +38,11 @@ class TransactionProcessorService:
         self,
         repo: TransactionRepository,
         settings: Settings | None = None,
+        approval_repo: PaymentApprovalRepository | None = None,
     ) -> None:
         self._repo = repo
         self._settings = settings or get_settings()
+        self._approval_repo = approval_repo or PaymentApprovalRepository(repo._db)
 
     def process_batch(self) -> dict[str, int]:
         rows = self._repo.list_pending_for_update(
@@ -71,6 +76,14 @@ class TransactionProcessorService:
             reason_code=decision.reason_code or "DENIED",
             processed_by="system",
         )
+        if decision.reason_code == APPROVAL_TIMEOUT:
+            self._approval_repo.record_event(
+                transaction_id=tx.transaction_id,
+                event_type="timed_out",
+                verification_method="system",
+                detail=APPROVAL_TIMEOUT,
+            )
+            self._repo._db.commit()
         return "denied"
 
 
@@ -101,6 +114,15 @@ def evaluate_transaction(tx: Transaction, settings: Settings) -> ProcessorDecisi
 
     if tx.amount > settings.tx_manual_review_above_amount:
         return ProcessorDecision("skip")
+
+    if getattr(tx, "requires_user_approval", False) and tx.user_approved_at is None:
+        expires = getattr(tx, "user_approval_expires_at", None)
+        if expires is not None:
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires:
+                return ProcessorDecision("deny", APPROVAL_TIMEOUT)
+        return ProcessorDecision("skip", AWAITING_USER_APPROVAL)
 
     if _is_pending_timeout(tx, settings):
         if settings.tx_pending_timeout_action == "allow":

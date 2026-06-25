@@ -42,9 +42,22 @@ class Transaction(Base):
     )
     processed_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
     deny_reason_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    requires_user_approval: Mapped[bool] = mapped_column(nullable=False, server_default="false")
+    user_approval_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    user_approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    user_approval_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     sender_card = relationship("Card", foreign_keys=[sender_card_id])
     recipient_card = relationship("Card", foreign_keys=[recipient_card_id])
     transaction_type = relationship("TransactionType", back_populates="transactions")
     status = relationship("TransactionStatus", back_populates="transactions")
     refund_detail = relationship("RefundRequestDetail", back_populates="transaction", uselist=False)
+    approval_events = relationship(
+        "PaymentApprovalEvent",
+        back_populates="transaction",
+        order_by="PaymentApprovalEvent.created_at",
+    )

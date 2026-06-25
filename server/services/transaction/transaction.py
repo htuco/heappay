@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from sqlalchemy.exc import IntegrityError
 
 from models.transaction import Transaction
+from repositories.payment_approval.payment_approval import PaymentApprovalRepository
 from repositories.transaction.transaction import TransactionRepository, TransactionStateError
-from schemas.transaction import TransactionCreate, TransactionPatch
+from repositories.user.auth import UserAuthRepository
+from schemas.transaction import TransactionApproveRequest, TransactionCreate, TransactionPatch
 from settings import get_settings
+from utils.totp import decrypt_secret, verify_totp_code
 
 
 class TransactionNotFoundError(Exception):
@@ -44,6 +48,14 @@ class DuplicatePaymentError(Exception):
     """A similar payment was already submitted within the duplicate window."""
 
 
+class ApprovalRequiredError(Exception):
+    """Step-up verification failed or approval is not allowed."""
+
+
+class ApprovalExpiredError(Exception):
+    """The in-app approval window has expired."""
+
+
 class CardFrozenError(Exception):
     """A frozen card cannot send or receive money.
 
@@ -60,8 +72,15 @@ class TransactionService:
     DEFAULT_STATUS = "pending"
     FROZEN_CARD_STATUS = "frozen"
 
-    def __init__(self, repo: TransactionRepository) -> None:
+    def __init__(
+        self,
+        repo: TransactionRepository,
+        approval_repo: PaymentApprovalRepository | None = None,
+        auth_repo: UserAuthRepository | None = None,
+    ) -> None:
         self._repo = repo
+        self._approval_repo = approval_repo or PaymentApprovalRepository(repo._db)
+        self._auth_repo = auth_repo
 
     def list_for_user(
         self,
@@ -226,6 +245,15 @@ class TransactionService:
             seconds=delay_seconds
         )
 
+        type_name = self._repo.get_transaction_type_name(payload.transaction_type_id) or ""
+        requires_approval = self._requires_user_approval(payload, type_name)
+        approval_expires_at = None
+        if requires_approval:
+            timeout_minutes = get_settings().tx_user_approval_timeout_minutes
+            approval_expires_at = datetime.now(timezone.utc) + timedelta(
+                minutes=timeout_minutes
+            )
+
         try:
             row = self._repo.create_with_balance_update(
                 sender_card=sender_card,
@@ -236,7 +264,17 @@ class TransactionService:
                 note=payload.note,
                 processing_eligible_at=processing_eligible_at,
                 idempotency_key=payload.idempotency_key,
+                requires_user_approval=requires_approval,
+                user_approval_expires_at=approval_expires_at,
             )
+            if requires_approval:
+                self._approval_repo.record_event(
+                    transaction_id=row.transaction_id,
+                    event_type="created",
+                    actor_user_id=user_id,
+                    detail="Awaiting in-app approval",
+                )
+                self._repo._db.commit()
             return row, True
         except IntegrityError as exc:
             self._repo.rollback()
@@ -247,6 +285,108 @@ class TransactionService:
                         raise ForbiddenError()
                     return existing, False
             raise
+
+    def approve(
+        self,
+        transaction_id: int,
+        payload: TransactionApproveRequest,
+        *,
+        user_id: int,
+    ) -> Transaction:
+        row = self._repo.get_by_id(transaction_id)
+        if row is None:
+            raise TransactionNotFoundError()
+        if not self._user_is_sender(row, user_id):
+            raise ForbiddenError()
+        if not row.requires_user_approval:
+            raise ApprovalRequiredError("This transaction does not require approval.")
+        if row.user_approved_at is not None:
+            raise ApprovalRequiredError("This payment has already been approved.")
+
+        expires = row.user_approval_expires_at
+        if expires is not None:
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires:
+                raise ApprovalExpiredError()
+
+        method = self._verify_step_up(user_id, payload)
+
+        try:
+            row = self._repo.approve_user_confirmation(
+                transaction_id,
+                approval_method=method,
+            )
+        except TransactionStateError as exc:
+            message = str(exc)
+            if "expired" in message.lower():
+                raise ApprovalExpiredError() from exc
+            raise ApprovalRequiredError(message) from exc
+
+        self._approval_repo.record_event(
+            transaction_id=transaction_id,
+            event_type="approved",
+            actor_user_id=user_id,
+            verification_method=method,
+        )
+        self._repo._db.commit()
+        return row
+
+    def list_approval_events(self, transaction_id: int, *, user_id: int) -> list:
+        row = self._repo.get_by_id(transaction_id)
+        if row is None:
+            raise TransactionNotFoundError()
+        if not self._user_participates(row, user_id):
+            raise ForbiddenError()
+        return self._approval_repo.list_for_transaction(transaction_id)
+
+    def _requires_user_approval(self, payload: TransactionCreate, type_name: str) -> bool:
+        if payload.requires_approval:
+            return True
+        settings = get_settings()
+        configured_types = {
+            name.strip().lower()
+            for name in settings.tx_user_approval_type_names.split(",")
+            if name.strip()
+        }
+        if type_name.lower() in configured_types:
+            return True
+        if payload.amount >= settings.tx_user_approval_above_amount:
+            return True
+        return False
+
+    def _verify_step_up(self, user_id: int, payload: TransactionApproveRequest) -> str:
+        if self._auth_repo is None:
+            raise ApprovalRequiredError("Step-up verification is unavailable.")
+
+        user = self._auth_repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ForbiddenError()
+
+        settings = get_settings()
+        if user.totp_enabled:
+            if not payload.totp_code:
+                raise ApprovalRequiredError("Authenticator code is required.")
+            if not user.totp_secret:
+                raise ApprovalRequiredError("Two-factor authentication is not configured.")
+            plain_secret = decrypt_secret(user.totp_secret, settings.totp_encryption_key)
+            if not verify_totp_code(plain_secret, payload.totp_code):
+                raise ApprovalRequiredError("Invalid authentication code.")
+            return "totp"
+
+        if not payload.password:
+            raise ApprovalRequiredError("Password is required to confirm this payment.")
+        if not bcrypt.checkpw(
+            payload.password.encode("utf-8"),
+            user.password_hash.encode("utf-8"),
+        ):
+            raise ApprovalRequiredError("Incorrect password.")
+        return "password"
+
+    def _user_is_sender(self, row: Transaction, user_id: int) -> bool:
+        if row.sender_card_id is None:
+            return False
+        return self._repo.card_owner_id(row.sender_card_id) == user_id
 
     @staticmethod
     def _is_idempotency_violation(exc: IntegrityError) -> bool:
@@ -344,11 +484,23 @@ class TransactionService:
                 # sender's held funds (same reversal as fail) but stamps the distinct
                 # 'cancelled' status so it doesn't read as a processor failure.
                 reason = "STAFF_CANCELLED" if processed_by == "staff" else "USER_CANCELLED"
-                return self._repo.cancel(
+                updated = self._repo.cancel(
                     row.transaction_id,
                     reason_code=reason,
                     processed_by=processed_by,
                 )
+                if row.requires_user_approval and row.user_approved_at is None:
+                    actor_id = None
+                    if processed_by == "user":
+                        actor_id = self._repo.card_owner_id(row.sender_card_id)
+                    self._approval_repo.record_event(
+                        transaction_id=row.transaction_id,
+                        event_type="cancelled",
+                        actor_user_id=actor_id,
+                        detail=reason,
+                    )
+                    self._repo._db.commit()
+                return updated
             if new_status_id == failed_id:
                 reason = "STAFF_DENIED" if processed_by == "staff" else "USER_DENIED"
                 return self._repo.fail(

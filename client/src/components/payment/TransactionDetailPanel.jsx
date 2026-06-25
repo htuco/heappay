@@ -11,16 +11,20 @@ import {
   RotateCcw,
   Save,
   Share2,
+  ShieldCheck,
   X,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import UserAvatar from '@/components/ui/UserAvatar'
+import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
 import { useAuth } from '@/hooks/useAuth'
 import useTransactionDetail from '@/hooks/useTransactionDetail'
 import { getTransactionStatus } from '@/components/payment/transactionHistory.utils'
+import transactionsService from '@/services/transactionsService'
+import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 
-const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback' }
+const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback', 6: 'Fine' }
 
 // Pre-check copy for the refund button when a refund already exists for this
 // transaction (a transaction can have at most one refund ever). `refund_status`
@@ -131,6 +135,15 @@ function getCounterparty(transaction, currentUserId, ownedCardIds) {
     (fallbackCardId ? `Card #${fallbackCardId}` : null)
   const user = party ?? transaction?.counterparty ?? null
   return { name: name || '—', user }
+}
+
+function isAwaitingApproval(transaction) {
+  return Boolean(
+    transaction?.awaiting_user_approval ||
+      (transaction?.requires_user_approval &&
+        !transaction?.user_approved_at &&
+        Number(transaction?.status_id) === 1),
+  )
 }
 
 function isPending(transaction) {
@@ -299,8 +312,13 @@ function TransferFlow({ transaction }) {
 function DetailsSection({ transaction, currentUserId, ownedCardIds }) {
   const outgoing = isOutgoing(transaction, currentUserId, ownedCardIds)
   const counterparty = getCounterparty(transaction, currentUserId, ownedCardIds)
-  const statusLabel = getStatusLabel(transaction)
-  const statusVariant = getTransactionStatus(Number(transaction?.status_id)).variant
+  const statusMeta = getTransactionStatus(
+    Number(transaction?.status_id),
+    transaction?.has_pending_refund,
+    isAwaitingApproval(transaction),
+  )
+  const statusLabel = statusMeta.label
+  const statusVariant = statusMeta.variant
 
   return (
     <section>
@@ -327,6 +345,74 @@ function DetailsSection({ transaction, currentUserId, ownedCardIds }) {
         <DetailRow label="Fee">{formatAmount(transaction?.fee ?? 0)}</DetailRow>
         <DetailRow label="Type">{getTypeLabel(transaction)}</DetailRow>
       </dl>
+    </section>
+  )
+}
+
+const EVENT_LABELS = {
+  created: 'Payment created — awaiting approval',
+  approved: 'Approved by you',
+  cancelled: 'Cancelled',
+  timed_out: 'Approval window expired',
+}
+
+function ApprovalAuditSection({ transactionId, open }) {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (!open || !transactionId) return
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    transactionsService
+      .listApprovalEvents(transactionId)
+      .then((rows) => {
+        if (!cancelled) setEvents(rows ?? [])
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message ?? 'Could not load approval history.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, transactionId])
+
+  if (!open) return null
+  if (loading) {
+    return (
+      <section className="rounded-surface border border-border bg-muted/20 p-4 text-xs text-muted-foreground">
+        Loading approval history…
+      </section>
+    )
+  }
+  if (error || events.length === 0) return null
+
+  return (
+    <section>
+      <h3 className="text-sm font-semibold text-card-foreground">Approval history</h3>
+      <ol className="mt-2 space-y-2">
+        {events.map((event) => (
+          <li
+            key={event.event_id}
+            className="rounded-surface border border-border bg-card px-3 py-2 text-xs"
+          >
+            <p className="font-medium text-card-foreground">
+              {EVENT_LABELS[event.event_type] ?? event.event_type}
+            </p>
+            <p className="mt-0.5 text-muted-foreground">{formatDate(event.created_at)}</p>
+            {event.verification_method && (
+              <p className="mt-0.5 text-muted-foreground">
+                Verified via {event.verification_method}
+              </p>
+            )}
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
@@ -365,14 +451,20 @@ function PanelBody({
   currentUserId,
   refundRequestedTransactionIds,
   isCancelling,
+  onApproved,
 }) {
   const [notes, setNotes] = useState(detail?.note ?? detail?.notes ?? '')
+  const [approvalOpen, setApprovalOpen] = useState(false)
   const animationClass = isClosing ? PANEL_EXIT_ANIMATION : PANEL_ENTER_ANIMATION
   const transactionId = getTransactionId(detail)
   const sentByCurrentUser = isSentByCurrentUser(detail, ownedCardIds, currentUserId)
   // Action buttons only render when a handler is wired — lets the panel be opened
   // read-only (e.g. from the wallet's per-card activity list).
   const canCancel = typeof onCancel === 'function' && isPending(detail) && sentByCurrentUser
+  const canApprove =
+    typeof onApproved === 'function' &&
+    isAwaitingApproval(detail) &&
+    sentByCurrentUser
   // A refund already exists for this transaction if the detail says so (any
   // status — pending/approved/declined/cancelled) or it was just requested in
   // this session. `refund_status` is authoritative when present; the optimistic
@@ -436,12 +528,25 @@ function PanelBody({
               currentUserId={currentUserId}
               ownedCardIds={ownedCardIds}
             />
+            {detail?.requires_user_approval && (
+              <ApprovalAuditSection transactionId={transactionId} open={hasApiDetail} />
+            )}
             <NotesSection value={notes} onChange={setNotes} />
           </>
         )}
       </div>
 
       <footer className="grid grid-cols-2 gap-3 border-t border-border bg-card px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pb-4">
+        {canApprove && (
+          <Button
+            className="col-span-2 h-11 rounded-input px-4 text-sm font-semibold shadow-none"
+            disabled={!detail}
+            onClick={() => setApprovalOpen(true)}
+          >
+            <ShieldCheck className="mr-2 size-4" />
+            Approve payment
+          </Button>
+        )}
         {canCancel && (
           <Button
             variant="destructive"
@@ -496,6 +601,17 @@ function PanelBody({
           </Button>
         </span>
       </footer>
+
+      <PaymentApprovalModal
+        isOpen={approvalOpen}
+        onClose={() => setApprovalOpen(false)}
+        transaction={detail}
+        onApproved={(updated) => {
+          setApprovalOpen(false)
+          onApproved?.(updated)
+          emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
+        }}
+      />
     </aside>
   )
 }
@@ -506,6 +622,7 @@ export default function TransactionDetailPanel({
   onClose,
   onRefund,
   onCancel,
+  onApproved,
   onShare,
   onSaveNotes,
   ownedCardIds,
@@ -578,6 +695,7 @@ export default function TransactionDetailPanel({
           currentUserId={currentUserId}
           refundRequestedTransactionIds={refundRequestedTransactionIds}
           isCancelling={isCancelling}
+          onApproved={onApproved}
         />
       ) : (
         <aside

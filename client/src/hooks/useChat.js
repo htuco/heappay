@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { chatService } from '@/services/chatService'
 import { getApiErrorMessage } from '@/utils/api'
 
-export function useChat() {
+export function useChat(agentMode = false) {
   const { user, isLoading: authLoading } = useAuth()
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -21,7 +21,7 @@ export function useChat() {
     setIsLoading(true)
 
     chatService
-      .getHistory()
+      .getHistory(agentMode)
       .then((history) => {
         if (!cancelled) setMessages(history)
       })
@@ -35,7 +35,7 @@ export function useChat() {
     return () => {
       cancelled = true
     }
-  }, [authLoading, user])
+  }, [authLoading, user, agentMode])
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = text.trim()
@@ -45,7 +45,7 @@ export function useChat() {
     setIsSending(true)
 
     try {
-      const { history } = await chatService.sendMessage(trimmed)
+      const { history } = await chatService.sendMessage(trimmed, agentMode)
       setMessages(history)
     } catch (err) {
       console.error('Chat error:', err)
@@ -60,12 +60,12 @@ export function useChat() {
     } finally {
       setIsSending(false)
     }
-  }, [])
+  }, [agentMode])
 
   const clearHistory = useCallback(async () => {
-    await chatService.clearHistory()
+    await chatService.clearHistory(agentMode)
     setMessages([])
-  }, [])
+  }, [agentMode])
 
   return { messages, isLoading, isSending, sendMessage, clearHistory }
 }

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     supabase_database_url: str = ""
     cohere_api_key: str = ""
+    gemini_api_key: str = ""
 
     # Supabase Storage (optional — required for /storage/images and POST /auth/me/avatar)
     supabase_url: str | None = None
@@ -55,6 +56,11 @@ class Settings(BaseSettings):
     tx_pending_timeout_action: Literal["allow", "deny"] = "deny"
     tx_staff_bypass_delay: bool = False
     tx_duplicate_window_seconds: int = 90
+    # In-app approval (step-up) before settling sensitive / online payments.
+    tx_user_approval_above_amount: Decimal = Decimal("100.00")
+    tx_user_approval_timeout_minutes: int = 15
+    # Comma-separated transaction type names that always require user approval (e.g. fines).
+    tx_user_approval_type_names: str = "fine"
 
     # TOTP 2FA — Fernet key for encrypting totp_secret at rest
     totp_encryption_key: str = ""

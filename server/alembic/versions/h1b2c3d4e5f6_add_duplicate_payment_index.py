@@ -1,7 +1,7 @@
 """add index for duplicate payment detection
 
 Revision ID: h1b2c3d4e5f6
-Revises: g3a1b2c3d4e5
+Revises: 96c2f4edc0ab
 """
 
 from typing import Sequence, Union
@@ -9,7 +9,7 @@ from typing import Sequence, Union
 from alembic import op
 
 revision: str = "h1b2c3d4e5f6"
-down_revision: Union[str, Sequence[str], None] = "g3a1b2c3d4e5"
+down_revision: Union[str, Sequence[str], None] = "96c2f4edc0ab"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
