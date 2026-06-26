@@ -62,7 +62,6 @@ export default function RecoveryMethodPanel({ email, onChangePassword, totpEnabl
 
       <ActionRow
         label="Send reset email"
-        value="Email link"
         hint="Sends a time-limited password reset link to your account email."
         action={
           <Button
@@ -78,7 +77,6 @@ export default function RecoveryMethodPanel({ email, onChangePassword, totpEnabl
 
       <ActionRow
         label="Change current password"
-        value="Signed in"
         hint="Use this when you know your current password."
         action={
           <Button variant="outline" className="w-full sm:w-auto" onClick={onChangePassword}>

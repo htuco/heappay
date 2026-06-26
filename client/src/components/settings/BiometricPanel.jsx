@@ -118,7 +118,6 @@ export default function BiometricPanel() {
 	}
 
 	const enabled = status.enabled
-	const statusLabel = isLoadingStatus ? 'Checking...' : enabled ? 'Enabled' : 'Disabled'
 	const isBusy = isLoadingStatus || isEnrolling || isDisabling
 
 	return (
@@ -158,7 +157,6 @@ export default function BiometricPanel() {
 
 			<ActionRow
 				label="Biometric authentication"
-				value={statusLabel}
 				hint={
 					enabled
 						? `${status.credential_count || 1} credential enrolled. Disabling verifies your biometrics first, then revokes server access.`

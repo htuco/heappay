@@ -293,7 +293,6 @@ export default function TwoFactorPanel({ enabled, onStatusChange }) {
 
       <ActionRow
         label="Two-factor authentication"
-        value={enabled ? 'Enabled' : 'Disabled'}
         hint={enabled
           ? 'Requires your current authenticator code to disable.'
           : 'Use an authenticator app like Google Authenticator or Authy.'}

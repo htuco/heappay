@@ -196,12 +196,20 @@ export default function SettingsPage() {
           description="Email notices for payments and refunds, plus in-app billing reminders. Use Save changes below to update your account."
         >
           <div className="space-y-3">
+            {user?.email ? (
+              <p className="rounded-surface border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+                Transaction emails are sent to{' '}
+                <span className="break-all font-medium text-card-foreground">{user.email}</span>
+              </p>
+            ) : null}
             <ControlRow
               label="Payment sent"
               hint="Email when money you send completes."
               emphasize
+              alignToggle
             >
               <Toggle
+                compact
                 enabled={draftEmailPaymentSent}
                 label={draftEmailPaymentSent ? 'Enabled' : 'Disabled'}
                 onToggle={() => setDraftEmailPaymentSent((current) => !current)}
@@ -211,8 +219,10 @@ export default function SettingsPage() {
             <ControlRow
               label="Payment received"
               hint="Email when you receive a transfer."
+              alignToggle
             >
               <Toggle
+                compact
                 enabled={draftEmailPaymentReceived}
                 label={draftEmailPaymentReceived ? 'Enabled' : 'Disabled'}
                 onToggle={() => setDraftEmailPaymentReceived((current) => !current)}
@@ -222,8 +232,10 @@ export default function SettingsPage() {
             <ControlRow
               label="Top-up"
               hint="Email when a card top-up completes."
+              alignToggle
             >
               <Toggle
+                compact
                 enabled={draftEmailTopup}
                 label={draftEmailTopup ? 'Enabled' : 'Disabled'}
                 onToggle={() => setDraftEmailTopup((current) => !current)}
@@ -233,8 +245,10 @@ export default function SettingsPage() {
             <ControlRow
               label="Refund status"
               hint="Email when a refund request is approved or declined."
+              alignToggle
             >
               <Toggle
+                compact
                 enabled={draftEmailRefundStatus}
                 label={draftEmailRefundStatus ? 'Enabled' : 'Disabled'}
                 onToggle={() => setDraftEmailRefundStatus((current) => !current)}
@@ -244,8 +258,10 @@ export default function SettingsPage() {
             <ControlRow
               label="Billing reminders"
               hint="Renewal reminders and recurring payment confirmations."
+              alignToggle
             >
               <Toggle
+                compact
                 enabled={draftBillingReminders}
                 label={draftBillingReminders ? 'Enabled' : 'Disabled'}
                 onToggle={() => setDraftBillingReminders((current) => !current)}
