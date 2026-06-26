@@ -34,8 +34,18 @@ export const TX_SORT_OPTIONS = [
   { value: 'amount_asc', label: 'Amount low' },
 ]
 
-export function formatUsd(value) {
-  const num = Number.parseFloat(value ?? '0')
+export const HIDDEN_AMOUNT_LABEL = 'Hidden'
+
+export function formatUsd(value, options = {}) {
+  if (options.hidden) return HIDDEN_AMOUNT_LABEL
+  const num = Number.parseFloat(value ?? '')
+  if (Number.isNaN(num)) return '—'
+  return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+}
+
+export function formatMonetaryValue(value, { hidden = false } = {}) {
+  if (hidden) return HIDDEN_AMOUNT_LABEL
+  const num = Number.parseFloat(value ?? '')
   if (Number.isNaN(num)) return '—'
   return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }

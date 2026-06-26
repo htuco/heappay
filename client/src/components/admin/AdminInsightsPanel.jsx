@@ -12,7 +12,7 @@ import {
 import { Activity, ArrowUpRight, TicketCheck, TrendingUp } from 'lucide-react'
 
 import { useAdminStats } from '@/hooks/useAdminStats'
-import { TX_STATUS_META, TX_TYPE_META, formatUsd } from '@/utils/transactionMeta'
+import { TX_STATUS_META, TX_TYPE_META, HIDDEN_AMOUNT_LABEL, formatMonetaryValue } from '@/utils/transactionMeta'
 
 const MONTHS = 6
 
@@ -28,7 +28,7 @@ function monthLabel(period) {
   return new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'short' })
 }
 
-function buildChartData(monthly) {
+function buildChartData(monthly, amountsHidden) {
   const byPeriod = Object.fromEntries(
     (monthly ?? []).map((point) => [point.period, point])
   )
@@ -40,8 +40,9 @@ function buildChartData(monthly) {
     const point = byPeriod[period]
     data.push({
       label: monthLabel(period),
-      volume: point ? Number.parseFloat(point.volume) : 0,
+      volume: point && !point.volume_hidden ? Number.parseFloat(point.volume) : 0,
       count: point?.count ?? 0,
+      volumeHidden: amountsHidden || Boolean(point?.volume_hidden),
     })
   }
   return data
@@ -49,12 +50,27 @@ function buildChartData(monthly) {
 
 function VolumeTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
-  const { volume, count } = payload[0].payload
+  const { volume, count, volumeHidden } = payload[0].payload
   return (
     <div className="rounded-input border border-border bg-card px-3 py-2.5 shadow-lg">
       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="tabular-nums text-sm font-semibold text-card-foreground">{formatUsd(volume)}</p>
+      {volumeHidden ? (
+        <p className="text-sm font-semibold text-card-foreground">{HIDDEN_AMOUNT_LABEL}</p>
+      ) : (
+        <p className="tabular-nums text-sm font-semibold text-card-foreground">{formatMonetaryValue(volume)}</p>
+      )}
       <p className="text-xs text-muted-foreground">{count} transaction{count !== 1 ? 's' : ''}</p>
+    </div>
+  )
+}
+
+function CountTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const { count } = payload[0].payload
+  return (
+    <div className="rounded-input border border-border bg-card px-3 py-2.5 shadow-lg">
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold text-card-foreground">{count} transaction{count !== 1 ? 's' : ''}</p>
     </div>
   )
 }
@@ -146,7 +162,11 @@ const TYPE_LABELS = Object.fromEntries(
 export default function AdminInsightsPanel() {
   const { txStats, requestStats, isLoading, error, refresh } = useAdminStats({ months: MONTHS })
 
-  const chartData = useMemo(() => buildChartData(txStats?.monthly), [txStats])
+  const chartData = useMemo(
+    () => buildChartData(txStats?.monthly, txStats?.amounts_hidden),
+    [txStats],
+  )
+  const amountsHidden = Boolean(txStats?.amounts_hidden)
 
   if (isLoading) return <InsightsSkeleton />
 
@@ -172,7 +192,9 @@ export default function AdminInsightsPanel() {
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-card-foreground sm:text-lg">Platform Activity</h2>
-          <p className="text-xs text-muted-foreground">Completed volume, last {MONTHS} months</p>
+          <p className="text-xs text-muted-foreground">
+            {amountsHidden ? `Transaction count, last ${MONTHS} months` : `Completed volume, last ${MONTHS} months`}
+          </p>
         </div>
       </header>
 
@@ -186,7 +208,7 @@ export default function AdminInsightsPanel() {
         <HeadlineStat
           icon={TrendingUp}
           label="Completed Volume"
-          value={formatUsd(txStats?.completed_volume)}
+          value={formatMonetaryValue(txStats?.completed_volume, { hidden: amountsHidden })}
           hint="All time"
         />
         <HeadlineStat
@@ -221,8 +243,16 @@ export default function AdminInsightsPanel() {
                 tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                 width={42}
               />
-              <Tooltip cursor={{ fill: 'var(--muted)', fillOpacity: 0.4 }} content={VolumeTooltip} />
-              <Bar dataKey="volume" fill="var(--primary)" radius={[6, 6, 0, 0]} maxBarSize={42} />
+              <Tooltip
+                cursor={{ fill: 'var(--muted)', fillOpacity: 0.4 }}
+                content={amountsHidden ? CountTooltip : VolumeTooltip}
+              />
+              <Bar
+                dataKey={amountsHidden ? 'count' : 'volume'}
+                fill="var(--primary)"
+                radius={[6, 6, 0, 0]}
+                maxBarSize={42}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

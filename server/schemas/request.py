@@ -15,6 +15,7 @@ class RefundRequestDetailResponse(BaseModel):
     request_id: int
     transaction_id: int
     transaction_amount: Decimal | None = None
+    transaction_amount_hidden: bool = False
     transaction_note: str | None = None
     sender_name: str | None = None
     recipient_name: str | None = None

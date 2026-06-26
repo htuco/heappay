@@ -5,7 +5,7 @@ from database import get_db
 from ratelimit import TRANSACTION_RATE_LIMIT, limiter, user_id_key_func
 from repositories.transaction.transaction import TransactionRepository
 from repositories.user.auth import UserAuthRepository
-from routes.dependencies import get_current_user_id, require_admin, require_staff
+from routes.dependencies import get_current_user_id, get_user_context, require_admin, require_staff
 from schemas.pagination import Page
 from schemas.response import ApiResponse
 from schemas.transaction import (
@@ -42,6 +42,10 @@ from services.transaction.transaction import (
     TransactionTypeNotFoundError,
 )
 from settings import get_settings
+from utils.transaction_privacy import (
+    build_masked_stats,
+    mask_transaction_response,
+)
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -86,10 +90,12 @@ def _card_to_party(card) -> TransactionPartyResponse | None:
     )
 
 
-def _to_detail_response(row) -> TransactionResponse:
+def _to_detail_response(row, *, mask_amount: bool = False) -> TransactionResponse:
     base = TransactionResponse.model_validate(row)
     base.sender = _card_to_party(row.sender_card)
     base.recipient = _card_to_party(row.recipient_card)
+    if mask_amount:
+        mask_transaction_response(base)
     return base
 
 
@@ -167,7 +173,7 @@ def list_all_transactions(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
-    items = [_to_detail_response(r) for r in rows]
+    items = [_to_detail_response(r, mask_amount=True) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
     )
@@ -192,21 +198,7 @@ def get_transaction_stats(
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionStatsResponse]:
     raw = service.get_platform_stats(months=months)
-    data = TransactionStatsResponse(
-        monthly=[
-            TransactionStatsMonthlyPoint(
-                period=r["period"],
-                count=r["count"],
-                volume=r["volume"],
-            )
-            for r in raw["monthly"]
-        ],
-        by_status=raw["by_status"],
-        by_type=raw["by_type"],
-        total_count=raw["total_count"],
-        completed_volume=raw["completed_volume"],
-        months=raw["months"],
-    )
+    data = build_masked_stats(raw)
     return ApiResponse[TransactionStatsResponse](
         success=True,
         message=f"Transaction stats for the last {months} month(s).",
@@ -231,8 +223,10 @@ def list_transactions_for_user(
         pattern="^(newest|oldest|amount_desc|amount_asc)$",
     ),
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[Page[TransactionResponse]]:
+    mask_amount = ctx.is_admin
     try:
         rows, total = service.list_for_user(
             user_id=user_id,
@@ -255,7 +249,7 @@ def list_transactions_for_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
-    items = [_to_detail_response(r) for r in rows]
+    items = [_to_detail_response(r, mask_amount=mask_amount) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
     )
@@ -275,6 +269,7 @@ def patch_transaction_as_staff(
     transaction_id: int,
     payload: TransactionPatch,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionResponse]:
     try:
@@ -302,7 +297,7 @@ def patch_transaction_as_staff(
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction updated successfully.",
-        data=_to_detail_response(row),
+        data=_to_detail_response(row, mask_amount=ctx.is_admin),
     )
 
 
@@ -314,6 +309,7 @@ def patch_transaction_as_staff(
 def get_transaction_as_staff(
     transaction_id: int,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionResponse]:
     row = service.get_by_id_staff(transaction_id)
@@ -324,7 +320,7 @@ def get_transaction_as_staff(
     return ApiResponse[TransactionResponse](
         success=True,
         message="Transaction retrieved successfully.",
-        data=_to_detail_response(row),
+        data=_to_detail_response(row, mask_amount=ctx.is_admin),
     )
 
 

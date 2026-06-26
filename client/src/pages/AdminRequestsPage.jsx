@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import RefundRequestDialog from '@/components/admin/RefundRequestDialog'
 import FreezeRequestDialog from '@/components/admin/FreezeRequestDialog'
 import transactionsService from '@/services/transactionsService'
+import { formatMonetaryValue } from '@/utils/transactionMeta'
 import { REQUEST_STATUS_IDS, REQUEST_STATUS_META } from '@/utils/requestStatus'
 
 const PAGE_SIZE = 20
@@ -189,9 +190,13 @@ function RefundTab() {
         <td className="px-4 py-3 text-sm text-foreground">{req.requester_name ?? `User #${req.requester_user_id}`}</td>
         <td className="px-4 py-3 text-sm text-muted-foreground">
           #{req.refund_detail?.transaction_id ?? '—'}
-          {req.refund_detail?.transaction_amount ? (
-            <span className="ml-2 font-medium text-foreground">${Number(req.refund_detail.transaction_amount).toFixed(2)}</span>
-          ) : null}
+          {(req.refund_detail?.transaction_amount != null || req.refund_detail?.transaction_amount_hidden) && (
+            <span className="ml-2 font-medium text-foreground">
+              {formatMonetaryValue(req.refund_detail?.transaction_amount, {
+                hidden: req.refund_detail?.transaction_amount_hidden,
+              })}
+            </span>
+          )}
         </td>
         <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
           {formatDate(isPending ? req.created_at : req.resolved_at ?? req.created_at)}
