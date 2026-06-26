@@ -73,8 +73,16 @@ export async function completeBiometricRegistration({ challengeId, credential })
 	return data
 }
 
-export async function disableBiometricAuthentication() {
-	const { data } = await api.delete('/auth/biometrics')
+export async function beginBiometricDisable() {
+	const { data } = await api.post('/auth/biometrics/disable/options')
+	return data
+}
+
+export async function completeBiometricDisable({ challengeId, credential }) {
+	const { data } = await api.post('/auth/biometrics/disable/complete', {
+		challenge_id: challengeId,
+		credential,
+	})
 	return data
 }
 

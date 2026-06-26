@@ -5,13 +5,19 @@ import ActionRow from '@/components/settings/ActionRow'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import {
+	beginBiometricDisable,
 	beginBiometricRegistration,
+	completeBiometricDisable,
 	completeBiometricRegistration,
-	disableBiometricAuthentication,
 	getBiometricStatus,
 } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
-import { createBiometricCredential, isWebAuthnEnrollmentAvailable } from '@/utils/webauthn'
+import {
+	createBiometricCredential,
+	getBiometricAssertion,
+	isWebAuthnAssertionAvailable,
+	isWebAuthnEnrollmentAvailable,
+} from '@/utils/webauthn'
 
 const UNSUPPORTED_MESSAGE =
 	'Biometric authentication is not available on this device or browser.'
@@ -87,13 +93,25 @@ export default function BiometricPanel() {
 		setIsDisabling(true)
 
 		try {
-			const response = await disableBiometricAuthentication()
+		if (!window.HeapNativeBiometrics?.getAssertion && !isWebAuthnAssertionAvailable()) {
+			throw new Error(UNSUPPORTED_MESSAGE)
+		}
+		const options = await beginBiometricDisable()
+		const credential = await getBiometricAssertion(options.publicKey)
+		const response = await completeBiometricDisable({
+			challengeId: options.challenge_id,
+			credential,
+		})
 			setStatus(response)
 			setSuccess(
 				'Biometric authentication is disabled. You can still use password, PIN, or authenticator fallback.',
 			)
 		} catch (err) {
+		if (err?.name === 'NotAllowedError') {
+			setError('Biometric verification was cancelled or timed out. Biometrics remain enabled.')
+		} else {
 			setError(getApiErrorMessage(err, 'Could not disable biometric authentication.'))
+		}
 		} finally {
 			setIsDisabling(false)
 		}
@@ -130,7 +148,7 @@ export default function BiometricPanel() {
 							</div>
 							<p className="mt-1 text-xs leading-5 text-muted-foreground">
 								{enabled
-									? 'Biometric approval is enabled for your account. You can revoke it here.'
+									? 'Biometric approval is enabled. Disabling requires Face ID or fingerprint.'
 									: 'Enroll this device now. Password, PIN, and authenticator fallback stay available.'}
 							</p>
 						</div>
@@ -143,7 +161,7 @@ export default function BiometricPanel() {
 				value={statusLabel}
 				hint={
 					enabled
-						? `${status.credential_count || 1} credential enrolled. Disabling revokes server access, but you may still see the passkey in your device settings.`
+						? `${status.credential_count || 1} credential enrolled. Disabling verifies your biometrics first, then revokes server access.`
 						: 'Use the secure biometric prompt on this device to enroll a passkey credential.'
 				}
 				action={

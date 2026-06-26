@@ -16,6 +16,7 @@ from main import create_app  # noqa: E402
 from routes.user.auth import get_auth_service  # noqa: E402
 from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
 from schemas.user.biometric import (  # noqa: E402
+    BiometricAuthenticationOptionsResponse,
     BiometricCredentialResponse,
     BiometricRegistrationOptionsResponse,
     BiometricStatusResponse,
@@ -99,6 +100,15 @@ class _FakeAuthService:
             device_type="single_device",
             backed_up=False,
         )
+
+    def begin_biometric_disable(self, _user_id):
+        return BiometricAuthenticationOptionsResponse(
+            challenge_id=8,
+            publicKey={"challenge": "abc", "rpId": "localhost", "allowCredentials": []},
+        )
+
+    def complete_biometric_disable(self, _user_id, _payload):
+        return BiometricStatusResponse(enabled=False, credential_count=0)
 
     def disable_biometric_authentication(self, _user_id):
         return BiometricStatusResponse(enabled=False, credential_count=0)
@@ -284,6 +294,28 @@ def test_biometric_disable_returns_disabled_status() -> None:
     resp = client.delete(
         "/auth/biometrics",
         headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"enabled": False, "credential_count": 0}
+
+
+def test_biometric_disable_options_returns_public_key_options() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/disable/options",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["challenge_id"] == 8
+    assert resp.json()["publicKey"]["rpId"] == "localhost"
+
+
+def test_biometric_disable_complete_returns_disabled_status() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/disable/complete",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"challenge_id": 8, "credential": {"id": "credential-1"}},
     )
     assert resp.status_code == 200
     assert resp.json() == {"enabled": False, "credential_count": 0}

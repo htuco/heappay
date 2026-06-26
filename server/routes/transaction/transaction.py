@@ -435,6 +435,28 @@ def get_transaction(
 
 
 @router.post(
+    "/biometric/options",
+    response_model=ApiResponse[BiometricApprovalOptionsResponse],
+    summary="Start biometric verification before creating a transaction.",
+)
+def transaction_biometric_options(
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[BiometricApprovalOptionsResponse]:
+    try:
+        options = service.begin_biometric_transaction_verification(user_id=user_id)
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or _APPROVAL_REQUIRED
+        ) from None
+    return ApiResponse[BiometricApprovalOptionsResponse](
+        success=True,
+        message="Biometric verification started.",
+        data=options,
+    )
+
+
+@router.post(
     "",
     response_model=ApiResponse[TransactionResponse],
     status_code=status.HTTP_201_CREATED,
@@ -478,6 +500,10 @@ def create_transaction(
     except DuplicatePaymentError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_PAYMENT
+        ) from None
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or _APPROVAL_REQUIRED
         ) from None
     except ForbiddenError:
         raise HTTPException(

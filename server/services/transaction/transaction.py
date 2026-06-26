@@ -300,6 +300,8 @@ class TransactionService:
         if sender_card is not None and sender_card.balance < payload.amount:
             raise InsufficientBalanceError()
 
+        self._verify_transaction_create_biometric(user_id, payload)
+
         delay_seconds = get_settings().tx_min_processing_delay_seconds
         processing_eligible_at = datetime.now(timezone.utc) + timedelta(
             seconds=delay_seconds
@@ -357,6 +359,41 @@ class TransactionService:
                         raise ForbiddenError()
                     return existing, False
             raise
+
+    def begin_biometric_transaction_verification(
+        self,
+        *,
+        user_id: int,
+    ) -> BiometricApprovalOptionsResponse:
+        if self._auth_repo is None:
+            raise ApprovalRequiredError("Step-up verification is unavailable.")
+
+        credentials = self._auth_repo.list_biometric_credentials(user_id)
+        if not credentials:
+            raise ApprovalRequiredError("Biometric authentication is not enabled.")
+
+        options = generate_authentication_options(
+            rp_id=get_settings().webauthn_rp_id,
+            allow_credentials=[
+                PublicKeyCredentialDescriptor(id=_base64url_decode(credential.credential_id))
+                for credential in credentials
+            ],
+            user_verification=UserVerificationRequirement.REQUIRED,
+        )
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=get_settings().webauthn_registration_challenge_expire_minutes,
+        )
+        challenge = self._auth_repo.create_biometric_authentication_challenge(
+            user_id=user_id,
+            transaction_id=None,
+            challenge=_base64url_encode(options.challenge),
+            expires_at=expires_at,
+        )
+
+        return BiometricApprovalOptionsResponse(
+            challenge_id=challenge.challenge_id,
+            publicKey=json.loads(options_to_json(options)),
+        )
 
     def approve(
         self,
@@ -474,6 +511,23 @@ class TransactionService:
             return True
         return False
 
+    def _verify_transaction_create_biometric(
+        self,
+        user_id: int,
+        payload: TransactionCreate,
+    ) -> None:
+        if self._auth_repo is None:
+            return
+
+        credentials = self._auth_repo.list_biometric_credentials(user_id)
+        if not credentials:
+            return
+
+        if not payload.biometric:
+            raise ApprovalRequiredError("Biometric verification is required to send money.")
+
+        self._verify_biometric_approval(None, user_id, payload.biometric)
+
     @staticmethod
     def _recipient_name(recipient_card) -> str | None:
         """Best-effort display name for the recipient, used for keyword matching."""
@@ -549,7 +603,7 @@ class TransactionService:
 
     def _verify_biometric_approval(
         self,
-        transaction_id: int,
+        transaction_id: int | None,
         user_id: int,
         payload: BiometricApprovalAssertion,
     ) -> str:

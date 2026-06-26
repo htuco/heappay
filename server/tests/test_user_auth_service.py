@@ -7,7 +7,10 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
 
 from schemas.user.auth import ChangePasswordRequest  # noqa: E402
-from schemas.user.biometric import BiometricRegistrationCompleteRequest  # noqa: E402
+from schemas.user.biometric import (  # noqa: E402
+    BiometricDisableRequest,
+    BiometricRegistrationCompleteRequest,
+)
 from services.user.auth import UserAuthService  # noqa: E402
 
 
@@ -86,6 +89,7 @@ class _AuthRepo:
         backed_up,
     ):
         row = SimpleNamespace(
+            credential_row_id=len(self.credentials) + 1,
             user_id=user_id,
             credential_id=credential_id,
             public_key=public_key,
@@ -97,10 +101,50 @@ class _AuthRepo:
         self.credentials.append(row)
         return row
 
+    def get_biometric_credential(self, user_id: int, credential_id: str):
+        for row in self.credentials:
+            if row.user_id == user_id and row.credential_id == credential_id:
+                return row
+        return None
+
     def delete_biometric_credentials(self, user_id: int):
         before = len(self.credentials)
         self.credentials = [row for row in self.credentials if row.user_id != user_id]
         return before - len(self.credentials)
+
+    def create_biometric_authentication_challenge(
+        self,
+        *,
+        user_id,
+        transaction_id,
+        challenge,
+        expires_at,
+    ):
+        row = SimpleNamespace(
+            challenge_id=len(self.challenges) + 1,
+            user_id=user_id,
+            transaction_id=transaction_id,
+            challenge=challenge,
+            expires_at=expires_at,
+            used_at=None,
+        )
+        self.challenges[row.challenge_id] = row
+        return row
+
+    def get_biometric_authentication_challenge(self, *, user_id, transaction_id, challenge_id):
+        row = self.challenges.get(challenge_id)
+        if row and row.user_id == user_id and row.transaction_id == transaction_id:
+            return row
+        return None
+
+    def mark_biometric_authentication_challenge_used(self, challenge_id):
+        self.challenges[challenge_id].used_at = datetime.now(timezone.utc)
+
+    def update_biometric_credential_usage(self, *, credential_row_id, sign_count):
+        for row in self.credentials:
+            if row.credential_row_id == credential_row_id:
+                row.sign_count = sign_count
+                row.last_used_at = datetime.now(timezone.utc)
 
 
 def test_change_password_invalidates_existing_refresh_token() -> None:
@@ -198,12 +242,12 @@ def test_complete_biometric_registration_rejects_expired_challenge() -> None:
         raise AssertionError("Expected expired biometric challenge to fail")
 
 
-def test_disable_biometric_authentication_removes_credentials() -> None:
+def test_disable_biometric_authentication_requires_verification_when_enrolled() -> None:
     repo = _AuthRepo()
     service = UserAuthService(repo)
     repo.create_biometric_credential(
         user_id=repo.user.user_id,
-        credential_id="credential-id",
+        credential_id="Y3JlZGVudGlhbC1pZA",
         public_key=b"public-key",
         sign_count=0,
         aaguid=None,
@@ -211,7 +255,72 @@ def test_disable_biometric_authentication_removes_credentials() -> None:
         backed_up=False,
     )
 
-    response = service.disable_biometric_authentication(repo.user.user_id)
+    try:
+        service.disable_biometric_authentication(repo.user.user_id)
+    except ValueError as exc:
+        assert str(exc) == "BIOMETRIC_VERIFICATION_REQUIRED"
+    else:  # pragma: no cover
+        raise AssertionError("Expected biometric disable to require verification")
+
+
+def test_begin_biometric_disable_creates_account_challenge(monkeypatch) -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    repo.create_biometric_credential(
+        user_id=repo.user.user_id,
+        credential_id="Y3JlZGVudGlhbC1pZA",
+        public_key=b"public-key",
+        sign_count=0,
+        aaguid=None,
+        device_type="single_device",
+        backed_up=False,
+    )
+    monkeypatch.setattr(
+        "services.user.auth.generate_authentication_options",
+        lambda **_: SimpleNamespace(challenge=b"challenge-bytes"),
+    )
+    monkeypatch.setattr(
+        "services.user.auth.options_to_json",
+        lambda _: '{"challenge":"challenge-bytes","allowCredentials":[]}',
+    )
+
+    response = service.begin_biometric_disable(repo.user.user_id)
+
+    assert response.challenge_id == 1
+    assert response.public_key["challenge"] == "challenge-bytes"
+    assert repo.challenges[1].transaction_id is None
+
+
+def test_complete_biometric_disable_verifies_then_removes_credentials(monkeypatch) -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    credential = repo.create_biometric_credential(
+        user_id=repo.user.user_id,
+        credential_id="Y3JlZGVudGlhbC1pZA",
+        public_key=b"public-key",
+        sign_count=0,
+        aaguid=None,
+        device_type="single_device",
+        backed_up=False,
+    )
+    challenge = repo.create_biometric_authentication_challenge(
+        user_id=repo.user.user_id,
+        transaction_id=None,
+        challenge="Y2hhbGxlbmdlLWJ5dGVz",
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+    )
+    monkeypatch.setattr(
+        "services.user.auth.verify_authentication_response",
+        lambda **_: SimpleNamespace(new_sign_count=2),
+    )
+
+    response = service.complete_biometric_disable(
+        repo.user.user_id,
+        BiometricDisableRequest(
+            challenge_id=challenge.challenge_id,
+            credential={"id": credential.credential_id, "rawId": credential.credential_id},
+        ),
+    )
 
     assert response.enabled is False
     assert response.credential_count == 0

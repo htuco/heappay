@@ -187,7 +187,7 @@ export default function PaymentApprovalModal({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-card-foreground">Use Face ID / fingerprint</p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Approve this payment with your enrolled biometric credential.
+                    Confirm it&apos;s you with the biometric credential enrolled in Settings.
                   </p>
                   <Button
                     type="button"
@@ -219,7 +219,7 @@ export default function PaymentApprovalModal({
           </div>
           <p className="text-xs text-muted-foreground">
             {biometricEnabled
-              ? 'Biometrics are optional. You can still use your existing verification method.'
+              ? 'If biometrics are unavailable, use your existing fallback verification.'
               : totpEnabled
               ? 'Enter the 6-digit code from your authenticator app.'
               : 'Quick identity check with your login password. Turn on two-factor auth in Settings to approve with a code instead.'}
