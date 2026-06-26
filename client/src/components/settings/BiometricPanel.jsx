@@ -5,13 +5,19 @@ import ActionRow from '@/components/settings/ActionRow'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import {
+	beginBiometricDisable,
 	beginBiometricRegistration,
+	completeBiometricDisable,
 	completeBiometricRegistration,
-	disableBiometricAuthentication,
 	getBiometricStatus,
 } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
-import { createBiometricCredential, isWebAuthnEnrollmentAvailable } from '@/utils/webauthn'
+import {
+	createBiometricCredential,
+	getBiometricAssertion,
+	isWebAuthnAssertionAvailable,
+	isWebAuthnEnrollmentAvailable,
+} from '@/utils/webauthn'
 
 const UNSUPPORTED_MESSAGE =
 	'Biometric authentication is not available on this device or browser.'
@@ -87,13 +93,25 @@ export default function BiometricPanel() {
 		setIsDisabling(true)
 
 		try {
-			const response = await disableBiometricAuthentication()
+		if (!window.HeapNativeBiometrics?.getAssertion && !isWebAuthnAssertionAvailable()) {
+			throw new Error(UNSUPPORTED_MESSAGE)
+		}
+		const options = await beginBiometricDisable()
+		const credential = await getBiometricAssertion(options.publicKey)
+		const response = await completeBiometricDisable({
+			challengeId: options.challenge_id,
+			credential,
+		})
 			setStatus(response)
 			setSuccess(
 				'Biometric authentication is disabled. You can still use password, PIN, or authenticator fallback.',
 			)
 		} catch (err) {
+		if (err?.name === 'NotAllowedError') {
+			setError('Biometric verification was cancelled or timed out. Biometrics remain enabled.')
+		} else {
 			setError(getApiErrorMessage(err, 'Could not disable biometric authentication.'))
+		}
 		} finally {
 			setIsDisabling(false)
 		}

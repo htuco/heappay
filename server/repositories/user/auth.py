@@ -312,7 +312,7 @@ class UserAuthRepository:
         self,
         *,
         user_id: int,
-        transaction_id: int,
+        transaction_id: int | None,
         challenge: str,
         expires_at: datetime,
     ) -> BiometricAuthenticationChallenge:
@@ -331,7 +331,7 @@ class UserAuthRepository:
         self,
         *,
         user_id: int,
-        transaction_id: int,
+        transaction_id: int | None,
         challenge_id: int,
     ) -> BiometricAuthenticationChallenge | None:
         stmt = select(BiometricAuthenticationChallenge).where(

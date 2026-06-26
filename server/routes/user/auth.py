@@ -25,7 +25,9 @@ from schemas.user.auth import (
     TotpVerifyRequest,
 )
 from schemas.user.biometric import (
+    BiometricAuthenticationOptionsResponse,
     BiometricCredentialResponse,
+    BiometricDisableRequest,
     BiometricRegistrationCompleteRequest,
     BiometricRegistrationOptionsResponse,
     BiometricStatusResponse,
@@ -223,6 +225,50 @@ def biometric_registration_complete(
         raise InvalidInput("Biometric enrollment failed. Try again.") from None
 
 
+@router.post(
+    "/biometrics/disable/options",
+    response_model=BiometricAuthenticationOptionsResponse,
+)
+def biometric_disable_options(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> BiometricAuthenticationOptionsResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.begin_biometric_disable(user_id)
+    except ValueError as exc:
+        if str(exc) == "BIOMETRIC_NOT_ENABLED":
+            raise InvalidInput("Biometric authentication is not enabled.") from None
+        raise InvalidInput("Could not start biometric verification.") from None
+
+
+@router.post("/biometrics/disable/complete", response_model=BiometricStatusResponse)
+def biometric_disable_complete(
+    payload: BiometricDisableRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> BiometricStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.complete_biometric_disable(user_id, payload)
+    except ValueError as exc:
+        if str(exc) == "INVALID_OR_EXPIRED_BIOMETRIC_CHALLENGE":
+            raise InvalidInput("Biometric verification expired. Try again.") from None
+        raise InvalidInput("Biometric verification failed. Try again.") from None
+
+
 @router.delete("/biometrics", response_model=BiometricStatusResponse)
 def biometric_disable(
     credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
@@ -237,7 +283,9 @@ def biometric_disable(
 
     try:
         return service.disable_biometric_authentication(user_id)
-    except ValueError:
+    except ValueError as exc:
+        if str(exc) == "BIOMETRIC_VERIFICATION_REQUIRED":
+            raise InvalidInput("Biometric verification is required to disable biometrics.") from None
         raise InvalidInput("Could not disable biometric authentication.") from None
 
 

@@ -14,9 +14,9 @@ class BiometricAuthenticationChallenge(Base):
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
-    transaction_id: Mapped[int] = mapped_column(
+    transaction_id: Mapped[int | None] = mapped_column(
         ForeignKey("transactions.transaction_id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     challenge: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

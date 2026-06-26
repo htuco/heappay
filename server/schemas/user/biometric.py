@@ -13,7 +13,17 @@ class BiometricRegistrationOptionsResponse(BaseModel):
     public_key: dict[str, Any] = Field(alias="publicKey")
 
 
+class BiometricAuthenticationOptionsResponse(BaseModel):
+    challenge_id: int
+    public_key: dict[str, Any] = Field(alias="publicKey")
+
+
 class BiometricRegistrationCompleteRequest(BaseModel):
+    challenge_id: int
+    credential: dict[str, Any]
+
+
+class BiometricDisableRequest(BaseModel):
     challenge_id: int
     credential: dict[str, Any]
 
