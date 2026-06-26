@@ -23,9 +23,19 @@ import { Button } from '@/components/ui/button'
 
 const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 
-function savedBillingFromUser(user) {
+function prefEnabled(user, key) {
   if (!user) return true
-  return user.billing_reminders_enabled !== false
+  return user[key] !== false
+}
+
+function savedNotificationPrefs(user) {
+  return {
+    billingReminders: prefEnabled(user, 'billing_reminders_enabled'),
+    emailPaymentSent: prefEnabled(user, 'email_payment_sent_enabled'),
+    emailPaymentReceived: prefEnabled(user, 'email_payment_received_enabled'),
+    emailTopup: prefEnabled(user, 'email_topup_enabled'),
+    emailRefundStatus: prefEnabled(user, 'email_refund_status_enabled'),
+  }
 }
 
 export default function SettingsPage() {
@@ -38,6 +48,10 @@ export default function SettingsPage() {
 
   const [draftTheme, setDraftTheme] = useState(themePreference)
   const [draftBillingReminders, setDraftBillingReminders] = useState(true)
+  const [draftEmailPaymentSent, setDraftEmailPaymentSent] = useState(true)
+  const [draftEmailPaymentReceived, setDraftEmailPaymentReceived] = useState(true)
+  const [draftEmailTopup, setDraftEmailTopup] = useState(true)
+  const [draftEmailRefundStatus, setDraftEmailRefundStatus] = useState(true)
   const [savePending, setSavePending] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
@@ -47,23 +61,47 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (user) {
-      setDraftBillingReminders(savedBillingFromUser(user))
+      const saved = savedNotificationPrefs(user)
+      setDraftBillingReminders(saved.billingReminders)
+      setDraftEmailPaymentSent(saved.emailPaymentSent)
+      setDraftEmailPaymentReceived(saved.emailPaymentReceived)
+      setDraftEmailTopup(saved.emailTopup)
+      setDraftEmailRefundStatus(saved.emailRefundStatus)
     }
   }, [user])
 
-  const savedBilling = useMemo(() => savedBillingFromUser(user), [user])
+  const saved = useMemo(() => savedNotificationPrefs(user), [user])
 
   const isThemeDirty = useMemo(() => draftTheme !== themePreference, [draftTheme, themePreference])
   const isBillingDirty = useMemo(
-    () => Boolean(user) && draftBillingReminders !== savedBilling,
-    [user, draftBillingReminders, savedBilling],
+    () =>
+      Boolean(user) &&
+      (draftBillingReminders !== saved.billingReminders ||
+        draftEmailPaymentSent !== saved.emailPaymentSent ||
+        draftEmailPaymentReceived !== saved.emailPaymentReceived ||
+        draftEmailTopup !== saved.emailTopup ||
+        draftEmailRefundStatus !== saved.emailRefundStatus),
+    [
+      user,
+      draftBillingReminders,
+      draftEmailPaymentSent,
+      draftEmailPaymentReceived,
+      draftEmailTopup,
+      draftEmailRefundStatus,
+      saved,
+    ],
   )
   const isDirty = isThemeDirty || isBillingDirty
 
   function handleDiscard() {
     setDraftTheme(themePreference)
     if (user) {
-      setDraftBillingReminders(savedBillingFromUser(user))
+      const next = savedNotificationPrefs(user)
+      setDraftBillingReminders(next.billingReminders)
+      setDraftEmailPaymentSent(next.emailPaymentSent)
+      setDraftEmailPaymentReceived(next.emailPaymentReceived)
+      setDraftEmailTopup(next.emailTopup)
+      setDraftEmailRefundStatus(next.emailRefundStatus)
     }
     setSaveError(null)
   }
@@ -75,7 +113,13 @@ export default function SettingsPage() {
     try {
       if (isBillingDirty && user) {
         await dispatch(
-          updateNotificationPreferences({ billingRemindersEnabled: draftBillingReminders }),
+          updateNotificationPreferences({
+            billingRemindersEnabled: draftBillingReminders,
+            emailPaymentSentEnabled: draftEmailPaymentSent,
+            emailPaymentReceivedEnabled: draftEmailPaymentReceived,
+            emailTopupEnabled: draftEmailTopup,
+            emailRefundStatusEnabled: draftEmailRefundStatus,
+          }),
         ).unwrap()
       }
     } catch (err) {
@@ -149,20 +193,62 @@ export default function SettingsPage() {
         <SettingsCard
           title="Notification Preferences"
           icon={Bell}
-          description="Email and in-app notices for billing activity. Use Save changes below to update your account."
+          description="Email notices for payments and refunds, plus in-app billing reminders. Use Save changes below to update your account."
         >
           <div className="space-y-3">
             <ControlRow
-              label="Billing reminders"
-              hint="Renewal reminders and payment confirmations."
+              label="Payment sent"
+              hint="Email when money you send completes."
               emphasize
+            >
+              <Toggle
+                enabled={draftEmailPaymentSent}
+                label={draftEmailPaymentSent ? 'Enabled' : 'Disabled'}
+                onToggle={() => setDraftEmailPaymentSent((current) => !current)}
+                disabled={!user || savePending}
+              />
+            </ControlRow>
+            <ControlRow
+              label="Payment received"
+              hint="Email when you receive a transfer."
+            >
+              <Toggle
+                enabled={draftEmailPaymentReceived}
+                label={draftEmailPaymentReceived ? 'Enabled' : 'Disabled'}
+                onToggle={() => setDraftEmailPaymentReceived((current) => !current)}
+                disabled={!user || savePending}
+              />
+            </ControlRow>
+            <ControlRow
+              label="Top-up"
+              hint="Email when a card top-up completes."
+            >
+              <Toggle
+                enabled={draftEmailTopup}
+                label={draftEmailTopup ? 'Enabled' : 'Disabled'}
+                onToggle={() => setDraftEmailTopup((current) => !current)}
+                disabled={!user || savePending}
+              />
+            </ControlRow>
+            <ControlRow
+              label="Refund status"
+              hint="Email when a refund request is approved or declined."
+            >
+              <Toggle
+                enabled={draftEmailRefundStatus}
+                label={draftEmailRefundStatus ? 'Enabled' : 'Disabled'}
+                onToggle={() => setDraftEmailRefundStatus((current) => !current)}
+                disabled={!user || savePending}
+              />
+            </ControlRow>
+            <ControlRow
+              label="Billing reminders"
+              hint="Renewal reminders and recurring payment confirmations."
             >
               <Toggle
                 enabled={draftBillingReminders}
                 label={draftBillingReminders ? 'Enabled' : 'Disabled'}
-                onToggle={() =>
-                  setDraftBillingReminders((current) => !current)
-                }
+                onToggle={() => setDraftBillingReminders((current) => !current)}
                 disabled={!user || savePending}
               />
             </ControlRow>
@@ -228,9 +314,9 @@ export default function SettingsPage() {
               <p className="text-sm font-semibold text-card-foreground">Unsaved changes</p>
               <p className="text-xs text-muted-foreground">
                 {isBillingDirty && isThemeDirty
-                  ? 'Billing preferences sync to your account; theme applies on this device only.'
+                  ? 'Notification preferences sync to your account; theme applies on this device only.'
                   : isBillingDirty
-                    ? 'Billing preferences will sync to your account when you save.'
+                    ? 'Notification preferences will sync to your account when you save.'
                     : 'Theme is kept on this device. Save to apply, or discard.'}
               </p>
               {saveError ? (

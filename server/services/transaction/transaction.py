@@ -758,9 +758,15 @@ class TransactionService:
 
         try:
             if new_status_id == completed_id:
-                return self._repo.complete(
+                completed = self._repo.complete(
                     row.transaction_id, processed_by=processed_by
                 )
+                from services.email.transaction_notifier import TransactionEmailNotifier
+
+                TransactionEmailNotifier(self._repo._db).notify_transaction_completed(
+                    row.transaction_id
+                )
+                return completed
             if new_status_id == cancelled_id:
                 # User/owner-initiated cancel of a pending transaction. Releases the
                 # sender's held funds (same reversal as fail) but stamps the distinct

@@ -484,10 +484,10 @@ def test_update_me_duplicate_email_returns_400() -> None:
 
 def test_update_notification_preferences_persists_flag() -> None:
     class _NotifService(_FakeAuthService):
-        last_enabled = None
+        last_payload = None
 
-        def update_notification_preferences(self, _token, enabled):
-            self.last_enabled = enabled
+        def update_notification_preferences(self, _token, payload):
+            self.last_payload = payload
             return _token_response()
 
     service = _NotifService()
@@ -495,11 +495,16 @@ def test_update_notification_preferences_persists_flag() -> None:
     resp = client.patch(
         "/auth/notification-preferences",
         headers={"Authorization": "Bearer access.token.here"},
-        json={"billing_reminders_enabled": False},
+        json={
+            "billing_reminders_enabled": False,
+            "email_payment_sent_enabled": False,
+            "email_topup_enabled": True,
+        },
     )
     assert resp.status_code == 200
     assert resp.json()["message"] == "Notification preferences updated."
-    assert service.last_enabled is False
+    assert service.last_payload.billing_reminders_enabled is False
+    assert service.last_payload.email_payment_sent_enabled is False
     assert "billing_reminders_enabled" in resp.json()["data"]["user"]
 
 
@@ -514,7 +519,7 @@ def test_update_notification_preferences_without_token_returns_401() -> None:
 
 def test_update_notification_preferences_invalid_session_returns_401() -> None:
     class _NoNotifService(_FakeAuthService):
-        def update_notification_preferences(self, _token, _enabled):
+        def update_notification_preferences(self, _token, _payload):
             return None
 
     client = _build_client(_NoNotifService())

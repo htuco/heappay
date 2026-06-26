@@ -70,6 +70,11 @@ class TransactionProcessorService:
             return "skipped"
         if decision.action == "allow":
             self._repo.complete(tx.transaction_id, processed_by="system")
+            from services.email.transaction_notifier import TransactionEmailNotifier
+
+            TransactionEmailNotifier(self._repo._db).notify_transaction_completed(
+                tx.transaction_id
+            )
             return "allowed"
         self._repo.fail(
             tx.transaction_id,

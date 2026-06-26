@@ -529,7 +529,7 @@ def update_notification_preferences(
 
     token_data = service.update_notification_preferences(
         credentials.credentials,
-        payload.billing_reminders_enabled,
+        payload,
     )
     if token_data is None:
         raise Unauthorized("Invalid or expired token.")

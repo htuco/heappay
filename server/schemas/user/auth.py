@@ -119,7 +119,26 @@ class ProfileUpdateRequest(BaseModel):
 
 
 class NotificationPreferencesUpdate(BaseModel):
-    billing_reminders_enabled: bool
+    billing_reminders_enabled: bool | None = None
+    email_payment_sent_enabled: bool | None = None
+    email_payment_received_enabled: bool | None = None
+    email_topup_enabled: bool | None = None
+    email_refund_status_enabled: bool | None = None
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "NotificationPreferencesUpdate":
+        if not any(
+            value is not None
+            for value in (
+                self.billing_reminders_enabled,
+                self.email_payment_sent_enabled,
+                self.email_payment_received_enabled,
+                self.email_topup_enabled,
+                self.email_refund_status_enabled,
+            )
+        ):
+            raise ValueError("At least one preference must be provided.")
+        return self
 
 
 class UserResponse(BaseModel):
@@ -134,6 +153,10 @@ class UserResponse(BaseModel):
     user_role_id: int
     role_name: str
     billing_reminders_enabled: bool = True
+    email_payment_sent_enabled: bool = True
+    email_payment_received_enabled: bool = True
+    email_topup_enabled: bool = True
+    email_refund_status_enabled: bool = True
     avatar_url: str | None = None
     totp_enabled: bool = False
 

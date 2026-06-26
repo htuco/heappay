@@ -163,7 +163,11 @@ class RequestService:
         if recipient_card is None or recipient_card.balance < tx.amount:
             raise InsufficientBalanceError()
 
-        return self._repo.approve_refund(request)
+        result = self._repo.approve_refund(request)
+        from services.email.transaction_notifier import TransactionEmailNotifier
+
+        TransactionEmailNotifier(self._repo._db).notify_refund_approved(request_id)
+        return result
 
     def decline_refund(self, *, request_id: int) -> Request:
         request = self._repo.get_by_id(request_id)
@@ -178,7 +182,11 @@ class RequestService:
             current = self._repo.status_name_for(request.request_status_id)
             raise RequestNotPendingError(current)
 
-        return self._repo.decline_refund(locked)
+        result = self._repo.decline_refund(locked)
+        from services.email.transaction_notifier import TransactionEmailNotifier
+
+        TransactionEmailNotifier(self._repo._db).notify_refund_declined(request_id)
+        return result
 
     # ── card freeze requests ────────────────────────────────────────────────
 
