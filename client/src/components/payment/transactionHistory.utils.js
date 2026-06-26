@@ -1,9 +1,84 @@
 import { HIDDEN_AMOUNT_LABEL } from '@/utils/transactionMeta'
+import {
+  Bus,
+  Clapperboard,
+  CreditCard,
+  Gift,
+  HeartPulse,
+  Home,
+  Lightbulb,
+  Receipt,
+  Repeat,
+  ShoppingBag,
+  ShoppingCart,
+  Tag,
+  Utensils,
+  Wallet,
+} from 'lucide-react'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
 })
+
+// Maps the backend's snake_case category machine names to a display label,
+// a lucide icon, and a color token used by the history pill and the
+// "Spending by Category" chart. Keyed by name (not id) because ids are not
+// stable across environments; transactions carry category_id, which we resolve
+// to a category record (from referenceData) before looking up meta here.
+export const CATEGORY_META = {
+  groceries: { label: 'Groceries', icon: ShoppingCart, color: '#16a34a' },
+  food_dining: { label: 'Food & Dining', icon: Utensils, color: '#ea580c' },
+  transport: { label: 'Transport', icon: Bus, color: '#2563eb' },
+  utilities: { label: 'Utilities', icon: Lightbulb, color: '#ca8a04' },
+  housing: { label: 'Housing', icon: Home, color: '#7c3aed' },
+  shopping: { label: 'Shopping', icon: ShoppingBag, color: '#db2777' },
+  entertainment: { label: 'Entertainment', icon: Clapperboard, color: '#c026d3' },
+  health: { label: 'Health', icon: HeartPulse, color: '#dc2626' },
+  subscriptions: { label: 'Subscriptions', icon: Repeat, color: '#0891b2' },
+  transfer: { label: 'Transfer', icon: CreditCard, color: '#475569' },
+  income: { label: 'Income', icon: Wallet, color: '#059669' },
+  fees: { label: 'Fees', icon: Receipt, color: '#b45309' },
+  other: { label: 'Other', icon: Tag, color: '#64748b' },
+}
+
+// Fallback for the null/Uncategorised bucket and any unknown name.
+export const UNCATEGORISED_META = {
+  label: 'Uncategorised',
+  icon: Gift,
+  color: '#94a3b8',
+}
+
+/**
+ * Resolve a category record (or id + list) to display meta.
+ * @param {{ name?: string } | null | undefined} category
+ * @returns {{ label: string, icon: Function, color: string }}
+ */
+export function getCategoryMeta(category) {
+  if (!category?.name) return UNCATEGORISED_META
+  return CATEGORY_META[category.name] ?? { ...UNCATEGORISED_META, label: category.name }
+}
+
+/**
+ * Look up a category record by id within the reference list.
+ * @param {number | null | undefined} categoryId
+ * @param {Array<{ transaction_category_id: number, name: string }>} categories
+ */
+export function findCategoryById(categoryId, categories = []) {
+  if (categoryId == null) return null
+  return categories.find((c) => c.transaction_category_id === categoryId) ?? null
+}
+
+/**
+ * Build "All categories" select options from the reference list.
+ * @param {Array<{ transaction_category_id: number, name: string }>} categories
+ */
+export function buildCategoryOptions(categories = []) {
+  return categories.map((c) => ({
+    value: String(c.transaction_category_id),
+    label: getCategoryMeta(c).label,
+  }))
+}
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',

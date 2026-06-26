@@ -1,19 +1,32 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from schemas.money import MoneyAmount
 
 
+class BiometricApprovalAssertion(BaseModel):
+    challenge_id: int
+    credential: dict[str, Any]
+
+
+class BiometricApprovalOptionsResponse(BaseModel):
+    challenge_id: int
+    public_key: dict[str, Any] = Field(alias="publicKey")
+
+
 class TransactionCreate(BaseModel):
     sender_card_id: int | None = Field(default=None, gt=0)
     recipient_card_id: int = Field(gt=0)
     transaction_type_id: int = Field(gt=0)
+    category_id: int | None = Field(default=None, gt=0)
     amount: MoneyAmount
     note: str | None = Field(default=None, max_length=255)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
     requires_approval: bool = False
+    biometric: BiometricApprovalAssertion | None = None
 
     @model_validator(mode="after")
     def validate_sender_recipient_distinct(self) -> "TransactionCreate":
@@ -28,6 +41,11 @@ class TransactionCreate(BaseModel):
 class TransactionPatch(BaseModel):
     status_id: int | None = Field(default=None, gt=0)
     note: str | None = Field(default=None, max_length=255)
+    # category_id is metadata only — setting/clearing it must not touch status,
+    # balances, or the settle flow. Omitted => untouched (exclude_unset); an
+    # explicit null clears the category back to "Uncategorised". gt=0 rejects 0
+    # while still allowing null through.
+    category_id: int | None = Field(default=None, gt=0)
 
 
 class TransactionApproveRequest(BaseModel):
@@ -35,13 +53,16 @@ class TransactionApproveRequest(BaseModel):
 
     totp_code: str | None = Field(default=None, min_length=6, max_length=6)
     password: str | None = Field(default=None, min_length=1, max_length=255)
+    biometric: BiometricApprovalAssertion | None = None
 
     @model_validator(mode="after")
     def require_one_credential(self) -> "TransactionApproveRequest":
-        if not self.totp_code and not self.password:
-            raise ValueError("Provide totp_code or password for step-up verification.")
-        if self.totp_code and self.password:
-            raise ValueError("Provide only one of totp_code or password.")
+        credentials = [self.totp_code, self.password, self.biometric]
+        provided = [credential for credential in credentials if credential]
+        if not provided:
+            raise ValueError("Provide a verification method for step-up verification.")
+        if len(provided) > 1:
+            raise ValueError("Provide only one verification method.")
         return self
 
 
@@ -70,6 +91,20 @@ class TransactionSummaryPoint(BaseModel):
 
 class TransactionSummaryResponse(BaseModel):
     points: list[TransactionSummaryPoint]
+    months: int
+
+
+class CategoryBreakdownItem(BaseModel):
+    # category_id is null for the "Uncategorised" bucket so the chart reconciles
+    # to total outgoing spend.
+    category_id: int | None
+    name: str
+    total: Decimal
+    count: int
+
+
+class CategoryBreakdownResponse(BaseModel):
+    items: list[CategoryBreakdownItem]
     months: int
 
 
@@ -123,6 +158,7 @@ class TransactionResponse(BaseModel):
     recurring_payment_id: int | None = None
     transaction_type_id: int
     status_id: int
+    category_id: int | None = None
     amount: Decimal | None = None
     amount_hidden: bool = False
     note: str | None

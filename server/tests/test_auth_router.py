@@ -15,6 +15,13 @@ from fastapi.testclient import TestClient  # noqa: E402
 from main import create_app  # noqa: E402
 from routes.user.auth import get_auth_service  # noqa: E402
 from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
+from schemas.user.biometric import (  # noqa: E402
+    BiometricAuthenticationOptionsResponse,
+    BiometricCredentialResponse,
+    BiometricRegistrationOptionsResponse,
+    BiometricStatusResponse,
+)
+from utils.password_policy import PASSWORD_RULES_MESSAGE  # noqa: E402
 
 
 _NOW = datetime.now(timezone.utc)
@@ -57,6 +64,9 @@ class _FakeAuthService:
     def logout(self, _token):
         return True
 
+    def resolve_active_user_id(self, _token):
+        return 42
+
     def get_me(self, _token):
         return _token_response()
 
@@ -65,6 +75,43 @@ class _FakeAuthService:
 
     def update_notification_preferences(self, _token, _enabled):
         return _token_response()
+
+    def change_password(self, _user_id, _payload):
+        return None
+
+    def request_password_reset(self, _payload):
+        return None
+
+    def confirm_password_reset(self, _payload):
+        return None
+
+    def get_biometric_status(self, _user_id):
+        return BiometricStatusResponse(enabled=False, credential_count=0)
+
+    def begin_biometric_registration(self, _user_id):
+        return BiometricRegistrationOptionsResponse(
+            challenge_id=7,
+            publicKey={"challenge": "abc", "rp": {"id": "localhost", "name": "Heap"}},
+        )
+
+    def complete_biometric_registration(self, _user_id, _payload):
+        return BiometricCredentialResponse(
+            credential_id="credential-1",
+            device_type="single_device",
+            backed_up=False,
+        )
+
+    def begin_biometric_disable(self, _user_id):
+        return BiometricAuthenticationOptionsResponse(
+            challenge_id=8,
+            publicKey={"challenge": "abc", "rpId": "localhost", "allowCredentials": []},
+        )
+
+    def complete_biometric_disable(self, _user_id, _payload):
+        return BiometricStatusResponse(enabled=False, credential_count=0)
+
+    def disable_biometric_authentication(self, _user_id):
+        return BiometricStatusResponse(enabled=False, credential_count=0)
 
 
 class _FakeAuthServiceAdmin:
@@ -109,7 +156,7 @@ def test_register_returns_201_with_role_fields() -> None:
             "email": "new@example.com",
             "first_name": "New",
             "last_name": "User",
-            "password": "password123",
+            "password": "Password123!",
         },
     )
     assert resp.status_code == 201
@@ -126,12 +173,27 @@ def test_register_response_has_tokens() -> None:
             "email": "new@example.com",
             "first_name": "New",
             "last_name": "User",
-            "password": "password123",
+            "password": "Password123!",
         },
     )
     data = resp.json()["data"]
     assert "access_token" in data
     assert "refresh_token" in data
+
+
+def test_register_rejects_weak_password() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "password123",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +235,124 @@ def test_login_invalid_credentials_returns_401() -> None:
         json={"email": "bad@example.com", "password": "wrongpassword"},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# biometrics
+# ---------------------------------------------------------------------------
+
+
+def test_biometric_status_returns_enrolled_state() -> None:
+    client = _build_client()
+    resp = client.get(
+        "/auth/biometrics",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"enabled": False, "credential_count": 0}
+
+
+def test_biometric_registration_options_returns_public_key_options() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/registration/options",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["challenge_id"] == 7
+    assert resp.json()["publicKey"]["rp"]["name"] == "Heap"
+
+
+def test_biometric_registration_complete_returns_credential() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/registration/complete",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"challenge_id": 7, "credential": {"id": "credential-1"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["credential_id"] == "credential-1"
+
+
+def test_biometric_registration_complete_handles_expired_challenge() -> None:
+    class _ExpiredChallengeService(_FakeAuthService):
+        def complete_biometric_registration(self, _user_id, _payload):
+            raise ValueError("INVALID_OR_EXPIRED_BIOMETRIC_CHALLENGE")
+
+    client = _build_client(_ExpiredChallengeService())
+    resp = client.post(
+        "/auth/biometrics/registration/complete",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"challenge_id": 7, "credential": {"id": "credential-1"}},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Biometric enrollment expired. Try again."
+
+
+def test_biometric_disable_returns_disabled_status() -> None:
+    client = _build_client()
+    resp = client.delete(
+        "/auth/biometrics",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"enabled": False, "credential_count": 0}
+
+
+def test_biometric_disable_options_returns_public_key_options() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/disable/options",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["challenge_id"] == 8
+    assert resp.json()["publicKey"]["rpId"] == "localhost"
+
+
+def test_biometric_disable_complete_returns_disabled_status() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/biometrics/disable/complete",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"challenge_id": 8, "credential": {"id": "credential-1"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"enabled": False, "credential_count": 0}
+
+
+# ---------------------------------------------------------------------------
+# password strength
+# ---------------------------------------------------------------------------
+
+
+def test_change_password_rejects_weak_new_password() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/change-password",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_password": "OldPassword123!",
+            "new_password": "password123",
+            "confirm_password": "password123",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
+
+
+def test_password_reset_confirm_rejects_weak_new_password() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/password-reset/confirm",
+        json={
+            "token": "a" * 32,
+            "new_password": "password123",
+            "confirm_password": "password123",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
 
 
 # ---------------------------------------------------------------------------

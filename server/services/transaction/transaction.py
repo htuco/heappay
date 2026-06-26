@@ -1,13 +1,29 @@
 from datetime import datetime, timedelta, timezone
+import base64
+import json
 
 import bcrypt
 from sqlalchemy.exc import IntegrityError
+from webauthn import (
+    generate_authentication_options,
+    options_to_json,
+    verify_authentication_response,
+)
+from webauthn.helpers.exceptions import WebAuthnException
+from webauthn.helpers.structs import PublicKeyCredentialDescriptor, UserVerificationRequirement
 
 from models.transaction import Transaction
 from repositories.payment_approval.payment_approval import PaymentApprovalRepository
+from repositories.transaction.category_rule import CategoryRuleRepository
 from repositories.transaction.transaction import TransactionRepository, TransactionStateError
 from repositories.user.auth import UserAuthRepository
-from schemas.transaction import TransactionApproveRequest, TransactionCreate, TransactionPatch
+from schemas.transaction import (
+    BiometricApprovalAssertion,
+    BiometricApprovalOptionsResponse,
+    TransactionApproveRequest,
+    TransactionCreate,
+    TransactionPatch,
+)
 from settings import get_settings
 from utils.totp import decrypt_secret, verify_totp_code
 
@@ -26,6 +42,10 @@ class TransactionTypeNotFoundError(Exception):
 
 class TransactionStatusNotFoundError(Exception):
     """Transaction status does not exist."""
+
+
+class TransactionCategoryNotFoundError(Exception):
+    """Transaction category does not exist."""
 
 
 class InsufficientBalanceError(Exception):
@@ -68,6 +88,15 @@ class CardFrozenError(Exception):
         super().__init__(f"The {side} card is frozen.")
 
 
+def _base64url_encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def _base64url_decode(value: str) -> bytes:
+    padded = value + "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(padded.encode("ascii"))
+
+
 class TransactionService:
     DEFAULT_STATUS = "pending"
     FROZEN_CARD_STATUS = "frozen"
@@ -77,10 +106,12 @@ class TransactionService:
         repo: TransactionRepository,
         approval_repo: PaymentApprovalRepository | None = None,
         auth_repo: UserAuthRepository | None = None,
+        category_rule_repo: "CategoryRuleRepository | None" = None,
     ) -> None:
         self._repo = repo
         self._approval_repo = approval_repo or PaymentApprovalRepository(repo._db)
         self._auth_repo = auth_repo
+        self._category_rule_repo = category_rule_repo or CategoryRuleRepository(repo._db)
 
     def list_for_user(
         self,
@@ -90,6 +121,7 @@ class TransactionService:
         offset: int = 0,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
         sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
         if status_id is not None and not self._repo.transaction_status_exists(status_id):
@@ -98,18 +130,24 @@ class TransactionService:
             transaction_type_id
         ):
             raise TransactionTypeNotFoundError()
+        if category_id is not None and not self._repo.transaction_category_exists(
+            category_id
+        ):
+            raise TransactionCategoryNotFoundError()
         items = self._repo.list_for_user(
             user_id=user_id,
             limit=limit,
             offset=offset,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
         total = self._repo.count_for_user(
             user_id=user_id,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
         )
         return items, total
 
@@ -120,6 +158,7 @@ class TransactionService:
         offset: int = 0,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
+        category_id: int | None = None,
         sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
         if status_id is not None and not self._repo.transaction_status_exists(status_id):
@@ -128,16 +167,22 @@ class TransactionService:
             transaction_type_id
         ):
             raise TransactionTypeNotFoundError()
+        if category_id is not None and not self._repo.transaction_category_exists(
+            category_id
+        ):
+            raise TransactionCategoryNotFoundError()
         items = self._repo.list_all(
             limit=limit,
             offset=offset,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
         total = self._repo.count_all(
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
         )
         return items, total
 
@@ -151,6 +196,16 @@ class TransactionService:
         months: int = 6,
     ) -> list[dict]:
         return self._repo.get_summary_for_user(user_id=user_id, months=months)
+
+    def get_category_breakdown_for_user(
+        self,
+        *,
+        user_id: int,
+        months: int = 6,
+    ) -> list[dict]:
+        return self._repo.get_category_breakdown_for_user(
+            user_id=user_id, months=months
+        )
 
     def list_for_card(
         self,
@@ -207,6 +262,11 @@ class TransactionService:
         if not self._repo.transaction_type_exists(payload.transaction_type_id):
             raise TransactionTypeNotFoundError()
 
+        if payload.category_id is not None and not self._repo.transaction_category_exists(
+            payload.category_id
+        ):
+            raise TransactionCategoryNotFoundError()
+
         status_id = self._repo.get_status_id_by_name(self.DEFAULT_STATUS)
         if status_id is None:
             raise TransactionStatusNotFoundError()
@@ -240,10 +300,23 @@ class TransactionService:
         if sender_card is not None and sender_card.balance < payload.amount:
             raise InsufficientBalanceError()
 
+        self._verify_transaction_create_biometric(user_id, payload)
+
         delay_seconds = get_settings().tx_min_processing_delay_seconds
         processing_eligible_at = datetime.now(timezone.utc) + timedelta(
             seconds=delay_seconds
         )
+
+        # Auto-categorisation (Phase 2): only when the user did not pick a
+        # category. An explicit choice always wins — rules never override it.
+        category_id = payload.category_id
+        if category_id is None:
+            recipient_name = self._recipient_name(recipient_card)
+            category_id = self._resolve_auto_category(
+                user_id=user_id,
+                note=payload.note,
+                recipient_name=recipient_name,
+            )
 
         type_name = self._repo.get_transaction_type_name(payload.transaction_type_id) or ""
         requires_approval = self._requires_user_approval(payload, type_name)
@@ -263,6 +336,7 @@ class TransactionService:
                 amount=payload.amount,
                 note=payload.note,
                 processing_eligible_at=processing_eligible_at,
+                category_id=category_id,
                 idempotency_key=payload.idempotency_key,
                 requires_user_approval=requires_approval,
                 user_approval_expires_at=approval_expires_at,
@@ -286,6 +360,41 @@ class TransactionService:
                     return existing, False
             raise
 
+    def begin_biometric_transaction_verification(
+        self,
+        *,
+        user_id: int,
+    ) -> BiometricApprovalOptionsResponse:
+        if self._auth_repo is None:
+            raise ApprovalRequiredError("Step-up verification is unavailable.")
+
+        credentials = self._auth_repo.list_biometric_credentials(user_id)
+        if not credentials:
+            raise ApprovalRequiredError("Biometric authentication is not enabled.")
+
+        options = generate_authentication_options(
+            rp_id=get_settings().webauthn_rp_id,
+            allow_credentials=[
+                PublicKeyCredentialDescriptor(id=_base64url_decode(credential.credential_id))
+                for credential in credentials
+            ],
+            user_verification=UserVerificationRequirement.REQUIRED,
+        )
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=get_settings().webauthn_registration_challenge_expire_minutes,
+        )
+        challenge = self._auth_repo.create_biometric_authentication_challenge(
+            user_id=user_id,
+            transaction_id=None,
+            challenge=_base64url_encode(options.challenge),
+            expires_at=expires_at,
+        )
+
+        return BiometricApprovalOptionsResponse(
+            challenge_id=challenge.challenge_id,
+            publicKey=json.loads(options_to_json(options)),
+        )
+
     def approve(
         self,
         transaction_id: int,
@@ -298,19 +407,9 @@ class TransactionService:
             raise TransactionNotFoundError()
         if not self._user_is_sender(row, user_id):
             raise ForbiddenError()
-        if not row.requires_user_approval:
-            raise ApprovalRequiredError("This transaction does not require approval.")
-        if row.user_approved_at is not None:
-            raise ApprovalRequiredError("This payment has already been approved.")
+        self._ensure_approval_pending(row)
 
-        expires = row.user_approval_expires_at
-        if expires is not None:
-            if expires.tzinfo is None:
-                expires = expires.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) > expires:
-                raise ApprovalExpiredError()
-
-        method = self._verify_step_up(user_id, payload)
+        method = self._verify_step_up(transaction_id, user_id, payload)
 
         try:
             row = self._repo.approve_user_confirmation(
@@ -331,6 +430,63 @@ class TransactionService:
         )
         self._repo._db.commit()
         return row
+
+    @staticmethod
+    def _ensure_approval_pending(row: Transaction) -> None:
+        if not row.requires_user_approval:
+            raise ApprovalRequiredError("This transaction does not require approval.")
+        if row.user_approved_at is not None:
+            raise ApprovalRequiredError("This payment has already been approved.")
+
+        expires = row.user_approval_expires_at
+        if expires is not None:
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires:
+                raise ApprovalExpiredError()
+
+    def begin_biometric_approval(
+        self,
+        transaction_id: int,
+        *,
+        user_id: int,
+    ) -> BiometricApprovalOptionsResponse:
+        if self._auth_repo is None:
+            raise ApprovalRequiredError("Step-up verification is unavailable.")
+
+        row = self._repo.get_by_id(transaction_id)
+        if row is None:
+            raise TransactionNotFoundError()
+        if not self._user_is_sender(row, user_id):
+            raise ForbiddenError()
+        self._ensure_approval_pending(row)
+
+        credentials = self._auth_repo.list_biometric_credentials(user_id)
+        if not credentials:
+            raise ApprovalRequiredError("Biometric authentication is not enabled.")
+
+        options = generate_authentication_options(
+            rp_id=get_settings().webauthn_rp_id,
+            allow_credentials=[
+                PublicKeyCredentialDescriptor(id=_base64url_decode(credential.credential_id))
+                for credential in credentials
+            ],
+            user_verification=UserVerificationRequirement.REQUIRED,
+        )
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=get_settings().webauthn_registration_challenge_expire_minutes,
+        )
+        challenge = self._auth_repo.create_biometric_authentication_challenge(
+            user_id=user_id,
+            transaction_id=transaction_id,
+            challenge=_base64url_encode(options.challenge),
+            expires_at=expires_at,
+        )
+
+        return BiometricApprovalOptionsResponse(
+            challenge_id=challenge.challenge_id,
+            publicKey=json.loads(options_to_json(options)),
+        )
 
     def list_approval_events(self, transaction_id: int, *, user_id: int) -> list:
         row = self._repo.get_by_id(transaction_id)
@@ -355,13 +511,75 @@ class TransactionService:
             return True
         return False
 
-    def _verify_step_up(self, user_id: int, payload: TransactionApproveRequest) -> str:
+    def _verify_transaction_create_biometric(
+        self,
+        user_id: int,
+        payload: TransactionCreate,
+    ) -> None:
+        if self._auth_repo is None:
+            return
+
+        credentials = self._auth_repo.list_biometric_credentials(user_id)
+        if not credentials:
+            return
+
+        if not payload.biometric:
+            raise ApprovalRequiredError("Biometric verification is required to send money.")
+
+        self._verify_biometric_approval(None, user_id, payload.biometric)
+
+    @staticmethod
+    def _recipient_name(recipient_card) -> str | None:
+        """Best-effort display name for the recipient, used for keyword matching."""
+        if recipient_card is None:
+            return None
+        user = getattr(recipient_card, "user", None)
+        if user is not None:
+            parts = [getattr(user, "first_name", None), getattr(user, "last_name", None)]
+            name = " ".join(p for p in parts if p).strip()
+            if name:
+                return name
+        return getattr(recipient_card, "cardholder_name", None)
+
+    def _resolve_auto_category(
+        self,
+        *,
+        user_id: int,
+        note: str | None,
+        recipient_name: str | None,
+    ) -> int | None:
+        """Return the category_id of the first matching keyword rule, or None.
+
+        Deterministic substring match (lowercased) on the note / recipient name.
+        Rules are pre-ordered by precedence (user rules before global, then
+        priority asc), so the first match wins. No ML, no MCC.
+        """
+        note_text = (note or "").lower()
+        recipient_text = (recipient_name or "").lower()
+        if not note_text and not recipient_text:
+            return None
+
+        for rule in self._category_rule_repo.list_applicable(user_id=user_id):
+            haystack = recipient_text if rule.match_field == "recipient_name" else note_text
+            if rule.keyword and rule.keyword.lower() in haystack:
+                return rule.category_id
+        return None
+
+    def _verify_step_up(
+        self,
+        transaction_id: int,
+        user_id: int,
+        payload: TransactionApproveRequest,
+    ) -> str:
         if self._auth_repo is None:
             raise ApprovalRequiredError("Step-up verification is unavailable.")
 
         user = self._auth_repo.get_user_by_id(user_id)
         if not user or user.deleted_at is not None:
             raise ForbiddenError()
+
+        if payload.biometric:
+            return self._verify_biometric_approval(transaction_id, user_id, payload.biometric)
 
         settings = get_settings()
         if user.totp_enabled:
@@ -382,6 +600,60 @@ class TransactionService:
         ):
             raise ApprovalRequiredError("Incorrect password.")
         return "password"
+
+    def _verify_biometric_approval(
+        self,
+        transaction_id: int | None,
+        user_id: int,
+        payload: BiometricApprovalAssertion,
+    ) -> str:
+        credential_id = payload.credential.get("rawId") or payload.credential.get("id")
+        if not isinstance(credential_id, str):
+            raise ApprovalRequiredError("Biometric verification failed.")
+
+        credential = self._auth_repo.get_biometric_credential(user_id, credential_id)
+        if credential is None:
+            raise ApprovalRequiredError("Biometric credential is not enrolled.")
+
+        challenge = self._auth_repo.get_biometric_authentication_challenge(
+            user_id=user_id,
+            transaction_id=transaction_id,
+            challenge_id=payload.challenge_id,
+        )
+        if (
+            challenge is None
+            or challenge.used_at is not None
+            or self._is_expired(challenge.expires_at)
+        ):
+            raise ApprovalRequiredError("Biometric verification expired. Try again.")
+
+        settings = get_settings()
+        origins = settings.webauthn_origin_list or settings.cors_origin_list
+        try:
+            verified = verify_authentication_response(
+                credential=payload.credential,
+                expected_challenge=_base64url_decode(challenge.challenge),
+                expected_rp_id=settings.webauthn_rp_id,
+                expected_origin=origins,
+                credential_public_key=credential.public_key,
+                credential_current_sign_count=credential.sign_count,
+                require_user_verification=True,
+            )
+        except WebAuthnException as exc:
+            raise ApprovalRequiredError("Biometric verification failed.") from exc
+
+        self._auth_repo.mark_biometric_authentication_challenge_used(challenge.challenge_id)
+        self._auth_repo.update_biometric_credential_usage(
+            credential_row_id=credential.credential_row_id,
+            sign_count=verified.new_sign_count,
+        )
+        return "biometric"
+
+    @staticmethod
+    def _is_expired(value: datetime) -> bool:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value <= datetime.now(timezone.utc)
 
     def _user_is_sender(self, row: Transaction, user_id: int) -> bool:
         if row.sender_card_id is None:
@@ -431,6 +703,16 @@ class TransactionService:
     ) -> Transaction:
         changes = payload.model_dump(exclude_unset=True)
         new_status_id = changes.pop("status_id", None)
+
+        # Validate a category change (set or clear). category_id is metadata only:
+        # it is applied via the plain update below and never touches status,
+        # balances, or the settle flow. A null clears it ("Uncategorised").
+        if "category_id" in changes:
+            category_id = changes["category_id"]
+            if category_id is not None and not self._repo.transaction_category_exists(
+                category_id
+            ):
+                raise TransactionCategoryNotFoundError()
 
         if new_status_id is not None:
             if not self._repo.transaction_status_exists(new_status_id):

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from google.genai import errors as GeminiErrors
 from groq import APIError as GroqAPIError
 from sqlalchemy.orm import Session
@@ -10,6 +10,14 @@ from repositories.request.request import RequestRepository
 from repositories.transaction.transaction import TransactionRepository
 from repositories.user.user import UserRepository
 from repositories.vector.knowledge import VectorRepository
+from ratelimit import (
+    CHAT_GLOBAL_RATE_LIMIT,
+    CHAT_RATE_LIMIT_MESSAGE,
+    CHAT_USER_RATE_LIMIT,
+    global_chat_key_func,
+    limiter,
+    user_id_key_func,
+)
 from routes.dependencies import UserContext, get_user_context
 from schemas.chat import ChatMessageOut, ChatRequest, ChatResponse
 from services.chat.chat import ChatService
@@ -56,7 +64,18 @@ def get_chat_service(db: Session = Depends(get_db)) -> ChatService:
 
 
 @router.post("/message", response_model=ChatResponse)
+@limiter.limit(
+    CHAT_GLOBAL_RATE_LIMIT,
+    key_func=global_chat_key_func,
+    error_message=CHAT_RATE_LIMIT_MESSAGE,
+)
+@limiter.limit(
+    CHAT_USER_RATE_LIMIT,
+    key_func=user_id_key_func,
+    error_message=CHAT_RATE_LIMIT_MESSAGE,
+)
 def send_message(
+    request: Request,
     payload: ChatRequest,
     ctx: UserContext = Depends(get_user_context),
     service: ChatService = Depends(get_chat_service),

@@ -36,3 +36,12 @@ class User(Base):
     role = relationship("UserRole", back_populates="users")
     cards = relationship("Card", back_populates="user")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user")
+    biometric_credentials = relationship("BiometricCredential", back_populates="user")
+    biometric_registration_challenges = relationship(
+        "BiometricRegistrationChallenge",
+        back_populates="user",
+    )
+    biometric_authentication_challenges = relationship(
+        "BiometricAuthenticationChallenge",
+        back_populates="user",
+    )

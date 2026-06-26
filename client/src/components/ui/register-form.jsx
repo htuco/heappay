@@ -10,6 +10,7 @@ import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 import { getApiErrorMessage } from '@/utils/api'
+import { PASSWORD_RULES_HINT } from '@/schemas/passwordSchema'
 
 const INITIAL_FORM_STATE = {
 	firstName: '',
@@ -163,12 +164,15 @@ export default function RegisterForm() {
 								name="password"
 								type="password"
 								label="Password"
-								placeholder="Minimum 8 characters"
+								placeholder="Create a strong password"
 								value={form.password}
 								onChange={handleChange}
 								disabled={loading}
 								error={errors.password}
 							/>
+							{!errors.password && (
+								<p className="mt-1 text-xs text-muted-foreground">{PASSWORD_RULES_HINT}</p>
+							)}
 							{form.password && !errors.password && (
 								<div className="mt-2 flex gap-1">
 									{[...Array(4)].map((_, i) => (

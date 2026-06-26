@@ -14,9 +14,13 @@ import {
 import { Modal, ModalTitle } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import FormBanner from '@/components/ui/FormBanner'
 import UserAvatar from '@/components/ui/UserAvatar'
 import RecipientPicker from '@/components/payment/RecipientPicker'
+import { buildCategoryOptions } from '@/components/payment/transactionHistory.utils'
+import { useAppSelector } from '@/store/hooks'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import { useAuth } from '@/hooks/useAuth'
 import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
@@ -24,12 +28,14 @@ import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
 import { listCards, lookupCardByNumber } from '@/services/cardsService'
+import { getBiometricStatus } from '@/services/authService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 import { createIdempotencyKey } from '@/utils/idempotency'
 import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
+import { getBiometricAssertion, isWebAuthnAssertionAvailable } from '@/utils/webauthn'
 
 const SEND_TYPE_NAMES = new Set(['payment', 'fine'])
 const AUTO_CLOSE_MS = 1200
@@ -472,6 +478,8 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
   const [recipientError, setRecipientError] = useState('')
   const debounceRef = useRef(null)
   const amountInputRef = useRef(null)
+  const categories = useAppSelector(selectTransactionCategories)
+  const categoryOptions = buildCategoryOptions(categories)
 
   const balance = fromCard ? Number(fromCard.balance) : null
   const amountNum = parseFloat(state.amount)
@@ -749,6 +757,22 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
         />
       </section>
 
+      {categoryOptions.length > 0 ? (
+        <section className="space-y-2">
+          <FieldLabel htmlFor="payment-category" hint="Optional">
+            Category
+          </FieldLabel>
+          <Select
+            id="payment-category"
+            value={state.categoryId != null ? String(state.categoryId) : ''}
+            onChange={(e) =>
+              onChange('categoryId', e.target.value === '' ? null : Number(e.target.value))
+            }
+            options={[{ value: '', label: 'No category' }, ...categoryOptions]}
+          />
+        </section>
+      ) : null}
+
       <WizardFooter>
         <Button variant="ghost" onClick={onBack}>
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -830,8 +854,9 @@ function StepReview({
           aria-hidden="true"
         />
         <span>
-          Sensitive payments (fines and amounts over $100) are held until you
-          confirm with your password or authenticator code.
+          If biometrics are enabled, you&apos;ll confirm with Face ID or fingerprint
+          before this payment is sent. Sensitive payments may still require an
+          additional approval step.
         </span>
       </p>
 
@@ -939,6 +964,7 @@ const INITIAL_FORM = {
   recipientInfo: null,
   amount: '',
   note: '',
+  categoryId: null,
 }
 
 const STEP_HEADINGS = [
@@ -1044,6 +1070,22 @@ export default function PaymentWizard({
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  async function getCreateBiometricPayload() {
+    const status = await getBiometricStatus()
+    if (!status.enabled) return null
+
+    if (!window.HeapNativeBiometrics?.getAssertion && !isWebAuthnAssertionAvailable()) {
+      throw new Error('Biometric authentication is not available on this device or browser.')
+    }
+
+    const options = await transactionsService.beginBiometricTransactionVerification()
+    const credential = await getBiometricAssertion(options.publicKey)
+    return {
+      challenge_id: options.challenge_id,
+      credential,
+    }
+  }
+
   async function handleSubmit() {
     if (isSubmitting) return
 
@@ -1060,6 +1102,7 @@ export default function PaymentWizard({
         setSubmitError('Enter a valid amount with up to 2 decimal places.')
         return
       }
+      const biometric = await getCreateBiometricPayload()
 
       const created = await transactionsService.create({
         sender_card_id: form.fromCardId,
@@ -1067,7 +1110,9 @@ export default function PaymentWizard({
         transaction_type_id: form.txTypeId,
         amount: normalizedAmount,
         note: form.note || null,
+        category_id: form.categoryId ?? null,
         idempotency_key: idempotencyKeyRef.current,
+        ...(biometric ? { biometric } : {}),
       })
 
       if (created?.awaiting_user_approval || created?.requires_user_approval) {
@@ -1102,6 +1147,10 @@ export default function PaymentWizard({
       emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
       onSuccess?.()
     } catch (err) {
+      if (err?.name === 'NotAllowedError') {
+        setSubmitError('Biometric verification was cancelled or timed out. Payment was not sent.')
+        return
+      }
       setSubmitError(
         err?.message || 'Payment failed. Please check the details and try again.'
       )

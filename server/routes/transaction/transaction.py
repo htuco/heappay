@@ -9,9 +9,12 @@ from routes.dependencies import get_current_user_id, get_user_context, require_a
 from schemas.pagination import Page
 from schemas.response import ApiResponse
 from schemas.transaction import (
+    BiometricApprovalOptionsResponse,
     PaymentApprovalEventResponse,
     TransactionApproveRequest,
     TransactionCreate,
+    CategoryBreakdownItem,
+    CategoryBreakdownResponse,
     TransactionPartyResponse,
     TransactionPatch,
     TransactionResponse,
@@ -32,6 +35,7 @@ from services.transaction.transaction import (
     InsufficientBalanceError,
     InvalidTransactionTransitionError,
     ProcessingDelayNotElapsedError,
+    TransactionCategoryNotFoundError,
     TransactionNotFoundError,
     TransactionService,
     TransactionStatusNotFoundError,
@@ -49,6 +53,7 @@ _TRANSACTION_NOT_FOUND = "Transaction not found."
 _CARD_NOT_FOUND = "One of the referenced cards was not found."
 _TYPE_NOT_FOUND = "Transaction type not found."
 _STATUS_NOT_FOUND = "Transaction status not found."
+_CATEGORY_NOT_FOUND = "Transaction category not found."
 _INSUFFICIENT_BALANCE = "Sender card has insufficient balance."
 _FORBIDDEN = "You do not have access to this resource."
 _SENDER_CARD_FROZEN = "This card is frozen and can't be used to send money."
@@ -98,13 +103,22 @@ def _to_detail_response(row, *, mask_amount: bool = False) -> TransactionRespons
 def list_transactions(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    category_id: int | None = Query(default=None, ge=1),
     user_id: int = Depends(get_current_user_id),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[Page[TransactionResponse]]:
     offset = (page - 1) * page_size
-    rows, total = service.list_for_user(
-        user_id=user_id, limit=page_size, offset=offset
-    )
+    try:
+        rows, total = service.list_for_user(
+            user_id=user_id,
+            limit=page_size,
+            offset=offset,
+            category_id=category_id,
+        )
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
+        ) from None
     items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
         items=items, total=total, page=page, page_size=page_size
@@ -129,6 +143,7 @@ def list_all_transactions(
     page_size: int = Query(default=20, ge=1, le=100),
     status_id: int | None = Query(default=None, ge=1),
     transaction_type_id: int | None = Query(default=None, ge=1),
+    category_id: int | None = Query(default=None, ge=1),
     sort: str = Query(
         default="newest",
         pattern="^(newest|oldest|amount_desc|amount_asc)$",
@@ -143,6 +158,7 @@ def list_all_transactions(
             offset=offset,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
     except TransactionStatusNotFoundError:
@@ -152,6 +168,10 @@ def list_all_transactions(
     except TransactionTypeNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     items = [_to_detail_response(r, mask_amount=True) for r in rows]
     page_data = Page[TransactionResponse].build(
@@ -197,6 +217,7 @@ def list_transactions_for_user(
     page_size: int = Query(default=10, ge=1, le=100),
     status_id: int | None = Query(default=None, ge=1),
     transaction_type_id: int | None = Query(default=None, ge=1),
+    category_id: int | None = Query(default=None, ge=1),
     sort: str = Query(
         default="newest",
         pattern="^(newest|oldest|amount_desc|amount_asc)$",
@@ -213,6 +234,7 @@ def list_transactions_for_user(
             offset=(page - 1) * page_size,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            category_id=category_id,
             sort=sort,
         )
     except TransactionStatusNotFoundError:
@@ -222,6 +244,10 @@ def list_transactions_for_user(
     except TransactionTypeNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     items = [_to_detail_response(r, mask_amount=mask_amount) for r in rows]
     page_data = Page[TransactionResponse].build(
@@ -255,6 +281,10 @@ def patch_transaction_as_staff(
     except TransactionStatusNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     except InvalidTransactionTransitionError:
         raise HTTPException(
@@ -316,6 +346,33 @@ def get_transaction_summary(
     )
 
 
+@router.get(
+    "/summary/by-category",
+    response_model=ApiResponse[CategoryBreakdownResponse],
+    summary="Outgoing spend grouped by category for the current user.",
+)
+def get_transaction_category_breakdown(
+    months: int = Query(default=6, ge=1, le=24),
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[CategoryBreakdownResponse]:
+    raw = service.get_category_breakdown_for_user(user_id=user_id, months=months)
+    items = [
+        CategoryBreakdownItem(
+            category_id=r["category_id"],
+            name=r["name"] if r["name"] is not None else "Uncategorised",
+            total=r["total"],
+            count=r["count"],
+        )
+        for r in raw
+    ]
+    return ApiResponse[CategoryBreakdownResponse](
+        success=True,
+        message=f"Spending by category for the last {months} month(s).",
+        data=CategoryBreakdownResponse(items=items, months=months),
+    )
+
+
 @router.get("/card/{card_id}", response_model=ApiResponse[Page[TransactionResponse]])
 def list_transactions_for_card(
     card_id: int,
@@ -374,6 +431,28 @@ def get_transaction(
 
 
 @router.post(
+    "/biometric/options",
+    response_model=ApiResponse[BiometricApprovalOptionsResponse],
+    summary="Start biometric verification before creating a transaction.",
+)
+def transaction_biometric_options(
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[BiometricApprovalOptionsResponse]:
+    try:
+        options = service.begin_biometric_transaction_verification(user_id=user_id)
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or _APPROVAL_REQUIRED
+        ) from None
+    return ApiResponse[BiometricApprovalOptionsResponse](
+        success=True,
+        message="Biometric verification started.",
+        data=options,
+    )
+
+
+@router.post(
     "",
     response_model=ApiResponse[TransactionResponse],
     status_code=status.HTTP_201_CREATED,
@@ -401,6 +480,10 @@ def create_transaction(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
         ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
+        ) from None
     except InsufficientBalanceError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_INSUFFICIENT_BALANCE
@@ -413,6 +496,10 @@ def create_transaction(
     except DuplicatePaymentError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_PAYMENT
+        ) from None
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or _APPROVAL_REQUIRED
         ) from None
     except ForbiddenError:
         raise HTTPException(
@@ -430,6 +517,41 @@ def create_transaction(
             else "Transaction already exists (idempotent replay)."
         ),
         data=_to_detail_response(row),
+    )
+
+
+@router.post(
+    "/{transaction_id}/approval/biometric/options",
+    response_model=ApiResponse[BiometricApprovalOptionsResponse],
+    summary="Start biometric verification for a sensitive pending payment.",
+)
+def biometric_approval_options(
+    transaction_id: int,
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[BiometricApprovalOptionsResponse]:
+    try:
+        options = service.begin_biometric_approval(transaction_id, user_id=user_id)
+    except TransactionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TRANSACTION_NOT_FOUND
+        ) from None
+    except ForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
+    except ApprovalExpiredError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_APPROVAL_EXPIRED
+        ) from None
+    except ApprovalRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or _APPROVAL_REQUIRED
+        ) from None
+    return ApiResponse[BiometricApprovalOptionsResponse](
+        success=True,
+        message="Biometric verification started.",
+        data=options,
     )
 
 
@@ -513,6 +635,10 @@ def patch_transaction(
     except TransactionStatusNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
         ) from None
     except ForbiddenError:
         raise HTTPException(
