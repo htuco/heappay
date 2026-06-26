@@ -7,6 +7,16 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, mo
 from schemas.money import MoneyAmount
 
 
+class BiometricApprovalAssertion(BaseModel):
+    challenge_id: int
+    credential: dict[str, Any]
+
+
+class BiometricApprovalOptionsResponse(BaseModel):
+    challenge_id: int
+    public_key: dict[str, Any] = Field(alias="publicKey")
+
+
 class TransactionCreate(BaseModel):
     sender_card_id: int | None = Field(default=None, gt=0)
     recipient_card_id: int = Field(gt=0)
@@ -16,6 +26,7 @@ class TransactionCreate(BaseModel):
     note: str | None = Field(default=None, max_length=255)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
     requires_approval: bool = False
+    biometric: BiometricApprovalAssertion | None = None
 
     @model_validator(mode="after")
     def validate_sender_recipient_distinct(self) -> "TransactionCreate":
@@ -35,16 +46,6 @@ class TransactionPatch(BaseModel):
     # explicit null clears the category back to "Uncategorised". gt=0 rejects 0
     # while still allowing null through.
     category_id: int | None = Field(default=None, gt=0)
-
-
-class BiometricApprovalAssertion(BaseModel):
-    challenge_id: int
-    credential: dict[str, Any]
-
-
-class BiometricApprovalOptionsResponse(BaseModel):
-    challenge_id: int
-    public_key: dict[str, Any] = Field(alias="publicKey")
 
 
 class TransactionApproveRequest(BaseModel):

@@ -187,9 +187,22 @@ export const transactionsService = {
 	},
 
 	/**
+	 * Start biometric verification before creating a transaction.
+	 * @returns {Promise<{ challenge_id: number, publicKey: object }>}
+	 */
+	async beginBiometricTransactionVerification() {
+		try {
+			const { data } = await api.post('/transactions/biometric/options')
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * Create a new transaction.
 	 * The sender card must belong to the current user.
-	 * @param {import('@/types/transaction').CreateTransactionPayload} payload
+	 * @param {import('@/types/transaction').CreateTransactionPayload & { biometric?: { challenge_id: number, credential: object } }} payload
 	 * @returns {Promise<import('@/types/transaction').Transaction>}
 	 */
 	async create(payload) {
