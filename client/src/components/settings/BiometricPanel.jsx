@@ -148,7 +148,7 @@ export default function BiometricPanel() {
 							</div>
 							<p className="mt-1 text-xs leading-5 text-muted-foreground">
 								{enabled
-									? 'Biometric approval is enabled for your account. You can revoke it here.'
+									? 'Biometric approval is enabled. Disabling requires Face ID or fingerprint.'
 									: 'Enroll this device now. Password, PIN, and authenticator fallback stay available.'}
 							</p>
 						</div>
@@ -161,7 +161,7 @@ export default function BiometricPanel() {
 				value={statusLabel}
 				hint={
 					enabled
-						? `${status.credential_count || 1} credential enrolled. Disabling revokes server access, but you may still see the passkey in your device settings.`
+						? `${status.credential_count || 1} credential enrolled. Disabling verifies your biometrics first, then revokes server access.`
 						: 'Use the secure biometric prompt on this device to enroll a passkey credential.'
 				}
 				action={
