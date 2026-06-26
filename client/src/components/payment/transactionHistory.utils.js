@@ -1,3 +1,4 @@
+import { HIDDEN_AMOUNT_LABEL } from '@/utils/transactionMeta'
 import {
   Bus,
   Clapperboard,
@@ -113,9 +114,13 @@ export const TRANSACTION_TYPE_OPTIONS = [
   { value: '6', label: 'Fine' },
 ]
 
-export function formatTransactionAmount(amount) {
-  const numericAmount = Number(amount)
-  if (Number.isNaN(numericAmount)) return amount
+export function formatTransactionAmount(amountOrTx) {
+  if (amountOrTx && typeof amountOrTx === 'object' && !Array.isArray(amountOrTx)) {
+    if (amountOrTx.amount_hidden) return HIDDEN_AMOUNT_LABEL
+    return formatTransactionAmount(amountOrTx.amount)
+  }
+  const numericAmount = Number(amountOrTx)
+  if (Number.isNaN(numericAmount)) return amountOrTx ?? '—'
   return currencyFormatter.format(numericAmount)
 }
 

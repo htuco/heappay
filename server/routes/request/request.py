@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.request.request import RequestRepository
-from routes.dependencies import get_current_user_id, require_admin, require_staff
+from routes.dependencies import get_current_user_id, get_user_context, require_admin, require_staff
 from schemas.pagination import Page
 from schemas.request import (
     CardFreezeRequestCreate,
@@ -30,6 +30,7 @@ from services.request.request import (
     RequestStatusNotFoundError,
     TransactionNotFoundError,
 )
+from utils.transaction_privacy import mask_refund_detail
 
 router = APIRouter(prefix="/requests", tags=["requests"])
 
@@ -65,7 +66,7 @@ def _user_name(user) -> str | None:
     return f"{user.first_name} {user.last_name}".strip() or None
 
 
-def _to_response(req) -> RequestResponse:
+def _to_response(req, *, mask_amounts: bool = False) -> RequestResponse:
     detail = None
     if req.refund_detail is not None:
         tx = req.refund_detail.transaction
@@ -84,6 +85,8 @@ def _to_response(req) -> RequestResponse:
             sender_name=sender_name,
             recipient_name=recipient_name,
         )
+        if mask_amounts:
+            mask_refund_detail(detail)
 
     freeze_detail = None
     card_freeze = getattr(req, "card_freeze_detail", None)
@@ -156,6 +159,7 @@ def create_refund_request(
 def approve_refund(
     request_id: int,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -173,7 +177,7 @@ def approve_refund(
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund approved. Balance reversed.",
-        data=_to_response(req),
+        data=_to_response(req, mask_amounts=ctx.is_admin),
     )
 
 
@@ -184,6 +188,7 @@ def approve_refund(
 def decline_refund(
     request_id: int,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -195,7 +200,7 @@ def decline_refund(
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund request declined.",
-        data=_to_response(req),
+        data=_to_response(req, mask_amounts=ctx.is_admin),
     )
 
 
@@ -241,6 +246,7 @@ def create_card_freeze_request(
 def approve_card_freeze(
     request_id: int,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -256,7 +262,7 @@ def approve_card_freeze(
     return ApiResponse[RequestResponse](
         success=True,
         message="Freeze approved. The card is now frozen.",
-        data=_to_response(req),
+        data=_to_response(req, mask_amounts=ctx.is_admin),
     )
 
 
@@ -267,6 +273,7 @@ def approve_card_freeze(
 def decline_card_freeze(
     request_id: int,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -278,7 +285,7 @@ def decline_card_freeze(
     return ApiResponse[RequestResponse](
         success=True,
         message="Freeze request declined.",
-        data=_to_response(req),
+        data=_to_response(req, mask_amounts=ctx.is_admin),
     )
 
 
@@ -324,6 +331,7 @@ def create_card_unfreeze_request(
 def approve_card_unfreeze(
     request_id: int,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -339,7 +347,7 @@ def approve_card_unfreeze(
     return ApiResponse[RequestResponse](
         success=True,
         message="Unfreeze approved. The card is now active.",
-        data=_to_response(req),
+        data=_to_response(req, mask_amounts=ctx.is_admin),
     )
 
 
@@ -350,6 +358,7 @@ def approve_card_unfreeze(
 def decline_card_unfreeze(
     request_id: int,
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -361,7 +370,7 @@ def decline_card_unfreeze(
     return ApiResponse[RequestResponse](
         success=True,
         message="Unfreeze request declined.",
-        data=_to_response(req),
+        data=_to_response(req, mask_amounts=ctx.is_admin),
     )
 
 
@@ -375,6 +384,7 @@ def list_freezes(
     page_size: int = Query(default=20, ge=1, le=100),
     status_id: int | None = Query(default=None, ge=1),
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[Page[RequestResponse]]:
     try:
@@ -388,7 +398,7 @@ def list_freezes(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
         ) from None
     data = Page[RequestResponse].build(
-        items=[_to_response(r) for r in items],
+        items=[_to_response(r, mask_amounts=ctx.is_admin) for r in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -410,13 +420,14 @@ def list_requests_for_user(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[Page[RequestResponse]]:
     items, total = service.list_for_user(
         user_id=user_id, limit=page_size, offset=(page - 1) * page_size
     )
     data = Page[RequestResponse].build(
-        items=[_to_response(r) for r in items],
+        items=[_to_response(r, mask_amounts=ctx.is_admin) for r in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -437,13 +448,14 @@ def list_pending_refunds(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[Page[RequestResponse]]:
     items, total = service.list_pending_refunds(
         limit=page_size, offset=(page - 1) * page_size
     )
     data = Page[RequestResponse].build(
-        items=[_to_response(r) for r in items],
+        items=[_to_response(r, mask_amounts=ctx.is_admin) for r in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -462,6 +474,7 @@ def list_pending_refunds(
 )
 def get_request_stats(
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestStatsResponse]:
     stats = service.get_refund_stats()
@@ -482,6 +495,7 @@ def list_refunds(
     page_size: int = Query(default=20, ge=1, le=100),
     status_id: int | None = Query(default=None, ge=1),
     _: int = Depends(require_staff),
+    ctx=Depends(get_user_context),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[Page[RequestResponse]]:
     try:
@@ -495,7 +509,7 @@ def list_refunds(
             status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
         ) from None
     data = Page[RequestResponse].build(
-        items=[_to_response(r) for r in items],
+        items=[_to_response(r, mask_amounts=ctx.is_admin) for r in items],
         total=total,
         page=page,
         page_size=page_size,

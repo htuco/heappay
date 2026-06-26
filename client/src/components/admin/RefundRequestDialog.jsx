@@ -14,11 +14,7 @@ import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
 import { REQUEST_STATUS_IDS, REQUEST_STATUS_META } from '@/utils/requestStatus'
 
-function formatAmount(amount) {
-  const num = Number.parseFloat(amount ?? '0')
-  if (Number.isNaN(num)) return '—'
-  return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-}
+import { formatMonetaryValue } from '@/utils/transactionMeta'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -108,7 +104,9 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Amount</span>
               <span className="text-sm font-semibold text-card-foreground">
-                {formatAmount(request?.refund_detail?.transaction_amount)}
+                {formatMonetaryValue(request?.refund_detail?.transaction_amount, {
+                  hidden: request?.refund_detail?.transaction_amount_hidden,
+                })}
               </span>
             </div>
             {request?.refund_detail?.sender_name && (

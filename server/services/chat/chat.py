@@ -102,7 +102,9 @@ class ChatService:
             )
         return lines
 
-    def _format_transactions(self, transactions: list, limit_label: int) -> list[str]:
+    def _format_transactions(
+        self, transactions: list, limit_label: int, *, mask_amounts: bool = False
+    ) -> list[str]:
         if not transactions:
             return [f"   Recent transactions (last {limit_label}): No transactions found."]
         lines = [f"   Recent transactions (last {limit_label}):"]
@@ -111,7 +113,8 @@ class ChatService:
             status = txn.status.name if txn.status else "unknown"
             note = f" [{txn.note}]" if txn.note else ""
             created = txn.created_at.strftime("%Y-%m-%d")
-            lines.append(f"   - {created}: {txn_type} {txn.amount}€{note} — {status}")
+            amount_part = "[amount hidden]" if mask_amounts else f"{txn.amount}€"
+            lines.append(f"   - {created}: {txn_type} {amount_part}{note} — {status}")
         return lines
 
     def _user_context_from_vector(self, user_id: int, message: str) -> str | None:
@@ -199,8 +202,9 @@ class ChatService:
         if is_admin:
             lines = [
                 'You are an admin assistant for "heap", a digital wallet app.',
-                "You have full access to all users, their cards, and their transactions.",
-                "Help the admin with anything they ask about users, finances, or the platform.",
+                "You have access to user, card, and transaction metadata across the platform.",
+                "Transaction monetary amounts are hidden from admins for privacy — you can see ids, users, status, dates, and types, but not euro amounts.",
+                "Help the admin with anything they ask about users and the platform within those limits.",
                 "Always respond in the same language the admin writes in. Always use Latin script (never Cyrillic).",
                 "Be concise and precise. Today's date is " + today + ".",
                 "",
@@ -216,7 +220,7 @@ class ChatService:
                 cards = self._card_repo.list_all(user_id=u.user_id)
                 lines.extend(self._format_cards(cards))
                 txns = self._transaction_repo.list_for_user(user_id=u.user_id, limit=3)
-                lines.extend(self._format_transactions(txns, 3))
+                lines.extend(self._format_transactions(txns, 3, mask_amounts=True))
                 lines.append("")
         else:
             lines = [
