@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, true
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -31,6 +31,17 @@ class User(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default="false")
+    app_pin_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    app_pin_failed_attempts: Mapped[int] = mapped_column(
+        Integer(),
+        nullable=False,
+        server_default="0",
+    )
+    app_pin_locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    app_pin_set_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")

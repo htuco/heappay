@@ -78,6 +78,39 @@ class DeactivateAccountRequest(BaseModel):
     current_password: str = Field(min_length=1)
 
 
+class AppPinStatusResponse(BaseModel):
+    enabled: bool
+    locked: bool = False
+    locked_until: datetime | None = None
+    failed_attempts_remaining: int | None = None
+
+
+class AppPinSetRequest(BaseModel):
+    current_password: str = Field(min_length=1)
+    pin: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
+    confirm_pin: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
+
+    @model_validator(mode="after")
+    def pins_match(self) -> "AppPinSetRequest":
+        if self.pin != self.confirm_pin:
+            raise ValueError("PINs do not match.")
+        return self
+
+
+class AppPinChangeRequest(BaseModel):
+    current_pin: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
+    new_pin: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
+    confirm_pin: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
+
+    @model_validator(mode="after")
+    def pins_match(self) -> "AppPinChangeRequest":
+        if self.new_pin != self.confirm_pin:
+            raise ValueError("PINs do not match.")
+        if self.current_pin == self.new_pin:
+            raise ValueError("New PIN must be different from the current PIN.")
+        return self
+
+
 class ProfileUpdateRequest(BaseModel):
     email: EmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)

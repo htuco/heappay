@@ -176,6 +176,50 @@ class UserAuthRepository:
         )
         self._db.commit()
 
+    def update_app_pin(self, user_id: int, pin_hash: str) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                app_pin_hash=pin_hash,
+                app_pin_failed_attempts=0,
+                app_pin_locked_until=None,
+                app_pin_set_at=datetime.now(timezone.utc),
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
+    def record_app_pin_failure(
+        self,
+        user_id: int,
+        *,
+        failed_attempts: int,
+        locked_until: datetime | None,
+    ) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                app_pin_failed_attempts=failed_attempts,
+                app_pin_locked_until=locked_until,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
+    def reset_app_pin_failures(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                app_pin_failed_attempts=0,
+                app_pin_locked_until=None,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
     def complete_invitation(self, user_id: int, hashed_password: str) -> User | None:
         invited_status_id = self._get_status_id_by_name(_INVITED_STATUS_NAME)
         active_status_id = self._get_status_id_by_name(_ACTIVE_STATUS_NAME)
