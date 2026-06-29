@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import FormBanner from '@/components/ui/FormBanner'
+import AppPinPad from '@/components/payment/AppPinPad'
 import UserAvatar from '@/components/ui/UserAvatar'
 import RecipientPicker from '@/components/payment/RecipientPicker'
 import { buildCategoryOptions } from '@/components/payment/transactionHistory.utils'
@@ -854,9 +855,8 @@ function StepReview({
           aria-hidden="true"
         />
         <span>
-          If biometrics are enabled, you&apos;ll confirm with Face ID or fingerprint
-          before this payment is sent. Sensitive payments may still require an
-          additional approval step.
+          You&apos;ll confirm this payment with Face ID / fingerprint first when
+          available. Otherwise, use your separate app PIN before money is sent.
         </span>
       </p>
 
@@ -996,6 +996,11 @@ export default function PaymentWizard({
   const [submitError, setSubmitError] = useState('')
   const [pendingApprovalTx, setPendingApprovalTx] = useState(null)
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
+  const [pinConfirmOpen, setPinConfirmOpen] = useState(false)
+  const [pin, setPin] = useState('')
+  const [pinError, setPinError] = useState('')
+  const [pinSubtitle, setPinSubtitle] = useState('Enter your app PIN to send this payment.')
+  const [isPinSubmitting, setIsPinSubmitting] = useState(false)
   const idempotencyKeyRef = useRef(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
@@ -1004,6 +1009,9 @@ export default function PaymentWizard({
     setStep(initialCardId ? 1 : 0)
     setForm({ ...INITIAL_FORM, fromCardId: initialCardId ?? null })
     setSubmitError('')
+    setPinConfirmOpen(false)
+    setPin('')
+    setPinError('')
     setShowCloseConfirm(false)
   }, [isOpen, initialCardId])
 
@@ -1042,6 +1050,9 @@ export default function PaymentWizard({
     setSubmitError('')
     setPendingApprovalTx(null)
     setApprovalModalOpen(false)
+    setPinConfirmOpen(false)
+    setPin('')
+    setPinError('')
     idempotencyKeyRef.current = null
     setShowCloseConfirm(false)
     onClose()
@@ -1086,6 +1097,63 @@ export default function PaymentWizard({
     }
   }
 
+  function openPinConfirmation(message = 'Enter your app PIN to send this payment.') {
+    setPin('')
+    setPinError('')
+    setPinSubtitle(message)
+    setPinConfirmOpen(true)
+  }
+
+  async function submitPayment(confirmation = {}) {
+    const normalizedAmount = normalizeAmountForSubmit(form.amount)
+    if (!normalizedAmount) {
+      throw new Error('Enter a valid amount with up to 2 decimal places.')
+    }
+
+    const created = await transactionsService.create({
+      sender_card_id: form.fromCardId,
+      recipient_card_id: form.recipientInfo.card_id,
+      transaction_type_id: form.txTypeId,
+      amount: normalizedAmount,
+      note: form.note || null,
+      category_id: form.categoryId ?? null,
+      idempotency_key: idempotencyKeyRef.current,
+      ...confirmation,
+    })
+
+    if (created?.awaiting_user_approval || created?.requires_user_approval) {
+      setPendingApprovalTx(created)
+      setApprovalModalOpen(true)
+      return
+    }
+
+    setStep(3)
+
+    const isSelfTransfer = form.recipientInfo.user_id === user?.id
+    const txLink = created?.transaction_id
+      ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
+      : { route: '/payments' }
+
+    if (isSelfTransfer) {
+      notify({
+        type: 'success',
+        category: CATEGORIES.PAYMENT_SELF,
+        message: `Transferred ${formatMoney(form.amount)} to your card ****${form.recipientInfo.last_four}.`,
+        link: txLink,
+      })
+    } else {
+      notify({
+        type: 'success',
+        category: CATEGORIES.PAYMENT_SENT,
+        message: `${formatMoney(form.amount)} sent to ${form.recipientInfo.owner_name}.`,
+        link: txLink,
+      })
+    }
+
+    emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
+    onSuccess?.()
+  }
+
   async function handleSubmit() {
     if (isSubmitting) return
 
@@ -1102,53 +1170,20 @@ export default function PaymentWizard({
         setSubmitError('Enter a valid amount with up to 2 decimal places.')
         return
       }
+
       const biometric = await getCreateBiometricPayload()
-
-      const created = await transactionsService.create({
-        sender_card_id: form.fromCardId,
-        recipient_card_id: form.recipientInfo.card_id,
-        transaction_type_id: form.txTypeId,
-        amount: normalizedAmount,
-        note: form.note || null,
-        category_id: form.categoryId ?? null,
-        idempotency_key: idempotencyKeyRef.current,
-        ...(biometric ? { biometric } : {}),
-      })
-
-      if (created?.awaiting_user_approval || created?.requires_user_approval) {
-        setPendingApprovalTx(created)
-        setApprovalModalOpen(true)
-        return
-      }
-
-      setStep(3)
-
-      const isSelfTransfer = form.recipientInfo.user_id === user?.id
-      const txLink = created?.transaction_id
-        ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
-        : { route: '/payments' }
-
-      if (isSelfTransfer) {
-        notify({
-          type: 'success',
-          category: CATEGORIES.PAYMENT_SELF,
-          message: `Transferred ${formatMoney(form.amount)} to your card ****${form.recipientInfo.last_four}.`,
-          link: txLink,
-        })
+      if (biometric) {
+        await submitPayment({ biometric })
       } else {
-        notify({
-          type: 'success',
-          category: CATEGORIES.PAYMENT_SENT,
-          message: `${formatMoney(form.amount)} sent to ${form.recipientInfo.owner_name}.`,
-          link: txLink,
-        })
+        openPinConfirmation('Enter your app PIN to send this payment.')
       }
-
-      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
-      onSuccess?.()
     } catch (err) {
       if (err?.name === 'NotAllowedError') {
-        setSubmitError('Biometric verification was cancelled or timed out. Payment was not sent.')
+        openPinConfirmation('Biometric verification was cancelled. Use your app PIN to continue.')
+        return
+      }
+      if (err?.message?.toLowerCase().includes('biometric')) {
+        openPinConfirmation('Biometrics are unavailable right now. Use your app PIN to continue.')
         return
       }
       setSubmitError(
@@ -1156,6 +1191,21 @@ export default function PaymentWizard({
       )
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handlePinSubmit() {
+    if (isPinSubmitting || pin.length !== 4) return
+    setPinError('')
+    setIsPinSubmitting(true)
+    try {
+      await submitPayment({ app_pin: pin })
+      setPinConfirmOpen(false)
+    } catch (err) {
+      setPin('')
+      setPinError(err?.message || 'Could not confirm app PIN. Try again.')
+    } finally {
+      setIsPinSubmitting(false)
     }
   }
 
@@ -1331,6 +1381,38 @@ export default function PaymentWizard({
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {pinConfirmOpen && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-foreground/30 p-4 backdrop-blur-[3px] animate-in fade-in-0 duration-200"
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !isPinSubmitting) {
+              setPinConfirmOpen(false)
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payment-pin-title"
+        >
+          <div className="w-full max-w-sm rounded-panel border border-border/60 bg-background px-6 py-6 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-300">
+            <p id="payment-pin-title" className="sr-only">
+              Confirm payment with app PIN
+            </p>
+            <AppPinPad
+              value={pin}
+              onChange={setPin}
+              onSubmit={handlePinSubmit}
+              isSubmitting={isPinSubmitting}
+              error={pinError}
+              title="Confirm with app PIN"
+              subtitle={pinSubtitle}
+              submitLabel="Send payment"
+              cancelLabel="Back"
+              onCancel={() => setPinConfirmOpen(false)}
+            />
           </div>
         </div>
       )}
