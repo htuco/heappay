@@ -206,15 +206,28 @@ class UserAuthRepository:
         self._db.commit()
 
     def update_notification_preferences(
-        self, user_id: int, billing_reminders_enabled: bool
+        self,
+        user_id: int,
+        *,
+        billing_reminders_enabled: bool | None = None,
+        email_payment_sent_enabled: bool | None = None,
+        email_payment_received_enabled: bool | None = None,
+        email_topup_enabled: bool | None = None,
+        email_refund_status_enabled: bool | None = None,
     ) -> None:
+        values: dict = {"modified_at": datetime.now(timezone.utc)}
+        if billing_reminders_enabled is not None:
+            values["billing_reminders_enabled"] = billing_reminders_enabled
+        if email_payment_sent_enabled is not None:
+            values["email_payment_sent_enabled"] = email_payment_sent_enabled
+        if email_payment_received_enabled is not None:
+            values["email_payment_received_enabled"] = email_payment_received_enabled
+        if email_topup_enabled is not None:
+            values["email_topup_enabled"] = email_topup_enabled
+        if email_refund_status_enabled is not None:
+            values["email_refund_status_enabled"] = email_refund_status_enabled
         self._db.execute(
-            update(User)
-            .where(User.user_id == user_id)
-            .values(
-                billing_reminders_enabled=billing_reminders_enabled,
-                modified_at=datetime.now(timezone.utc),
-            )
+            update(User).where(User.user_id == user_id).values(**values)
         )
         self._db.commit()
 

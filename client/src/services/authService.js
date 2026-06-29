@@ -121,9 +121,19 @@ export async function uploadProfileAvatar(file) {
 	return user
 }
 
-export async function updateNotificationPreferences({ billingRemindersEnabled }) {
+export async function updateNotificationPreferences({
+	billingRemindersEnabled,
+	emailPaymentSentEnabled,
+	emailPaymentReceivedEnabled,
+	emailTopupEnabled,
+	emailRefundStatusEnabled,
+}) {
 	const { data } = await api.patch('/auth/notification-preferences', {
 		billing_reminders_enabled: billingRemindersEnabled,
+		email_payment_sent_enabled: emailPaymentSentEnabled,
+		email_payment_received_enabled: emailPaymentReceivedEnabled,
+		email_topup_enabled: emailTopupEnabled,
+		email_refund_status_enabled: emailRefundStatusEnabled,
 	})
 	const td = data.data
 	if (td?.access_token && td?.refresh_token) {

@@ -83,6 +83,11 @@ def _credit_card(db, raw: dict) -> bool:
         )
     )
     db.commit()
+    tx = tx_repo.get_by_idempotency_key(nexus_idempotency_key(request_id))
+    if tx is not None:
+        from services.email.transaction_notifier import TransactionEmailNotifier
+
+        TransactionEmailNotifier(db).notify_transaction_completed(tx.transaction_id)
     logger.info(
         "nexus claim: credited card_id=%s amount=%s request_id=%s",
         card_id,

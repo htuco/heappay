@@ -41,6 +41,7 @@ from schemas.user.auth import (
     ChangePasswordRequest,
     DeactivateAccountRequest,
     LoginRequest,
+    NotificationPreferencesUpdate,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
     ProfileUpdateRequest,
@@ -186,6 +187,10 @@ class UserAuthService:
             user_role_id=user.user_role_id,
             role_name=role_name,
             billing_reminders_enabled=user.billing_reminders_enabled,
+            email_payment_sent_enabled=user.email_payment_sent_enabled,
+            email_payment_received_enabled=user.email_payment_received_enabled,
+            email_topup_enabled=user.email_topup_enabled,
+            email_refund_status_enabled=user.email_refund_status_enabled,
             avatar_url=resolve_avatar_url_for_client(raw_avatar, self.settings),
             totp_enabled=user.totp_enabled,
         )
@@ -650,13 +655,20 @@ class UserAuthService:
         )
 
     def update_notification_preferences(
-        self, token: str, billing_reminders_enabled: bool
+        self, token: str, preferences: NotificationPreferencesUpdate
     ) -> TokenResponse | None:
         user_id = self.resolve_active_user_id(token)
         if user_id is None:
             return None
 
-        self.repo.update_notification_preferences(user_id, billing_reminders_enabled)
+        self.repo.update_notification_preferences(
+            user_id,
+            billing_reminders_enabled=preferences.billing_reminders_enabled,
+            email_payment_sent_enabled=preferences.email_payment_sent_enabled,
+            email_payment_received_enabled=preferences.email_payment_received_enabled,
+            email_topup_enabled=preferences.email_topup_enabled,
+            email_refund_status_enabled=preferences.email_refund_status_enabled,
+        )
         user = self.repo.get_user_by_id(user_id)
         if user is None:
             return None

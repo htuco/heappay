@@ -28,6 +28,18 @@ class User(Base):
     billing_reminders_enabled: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
+    email_payment_sent_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
+    email_payment_received_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
+    email_topup_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
+    email_refund_status_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default="false")

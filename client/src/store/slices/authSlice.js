@@ -107,9 +107,24 @@ export const uploadProfileAvatarUser = createAsyncThunk(
 
 export const updateNotificationPreferences = createAsyncThunk(
   'auth/updateNotificationPreferences',
-  async ({ billingRemindersEnabled }, { rejectWithValue }) => {
+  async (
+    {
+      billingRemindersEnabled,
+      emailPaymentSentEnabled,
+      emailPaymentReceivedEnabled,
+      emailTopupEnabled,
+      emailRefundStatusEnabled,
+    },
+    { rejectWithValue },
+  ) => {
     try {
-      return await authService.updateNotificationPreferences({ billingRemindersEnabled })
+      return await authService.updateNotificationPreferences({
+        billingRemindersEnabled,
+        emailPaymentSentEnabled,
+        emailPaymentReceivedEnabled,
+        emailTopupEnabled,
+        emailRefundStatusEnabled,
+      })
     } catch (error) {
       return rejectWithValue(
         getApiErrorMessage(error, 'Could not save notification preferences.'),
