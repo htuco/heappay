@@ -35,8 +35,17 @@ class _FakeRepo:
     def get_by_idempotency_key(self, key):
         return None
 
+    def find_recent_duplicate(self, **_kwargs):
+        return None
+
     def transaction_type_exists(self, type_id):
         return True
+
+    def transaction_category_exists(self, category_id):
+        return True
+
+    def get_transaction_type_name(self, type_id):
+        return "payment"
 
     def get_status_id_by_name(self, name):
         return {"pending": 10}.get(name)
@@ -59,6 +68,13 @@ class _FakeRepo:
 def _service(cards):
     svc = TransactionService.__new__(TransactionService)
     svc._repo = _FakeRepo(cards)
+    svc._auth_repo = None
+    svc._approval_repo = None
+    svc._category_rule_repo = type(
+        "_CategoryRuleRepo",
+        (),
+        {"list_applicable": lambda self, user_id: []},
+    )()
     return svc
 
 

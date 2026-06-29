@@ -192,7 +192,7 @@ def test_begin_biometric_transaction_verification_creates_account_challenge(monk
     assert kwargs["challenge"] == "Y2hhbGxlbmdlLWJ5dGVz"
 
 
-def test_create_requires_biometric_when_user_has_enrolled_credential():
+def test_create_requires_biometric_or_pin_when_user_has_enrolled_credential():
     from schemas.transaction import TransactionCreate
     from services.transaction.transaction import ApprovalRequiredError, TransactionService
 
@@ -207,8 +207,8 @@ def test_create_requires_biometric_when_user_has_enrolled_credential():
 
     service = TransactionService(MagicMock(), auth_repo=auth_repo)
 
-    with pytest.raises(ApprovalRequiredError, match="Biometric verification is required"):
-        service._verify_transaction_create_biometric(1, payload)
+    with pytest.raises(ApprovalRequiredError, match="Biometric verification or app PIN"):
+        service._verify_transaction_create_confirmation(1, payload)
 
 
 def test_create_accepts_biometric_when_user_has_enrolled_credential(monkeypatch):
@@ -254,7 +254,7 @@ def test_create_accepts_biometric_when_user_has_enrolled_credential(monkeypatch)
     )
 
     service = TransactionService(MagicMock(), auth_repo=auth_repo)
-    service._verify_transaction_create_biometric(1, payload)
+    service._verify_transaction_create_confirmation(1, payload)
 
     auth_repo.get_biometric_authentication_challenge.assert_called_once_with(
         user_id=1,
@@ -262,6 +262,87 @@ def test_create_accepts_biometric_when_user_has_enrolled_credential(monkeypatch)
         challenge_id=6,
     )
     auth_repo.mark_biometric_authentication_challenge_used.assert_called_once_with(6)
+
+
+def test_create_requires_app_pin_when_biometrics_are_not_enabled():
+    from schemas.transaction import TransactionCreate
+    from services.transaction.transaction import ApprovalRequiredError, TransactionService
+
+    auth_repo = MagicMock()
+    auth_repo.list_biometric_credentials.return_value = []
+    payload = TransactionCreate(
+        sender_card_id=1,
+        recipient_card_id=2,
+        transaction_type_id=2,
+        amount=Decimal("25.00"),
+    )
+
+    service = TransactionService(MagicMock(), auth_repo=auth_repo)
+
+    with pytest.raises(ApprovalRequiredError, match="App PIN is required"):
+        service._verify_transaction_create_confirmation(1, payload)
+
+
+def test_create_accepts_app_pin_when_biometrics_are_not_enabled(monkeypatch):
+    from schemas.transaction import TransactionCreate
+    from services.transaction import transaction as transaction_module
+    from services.transaction.transaction import TransactionService
+
+    user = MagicMock(
+        deleted_at=None,
+        app_pin_hash="pin-hash",
+        app_pin_failed_attempts=1,
+        app_pin_locked_until=None,
+    )
+    auth_repo = MagicMock()
+    auth_repo.list_biometric_credentials.return_value = []
+    auth_repo.get_user_by_id.return_value = user
+    monkeypatch.setattr(transaction_module.bcrypt, "checkpw", lambda *_: True)
+    payload = TransactionCreate(
+        sender_card_id=1,
+        recipient_card_id=2,
+        transaction_type_id=2,
+        amount=Decimal("25.00"),
+        app_pin="1234",
+    )
+
+    service = TransactionService(MagicMock(), auth_repo=auth_repo)
+    service._verify_transaction_create_confirmation(1, payload)
+
+    auth_repo.reset_app_pin_failures.assert_called_once_with(1)
+
+
+def test_create_locks_app_pin_after_failed_attempts(monkeypatch):
+    from schemas.transaction import TransactionCreate
+    from services.transaction import transaction as transaction_module
+    from services.transaction.transaction import ApprovalRequiredError, TransactionService
+
+    user = MagicMock(
+        deleted_at=None,
+        app_pin_hash="pin-hash",
+        app_pin_failed_attempts=4,
+        app_pin_locked_until=None,
+    )
+    auth_repo = MagicMock()
+    auth_repo.list_biometric_credentials.return_value = []
+    auth_repo.get_user_by_id.return_value = user
+    monkeypatch.setattr(transaction_module.bcrypt, "checkpw", lambda *_: False)
+    payload = TransactionCreate(
+        sender_card_id=1,
+        recipient_card_id=2,
+        transaction_type_id=2,
+        amount=Decimal("25.00"),
+        app_pin="0000",
+    )
+
+    service = TransactionService(MagicMock(), auth_repo=auth_repo)
+
+    with pytest.raises(ApprovalRequiredError, match="App PIN is locked"):
+        service._verify_transaction_create_confirmation(1, payload)
+
+    kwargs = auth_repo.record_app_pin_failure.call_args.kwargs
+    assert kwargs["failed_attempts"] == 5
+    assert kwargs["locked_until"] is not None
 
 
 def test_approve_accepts_biometric_assertion(monkeypatch):
@@ -323,4 +404,38 @@ def test_approve_accepts_biometric_assertion(monkeypatch):
         credential_row_id=12,
         sign_count=2,
     )
+    approval_repo.record_event.assert_called_once()
+
+
+def test_approve_accepts_app_pin(monkeypatch):
+    from schemas.transaction import TransactionApproveRequest
+    from services.transaction import transaction as transaction_module
+    from services.transaction.transaction import TransactionService
+
+    tx = _tx(transaction_id=99)
+    approved = _tx(transaction_id=99, user_approved_at=datetime.now(timezone.utc))
+    repo = MagicMock()
+    repo._db = MagicMock()
+    repo.get_by_id.return_value = tx
+    repo.card_owner_id.return_value = 1
+    repo.approve_user_confirmation.return_value = approved
+    approval_repo = MagicMock()
+    user = MagicMock(
+        deleted_at=None,
+        totp_enabled=False,
+        app_pin_hash="pin-hash",
+        app_pin_failed_attempts=0,
+        app_pin_locked_until=None,
+    )
+    auth_repo = MagicMock()
+    auth_repo.get_user_by_id.return_value = user
+    monkeypatch.setattr(transaction_module.bcrypt, "checkpw", lambda *_: True)
+
+    payload = TransactionApproveRequest(app_pin="1234")
+    service = TransactionService(repo, approval_repo=approval_repo, auth_repo=auth_repo)
+    result = service.approve(99, payload, user_id=1)
+
+    assert result is approved
+    repo.approve_user_confirmation.assert_called_once_with(99, approval_method="app_pin")
+    auth_repo.reset_app_pin_failures.assert_called_once_with(1)
     approval_repo.record_event.assert_called_once()

@@ -300,7 +300,7 @@ class TransactionService:
         if sender_card is not None and sender_card.balance < payload.amount:
             raise InsufficientBalanceError()
 
-        self._verify_transaction_create_biometric(user_id, payload)
+        self._verify_transaction_create_confirmation(user_id, payload)
 
         delay_seconds = get_settings().tx_min_processing_delay_seconds
         processing_eligible_at = datetime.now(timezone.utc) + timedelta(
@@ -511,7 +511,7 @@ class TransactionService:
             return True
         return False
 
-    def _verify_transaction_create_biometric(
+    def _verify_transaction_create_confirmation(
         self,
         user_id: int,
         payload: TransactionCreate,
@@ -520,13 +520,19 @@ class TransactionService:
             return
 
         credentials = self._auth_repo.list_biometric_credentials(user_id)
-        if not credentials:
+        if payload.biometric:
+            self._verify_biometric_approval(None, user_id, payload.biometric)
             return
 
-        if not payload.biometric:
-            raise ApprovalRequiredError("Biometric verification is required to send money.")
+        if payload.app_pin:
+            self._verify_app_pin(user_id, payload.app_pin)
+            return
 
-        self._verify_biometric_approval(None, user_id, payload.biometric)
+        if credentials:
+            raise ApprovalRequiredError(
+                "Biometric verification or app PIN is required to send money."
+            )
+        raise ApprovalRequiredError("App PIN is required to send money.")
 
     @staticmethod
     def _recipient_name(recipient_card) -> str | None:
@@ -581,6 +587,9 @@ class TransactionService:
         if payload.biometric:
             return self._verify_biometric_approval(transaction_id, user_id, payload.biometric)
 
+        if payload.app_pin:
+            return self._verify_app_pin(user_id, payload.app_pin)
+
         settings = get_settings()
         if user.totp_enabled:
             if not payload.totp_code:
@@ -600,6 +609,40 @@ class TransactionService:
         ):
             raise ApprovalRequiredError("Incorrect password.")
         return "password"
+
+    def _verify_app_pin(self, user_id: int, pin: str) -> str:
+        if self._auth_repo is None:
+            raise ApprovalRequiredError("Step-up verification is unavailable.")
+
+        user = self._auth_repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ForbiddenError()
+        if not getattr(user, "app_pin_hash", None):
+            raise ApprovalRequiredError("Set an app PIN in Settings before sending money.")
+
+        locked_until = getattr(user, "app_pin_locked_until", None)
+        if self._is_pin_locked(locked_until):
+            raise ApprovalRequiredError("App PIN is locked. Try again later.")
+
+        if bcrypt.checkpw(pin.encode("utf-8"), user.app_pin_hash.encode("utf-8")):
+            self._auth_repo.reset_app_pin_failures(user_id)
+            return "app_pin"
+
+        settings = get_settings()
+        failed_attempts = (getattr(user, "app_pin_failed_attempts", 0) or 0) + 1
+        new_locked_until = None
+        if failed_attempts >= settings.app_pin_max_failed_attempts:
+            new_locked_until = datetime.now(timezone.utc) + timedelta(
+                minutes=settings.app_pin_lockout_minutes,
+            )
+        self._auth_repo.record_app_pin_failure(
+            user_id,
+            failed_attempts=failed_attempts,
+            locked_until=new_locked_until,
+        )
+        if new_locked_until is not None:
+            raise ApprovalRequiredError("App PIN is locked. Try again later.")
+        raise ApprovalRequiredError("Incorrect app PIN.")
 
     def _verify_biometric_approval(
         self,
@@ -654,6 +697,14 @@ class TransactionService:
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
         return value <= datetime.now(timezone.utc)
+
+    @staticmethod
+    def _is_pin_locked(locked_until: datetime | None) -> bool:
+        if locked_until is None:
+            return False
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        return locked_until > datetime.now(timezone.utc)
 
     def _user_is_sender(self, row: Transaction, user_id: int) -> bool:
         if row.sender_card_id is None:
