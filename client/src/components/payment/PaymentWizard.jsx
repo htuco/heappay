@@ -29,7 +29,7 @@ import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
 import { listCards, lookupCardByNumber } from '@/services/cardsService'
-import { getBiometricStatus } from '@/services/authService'
+import { getAppPinStatus, getBiometricStatus } from '@/services/authService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
@@ -1097,6 +1097,11 @@ export default function PaymentWizard({
     }
   }
 
+  async function getCreateAppPinRequired() {
+    const status = await getAppPinStatus()
+    return Boolean(status.enabled)
+  }
+
   function openPinConfirmation(message = 'Enter your app PIN to send this payment.') {
     setPin('')
     setPinError('')
@@ -1174,16 +1179,26 @@ export default function PaymentWizard({
       const biometric = await getCreateBiometricPayload()
       if (biometric) {
         await submitPayment({ biometric })
-      } else {
+      } else if (await getCreateAppPinRequired()) {
         openPinConfirmation('Enter your app PIN to send this payment.')
+      } else {
+        await submitPayment()
       }
     } catch (err) {
       if (err?.name === 'NotAllowedError') {
-        openPinConfirmation('Biometric verification was cancelled. Use your app PIN to continue.')
+        if (await getCreateAppPinRequired()) {
+          openPinConfirmation('Biometric verification was cancelled. Use your app PIN to continue.')
+        } else {
+          setSubmitError('Biometric verification was cancelled. Payment was not sent.')
+        }
         return
       }
       if (err?.message?.toLowerCase().includes('biometric')) {
-        openPinConfirmation('Biometrics are unavailable right now. Use your app PIN to continue.')
+        if (await getCreateAppPinRequired()) {
+          openPinConfirmation('Biometrics are unavailable right now. Use your app PIN to continue.')
+        } else {
+          setSubmitError('Biometrics are unavailable right now. Payment was not sent.')
+        }
         return
       }
       setSubmitError(

@@ -528,11 +528,16 @@ class TransactionService:
             self._verify_app_pin(user_id, payload.app_pin)
             return
 
+        user = self._auth_repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ForbiddenError()
+
         if credentials:
             raise ApprovalRequiredError(
                 "Biometric verification or app PIN is required to send money."
             )
-        raise ApprovalRequiredError("App PIN is required to send money.")
+        if getattr(user, "app_pin_hash", None):
+            raise ApprovalRequiredError("App PIN is required to send money.")
 
     @staticmethod
     def _recipient_name(recipient_card) -> str | None:

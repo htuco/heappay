@@ -198,6 +198,7 @@ def test_create_requires_biometric_or_pin_when_user_has_enrolled_credential():
 
     auth_repo = MagicMock()
     auth_repo.list_biometric_credentials.return_value = [MagicMock()]
+    auth_repo.get_user_by_id.return_value = MagicMock(deleted_at=None, app_pin_hash=None)
     payload = TransactionCreate(
         sender_card_id=1,
         recipient_card_id=2,
@@ -264,12 +265,33 @@ def test_create_accepts_biometric_when_user_has_enrolled_credential(monkeypatch)
     auth_repo.mark_biometric_authentication_challenge_used.assert_called_once_with(6)
 
 
-def test_create_requires_app_pin_when_biometrics_are_not_enabled():
+def test_create_allows_without_pin_when_biometrics_and_pin_are_not_enabled():
+    from schemas.transaction import TransactionCreate
+    from services.transaction.transaction import TransactionService
+
+    user = MagicMock(deleted_at=None, app_pin_hash=None)
+    auth_repo = MagicMock()
+    auth_repo.list_biometric_credentials.return_value = []
+    auth_repo.get_user_by_id.return_value = user
+    payload = TransactionCreate(
+        sender_card_id=1,
+        recipient_card_id=2,
+        transaction_type_id=2,
+        amount=Decimal("25.00"),
+    )
+
+    service = TransactionService(MagicMock(), auth_repo=auth_repo)
+    service._verify_transaction_create_confirmation(1, payload)
+
+
+def test_create_requires_app_pin_when_pin_is_enabled_and_biometrics_are_not_enabled():
     from schemas.transaction import TransactionCreate
     from services.transaction.transaction import ApprovalRequiredError, TransactionService
 
+    user = MagicMock(deleted_at=None, app_pin_hash="pin-hash")
     auth_repo = MagicMock()
     auth_repo.list_biometric_credentials.return_value = []
+    auth_repo.get_user_by_id.return_value = user
     payload = TransactionCreate(
         sender_card_id=1,
         recipient_card_id=2,
