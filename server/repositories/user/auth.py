@@ -220,6 +220,20 @@ class UserAuthRepository:
         )
         self._db.commit()
 
+    def clear_app_pin(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                app_pin_hash=None,
+                app_pin_failed_attempts=0,
+                app_pin_locked_until=None,
+                app_pin_set_at=None,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
     def complete_invitation(self, user_id: int, hashed_password: str) -> User | None:
         invited_status_id = self._get_status_id_by_name(_INVITED_STATUS_NAME)
         active_status_id = self._get_status_id_by_name(_ACTIVE_STATUS_NAME)

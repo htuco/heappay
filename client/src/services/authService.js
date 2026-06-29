@@ -109,6 +109,13 @@ export async function changeAppPin({ currentPin, newPin }) {
 	return data
 }
 
+export async function disableAppPin({ currentPin }) {
+	const { data } = await api.delete('/auth/app-pin', {
+		data: { current_pin: currentPin },
+	})
+	return data
+}
+
 export async function getMe() {
 	const { data } = await api.get('/auth/me')
 	const user = data.data.user

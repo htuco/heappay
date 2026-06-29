@@ -137,6 +137,14 @@ class _FakeAuthService:
             failed_attempts_remaining=5,
         )
 
+    def disable_app_pin(self, _user_id, _payload):
+        return AppPinStatusResponse(
+            enabled=False,
+            locked=False,
+            locked_until=None,
+            failed_attempts_remaining=5,
+        )
+
 
 class _FakeAuthServiceAdmin:
     def login(self, _payload):
@@ -412,6 +420,34 @@ def test_app_pin_change_locked_returns_friendly_error() -> None:
     )
     assert resp.status_code == 400
     assert resp.json()["message"] == "App PIN is locked. Try again later."
+
+
+def test_app_pin_disable_returns_disabled_state() -> None:
+    client = _build_client()
+    resp = client.request(
+        "DELETE",
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"current_pin": "1234"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["enabled"] is False
+
+
+def test_app_pin_disable_wrong_pin_returns_friendly_error() -> None:
+    class _WrongPinService(_FakeAuthService):
+        def disable_app_pin(self, _user_id, _payload):
+            raise ValueError("INVALID_APP_PIN")
+
+    client = _build_client(_WrongPinService())
+    resp = client.request(
+        "DELETE",
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"current_pin": "0000"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Current app PIN is incorrect."
 
 
 # ---------------------------------------------------------------------------

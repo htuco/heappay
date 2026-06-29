@@ -10,6 +10,7 @@ from routes.storage.deps import get_supabase_image_storage_service
 from schemas.user.auth import (
     AcceptInvitationRequest,
     AppPinChangeRequest,
+    AppPinDisableRequest,
     AppPinSetRequest,
     AppPinStatusResponse,
     AuthResponse,
@@ -358,6 +359,32 @@ def app_pin_change(
         if msg == "INVALID_APP_PIN":
             raise InvalidInput("Current app PIN is incorrect.") from None
         raise InvalidInput("Could not change app PIN.") from None
+
+
+@router.delete("/app-pin", response_model=AppPinStatusResponse)
+def app_pin_disable(
+    payload: AppPinDisableRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AppPinStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.disable_app_pin(user_id, payload)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "APP_PIN_NOT_SET":
+            raise InvalidInput("App PIN is not set.") from None
+        if msg == "APP_PIN_LOCKED":
+            raise InvalidInput("App PIN is locked. Try again later.") from None
+        if msg == "INVALID_APP_PIN":
+            raise InvalidInput("Current app PIN is incorrect.") from None
+        raise InvalidInput("Could not disable app PIN.") from None
 
 
 @router.post("/refresh", response_model=AuthResponse)

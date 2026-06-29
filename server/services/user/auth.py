@@ -39,6 +39,7 @@ from schemas.user.biometric import (
 from schemas.user.auth import (
     AcceptInvitationRequest,
     AppPinChangeRequest,
+    AppPinDisableRequest,
     AppPinSetRequest,
     AppPinStatusResponse,
     ChangePasswordRequest,
@@ -451,6 +452,11 @@ class UserAuthService:
     def change_app_pin(self, user_id: int, payload: AppPinChangeRequest) -> AppPinStatusResponse:
         self.verify_app_pin(user_id, payload.current_pin)
         self.repo.update_app_pin(user_id, self.hash_app_pin(payload.new_pin))
+        return self.get_app_pin_status(user_id)
+
+    def disable_app_pin(self, user_id: int, payload: AppPinDisableRequest) -> AppPinStatusResponse:
+        self.verify_app_pin(user_id, payload.current_pin)
+        self.repo.clear_app_pin(user_id)
         return self.get_app_pin_status(user_id)
 
     def verify_app_pin(self, user_id: int, pin: str) -> None:

@@ -6,7 +6,12 @@ from unittest.mock import patch
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
 
-from schemas.user.auth import AppPinChangeRequest, AppPinSetRequest, ChangePasswordRequest  # noqa: E402
+from schemas.user.auth import (  # noqa: E402
+    AppPinChangeRequest,
+    AppPinDisableRequest,
+    AppPinSetRequest,
+    ChangePasswordRequest,
+)
 from schemas.user.biometric import (  # noqa: E402
     BiometricDisableRequest,
     BiometricRegistrationCompleteRequest,
@@ -74,6 +79,13 @@ class _AuthRepo:
         if user_id == self.user.user_id:
             self.user.app_pin_failed_attempts = 0
             self.user.app_pin_locked_until = None
+
+    def clear_app_pin(self, user_id: int) -> None:
+        if user_id == self.user.user_id:
+            self.user.app_pin_hash = None
+            self.user.app_pin_failed_attempts = 0
+            self.user.app_pin_locked_until = None
+            self.user.app_pin_set_at = None
 
     def list_biometric_credentials(self, user_id: int):
         return [row for row in self.credentials if row.user_id == user_id]
@@ -247,6 +259,22 @@ def test_change_app_pin_verifies_current_pin() -> None:
     verify_app_pin.assert_called_once_with(repo.user.user_id, "1234")
     assert status.enabled is True
     assert repo.user.app_pin_hash == "new-pin-hash"
+
+
+def test_disable_app_pin_verifies_current_pin_then_clears_pin() -> None:
+    repo = _AuthRepo()
+    repo.user.app_pin_hash = "old-pin-hash"
+    repo.user.app_pin_failed_attempts = 2
+    service = UserAuthService(repo)
+    payload = AppPinDisableRequest(current_pin="1234")
+
+    with patch.object(service, "verify_app_pin") as verify_app_pin:
+        status = service.disable_app_pin(repo.user.user_id, payload)
+
+    verify_app_pin.assert_called_once_with(repo.user.user_id, "1234")
+    assert status.enabled is False
+    assert repo.user.app_pin_hash is None
+    assert repo.user.app_pin_failed_attempts == 0
 
 
 def test_verify_app_pin_locks_after_failed_attempts() -> None:

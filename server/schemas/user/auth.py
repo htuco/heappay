@@ -111,6 +111,10 @@ class AppPinChangeRequest(BaseModel):
         return self
 
 
+class AppPinDisableRequest(BaseModel):
+    current_pin: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
+
+
 class ProfileUpdateRequest(BaseModel):
     email: EmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
