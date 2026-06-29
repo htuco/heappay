@@ -6,7 +6,12 @@ from unittest.mock import patch
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
 
-from schemas.user.auth import ChangePasswordRequest  # noqa: E402
+from schemas.user.auth import (  # noqa: E402
+    AppPinChangeRequest,
+    AppPinDisableRequest,
+    AppPinSetRequest,
+    ChangePasswordRequest,
+)
 from schemas.user.biometric import (  # noqa: E402
     BiometricDisableRequest,
     BiometricRegistrationCompleteRequest,
@@ -27,6 +32,10 @@ class _UserRow:
         self.deleted_at = None
         self.first_name = "Test"
         self.last_name = "User"
+        self.app_pin_hash = None
+        self.app_pin_failed_attempts = 0
+        self.app_pin_locked_until = None
+        self.app_pin_set_at = None
 
 
 class _AuthRepo:
@@ -53,6 +62,30 @@ class _AuthRepo:
         if user_id == self.user.user_id:
             self.user.password_hash = hashed_password
             self.user.refresh_token = None
+
+    def update_app_pin(self, user_id: int, pin_hash: str) -> None:
+        if user_id == self.user.user_id:
+            self.user.app_pin_hash = pin_hash
+            self.user.app_pin_failed_attempts = 0
+            self.user.app_pin_locked_until = None
+            self.user.app_pin_set_at = datetime.now(timezone.utc)
+
+    def record_app_pin_failure(self, user_id: int, *, failed_attempts: int, locked_until):
+        if user_id == self.user.user_id:
+            self.user.app_pin_failed_attempts = failed_attempts
+            self.user.app_pin_locked_until = locked_until
+
+    def reset_app_pin_failures(self, user_id: int) -> None:
+        if user_id == self.user.user_id:
+            self.user.app_pin_failed_attempts = 0
+            self.user.app_pin_locked_until = None
+
+    def clear_app_pin(self, user_id: int) -> None:
+        if user_id == self.user.user_id:
+            self.user.app_pin_hash = None
+            self.user.app_pin_failed_attempts = 0
+            self.user.app_pin_locked_until = None
+            self.user.app_pin_set_at = None
 
     def list_biometric_credentials(self, user_id: int):
         return [row for row in self.credentials if row.user_id == user_id]
@@ -166,6 +199,120 @@ def test_change_password_invalidates_existing_refresh_token() -> None:
         assert repo.user.password_hash == "new-hash"
         assert repo.user.refresh_token is None
         assert service.refresh("old.refresh.token") is None
+
+
+def test_set_app_pin_requires_current_password() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    payload = AppPinSetRequest(
+        current_password="WrongPassword123!",
+        pin="1234",
+        confirm_pin="1234",
+    )
+
+    with patch.object(service, "verify_password", return_value=False):
+        try:
+            service.set_app_pin(repo.user.user_id, payload)
+        except ValueError as exc:
+            assert str(exc) == "WRONG_CURRENT_PASSWORD"
+        else:  # pragma: no cover
+            raise AssertionError("Expected app PIN setup to require the account password")
+
+
+def test_set_app_pin_hashes_and_enables_pin() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    payload = AppPinSetRequest(
+        current_password="OldPassword123!",
+        pin="1234",
+        confirm_pin="1234",
+    )
+
+    with (
+        patch.object(service, "verify_password", return_value=True),
+        patch.object(service, "hash_app_pin", return_value="pin-hash"),
+    ):
+        status = service.set_app_pin(repo.user.user_id, payload)
+
+    assert status.enabled is True
+    assert status.locked is False
+    assert repo.user.app_pin_hash == "pin-hash"
+    assert repo.user.app_pin_failed_attempts == 0
+
+
+def test_change_app_pin_verifies_current_pin() -> None:
+    repo = _AuthRepo()
+    repo.user.app_pin_hash = "old-pin-hash"
+    service = UserAuthService(repo)
+    payload = AppPinChangeRequest(
+        current_pin="1234",
+        new_pin="4321",
+        confirm_pin="4321",
+    )
+
+    with (
+        patch.object(service, "verify_app_pin") as verify_app_pin,
+        patch.object(service, "hash_app_pin", return_value="new-pin-hash"),
+    ):
+        status = service.change_app_pin(repo.user.user_id, payload)
+
+    verify_app_pin.assert_called_once_with(repo.user.user_id, "1234")
+    assert status.enabled is True
+    assert repo.user.app_pin_hash == "new-pin-hash"
+
+
+def test_disable_app_pin_verifies_current_pin_then_clears_pin() -> None:
+    repo = _AuthRepo()
+    repo.user.app_pin_hash = "old-pin-hash"
+    repo.user.app_pin_failed_attempts = 2
+    service = UserAuthService(repo)
+    payload = AppPinDisableRequest(current_pin="1234")
+
+    with patch.object(service, "verify_app_pin") as verify_app_pin:
+        status = service.disable_app_pin(repo.user.user_id, payload)
+
+    verify_app_pin.assert_called_once_with(repo.user.user_id, "1234")
+    assert status.enabled is False
+    assert repo.user.app_pin_hash is None
+    assert repo.user.app_pin_failed_attempts == 0
+
+
+def test_verify_app_pin_locks_after_failed_attempts() -> None:
+    repo = _AuthRepo()
+    repo.user.app_pin_hash = "pin-hash"
+    service = UserAuthService(repo)
+
+    with patch.object(service, "verify_app_pin_hash", return_value=False):
+        for _ in range(service.settings.app_pin_max_failed_attempts - 1):
+            try:
+                service.verify_app_pin(repo.user.user_id, "0000")
+            except ValueError as exc:
+                assert str(exc) == "INVALID_APP_PIN"
+            else:  # pragma: no cover
+                raise AssertionError("Expected invalid PIN to fail")
+
+        try:
+            service.verify_app_pin(repo.user.user_id, "0000")
+        except ValueError as exc:
+            assert str(exc) == "APP_PIN_LOCKED"
+        else:  # pragma: no cover
+            raise AssertionError("Expected repeated failures to lock the PIN")
+
+    assert repo.user.app_pin_failed_attempts == service.settings.app_pin_max_failed_attempts
+    assert repo.user.app_pin_locked_until is not None
+
+
+def test_verify_app_pin_resets_failures_on_success() -> None:
+    repo = _AuthRepo()
+    repo.user.app_pin_hash = "pin-hash"
+    repo.user.app_pin_failed_attempts = 2
+    service = UserAuthService(repo)
+
+    with patch.object(service, "verify_app_pin_hash", return_value=True):
+        service.verify_app_pin(repo.user.user_id, "1234")
+
+    assert repo.user.app_pin_failed_attempts == 0
+    assert repo.user.app_pin_locked_until is None
 
 
 def test_begin_biometric_registration_stores_challenge(monkeypatch) -> None:

@@ -4,8 +4,9 @@ import { Modal, ModalTitle } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormBanner from '@/components/ui/FormBanner'
+import AppPinPad from '@/components/payment/AppPinPad'
 import { useAuth } from '@/hooks/useAuth'
-import { getBiometricStatus } from '@/services/authService'
+import { getAppPinStatus, getBiometricStatus } from '@/services/authService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { getBiometricAssertion, isWebAuthnAssertionAvailable } from '@/utils/webauthn'
@@ -38,9 +39,11 @@ export default function PaymentApprovalModal({
 }) {
   const { user } = useAuth()
   const totpEnabled = user?.totp_enabled ?? false
+  const [pin, setPin] = useState('')
   const [totpCode, setTotpCode] = useState('')
   const [password, setPassword] = useState('')
   const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [appPinEnabled, setAppPinEnabled] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isBiometricSubmitting, setIsBiometricSubmitting] = useState(false)
@@ -51,6 +54,7 @@ export default function PaymentApprovalModal({
 
   useEffect(() => {
     if (!isOpen) {
+      setPin('')
       setTotpCode('')
       setPassword('')
       setError('')
@@ -66,21 +70,26 @@ export default function PaymentApprovalModal({
   useEffect(() => {
     let ignore = false
 
-    async function loadBiometricStatus() {
+    async function loadSecurityStatus() {
       if (!isOpen) return
       try {
-        const status = await getBiometricStatus()
+        const [biometricStatus, pinStatus] = await Promise.all([
+          getBiometricStatus(),
+          getAppPinStatus(),
+        ])
         if (!ignore) {
-          setBiometricEnabled(Boolean(status.enabled))
+          setBiometricEnabled(Boolean(biometricStatus.enabled))
+          setAppPinEnabled(Boolean(pinStatus.enabled))
         }
       } catch {
         if (!ignore) {
           setBiometricEnabled(false)
+          setAppPinEnabled(false)
         }
       }
     }
 
-    loadBiometricStatus()
+    loadSecurityStatus()
     return () => {
       ignore = true
     }
@@ -91,15 +100,20 @@ export default function PaymentApprovalModal({
     setError('')
     setIsSubmitting(true)
     try {
-      const payload = totpEnabled
-        ? { totp_code: totpCode }
-        : { password }
+      const payload = appPinEnabled
+        ? { app_pin: pin }
+        : totpEnabled
+          ? { totp_code: totpCode }
+          : { password }
       const updated = await transactionsService.approve(transactionId, payload)
       emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
       onApproved?.(updated)
       onClose?.()
     } catch (err) {
       setError(err?.message || 'Approval failed. Check your verification and try again.')
+      setPin('')
+      setTotpCode('')
+      setPassword('')
     } finally {
       setIsSubmitting(false)
     }
@@ -138,10 +152,8 @@ export default function PaymentApprovalModal({
     }
   }
 
-  const canSubmit = totpEnabled
-    ? totpCode.length === 6
-    : password.length > 0
   const isBusy = isSubmitting || isBiometricSubmitting
+  const canLegacySubmit = totpEnabled ? totpCode.length === 6 : password.length > 0
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="default" className="max-w-sm">
@@ -215,63 +227,85 @@ export default function PaymentApprovalModal({
 
           <div className="flex items-center gap-2 text-sm font-medium text-card-foreground">
             <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
-            {biometricEnabled ? 'Fallback verification' : totpEnabled ? 'Authenticator code' : 'Account password'}
+            {appPinEnabled
+              ? biometricEnabled ? 'Fallback app PIN' : 'App PIN'
+              : biometricEnabled ? 'Fallback verification' : totpEnabled ? 'Authenticator code' : 'Account password'}
           </div>
           <p className="text-xs text-muted-foreground">
-            {biometricEnabled
-              ? 'If biometrics are unavailable, use your existing fallback verification.'
-              : totpEnabled
-              ? 'Enter the 6-digit code from your authenticator app.'
-              : 'Quick identity check with your login password. Turn on two-factor auth in Settings to approve with a code instead.'}
+            {appPinEnabled
+              ? biometricEnabled
+                ? 'If biometrics are unavailable, use your separate payment PIN.'
+                : 'Enter your 4-digit app PIN to approve this payment.'
+              : biometricEnabled
+                ? 'No app PIN is set, so use your existing fallback verification if biometrics are unavailable.'
+                : totpEnabled
+                  ? 'No app PIN is set. Enter the 6-digit code from your authenticator app.'
+                  : 'No app PIN is set. Use your login password for this approval.'}
           </p>
 
-          {totpEnabled ? (
-            <Input
-              autoFocus
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="000000"
-              value={totpCode}
-              onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              disabled={isBusy}
-              className="max-w-48 font-mono tracking-widest"
-              aria-label="Authenticator code"
+          {appPinEnabled ? (
+            <AppPinPad
+              value={pin}
+              onChange={setPin}
+              onSubmit={handleApprove}
+              isSubmitting={isSubmitting}
+              error={error}
+              title="Enter app PIN"
+              subtitle="Use your 4-digit payment PIN to approve this transfer."
+              submitLabel="Approve & settle"
             />
           ) : (
-            <Input
-              autoFocus
-              type="password"
-              placeholder="Your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isBusy}
-              className="max-w-sm"
-              aria-label="Account password"
-            />
+            <>
+              {totpEnabled ? (
+                <Input
+                  autoFocus
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  disabled={isBusy}
+                  className="max-w-48 font-mono tracking-widest"
+                  aria-label="Authenticator code"
+                />
+              ) : (
+                <Input
+                  autoFocus
+                  type="password"
+                  placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isBusy}
+                  className="max-w-sm"
+                  aria-label="Account password"
+                />
+              )}
+              {error && <FormBanner variant="error" message={error} />}
+            </>
           )}
-
-          {error && <FormBanner variant="error" message={error} />}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>
             Later
           </Button>
-          <Button
-            type="button"
-            onClick={handleApprove}
-            disabled={!canSubmit || isBusy}
-            aria-busy={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Verifying…
-              </>
-            ) : (
-              'Approve & settle'
-            )}
-          </Button>
+          {!appPinEnabled && (
+            <Button
+              type="button"
+              onClick={handleApprove}
+              disabled={!canLegacySubmit || isBusy}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                'Approve & settle'
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </Modal>

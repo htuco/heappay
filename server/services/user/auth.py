@@ -38,6 +38,10 @@ from schemas.user.biometric import (
 )
 from schemas.user.auth import (
     AcceptInvitationRequest,
+    AppPinChangeRequest,
+    AppPinDisableRequest,
+    AppPinSetRequest,
+    AppPinStatusResponse,
     ChangePasswordRequest,
     DeactivateAccountRequest,
     LoginRequest,
@@ -105,6 +109,14 @@ class UserAuthService:
         return bcrypt.checkpw(
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
         )
+
+    def hash_app_pin(self, pin: str) -> str:
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(pin.encode("utf-8"), salt)
+        return hashed.decode("utf-8")
+
+    def verify_app_pin_hash(self, pin: str, hashed_pin: str) -> bool:
+        return bcrypt.checkpw(pin.encode("utf-8"), hashed_pin.encode("utf-8"))
 
     def create_access_token(self, user_id: int) -> str:
         expire = datetime.now(timezone.utc) + timedelta(
@@ -413,6 +425,81 @@ class UserAuthService:
 
         self.repo.delete_biometric_credentials(user_id)
         return BiometricStatusResponse(enabled=False, credential_count=0)
+
+    def get_app_pin_status(self, user_id: int) -> AppPinStatusResponse:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+
+        locked_until = getattr(user, "app_pin_locked_until", None)
+        locked = self._is_pin_locked(locked_until)
+        failed_attempts = getattr(user, "app_pin_failed_attempts", 0) or 0
+        remaining = max(self.settings.app_pin_max_failed_attempts - failed_attempts, 0)
+        return AppPinStatusResponse(
+            enabled=bool(getattr(user, "app_pin_hash", None)),
+            locked=locked,
+            locked_until=locked_until if locked else None,
+            failed_attempts_remaining=remaining,
+        )
+
+    def set_app_pin(self, user_id: int, payload: AppPinSetRequest) -> AppPinStatusResponse:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if getattr(user, "app_pin_hash", None):
+            raise ValueError("APP_PIN_ALREADY_SET")
+        if not self.verify_password(payload.current_password, user.password_hash):
+            raise ValueError("WRONG_CURRENT_PASSWORD")
+
+        self.repo.update_app_pin(user_id, self.hash_app_pin(payload.pin))
+        return self.get_app_pin_status(user_id)
+
+    def change_app_pin(self, user_id: int, payload: AppPinChangeRequest) -> AppPinStatusResponse:
+        self.verify_app_pin(user_id, payload.current_pin)
+        self.repo.update_app_pin(user_id, self.hash_app_pin(payload.new_pin))
+        return self.get_app_pin_status(user_id)
+
+    def disable_app_pin(self, user_id: int, payload: AppPinDisableRequest) -> AppPinStatusResponse:
+        self.verify_app_pin(user_id, payload.current_pin)
+        self.repo.clear_app_pin(user_id)
+        return self.get_app_pin_status(user_id)
+
+    def verify_app_pin(self, user_id: int, pin: str) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if not getattr(user, "app_pin_hash", None):
+            raise ValueError("APP_PIN_NOT_SET")
+
+        locked_until = getattr(user, "app_pin_locked_until", None)
+        if self._is_pin_locked(locked_until):
+            raise ValueError("APP_PIN_LOCKED")
+
+        if self.verify_app_pin_hash(pin, user.app_pin_hash):
+            self.repo.reset_app_pin_failures(user_id)
+            return
+
+        failed_attempts = (getattr(user, "app_pin_failed_attempts", 0) or 0) + 1
+        locked_until = None
+        if failed_attempts >= self.settings.app_pin_max_failed_attempts:
+            locked_until = datetime.now(timezone.utc) + timedelta(
+                minutes=self.settings.app_pin_lockout_minutes,
+            )
+        self.repo.record_app_pin_failure(
+            user_id,
+            failed_attempts=failed_attempts,
+            locked_until=locked_until,
+        )
+        if locked_until is not None:
+            raise ValueError("APP_PIN_LOCKED")
+        raise ValueError("INVALID_APP_PIN")
+
+    def _is_pin_locked(self, locked_until: datetime | None) -> bool:
+        if locked_until is None:
+            return False
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        return locked_until > datetime.now(timezone.utc)
 
     def begin_biometric_disable(self, user_id: int) -> BiometricAuthenticationOptionsResponse:
         user = self.repo.get_user_by_id(user_id)

@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     webauthn_origins: str = "http://localhost:5173"
     webauthn_registration_challenge_expire_minutes: int = 5
 
+    # App PIN step-up for payment confirmation.
+    app_pin_length: int = 4
+    app_pin_max_failed_attempts: int = 5
+    app_pin_lockout_minutes: int = 5
+
     # FEP Nexus funding integration (card top-ups via external treasury)
     nexus_url: str = ""
     nexus_secret_key: str = ""

@@ -86,6 +86,36 @@ export async function completeBiometricDisable({ challengeId, credential }) {
 	return data
 }
 
+export async function getAppPinStatus() {
+	const { data } = await api.get('/auth/app-pin')
+	return data
+}
+
+export async function setAppPin({ currentPassword, pin }) {
+	const { data } = await api.post('/auth/app-pin', {
+		current_password: currentPassword,
+		pin,
+		confirm_pin: pin,
+	})
+	return data
+}
+
+export async function changeAppPin({ currentPin, newPin }) {
+	const { data } = await api.patch('/auth/app-pin', {
+		current_pin: currentPin,
+		new_pin: newPin,
+		confirm_pin: newPin,
+	})
+	return data
+}
+
+export async function disableAppPin({ currentPin }) {
+	const { data } = await api.delete('/auth/app-pin', {
+		data: { current_pin: currentPin },
+	})
+	return data
+}
+
 export async function getMe() {
 	const { data } = await api.get('/auth/me')
 	const user = data.data.user

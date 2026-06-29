@@ -9,6 +9,10 @@ from repositories.user.auth import UserAuthRepository
 from routes.storage.deps import get_supabase_image_storage_service
 from schemas.user.auth import (
     AcceptInvitationRequest,
+    AppPinChangeRequest,
+    AppPinDisableRequest,
+    AppPinSetRequest,
+    AppPinStatusResponse,
     AuthResponse,
     ChangePasswordRequest,
     DeactivateAccountRequest,
@@ -287,6 +291,100 @@ def biometric_disable(
         if str(exc) == "BIOMETRIC_VERIFICATION_REQUIRED":
             raise InvalidInput("Biometric verification is required to disable biometrics.") from None
         raise InvalidInput("Could not disable biometric authentication.") from None
+
+
+@router.get("/app-pin", response_model=AppPinStatusResponse)
+def app_pin_status(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AppPinStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.get_app_pin_status(user_id)
+    except ValueError:
+        raise InvalidInput("Could not load app PIN status.") from None
+
+
+@router.post("/app-pin", response_model=AppPinStatusResponse)
+def app_pin_set(
+    payload: AppPinSetRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AppPinStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.set_app_pin(user_id, payload)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "APP_PIN_ALREADY_SET":
+            raise InvalidInput("App PIN is already set. Change it instead.") from None
+        if msg == "WRONG_CURRENT_PASSWORD":
+            raise InvalidInput("Current password is incorrect.") from None
+        raise InvalidInput("Could not set app PIN.") from None
+
+
+@router.patch("/app-pin", response_model=AppPinStatusResponse)
+def app_pin_change(
+    payload: AppPinChangeRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AppPinStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.change_app_pin(user_id, payload)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "APP_PIN_NOT_SET":
+            raise InvalidInput("Set an app PIN before changing it.") from None
+        if msg == "APP_PIN_LOCKED":
+            raise InvalidInput("App PIN is locked. Try again later.") from None
+        if msg == "INVALID_APP_PIN":
+            raise InvalidInput("Current app PIN is incorrect.") from None
+        raise InvalidInput("Could not change app PIN.") from None
+
+
+@router.delete("/app-pin", response_model=AppPinStatusResponse)
+def app_pin_disable(
+    payload: AppPinDisableRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AppPinStatusResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        return service.disable_app_pin(user_id, payload)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg == "APP_PIN_NOT_SET":
+            raise InvalidInput("App PIN is not set.") from None
+        if msg == "APP_PIN_LOCKED":
+            raise InvalidInput("App PIN is locked. Try again later.") from None
+        if msg == "INVALID_APP_PIN":
+            raise InvalidInput("Current app PIN is incorrect.") from None
+        raise InvalidInput("Could not disable app PIN.") from None
 
 
 @router.post("/refresh", response_model=AuthResponse)

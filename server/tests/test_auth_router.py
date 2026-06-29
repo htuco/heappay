@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from main import create_app  # noqa: E402
 from routes.user.auth import get_auth_service  # noqa: E402
-from schemas.user.auth import TokenResponse, UserResponse  # noqa: E402
+from schemas.user.auth import AppPinStatusResponse, TokenResponse, UserResponse  # noqa: E402
 from schemas.user.biometric import (  # noqa: E402
     BiometricAuthenticationOptionsResponse,
     BiometricCredentialResponse,
@@ -112,6 +112,38 @@ class _FakeAuthService:
 
     def disable_biometric_authentication(self, _user_id):
         return BiometricStatusResponse(enabled=False, credential_count=0)
+
+    def get_app_pin_status(self, _user_id):
+        return AppPinStatusResponse(
+            enabled=False,
+            locked=False,
+            locked_until=None,
+            failed_attempts_remaining=5,
+        )
+
+    def set_app_pin(self, _user_id, _payload):
+        return AppPinStatusResponse(
+            enabled=True,
+            locked=False,
+            locked_until=None,
+            failed_attempts_remaining=5,
+        )
+
+    def change_app_pin(self, _user_id, _payload):
+        return AppPinStatusResponse(
+            enabled=True,
+            locked=False,
+            locked_until=None,
+            failed_attempts_remaining=5,
+        )
+
+    def disable_app_pin(self, _user_id, _payload):
+        return AppPinStatusResponse(
+            enabled=False,
+            locked=False,
+            locked_until=None,
+            failed_attempts_remaining=5,
+        )
 
 
 class _FakeAuthServiceAdmin:
@@ -319,6 +351,103 @@ def test_biometric_disable_complete_returns_disabled_status() -> None:
     )
     assert resp.status_code == 200
     assert resp.json() == {"enabled": False, "credential_count": 0}
+
+
+# ---------------------------------------------------------------------------
+# app PIN
+# ---------------------------------------------------------------------------
+
+
+def test_app_pin_status_returns_current_state() -> None:
+    client = _build_client()
+    resp = client.get(
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["enabled"] is False
+    assert resp.json()["failed_attempts_remaining"] == 5
+
+
+def test_app_pin_set_returns_enabled_state() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_password": "Password123!",
+            "pin": "1234",
+            "confirm_pin": "1234",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["enabled"] is True
+
+
+def test_app_pin_set_wrong_password_returns_friendly_error() -> None:
+    class _WrongPasswordService(_FakeAuthService):
+        def set_app_pin(self, _user_id, _payload):
+            raise ValueError("WRONG_CURRENT_PASSWORD")
+
+    client = _build_client(_WrongPasswordService())
+    resp = client.post(
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_password": "wrong",
+            "pin": "1234",
+            "confirm_pin": "1234",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Current password is incorrect."
+
+
+def test_app_pin_change_locked_returns_friendly_error() -> None:
+    class _LockedPinService(_FakeAuthService):
+        def change_app_pin(self, _user_id, _payload):
+            raise ValueError("APP_PIN_LOCKED")
+
+    client = _build_client(_LockedPinService())
+    resp = client.patch(
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_pin": "1234",
+            "new_pin": "4321",
+            "confirm_pin": "4321",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "App PIN is locked. Try again later."
+
+
+def test_app_pin_disable_returns_disabled_state() -> None:
+    client = _build_client()
+    resp = client.request(
+        "DELETE",
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"current_pin": "1234"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["enabled"] is False
+
+
+def test_app_pin_disable_wrong_pin_returns_friendly_error() -> None:
+    class _WrongPinService(_FakeAuthService):
+        def disable_app_pin(self, _user_id, _payload):
+            raise ValueError("INVALID_APP_PIN")
+
+    client = _build_client(_WrongPinService())
+    resp = client.request(
+        "DELETE",
+        "/auth/app-pin",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"current_pin": "0000"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Current app PIN is incorrect."
 
 
 # ---------------------------------------------------------------------------

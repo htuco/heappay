@@ -27,14 +27,17 @@ class TransactionCreate(BaseModel):
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
     requires_approval: bool = False
     biometric: BiometricApprovalAssertion | None = None
+    app_pin: str | None = Field(default=None, min_length=4, max_length=4, pattern=r"^\d{4}$")
 
     @model_validator(mode="after")
-    def validate_sender_recipient_distinct(self) -> "TransactionCreate":
+    def validate_create_request(self) -> "TransactionCreate":
         if (
             self.sender_card_id is not None
             and self.sender_card_id == self.recipient_card_id
         ):
             raise ValueError("sender_card_id must differ from recipient_card_id")
+        if self.biometric and self.app_pin:
+            raise ValueError("Provide only one payment confirmation method.")
         return self
 
 
@@ -54,10 +57,11 @@ class TransactionApproveRequest(BaseModel):
     totp_code: str | None = Field(default=None, min_length=6, max_length=6)
     password: str | None = Field(default=None, min_length=1, max_length=255)
     biometric: BiometricApprovalAssertion | None = None
+    app_pin: str | None = Field(default=None, min_length=4, max_length=4, pattern=r"^\d{4}$")
 
     @model_validator(mode="after")
     def require_one_credential(self) -> "TransactionApproveRequest":
-        credentials = [self.totp_code, self.password, self.biometric]
+        credentials = [self.totp_code, self.password, self.biometric, self.app_pin]
         provided = [credential for credential in credentials if credential]
         if not provided:
             raise ValueError("Provide a verification method for step-up verification.")

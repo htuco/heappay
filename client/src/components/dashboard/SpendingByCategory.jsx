@@ -111,11 +111,14 @@ export default function SpendingByCategory({ months = 6, bare = false }) {
                     <Cell key={segment.key} fill={segment.color} />
                   ))}
                 </Pie>
-                <Tooltip content={<CategoryTooltip total={total} />} />
+                <Tooltip
+                  content={<CategoryTooltip total={total} />}
+                  wrapperStyle={{ zIndex: 20, pointerEvents: 'none' }}
+                />
               </PieChart>
             </ResponsiveContainer>
             {/* Center total */}
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
               <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
                 Total
               </span>
