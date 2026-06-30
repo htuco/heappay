@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import base64
 import json
+from decimal import Decimal
 
 import bcrypt
 from sqlalchemy.exc import IntegrityError
@@ -511,6 +512,14 @@ class TransactionService:
             return True
         return False
 
+    def _user_requires_payment_confirmation(self, user, amount: Decimal) -> bool:
+        if not getattr(user, "payment_confirm_enabled", True):
+            return False
+        threshold = getattr(user, "payment_confirm_above_amount", Decimal("0"))
+        if threshold is None:
+            threshold = Decimal("0")
+        return amount >= threshold
+
     def _verify_transaction_create_confirmation(
         self,
         user_id: int,
@@ -519,7 +528,6 @@ class TransactionService:
         if self._auth_repo is None:
             return
 
-        credentials = self._auth_repo.list_biometric_credentials(user_id)
         if payload.biometric:
             self._verify_biometric_approval(None, user_id, payload.biometric)
             return
@@ -532,12 +540,27 @@ class TransactionService:
         if not user or user.deleted_at is not None:
             raise ForbiddenError()
 
+        if payload.totp_code:
+            self._verify_totp_for_user(user, payload.totp_code)
+            return
+
+        if payload.password:
+            self._verify_password_for_user(user, payload.password)
+            return
+
+        credentials = self._auth_repo.list_biometric_credentials(user_id)
         if credentials:
             raise ApprovalRequiredError(
                 "Biometric verification or app PIN is required to send money."
             )
         if getattr(user, "app_pin_hash", None):
             raise ApprovalRequiredError("App PIN is required to send money.")
+        if self._user_requires_payment_confirmation(user, payload.amount):
+            if user.totp_enabled:
+                raise ApprovalRequiredError(
+                    "Authenticator code is required to confirm this payment."
+                )
+            raise ApprovalRequiredError("Password is required to confirm this payment.")
 
     @staticmethod
     def _recipient_name(recipient_card) -> str | None:
@@ -595,25 +618,34 @@ class TransactionService:
         if payload.app_pin:
             return self._verify_app_pin(user_id, payload.app_pin)
 
-        settings = get_settings()
-        if user.totp_enabled:
-            if not payload.totp_code:
-                raise ApprovalRequiredError("Authenticator code is required.")
-            if not user.totp_secret:
-                raise ApprovalRequiredError("Two-factor authentication is not configured.")
-            plain_secret = decrypt_secret(user.totp_secret, settings.totp_encryption_key)
-            if not verify_totp_code(plain_secret, payload.totp_code):
-                raise ApprovalRequiredError("Invalid authentication code.")
+        if payload.totp_code:
+            self._verify_totp_for_user(user, payload.totp_code)
             return "totp"
 
-        if not payload.password:
-            raise ApprovalRequiredError("Password is required to confirm this payment.")
+        if payload.password:
+            self._verify_password_for_user(user, payload.password)
+            return "password"
+
+        if user.totp_enabled:
+            raise ApprovalRequiredError("Authenticator code is required.")
+        raise ApprovalRequiredError("Password is required to confirm this payment.")
+
+    def _verify_totp_for_user(self, user, totp_code: str) -> None:
+        settings = get_settings()
+        if not user.totp_enabled:
+            raise ApprovalRequiredError("Two-factor authentication is not enabled.")
+        if not user.totp_secret:
+            raise ApprovalRequiredError("Two-factor authentication is not configured.")
+        plain_secret = decrypt_secret(user.totp_secret, settings.totp_encryption_key)
+        if not verify_totp_code(plain_secret, totp_code):
+            raise ApprovalRequiredError("Invalid authentication code.")
+
+    def _verify_password_for_user(self, user, password: str) -> None:
         if not bcrypt.checkpw(
-            payload.password.encode("utf-8"),
+            password.encode("utf-8"),
             user.password_hash.encode("utf-8"),
         ):
             raise ApprovalRequiredError("Incorrect password.")
-        return "password"
 
     def _verify_app_pin(self, user_id: int, pin: str) -> str:
         if self._auth_repo is None:

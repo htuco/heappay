@@ -18,6 +18,7 @@ from schemas.user.auth import (
     DeactivateAccountRequest,
     LoginRequest,
     NotificationPreferencesUpdate,
+    PaymentSecurityPreferencesUpdate,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
     ProfileUpdateRequest,
@@ -635,5 +636,28 @@ def update_notification_preferences(
     return AuthResponse(
         success=True,
         message="Notification preferences updated.",
+        data=token_data,
+    )
+
+
+@router.patch("/payment-security-preferences", response_model=AuthResponse)
+def update_payment_security_preferences(
+    payload: PaymentSecurityPreferencesUpdate,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    token_data = service.update_payment_security_preferences(
+        credentials.credentials,
+        payload,
+    )
+    if token_data is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    return AuthResponse(
+        success=True,
+        message="Payment security preferences updated.",
         data=token_data,
     )

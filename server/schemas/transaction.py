@@ -28,6 +28,8 @@ class TransactionCreate(BaseModel):
     requires_approval: bool = False
     biometric: BiometricApprovalAssertion | None = None
     app_pin: str | None = Field(default=None, min_length=4, max_length=4, pattern=r"^\d{4}$")
+    totp_code: str | None = Field(default=None, min_length=6, max_length=6)
+    password: str | None = Field(default=None, min_length=1, max_length=255)
 
     @model_validator(mode="after")
     def validate_create_request(self) -> "TransactionCreate":
@@ -36,7 +38,9 @@ class TransactionCreate(BaseModel):
             and self.sender_card_id == self.recipient_card_id
         ):
             raise ValueError("sender_card_id must differ from recipient_card_id")
-        if self.biometric and self.app_pin:
+        credentials = [self.biometric, self.app_pin, self.totp_code, self.password]
+        provided = [credential for credential in credentials if credential]
+        if len(provided) > 1:
             raise ValueError("Provide only one payment confirmation method.")
         return self
 

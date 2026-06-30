@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+import bcrypt
 import pytest
 
 from services.transaction.transaction_processor import (
@@ -265,11 +266,16 @@ def test_create_accepts_biometric_when_user_has_enrolled_credential(monkeypatch)
     auth_repo.mark_biometric_authentication_challenge_used.assert_called_once_with(6)
 
 
-def test_create_allows_without_pin_when_biometrics_and_pin_are_not_enabled():
+def test_create_allows_without_pin_when_biometrics_pin_and_policy_are_not_enabled():
     from schemas.transaction import TransactionCreate
     from services.transaction.transaction import TransactionService
 
-    user = MagicMock(deleted_at=None, app_pin_hash=None)
+    user = MagicMock(
+        deleted_at=None,
+        app_pin_hash=None,
+        payment_confirm_enabled=False,
+        payment_confirm_above_amount=Decimal("0"),
+    )
     auth_repo = MagicMock()
     auth_repo.list_biometric_credentials.return_value = []
     auth_repo.get_user_by_id.return_value = user
@@ -278,6 +284,85 @@ def test_create_allows_without_pin_when_biometrics_and_pin_are_not_enabled():
         recipient_card_id=2,
         transaction_type_id=2,
         amount=Decimal("25.00"),
+    )
+
+    service = TransactionService(MagicMock(), auth_repo=auth_repo)
+    service._verify_transaction_create_confirmation(1, payload)
+
+
+def test_create_requires_password_when_policy_always_confirm():
+    from schemas.transaction import TransactionCreate
+    from services.transaction.transaction import ApprovalRequiredError, TransactionService
+
+    user = MagicMock(
+        deleted_at=None,
+        app_pin_hash=None,
+        totp_enabled=False,
+        payment_confirm_enabled=True,
+        payment_confirm_above_amount=Decimal("0"),
+    )
+    auth_repo = MagicMock()
+    auth_repo.list_biometric_credentials.return_value = []
+    auth_repo.get_user_by_id.return_value = user
+    payload = TransactionCreate(
+        sender_card_id=1,
+        recipient_card_id=2,
+        transaction_type_id=2,
+        amount=Decimal("80.00"),
+    )
+
+    service = TransactionService(MagicMock(), auth_repo=auth_repo)
+
+    with pytest.raises(ApprovalRequiredError, match="Password is required"):
+        service._verify_transaction_create_confirmation(1, payload)
+
+
+def test_create_accepts_password_when_policy_requires_confirmation():
+    from schemas.transaction import TransactionCreate
+    from services.transaction.transaction import TransactionService
+
+    user = MagicMock(
+        deleted_at=None,
+        app_pin_hash=None,
+        totp_enabled=False,
+        password_hash=bcrypt.hashpw(b"secret", bcrypt.gensalt()).decode("utf-8"),
+        payment_confirm_enabled=True,
+        payment_confirm_above_amount=Decimal("0"),
+    )
+    auth_repo = MagicMock()
+    auth_repo.list_biometric_credentials.return_value = []
+    auth_repo.get_user_by_id.return_value = user
+    payload = TransactionCreate(
+        sender_card_id=1,
+        recipient_card_id=2,
+        transaction_type_id=2,
+        amount=Decimal("80.00"),
+        password="secret",
+    )
+
+    service = TransactionService(MagicMock(), auth_repo=auth_repo)
+    service._verify_transaction_create_confirmation(1, payload)
+
+
+def test_create_skips_policy_when_amount_below_threshold():
+    from schemas.transaction import TransactionCreate
+    from services.transaction.transaction import TransactionService
+
+    user = MagicMock(
+        deleted_at=None,
+        app_pin_hash=None,
+        totp_enabled=False,
+        payment_confirm_enabled=True,
+        payment_confirm_above_amount=Decimal("100.00"),
+    )
+    auth_repo = MagicMock()
+    auth_repo.list_biometric_credentials.return_value = []
+    auth_repo.get_user_by_id.return_value = user
+    payload = TransactionCreate(
+        sender_card_id=1,
+        recipient_card_id=2,
+        transaction_type_id=2,
+        amount=Decimal("80.00"),
     )
 
     service = TransactionService(MagicMock(), auth_repo=auth_repo)

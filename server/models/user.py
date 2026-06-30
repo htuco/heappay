@@ -1,6 +1,7 @@
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func, true
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, func, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -54,6 +55,16 @@ class User(Base):
         nullable=True,
     )
     app_pin_set_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payment_confirm_enabled: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        server_default=true(),
+    )
+    payment_confirm_above_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+        server_default="0",
+    )
 
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")
