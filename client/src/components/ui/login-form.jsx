@@ -21,7 +21,7 @@ import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
 import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
-import HCaptchaField from '@/components/auth-ui/HCaptchaField'
+import { HCaptchaModal } from '@/components/auth-ui/HCaptchaField'
 import { isHCaptchaEnabled } from '@/utils/hcaptcha'
 
 const INITIAL_FORM_STATE = { email: '', password: '', rememberMe: false }
@@ -107,7 +107,8 @@ export default function LoginForm() {
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
 	const [success, setSuccess] = useState(false)
-	const [hcaptchaToken, setHcaptchaToken] = useState('')
+	const [captchaOpen, setCaptchaOpen] = useState(false)
+	const [pendingLogin, setPendingLogin] = useState(null)
 	const captchaRef = useRef(null)
 
 	const isTotpPending = status === 'totp_pending'
@@ -115,6 +116,27 @@ export default function LoginForm() {
 	const handleChange = (e) => {
 		const { name, value, type, checked } = e.target
 		setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+	}
+
+	const submitLogin = async (values, hcaptchaToken = '') => {
+		try {
+			const user = await login({
+				email: values.email,
+				password: values.password,
+				remember: form.rememberMe,
+				hcaptchaToken,
+			})
+			if (user?.requiresTotp) return
+			setSuccess(true)
+			setForm(INITIAL_FORM_STATE)
+			setPendingLogin(null)
+			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
+			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 400)
+		} catch (err) {
+			setError(getApiErrorMessage(err, 'Invalid email or password.'))
+			setPendingLogin(null)
+			captchaRef.current?.resetCaptcha()
+		}
 	}
 
 	const handleSubmit = async (e) => {
@@ -129,29 +151,26 @@ export default function LoginForm() {
 			setErrors(fieldErrors)
 			return
 		}
-		if (isHCaptchaEnabled() && !hcaptchaToken) {
-			setError('Please complete the security check and try again.')
+
+		if (isHCaptchaEnabled()) {
+			setPendingLogin(result.data)
+			setCaptchaOpen(true)
 			return
 		}
 
-		try {
-			const user = await login({
-				email: result.data.email,
-				password: result.data.password,
-				remember: form.rememberMe,
-				hcaptchaToken,
-			})
-			if (user?.requiresTotp) return
-			setSuccess(true)
-			setForm(INITIAL_FORM_STATE)
-			setHcaptchaToken('')
-			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
-			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 400)
-		} catch (err) {
-			setError(getApiErrorMessage(err, 'Invalid email or password.'))
-			setHcaptchaToken('')
-			captchaRef.current?.resetCaptcha()
-		}
+		await submitLogin(result.data)
+	}
+
+	const handleCaptchaVerified = async (token) => {
+		if (!pendingLogin) return
+		setCaptchaOpen(false)
+		await submitLogin(pendingLogin, token)
+	}
+
+	const handleCaptchaClose = () => {
+		setCaptchaOpen(false)
+		setPendingLogin(null)
+		captchaRef.current?.resetCaptcha()
 	}
 
 	if (isTotpPending) {
@@ -220,17 +239,6 @@ export default function LoginForm() {
 							</button>
 						</div>
 
-						<HCaptchaField
-							captchaRef={captchaRef}
-							disabled={loading}
-							onVerify={setHcaptchaToken}
-							onExpire={() => setHcaptchaToken('')}
-							onError={() => {
-								setHcaptchaToken('')
-								setError('Security check failed to load. Please try again.')
-							}}
-						/>
-
 						<AuthButton type="submit" disabled={loading}>
 							{loading ? 'Logging in...' : 'Log in'}
 						</AuthButton>
@@ -243,6 +251,21 @@ export default function LoginForm() {
 					/>
 				</div>
 			</div>
+			<HCaptchaModal
+				open={captchaOpen}
+				captchaRef={captchaRef}
+				title="Confirm it is you"
+				description="Complete this quick security check before we sign you in."
+				disabled={loading}
+				onVerify={handleCaptchaVerified}
+				onExpire={() => captchaRef.current?.resetCaptcha()}
+				onError={() => {
+					setCaptchaOpen(false)
+					setPendingLogin(null)
+					setError('Security check failed to load. Please try again.')
+				}}
+				onClose={handleCaptchaClose}
+			/>
 		</div>
 	)
 }

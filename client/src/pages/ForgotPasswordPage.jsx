@@ -8,7 +8,7 @@ import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
-import HCaptchaField from '@/components/auth-ui/HCaptchaField'
+import { HCaptchaModal } from '@/components/auth-ui/HCaptchaField'
 import FormBanner from '@/components/ui/FormBanner'
 import { requestPasswordReset } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
@@ -25,8 +25,28 @@ export default function ForgotPasswordPage() {
   const [bannerError, setBannerError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
-  const [hcaptchaToken, setHcaptchaToken] = useState('')
+  const [captchaOpen, setCaptchaOpen] = useState(false)
+  const [pendingEmail, setPendingEmail] = useState('')
   const captchaRef = useRef(null)
+
+  async function submitPasswordReset(emailAddress, hcaptchaToken = '') {
+    setLoading(true)
+    try {
+      const response = await requestPasswordReset({
+        email: emailAddress,
+        hcaptchaToken,
+      })
+      setSuccess(response.message || 'If an account exists for this email, a reset link has been sent.')
+      setPendingEmail('')
+      captchaRef.current?.resetCaptcha()
+    } catch (err) {
+      setBannerError(getApiErrorMessage(err, 'Could not request password reset.'))
+      setPendingEmail('')
+      captchaRef.current?.resetCaptcha()
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -39,27 +59,26 @@ export default function ForgotPasswordPage() {
       setFieldError(result.error.issues[0]?.message || 'Enter a valid email address.')
       return
     }
-    if (isHCaptchaEnabled() && !hcaptchaToken) {
-      setBannerError('Please complete the security check and try again.')
+
+    if (isHCaptchaEnabled()) {
+      setPendingEmail(result.data.email)
+      setCaptchaOpen(true)
       return
     }
 
-    setLoading(true)
-    try {
-      const response = await requestPasswordReset({
-        email: result.data.email,
-        hcaptchaToken,
-      })
-      setSuccess(response.message || 'If an account exists for this email, a reset link has been sent.')
-      setHcaptchaToken('')
-      captchaRef.current?.resetCaptcha()
-    } catch (err) {
-      setBannerError(getApiErrorMessage(err, 'Could not request password reset.'))
-      setHcaptchaToken('')
-      captchaRef.current?.resetCaptcha()
-    } finally {
-      setLoading(false)
-    }
+    await submitPasswordReset(result.data.email)
+  }
+
+  async function handleCaptchaVerified(token) {
+    if (!pendingEmail) return
+    setCaptchaOpen(false)
+    await submitPasswordReset(pendingEmail, token)
+  }
+
+  function handleCaptchaClose() {
+    setCaptchaOpen(false)
+    setPendingEmail('')
+    captchaRef.current?.resetCaptcha()
   }
 
   return (
@@ -91,17 +110,6 @@ export default function ForgotPasswordPage() {
               error={fieldError}
             />
 
-            <HCaptchaField
-              captchaRef={captchaRef}
-              disabled={loading}
-              onVerify={setHcaptchaToken}
-              onExpire={() => setHcaptchaToken('')}
-              onError={() => {
-                setHcaptchaToken('')
-                setBannerError('Security check failed to load. Please try again.')
-              }}
-            />
-
             <AuthButton type="submit" disabled={loading}>
               <Mail className="mr-2 inline h-5 w-5 align-[-3px]" />
               {loading ? 'Sending...' : 'Send reset link'}
@@ -118,6 +126,21 @@ export default function ForgotPasswordPage() {
           </button>
         </div>
       </div>
+      <HCaptchaModal
+        open={captchaOpen}
+        captchaRef={captchaRef}
+        title="Before we send it"
+        description="Complete this quick security check before requesting a reset link."
+        disabled={loading}
+        onVerify={handleCaptchaVerified}
+        onExpire={() => captchaRef.current?.resetCaptcha()}
+        onError={() => {
+          setCaptchaOpen(false)
+          setPendingEmail('')
+          setBannerError('Security check failed to load. Please try again.')
+        }}
+        onClose={handleCaptchaClose}
+      />
     </section>
   )
 }
