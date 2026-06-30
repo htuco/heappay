@@ -228,6 +228,27 @@ def test_register_rejects_weak_password() -> None:
     assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
 
 
+def test_register_hcaptcha_failure_returns_friendly_error(monkeypatch) -> None:
+    from routes.user import auth as auth_route_module
+
+    def fail_hcaptcha(_request, _token):
+        raise auth_route_module.InvalidInput(auth_route_module.HCAPTCHA_FAILURE_MESSAGE)
+
+    monkeypatch.setattr(auth_route_module, "verify_auth_hcaptcha", fail_hcaptcha)
+    client = _build_client()
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "Password123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Please complete the security check and try again."
+
+
 # ---------------------------------------------------------------------------
 # login
 # ---------------------------------------------------------------------------
@@ -267,6 +288,22 @@ def test_login_invalid_credentials_returns_401() -> None:
         json={"email": "bad@example.com", "password": "wrongpassword"},
     )
     assert resp.status_code == 401
+
+
+def test_login_hcaptcha_failure_returns_friendly_error(monkeypatch) -> None:
+    from routes.user import auth as auth_route_module
+
+    def fail_hcaptcha(_request, _token):
+        raise auth_route_module.InvalidInput(auth_route_module.HCAPTCHA_FAILURE_MESSAGE)
+
+    monkeypatch.setattr(auth_route_module, "verify_auth_hcaptcha", fail_hcaptcha)
+    client = _build_client()
+    resp = client.post(
+        "/auth/login",
+        json={"email": "test@example.com", "password": "password123"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Please complete the security check and try again."
 
 
 # ---------------------------------------------------------------------------
@@ -448,6 +485,27 @@ def test_app_pin_disable_wrong_pin_returns_friendly_error() -> None:
     )
     assert resp.status_code == 400
     assert resp.json()["message"] == "Current app PIN is incorrect."
+
+
+# ---------------------------------------------------------------------------
+# password reset request
+# ---------------------------------------------------------------------------
+
+
+def test_password_reset_request_hcaptcha_failure_returns_friendly_error(monkeypatch) -> None:
+    from routes.user import auth as auth_route_module
+
+    def fail_hcaptcha(_request, _token):
+        raise auth_route_module.InvalidInput(auth_route_module.HCAPTCHA_FAILURE_MESSAGE)
+
+    monkeypatch.setattr(auth_route_module, "verify_auth_hcaptcha", fail_hcaptcha)
+    client = _build_client()
+    resp = client.post(
+        "/auth/password-reset/request",
+        json={"email": "test@example.com"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "Please complete the security check and try again."
 
 
 # ---------------------------------------------------------------------------

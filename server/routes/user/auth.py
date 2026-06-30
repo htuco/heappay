@@ -38,6 +38,7 @@ from schemas.user.biometric import (
 )
 from services.storage.supabase_image_storage import SupabaseImageStorageService
 from services.user.auth import UserAuthService
+from utils.hcaptcha import HCAPTCHA_FAILURE_MESSAGE, verify_hcaptcha_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -48,6 +49,16 @@ def get_auth_service(db: Session = Depends(get_db)) -> UserAuthService:
     return UserAuthService(UserAuthRepository(db))
 
 
+def verify_auth_hcaptcha(request: Request, token: str | None) -> None:
+    try:
+        verify_hcaptcha_token(
+            token,
+            request.client.host if request.client is not None else None,
+        )
+    except ValueError:
+        raise InvalidInput(HCAPTCHA_FAILURE_MESSAGE) from None
+
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(AUTH_RATE_LIMIT)
 def register(
@@ -55,6 +66,7 @@ def register(
     payload: RegisterRequest,
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:
+    verify_auth_hcaptcha(request, payload.hcaptcha_token)
     try:
         token_response = service.register(payload)
     except ValueError:
@@ -70,6 +82,7 @@ def login(
     payload: LoginRequest,
     service: UserAuthService = Depends(get_auth_service),
 ) -> TotpLoginResponse:
+    verify_auth_hcaptcha(request, payload.hcaptcha_token)
     try:
         result = service.login(payload)
     except ValueError:
@@ -443,9 +456,11 @@ def change_password(
 
 @router.post("/password-reset/request", response_model=AuthResponse)
 def request_password_reset(
+    request: Request,
     payload: PasswordResetRequest,
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:
+    verify_auth_hcaptcha(request, payload.hcaptcha_token)
     try:
         service.request_password_reset(payload)
     except ValueError as exc:

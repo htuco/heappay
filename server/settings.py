@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     password_reset_token_expire_minutes: int = 30
     password_reset_url: str = "http://localhost:5173/reset-password"
 
+    # hCaptcha bot protection. Verification is disabled until a secret key is set.
+    hcaptcha_secret_key: str = ""
+    hcaptcha_verify_url: str = "https://api.hcaptcha.com/siteverify"
+
     # Optional SMTP mail delivery for password reset links.
     smtp_host: str | None = None
     smtp_port: int = 587
