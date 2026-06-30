@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CheckCircle2, KeyRound, LockKeyhole, X } from 'lucide-react'
+import { KeyRound, X } from 'lucide-react'
 
 import ActionRow from '@/components/settings/ActionRow'
 import { Button } from '@/components/ui/button'
@@ -268,13 +268,6 @@ export default function AppPinPanel() {
 
 	const enabled = status.enabled
 	const lockedUntil = formatLockedUntil(status.locked_until)
-	const statusLabel = isLoadingStatus
-		? 'Checking...'
-		: status.locked
-			? 'Locked'
-			: enabled
-				? 'Enabled'
-				: 'Not set'
 
 	return (
 		<>
@@ -288,40 +281,8 @@ export default function AppPinPanel() {
 			<FormBanner variant="success" message={success} />
 			<FormBanner variant="error" message={error} />
 
-			<div className="rounded-surface border border-border bg-emphasis px-4 py-4">
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-					<div className="flex min-w-0 gap-3">
-						<span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-input border ${enabled ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border bg-muted/40 text-muted-foreground'}`}>
-							<LockKeyhole className="h-4 w-4" />
-						</span>
-						<div className="min-w-0">
-							<div className="flex flex-wrap items-center gap-2">
-								<p className="text-sm font-semibold text-card-foreground">App PIN</p>
-								{enabled ? (
-									<span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-										<CheckCircle2 className="h-3 w-3" />
-										Active
-									</span>
-								) : (
-									<span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-										Not set
-									</span>
-								)}
-							</div>
-							<p className="mt-1 text-xs leading-5 text-muted-foreground">
-								{enabled
-									? 'Used as the payment fallback when Face ID or fingerprint is unavailable.'
-									: 'Set a separate 4-digit PIN for payment confirmation.'}
-							</p>
-						</div>
-					</div>
-					<KeyRound className="hidden h-5 w-5 shrink-0 text-primary sm:block" />
-				</div>
-			</div>
-
 			<ActionRow
-				label="Payment app PIN"
-				value={statusLabel}
+				label="App PIN"
 				hint={
 					status.locked
 						? `Too many failed attempts. Try again${lockedUntil ? ` after ${lockedUntil}` : ' later'}.`

@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated
 
 from pydantic import (
@@ -158,6 +159,17 @@ class ProfileUpdateRequest(BaseModel):
         return self
 
 
+class PaymentSecurityPreferencesUpdate(BaseModel):
+    payment_confirm_enabled: bool | None = None
+    payment_confirm_above_amount: Decimal | None = Field(default=None, ge=0, le=Decimal("500000"))
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "PaymentSecurityPreferencesUpdate":
+        if self.payment_confirm_enabled is None and self.payment_confirm_above_amount is None:
+            raise ValueError("At least one preference must be provided.")
+        return self
+
+
 class NotificationPreferencesUpdate(BaseModel):
     billing_reminders_enabled: bool | None = None
     email_payment_sent_enabled: bool | None = None
@@ -199,6 +211,8 @@ class UserResponse(BaseModel):
     email_refund_status_enabled: bool = True
     avatar_url: str | None = None
     totp_enabled: bool = False
+    payment_confirm_enabled: bool = True
+    payment_confirm_above_amount: Decimal = Decimal("0")
 
 
 class TokenResponse(BaseModel):

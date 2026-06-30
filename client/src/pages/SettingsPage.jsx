@@ -3,7 +3,7 @@ import { Bell, CreditCard, Eye, KeyRound, Paintbrush } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
-import { refreshSession, updateNotificationPreferences } from '@/store/slices/authSlice'
+import { refreshSession, updateNotificationPreferences, updatePaymentSecurityPreferences } from '@/store/slices/authSlice'
 
 import { useWalletCards } from '@/hooks/useWalletCards'
 
@@ -38,6 +38,13 @@ function savedNotificationPrefs(user) {
   }
 }
 
+function savedPaymentSecurityPrefs(user) {
+  return {
+    paymentConfirmEnabled: user?.payment_confirm_enabled !== false,
+    paymentConfirmAboveAmount: String(user?.payment_confirm_above_amount ?? 0),
+  }
+}
+
 export default function SettingsPage() {
   const dispatch = useAppDispatch()
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
@@ -52,6 +59,8 @@ export default function SettingsPage() {
   const [draftEmailPaymentReceived, setDraftEmailPaymentReceived] = useState(true)
   const [draftEmailTopup, setDraftEmailTopup] = useState(true)
   const [draftEmailRefundStatus, setDraftEmailRefundStatus] = useState(true)
+  const [draftPaymentConfirmEnabled, setDraftPaymentConfirmEnabled] = useState(true)
+  const [draftPaymentConfirmAboveAmount, setDraftPaymentConfirmAboveAmount] = useState('0')
   const [savePending, setSavePending] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
@@ -67,10 +76,14 @@ export default function SettingsPage() {
       setDraftEmailPaymentReceived(saved.emailPaymentReceived)
       setDraftEmailTopup(saved.emailTopup)
       setDraftEmailRefundStatus(saved.emailRefundStatus)
+      const paymentPrefs = savedPaymentSecurityPrefs(user)
+      setDraftPaymentConfirmEnabled(paymentPrefs.paymentConfirmEnabled)
+      setDraftPaymentConfirmAboveAmount(paymentPrefs.paymentConfirmAboveAmount)
     }
   }, [user])
 
   const saved = useMemo(() => savedNotificationPrefs(user), [user])
+  const savedPayment = useMemo(() => savedPaymentSecurityPrefs(user), [user])
 
   const isThemeDirty = useMemo(() => draftTheme !== themePreference, [draftTheme, themePreference])
   const isBillingDirty = useMemo(
@@ -91,7 +104,14 @@ export default function SettingsPage() {
       saved,
     ],
   )
-  const isDirty = isThemeDirty || isBillingDirty
+  const isPaymentSecurityDirty = useMemo(
+    () =>
+      Boolean(user) &&
+      (draftPaymentConfirmEnabled !== savedPayment.paymentConfirmEnabled ||
+        draftPaymentConfirmAboveAmount !== savedPayment.paymentConfirmAboveAmount),
+    [user, draftPaymentConfirmEnabled, draftPaymentConfirmAboveAmount, savedPayment],
+  )
+  const isDirty = isThemeDirty || isBillingDirty || isPaymentSecurityDirty
 
   function handleDiscard() {
     setDraftTheme(themePreference)
@@ -102,6 +122,9 @@ export default function SettingsPage() {
       setDraftEmailPaymentReceived(next.emailPaymentReceived)
       setDraftEmailTopup(next.emailTopup)
       setDraftEmailRefundStatus(next.emailRefundStatus)
+      const paymentPrefs = savedPaymentSecurityPrefs(user)
+      setDraftPaymentConfirmEnabled(paymentPrefs.paymentConfirmEnabled)
+      setDraftPaymentConfirmAboveAmount(paymentPrefs.paymentConfirmAboveAmount)
     }
     setSaveError(null)
   }
@@ -122,8 +145,16 @@ export default function SettingsPage() {
           }),
         ).unwrap()
       }
+      if (isPaymentSecurityDirty && user) {
+        await dispatch(
+          updatePaymentSecurityPreferences({
+            paymentConfirmEnabled: draftPaymentConfirmEnabled,
+            paymentConfirmAboveAmount: draftPaymentConfirmAboveAmount,
+          }),
+        ).unwrap()
+      }
     } catch (err) {
-      setSaveError(typeof err === 'string' ? err : 'Could not save notification preferences.')
+      setSaveError(typeof err === 'string' ? err : 'Could not save your settings.')
     } finally {
       setSavePending(false)
     }
@@ -177,6 +208,11 @@ export default function SettingsPage() {
             onChangePassword={() => setIsChangePasswordOpen(true)}
             totpEnabled={user?.totp_enabled ?? false}
             onTotpStatusChange={() => dispatch(refreshSession())}
+            paymentConfirmEnabled={draftPaymentConfirmEnabled}
+            paymentConfirmAboveAmount={draftPaymentConfirmAboveAmount}
+            onPaymentConfirmEnabledChange={setDraftPaymentConfirmEnabled}
+            onPaymentConfirmAboveAmountChange={setDraftPaymentConfirmAboveAmount}
+            paymentPrefsDisabled={!user || savePending}
           />
         </SettingsCard>
 
@@ -329,10 +365,18 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-semibold text-card-foreground">Unsaved changes</p>
               <p className="text-xs text-muted-foreground">
-                {isBillingDirty && isThemeDirty
+                {isBillingDirty && isPaymentSecurityDirty && isThemeDirty
+                  ? 'Account preferences sync to your account; theme applies on this device only.'
+                  : isBillingDirty && isPaymentSecurityDirty
+                    ? 'Account preferences will sync to your account when you save.'
+                  : isBillingDirty && isThemeDirty
                   ? 'Notification preferences sync to your account; theme applies on this device only.'
+                  : isPaymentSecurityDirty && isThemeDirty
+                    ? 'Payment security syncs to your account; theme applies on this device only.'
                   : isBillingDirty
                     ? 'Notification preferences will sync to your account when you save.'
+                    : isPaymentSecurityDirty
+                      ? 'Payment security preferences will sync to your account when you save.'
                     : 'Theme is kept on this device. Save to apply, or discard.'}
               </p>
               {saveError ? (
@@ -351,7 +395,7 @@ export default function SettingsPage() {
               <Button
                 className="w-full px-5 sm:w-auto"
                 onClick={handleSaveChanges}
-                disabled={savePending || (isBillingDirty && !user)}
+                disabled={savePending || ((isBillingDirty || isPaymentSecurityDirty) && !user)}
               >
                 {savePending ? 'Saving…' : 'Save changes'}
               </Button>

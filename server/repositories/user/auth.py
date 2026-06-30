@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -284,6 +285,23 @@ class UserAuthRepository:
             values["email_topup_enabled"] = email_topup_enabled
         if email_refund_status_enabled is not None:
             values["email_refund_status_enabled"] = email_refund_status_enabled
+        self._db.execute(
+            update(User).where(User.user_id == user_id).values(**values)
+        )
+        self._db.commit()
+
+    def update_payment_security_preferences(
+        self,
+        user_id: int,
+        *,
+        payment_confirm_enabled: bool | None = None,
+        payment_confirm_above_amount: Decimal | None = None,
+    ) -> None:
+        values: dict = {"modified_at": datetime.now(timezone.utc)}
+        if payment_confirm_enabled is not None:
+            values["payment_confirm_enabled"] = payment_confirm_enabled
+        if payment_confirm_above_amount is not None:
+            values["payment_confirm_above_amount"] = payment_confirm_above_amount
         self._db.execute(
             update(User).where(User.user_id == user_id).values(**values)
         )

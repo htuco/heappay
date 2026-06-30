@@ -4,7 +4,7 @@ import lottieSrc from '@/assets/dashboard-loading.lottie'
 
 const MESSAGES = [
   'Syncing your cards...',
-  'Counting your money (accurately 😉)',
+  'Counting your money accurately...',
   'Preparing your financial overview...',
   'Loading your wallet...',
   'Almost ready. Just balancing things.',

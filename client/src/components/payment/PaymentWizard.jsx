@@ -36,7 +36,9 @@ import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 import { createIdempotencyKey } from '@/utils/idempotency'
 import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
+import PaymentSendConfirmModal from '@/components/payment/PaymentSendConfirmModal'
 import { getBiometricAssertion, isWebAuthnAssertionAvailable } from '@/utils/webauthn'
+import { paymentConfirmationLabel, userRequiresPaymentConfirmation } from '@/utils/paymentSecurity'
 
 const SEND_TYPE_NAMES = new Set(['payment', 'fine'])
 const AUTO_CLOSE_MS = 1200
@@ -798,6 +800,7 @@ function StepReview({
   onBack,
   isSubmitting,
   error,
+  confirmationHint,
 }) {
   const { maskCard } = useCardBrandResolver()
   const txType = txTypes.find((t) => t.transaction_type_id === state.txTypeId)
@@ -855,8 +858,7 @@ function StepReview({
           aria-hidden="true"
         />
         <span>
-          You&apos;ll confirm this payment with Face ID / fingerprint first when
-          available. Otherwise, use your separate app PIN before money is sent.
+          {confirmationHint}
         </span>
       </p>
 
@@ -997,6 +999,7 @@ export default function PaymentWizard({
   const [pendingApprovalTx, setPendingApprovalTx] = useState(null)
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   const [pinConfirmOpen, setPinConfirmOpen] = useState(false)
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false)
   const [pin, setPin] = useState('')
   const [pinError, setPinError] = useState('')
   const [pinSubtitle, setPinSubtitle] = useState('Enter your app PIN to send this payment.')
@@ -1010,6 +1013,7 @@ export default function PaymentWizard({
     setForm({ ...INITIAL_FORM, fromCardId: initialCardId ?? null })
     setSubmitError('')
     setPinConfirmOpen(false)
+    setSendConfirmOpen(false)
     setPin('')
     setPinError('')
     setShowCloseConfirm(false)
@@ -1051,6 +1055,7 @@ export default function PaymentWizard({
     setPendingApprovalTx(null)
     setApprovalModalOpen(false)
     setPinConfirmOpen(false)
+    setSendConfirmOpen(false)
     setPin('')
     setPinError('')
     idempotencyKeyRef.current = null
@@ -1181,6 +1186,8 @@ export default function PaymentWizard({
         await submitPayment({ biometric })
       } else if (await getCreateAppPinRequired()) {
         openPinConfirmation('Enter your app PIN to send this payment.')
+      } else if (userRequiresPaymentConfirmation(user, normalizedAmount)) {
+        setSendConfirmOpen(true)
       } else {
         await submitPayment()
       }
@@ -1207,6 +1214,11 @@ export default function PaymentWizard({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  async function handleSendConfirm(confirmation) {
+    await submitPayment(confirmation)
+    setSendConfirmOpen(false)
   }
 
   async function handlePinSubmit() {
@@ -1242,6 +1254,10 @@ export default function PaymentWizard({
   const fromCard = cards.find((c) => c.card_id === form.fromCardId) ?? null
   const txType = txTypes.find((t) => t.transaction_type_id === form.txTypeId)
   const isSuccess = step === 3
+  const confirmationHint = user?.totp_enabled
+    ? 'Confirm with Face ID / fingerprint, app PIN, or your authenticator code before money is sent.'
+    : 'Confirm with Face ID / fingerprint, app PIN, or your password before money is sent. ' +
+      paymentConfirmationLabel(user)
 
   return (
     <Modal
@@ -1342,6 +1358,7 @@ export default function PaymentWizard({
                   onBack={() => setStep(1)}
                   isSubmitting={isSubmitting}
                   error={submitError}
+                  confirmationHint={confirmationHint}
                 />
               )}
             </div>
@@ -1431,6 +1448,14 @@ export default function PaymentWizard({
           </div>
         </div>
       )}
+
+      <PaymentSendConfirmModal
+        isOpen={sendConfirmOpen}
+        onClose={() => setSendConfirmOpen(false)}
+        amount={form.amount}
+        recipientName={form.recipientInfo?.owner_name}
+        onConfirm={handleSendConfirm}
+      />
 
       <PaymentApprovalModal
         isOpen={approvalModalOpen}

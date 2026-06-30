@@ -133,6 +133,22 @@ export const updateNotificationPreferences = createAsyncThunk(
   },
 )
 
+export const updatePaymentSecurityPreferences = createAsyncThunk(
+  'auth/updatePaymentSecurityPreferences',
+  async ({ paymentConfirmEnabled, paymentConfirmAboveAmount }, { rejectWithValue }) => {
+    try {
+      return await authService.updatePaymentSecurityPreferences({
+        paymentConfirmEnabled,
+        paymentConfirmAboveAmount,
+      })
+    } catch (error) {
+      return rejectWithValue(
+        getApiErrorMessage(error, 'Could not save payment security preferences.'),
+      )
+    }
+  },
+)
+
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   await authService.logout()
 })
@@ -246,6 +262,10 @@ const authSlice = createSlice({
         state.error = action.payload ?? 'Profile update failed.'
       })
       .addCase(updateNotificationPreferences.fulfilled, (state, action) => {
+        state.user = action.payload
+        state.error = null
+      })
+      .addCase(updatePaymentSecurityPreferences.fulfilled, (state, action) => {
         state.user = action.payload
         state.error = null
       })

@@ -76,6 +76,9 @@ class _FakeAuthService:
     def update_notification_preferences(self, _token, _enabled):
         return _token_response()
 
+    def update_payment_security_preferences(self, _token, _payload):
+        return _token_response()
+
     def change_password(self, _user_id, _payload):
         return None
 
@@ -157,6 +160,9 @@ class _FakeAuthServiceAdmin:
         return _token_response(role_id=1, role_name="admin")
 
     def update_notification_preferences(self, _token, _enabled):
+        return _token_response(role_id=1, role_name="admin")
+
+    def update_payment_security_preferences(self, _token, _payload):
         return _token_response(role_id=1, role_name="admin")
 
     def register(self, _payload):  # pragma: no cover
@@ -716,6 +722,35 @@ def test_update_notification_preferences_invalid_session_returns_401() -> None:
         json={"billing_reminders_enabled": True},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# PATCH /payment-security-preferences
+# ---------------------------------------------------------------------------
+
+
+def test_update_payment_security_preferences_persists_flag() -> None:
+    class _SecurityService(_FakeAuthService):
+        last_payload = None
+
+        def update_payment_security_preferences(self, _token, payload):
+            self.last_payload = payload
+            return _token_response()
+
+    service = _SecurityService()
+    client = _build_client(service)
+    resp = client.patch(
+        "/auth/payment-security-preferences",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "payment_confirm_enabled": True,
+            "payment_confirm_above_amount": "10.00",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["message"] == "Payment security preferences updated."
+    assert service.last_payload.payment_confirm_enabled is True
+    assert str(service.last_payload.payment_confirm_above_amount) == "10.00"
 
 
 # ---------------------------------------------------------------------------

@@ -46,6 +46,7 @@ from schemas.user.auth import (
     DeactivateAccountRequest,
     LoginRequest,
     NotificationPreferencesUpdate,
+    PaymentSecurityPreferencesUpdate,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
     ProfileUpdateRequest,
@@ -205,6 +206,8 @@ class UserAuthService:
             email_refund_status_enabled=user.email_refund_status_enabled,
             avatar_url=resolve_avatar_url_for_client(raw_avatar, self.settings),
             totp_enabled=user.totp_enabled,
+            payment_confirm_enabled=user.payment_confirm_enabled,
+            payment_confirm_above_amount=user.payment_confirm_above_amount,
         )
         return TokenResponse(
             access_token=access_token or self.create_access_token(user.user_id),
@@ -755,6 +758,28 @@ class UserAuthService:
             email_payment_received_enabled=preferences.email_payment_received_enabled,
             email_topup_enabled=preferences.email_topup_enabled,
             email_refund_status_enabled=preferences.email_refund_status_enabled,
+        )
+        user = self.repo.get_user_by_id(user_id)
+        if user is None:
+            return None
+
+        return self._build_token_response_for_user(
+            user,
+            user.refresh_token or "",
+            access_token=token,
+        )
+
+    def update_payment_security_preferences(
+        self, token: str, preferences: PaymentSecurityPreferencesUpdate
+    ) -> TokenResponse | None:
+        user_id = self.resolve_active_user_id(token)
+        if user_id is None:
+            return None
+
+        self.repo.update_payment_security_preferences(
+            user_id,
+            payment_confirm_enabled=preferences.payment_confirm_enabled,
+            payment_confirm_above_amount=preferences.payment_confirm_above_amount,
         )
         user = self.repo.get_user_by_id(user_id)
         if user is None:

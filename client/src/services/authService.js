@@ -179,6 +179,23 @@ export async function updateNotificationPreferences({
 	return user
 }
 
+export async function updatePaymentSecurityPreferences({
+	paymentConfirmEnabled,
+	paymentConfirmAboveAmount,
+}) {
+	const { data } = await api.patch('/auth/payment-security-preferences', {
+		payment_confirm_enabled: paymentConfirmEnabled,
+		payment_confirm_above_amount: paymentConfirmAboveAmount,
+	})
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token)
+	}
+	const user = td.user
+	setAuthUser(user, { remember: getAuthRememberPreference() })
+	return user
+}
+
 export async function logout() {
 	try {
 		await api.post('/auth/logout')
