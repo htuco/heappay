@@ -93,8 +93,14 @@ export default function SpendingByCategory({ months = 6, bare = false }) {
       )}
 
       {!isLoading && !error && !isEmpty && (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="relative h-56 w-full min-w-0 sm:w-56 sm:shrink-0">
+        <div
+          className={
+            bare
+              ? 'flex flex-col gap-4'
+              : 'flex flex-col gap-4 sm:flex-row sm:items-center'
+          }
+        >
+          <div className={`relative mx-auto h-56 w-full min-w-0 ${bare ? 'max-w-56' : 'sm:w-56 sm:shrink-0'}`}>
             <ResponsiveContainer width="100%" height={224} minWidth={0}>
               <PieChart>
                 <Pie
@@ -129,20 +135,23 @@ export default function SpendingByCategory({ months = 6, bare = false }) {
           </div>
 
           {/* Legend */}
-          <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <ul className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden">
             {segments.map((segment) => {
               const pct = total > 0 ? Math.round((segment.value / total) * 100) : 0
               return (
-                <li key={segment.key} className="flex items-center gap-2 text-sm">
+                <li
+                  key={segment.key}
+                  className="grid grid-cols-[0.625rem_minmax(0,1fr)_2.25rem_4.75rem] items-center gap-x-2 text-sm"
+                >
                   <span
                     className="size-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: segment.color }}
                   />
-                  <span className="min-w-0 flex-1 truncate text-card-foreground">
-                    {segment.name}
+                  <span className="min-w-0 truncate text-card-foreground">{segment.name}</span>
+                  <span className="shrink-0 text-right tabular-nums text-muted-foreground">
+                    {pct}%
                   </span>
-                  <span className="tabular-nums text-muted-foreground">{pct}%</span>
-                  <span className="tabular-nums font-medium text-card-foreground">
+                  <span className="shrink-0 text-right tabular-nums font-medium text-card-foreground">
                     {formatMoney(segment.value)}
                   </span>
                 </li>
