@@ -1,6 +1,6 @@
 import logo from '@/assets/logo.png'
 import { ArrowLeft, Mail } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
@@ -8,9 +8,11 @@ import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import { HCaptchaModal } from '@/components/auth-ui/HCaptchaField'
 import FormBanner from '@/components/ui/FormBanner'
 import { requestPasswordReset } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
+import { isHCaptchaEnabled } from '@/utils/hcaptcha'
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().min(1, 'Email is required').email('Invalid email format'),
@@ -23,6 +25,28 @@ export default function ForgotPasswordPage() {
   const [bannerError, setBannerError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+  const [captchaOpen, setCaptchaOpen] = useState(false)
+  const [pendingEmail, setPendingEmail] = useState('')
+  const captchaRef = useRef(null)
+
+  async function submitPasswordReset(emailAddress, hcaptchaToken = '') {
+    setLoading(true)
+    try {
+      const response = await requestPasswordReset({
+        email: emailAddress,
+        hcaptchaToken,
+      })
+      setSuccess(response.message || 'If an account exists for this email, a reset link has been sent.')
+      setPendingEmail('')
+      captchaRef.current?.resetCaptcha()
+    } catch (err) {
+      setBannerError(getApiErrorMessage(err, 'Could not request password reset.'))
+      setPendingEmail('')
+      captchaRef.current?.resetCaptcha()
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -36,15 +60,25 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    setLoading(true)
-    try {
-      const response = await requestPasswordReset({ email: result.data.email })
-      setSuccess(response.message || 'If an account exists for this email, a reset link has been sent.')
-    } catch (err) {
-      setBannerError(getApiErrorMessage(err, 'Could not request password reset.'))
-    } finally {
-      setLoading(false)
+    if (isHCaptchaEnabled()) {
+      setPendingEmail(result.data.email)
+      setCaptchaOpen(true)
+      return
     }
+
+    await submitPasswordReset(result.data.email)
+  }
+
+  async function handleCaptchaVerified(token) {
+    if (!pendingEmail) return
+    setCaptchaOpen(false)
+    await submitPasswordReset(pendingEmail, token)
+  }
+
+  function handleCaptchaClose() {
+    setCaptchaOpen(false)
+    setPendingEmail('')
+    captchaRef.current?.resetCaptcha()
   }
 
   return (
@@ -92,6 +126,21 @@ export default function ForgotPasswordPage() {
           </button>
         </div>
       </div>
+      <HCaptchaModal
+        open={captchaOpen}
+        captchaRef={captchaRef}
+        title="Before we send it"
+        description="Complete this quick security check before requesting a reset link."
+        disabled={loading}
+        onVerify={handleCaptchaVerified}
+        onExpire={() => captchaRef.current?.resetCaptcha()}
+        onError={() => {
+          setCaptchaOpen(false)
+          setPendingEmail('')
+          setBannerError('Security check failed to load. Please try again.')
+        }}
+        onClose={handleCaptchaClose}
+      />
     </section>
   )
 }

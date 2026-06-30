@@ -35,12 +35,12 @@ export function useAuth() {
 		return () => window.removeEventListener('focus', onFocus)
 	}, [dispatch])
 
-	const login = useCallback(async ({ email, password, remember }) => {
-		return dispatch(loginUser({ email, password, remember })).unwrap()
+	const login = useCallback(async ({ email, password, remember, hcaptchaToken }) => {
+		return dispatch(loginUser({ email, password, remember, hcaptchaToken })).unwrap()
 	}, [dispatch])
 
-	const register = useCallback(async ({ firstName, lastName, email, password }) => {
-		return dispatch(registerUser({ firstName, lastName, email, password })).unwrap()
+	const register = useCallback(async ({ firstName, lastName, email, password, hcaptchaToken }) => {
+		return dispatch(registerUser({ firstName, lastName, email, password, hcaptchaToken })).unwrap()
 	}, [dispatch])
 
 	const updateProfile = useCallback(async (fields) => {

@@ -63,17 +63,18 @@ export default function LoginNavButton() {
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p>
 
-            <DropdownMenuItem asChild className="mt-5 p-0 focus:bg-transparent">
+            <div className="mt-5">
               <Link
                 to="/settings"
-                className="group inline-flex cursor-pointer items-center gap-2 rounded-input bg-linear-to-r from-primary/10 to-primary-light/10 px-5 py-2 text-sm font-medium text-primary ring-1 ring-primary/20 transition-all duration-200 hover:from-primary/15 hover:to-primary-light/15 hover:ring-primary/40"
+                className="group relative inline-flex h-12 min-w-64 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-input border border-primary/20 bg-linear-to-r from-primary/10 to-primary-light/10 px-5 text-sm font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
-                Manage your account
-                <span className="text-primary/60 transition-transform duration-200 group-hover:translate-x-0.5">
+                <span className="pointer-events-none absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100" />
+                <span className="relative">Manage your account</span>
+                <span className="relative text-primary/60">
                   →
                 </span>
               </Link>
-            </DropdownMenuItem>
+            </div>
           </div>
 
           <DropdownMenuSeparator className="my-0" />

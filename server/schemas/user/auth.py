@@ -22,11 +22,13 @@ class RegisterRequest(BaseModel):
     first_name: str
     last_name: str
     password: StrongPasswordStr
+    hcaptcha_token: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: LoginPasswordStr
+    hcaptcha_token: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
 class RefreshRequest(BaseModel):
@@ -47,6 +49,7 @@ class ChangePasswordRequest(BaseModel):
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr
+    hcaptcha_token: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
 class PasswordResetConfirmRequest(BaseModel):

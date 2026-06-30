@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils'
 const STOCK_PLACEHOLDER_URL =
   'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&h=200&fit=crop&crop=faces'
 
+const loadedAvatarSrcs = new Set()
+const failedAvatarSrcs = new Set()
+
 function pickAvatarUrl(user) {
   if (!user) return null
   return user.avatar_url ?? user.avatarUrl ?? null
@@ -49,8 +52,8 @@ export default function UserAvatar({
 
   const initials = getInitials(user)
   const label = getAvatarLabel(user, initials)
-  const imageFailed = imageSrc != null && failedSrc === imageSrc
-  const imageReady = imageSrc != null && readySrc === imageSrc
+  const imageFailed = imageSrc != null && (failedSrc === imageSrc || failedAvatarSrcs.has(imageSrc))
+  const imageReady = imageSrc != null && (readySrc === imageSrc || loadedAvatarSrcs.has(imageSrc))
   const showImage = Boolean(!imageFailed && imageSrc)
 
   return (
@@ -73,8 +76,12 @@ export default function UserAvatar({
               'block h-full w-full min-h-0 min-w-0 object-cover transition-opacity duration-200 ease-out',
               imageReady ? 'opacity-100' : 'opacity-0',
             )}
-            onLoad={() => setReadySrc(imageSrc)}
+            onLoad={() => {
+              loadedAvatarSrcs.add(imageSrc)
+              setReadySrc(imageSrc)
+            }}
             onError={() => {
+              failedAvatarSrcs.add(imageSrc)
               setReadySrc(null)
               setFailedSrc(imageSrc)
             }}

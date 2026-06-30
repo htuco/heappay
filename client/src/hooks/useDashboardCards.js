@@ -8,25 +8,30 @@ import { subscribeDataChange } from '@/utils/dataEvents'
 
 const MIN_LOADER_MS = 1500
 
+function getUserId(user) {
+  return user?.id ?? user?.user_id ?? null
+}
+
 export function useDashboardCards() {
   const { user, isLoading: authLoading } = useAuth()
+  const userId = getUserId(user)
+  const holderName = getUserDisplayName(user)
   const [cards, setCards] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const loadCards = useCallback(
     async ({ showLoader = true } = {}) => {
-      if (!user?.id) return
+      if (!userId) return
       if (showLoader) setIsLoading(true)
       setError(null)
       const startedAt = Date.now()
       try {
         const [rawCards, cardTypes, cardStatuses] = await Promise.all([
-          listCards({ user_id: user.id }),
+          listCards({ user_id: userId }),
           cardTypesService.list(),
           cardStatusesService.list(),
         ])
-        const holderName = getUserDisplayName(user)
         setCards(normalizeApiCards(rawCards, cardTypes, cardStatuses, holderName))
       } catch (err) {
         setError(err)
@@ -38,17 +43,28 @@ export function useDashboardCards() {
         setTimeout(() => setIsLoading(false), remaining)
       }
     },
-    [user]
+    [holderName, userId]
   )
 
   useEffect(() => {
     if (authLoading) return
-    if (!user?.id) {
-      setIsLoading(false)
-      return
+    if (!userId) {
+      let cancelled = false
+      Promise.resolve().then(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+      return () => {
+        cancelled = true
+      }
     }
-    loadCards()
-  }, [authLoading, user, loadCards])
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) loadCards()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, userId, loadCards])
 
   useEffect(() => {
     return subscribeDataChange(() => {

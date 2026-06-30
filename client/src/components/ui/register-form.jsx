@@ -1,5 +1,5 @@
 import BrandLogo from '@/components/ui/BrandLogo'
-import { useState, useMemo } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { registerSchema } from '@/schemas/registerSchema'
 import { useAuth } from '@/hooks/useAuth'
@@ -9,6 +9,8 @@ import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
 import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import { HCaptchaModal } from '@/components/auth-ui/HCaptchaField'
+import { isHCaptchaEnabled } from '@/utils/hcaptcha'
 import { getApiErrorMessage } from '@/utils/api'
 import { PASSWORD_RULES_HINT } from '@/schemas/passwordSchema'
 
@@ -31,6 +33,9 @@ export default function RegisterForm() {
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
 	const [success, setSuccess] = useState(false)
+	const [captchaOpen, setCaptchaOpen] = useState(false)
+	const [pendingRegistration, setPendingRegistration] = useState(null)
+	const captchaRef = useRef(null)
 
 	const calculatePasswordStrength = (pass) => {
 		let strength = 0
@@ -53,6 +58,30 @@ export default function RegisterForm() {
 		() => calculatePasswordStrength(form.password),
 		[form.password]
 	)
+
+	const submitRegistration = async (values, hcaptchaToken = '') => {
+		try {
+			await register({
+				firstName: values.firstName,
+				lastName: values.lastName,
+				email: values.email,
+				password: values.password,
+				hcaptchaToken,
+			})
+			setSuccess(true)
+			setForm(INITIAL_FORM_STATE)
+			setPendingRegistration(null)
+			setTimeout(() => navigate('/dashboard'), 1000)
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Could not create your account. Please try again.')
+			setError(message)
+			setPendingRegistration(null)
+			captchaRef.current?.resetCaptcha()
+			if (isDuplicateEmailMessage(message)) {
+				setErrors({ email: 'Use a different email or try logging in.' })
+			}
+		}
+	}
 
 	const handleSubmit = async (e) => {
 		e.preventDefault()
@@ -77,23 +106,25 @@ export default function RegisterForm() {
 			return
 		}
 
-		try {
-			await register({
-				firstName: form.firstName.trim(),
-				lastName: form.lastName.trim(),
-				email: form.email.trim(),
-				password: form.password,
-			})
-			setSuccess(true)
-			setForm(INITIAL_FORM_STATE)
-			setTimeout(() => navigate('/dashboard'), 1000)
-		} catch (err) {
-			const message = getApiErrorMessage(err, 'Could not create your account. Please try again.')
-			setError(message)
-			if (isDuplicateEmailMessage(message)) {
-				setErrors({ email: 'Use a different email or try logging in.' })
-			}
+		if (isHCaptchaEnabled()) {
+			setPendingRegistration(result.data)
+			setCaptchaOpen(true)
+			return
 		}
+
+		await submitRegistration(result.data)
+	}
+
+	const handleCaptchaVerified = async (token) => {
+		if (!pendingRegistration) return
+		setCaptchaOpen(false)
+		await submitRegistration(pendingRegistration, token)
+	}
+
+	const handleCaptchaClose = () => {
+		setCaptchaOpen(false)
+		setPendingRegistration(null)
+		captchaRef.current?.resetCaptcha()
 	}
 
 	const getPasswordStrengthColor = () => {
@@ -238,6 +269,21 @@ export default function RegisterForm() {
 					/>
 				</div>
 			</div>
+			<HCaptchaModal
+				open={captchaOpen}
+				captchaRef={captchaRef}
+				title="Protect your account"
+				description="Complete this quick security check before we create your account."
+				disabled={loading}
+				onVerify={handleCaptchaVerified}
+				onExpire={() => captchaRef.current?.resetCaptcha()}
+				onError={() => {
+					setCaptchaOpen(false)
+					setPendingRegistration(null)
+					setError('Security check failed to load. Please try again.')
+				}}
+				onClose={handleCaptchaClose}
+			/>
 		</div>
 	)
 }
