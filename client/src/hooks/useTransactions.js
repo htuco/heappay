@@ -5,6 +5,10 @@ import { subscribeDataChange } from '@/utils/dataEvents'
 
 const DEFAULT_PAGE_SIZE = 20
 
+function getUserId(user) {
+  return user?.id ?? user?.user_id ?? null
+}
+
 /**
  * Fetch and paginate transactions for the current user.
  *
@@ -27,6 +31,7 @@ export function useTransactions({
   categoryId,
 } = {}) {
   const { user, isLoading: authLoading } = useAuth()
+  const userId = getUserId(user)
 
   const [transactions, setTransactions] = useState([])
   const [page, setPageState] = useState(1)
@@ -63,51 +68,66 @@ export function useTransactions({
       prev.categoryId !== categoryId
     ) {
       prevQuery.current = { cardId, statusId, transactionTypeId, categoryId }
-      setPageState(1)
+      let cancelled = false
+      Promise.resolve().then(() => {
+        if (!cancelled) setPageState(1)
+      })
+      return () => {
+        cancelled = true
+      }
     }
   }, [cardId, statusId, transactionTypeId, categoryId])
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) {
-      setTransactions([])
-      setTotal(0)
-      setTotalPages(0)
-      setIsLoading(false)
-      return
+    if (!userId) {
+      let cancelled = false
+      Promise.resolve().then(() => {
+        if (cancelled) return
+        setTransactions([])
+        setTotal(0)
+        setTotalPages(0)
+        setIsLoading(false)
+      })
+      return () => {
+        cancelled = true
+      }
     }
 
     let cancelled = false
-    setIsLoading(true)
-    setError(null)
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setIsLoading(true)
+      setError(null)
 
-    const params = { page, pageSize }
-    if (typeof statusId === 'number') params.statusId = statusId
-    if (typeof transactionTypeId === 'number') params.transactionTypeId = transactionTypeId
-    if (typeof categoryId === 'number') params.categoryId = categoryId
-    const fetch =
-      cardId != null
-        ? transactionsService.listByCard(cardId, params)
-        : transactionsService.list(params)
+      const params = { page, pageSize }
+      if (typeof statusId === 'number') params.statusId = statusId
+      if (typeof transactionTypeId === 'number') params.transactionTypeId = transactionTypeId
+      if (typeof categoryId === 'number') params.categoryId = categoryId
+      const fetch =
+        cardId != null
+          ? transactionsService.listByCard(cardId, params)
+          : transactionsService.list(params)
 
-    fetch
-      .then((pageData) => {
-        if (cancelled) return
-        setTransactions(pageData.items)
-        setTotal(pageData.total)
-        setTotalPages(pageData.total_pages)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err)
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
+      fetch
+        .then((pageData) => {
+          if (cancelled) return
+          setTransactions(pageData.items)
+          setTotal(pageData.total)
+          setTotalPages(pageData.total_pages)
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err)
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false)
+        })
       })
 
     return () => {
       cancelled = true
     }
-  }, [authLoading, user, cardId, page, pageSize, statusId, transactionTypeId, categoryId, refreshKey])
+  }, [authLoading, userId, cardId, page, pageSize, statusId, transactionTypeId, categoryId, refreshKey])
 
   return {
     transactions,

@@ -5,6 +5,10 @@ import { subscribeDataChange } from '@/utils/dataEvents'
 
 const DEFAULT_MONTHS = 6
 
+function getUserId(user) {
+  return user?.id ?? user?.user_id ?? null
+}
+
 /**
  * Parse "YYYY-MM" into a short month label ("Jan", "Feb", …) without
  * timezone drift. Using `new Date(year, month - 1)` constructs a local date,
@@ -55,6 +59,7 @@ function getLastNMonths(n) {
  */
 export function useTransactionSummary({ months: initialMonths = DEFAULT_MONTHS } = {}) {
   const { user, isLoading: authLoading } = useAuth()
+  const userId = getUserId(user)
 
   const [months, setMonths] = useState(initialMonths)
   const [summary, setSummary] = useState(null)
@@ -72,32 +77,41 @@ export function useTransactionSummary({ months: initialMonths = DEFAULT_MONTHS }
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) {
-      setSummary(null)
-      setIsLoading(false)
-      return
+    if (!userId) {
+      let cancelled = false
+      Promise.resolve().then(() => {
+        if (cancelled) return
+        setSummary(null)
+        setIsLoading(false)
+      })
+      return () => {
+        cancelled = true
+      }
     }
 
     let cancelled = false
-    setIsLoading(true)
-    setError(null)
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setIsLoading(true)
+      setError(null)
 
-    transactionsService
-      .getSummary({ months })
-      .then((data) => {
-        if (!cancelled) setSummary(data)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err)
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
+      transactionsService
+        .getSummary({ months })
+        .then((data) => {
+          if (!cancelled) setSummary(data)
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err)
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false)
+        })
       })
 
     return () => {
       cancelled = true
     }
-  }, [authLoading, user, months, refreshKey])
+  }, [authLoading, userId, months, refreshKey])
 
   // Always emit exactly `months` data points (oldest → newest), padding months
   // that have no transactions with zeros so the chart always has full lines.
