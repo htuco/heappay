@@ -1,6 +1,7 @@
 import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { ShieldCheck, X } from 'lucide-react'
 
+import { useTheme } from '@/hooks/useTheme'
 import { HCAPTCHA_SITE_KEY, isHCaptchaEnabled } from '@/utils/hcaptcha'
 
 export function HCaptchaModal({
@@ -14,6 +15,9 @@ export function HCaptchaModal({
 	onError,
 	onClose,
 }) {
+	const { isDark } = useTheme()
+	const captchaTheme = isDark ? 'dark' : 'light'
+
 	if (!open || !isHCaptchaEnabled()) return null
 
 	return (
@@ -41,9 +45,10 @@ export function HCaptchaModal({
 				<div className={disabled ? 'pointer-events-none opacity-60' : ''}>
 					<div className="flex justify-center">
 						<HCaptcha
+							key={captchaTheme}
 							ref={captchaRef}
 							sitekey={HCAPTCHA_SITE_KEY}
-							theme="light"
+							theme={captchaTheme}
 							onVerify={onVerify}
 							onExpire={onExpire}
 							onError={onError}
