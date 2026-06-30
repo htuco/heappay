@@ -555,11 +555,9 @@ class TransactionService:
             )
         if getattr(user, "app_pin_hash", None):
             raise ApprovalRequiredError("App PIN is required to send money.")
+        if user.totp_enabled:
+            raise ApprovalRequiredError("Authenticator code is required to send money.")
         if self._user_requires_payment_confirmation(user, payload.amount):
-            if user.totp_enabled:
-                raise ApprovalRequiredError(
-                    "Authenticator code is required to confirm this payment."
-                )
             raise ApprovalRequiredError("Password is required to confirm this payment.")
 
     @staticmethod
