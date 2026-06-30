@@ -50,9 +50,9 @@ export const refreshSession = createAsyncThunk(
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
-  async ({ email, password, remember }, { rejectWithValue }) => {
+  async ({ email, password, remember, hcaptchaToken }, { rejectWithValue }) => {
     try {
-      return await authService.login({ email, password, remember })
+      return await authService.login({ email, password, remember, hcaptchaToken })
     } catch (error) {
       return rejectWithValue(getApiErrorMessage(error, 'Could not log in. Please try again.'))
     }
@@ -72,9 +72,9 @@ export const verifyTotpLogin = createAsyncThunk(
 
 export const registerUser = createAsyncThunk(
   'auth/registerUser',
-  async ({ firstName, lastName, email, password }, { rejectWithValue }) => {
+  async ({ firstName, lastName, email, password, hcaptchaToken }, { rejectWithValue }) => {
     try {
-      const user = await authService.register({ firstName, lastName, email, password })
+      const user = await authService.register({ firstName, lastName, email, password, hcaptchaToken })
       return user
     } catch (error) {
       return rejectWithValue(getApiErrorMessage(error, 'Could not create your account. Please try again.'))

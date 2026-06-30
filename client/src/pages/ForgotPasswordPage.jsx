@@ -1,6 +1,6 @@
 import logo from '@/assets/logo.png'
 import { ArrowLeft, Mail } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
@@ -8,9 +8,11 @@ import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import HCaptchaField from '@/components/auth-ui/HCaptchaField'
 import FormBanner from '@/components/ui/FormBanner'
 import { requestPasswordReset } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
+import { isHCaptchaEnabled } from '@/utils/hcaptcha'
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().min(1, 'Email is required').email('Invalid email format'),
@@ -23,6 +25,8 @@ export default function ForgotPasswordPage() {
   const [bannerError, setBannerError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+  const [hcaptchaToken, setHcaptchaToken] = useState('')
+  const captchaRef = useRef(null)
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -35,13 +39,24 @@ export default function ForgotPasswordPage() {
       setFieldError(result.error.issues[0]?.message || 'Enter a valid email address.')
       return
     }
+    if (isHCaptchaEnabled() && !hcaptchaToken) {
+      setBannerError('Please complete the security check and try again.')
+      return
+    }
 
     setLoading(true)
     try {
-      const response = await requestPasswordReset({ email: result.data.email })
+      const response = await requestPasswordReset({
+        email: result.data.email,
+        hcaptchaToken,
+      })
       setSuccess(response.message || 'If an account exists for this email, a reset link has been sent.')
+      setHcaptchaToken('')
+      captchaRef.current?.resetCaptcha()
     } catch (err) {
       setBannerError(getApiErrorMessage(err, 'Could not request password reset.'))
+      setHcaptchaToken('')
+      captchaRef.current?.resetCaptcha()
     } finally {
       setLoading(false)
     }
@@ -74,6 +89,17 @@ export default function ForgotPasswordPage() {
               onChange={(event) => setEmail(event.target.value)}
               disabled={loading}
               error={fieldError}
+            />
+
+            <HCaptchaField
+              captchaRef={captchaRef}
+              disabled={loading}
+              onVerify={setHcaptchaToken}
+              onExpire={() => setHcaptchaToken('')}
+              onError={() => {
+                setHcaptchaToken('')
+                setBannerError('Security check failed to load. Please try again.')
+              }}
             />
 
             <AuthButton type="submit" disabled={loading}>

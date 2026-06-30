@@ -1,5 +1,5 @@
 import BrandLogo from '@/components/ui/BrandLogo'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -21,6 +21,8 @@ import AuthLinkLabel from '@/components/auth-ui/AuthLinkLabel'
 import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
+import HCaptchaField from '@/components/auth-ui/HCaptchaField'
+import { isHCaptchaEnabled } from '@/utils/hcaptcha'
 
 const INITIAL_FORM_STATE = { email: '', password: '', rememberMe: false }
 
@@ -105,6 +107,8 @@ export default function LoginForm() {
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
 	const [success, setSuccess] = useState(false)
+	const [hcaptchaToken, setHcaptchaToken] = useState('')
+	const captchaRef = useRef(null)
 
 	const isTotpPending = status === 'totp_pending'
 
@@ -125,16 +129,28 @@ export default function LoginForm() {
 			setErrors(fieldErrors)
 			return
 		}
+		if (isHCaptchaEnabled() && !hcaptchaToken) {
+			setError('Please complete the security check and try again.')
+			return
+		}
 
 		try {
-			const user = await login({ email: result.data.email, password: result.data.password, remember: form.rememberMe })
+			const user = await login({
+				email: result.data.email,
+				password: result.data.password,
+				remember: form.rememberMe,
+				hcaptchaToken,
+			})
 			if (user?.requiresTotp) return
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
+			setHcaptchaToken('')
 			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
 			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 400)
 		} catch (err) {
 			setError(getApiErrorMessage(err, 'Invalid email or password.'))
+			setHcaptchaToken('')
+			captchaRef.current?.resetCaptcha()
 		}
 	}
 
@@ -197,13 +213,23 @@ export default function LoginForm() {
 							/>
 							<button
 								type="button"
-								title="Coming soon"
-								disabled
-								className="inline-flex min-h-11 cursor-not-allowed items-center text-sm font-medium text-muted-foreground touch-manipulation md:min-h-0"
+								onClick={() => navigate('/forgot-password')}
+								className="inline-flex min-h-11 items-center text-sm font-medium text-primary touch-manipulation hover:underline md:min-h-0"
 							>
 								Forgot password
 							</button>
 						</div>
+
+						<HCaptchaField
+							captchaRef={captchaRef}
+							disabled={loading}
+							onVerify={setHcaptchaToken}
+							onExpire={() => setHcaptchaToken('')}
+							onError={() => {
+								setHcaptchaToken('')
+								setError('Security check failed to load. Please try again.')
+							}}
+						/>
 
 						<AuthButton type="submit" disabled={loading}>
 							{loading ? 'Logging in...' : 'Log in'}
