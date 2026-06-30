@@ -65,6 +65,19 @@ class User(Base):
         nullable=False,
         server_default="0",
     )
+    recovery_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recovery_email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    recovery_email_verification_token: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    recovery_email_verification_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")
@@ -79,3 +92,4 @@ class User(Base):
         "BiometricAuthenticationChallenge",
         back_populates="user",
     )
+    security_audit_events = relationship("UserSecurityAuditEvent", back_populates="user")

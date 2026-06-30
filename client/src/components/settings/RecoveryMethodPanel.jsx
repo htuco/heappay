@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle2, KeyRound, Mail, Send, ShieldCheck } from 'lucide-react'
 
+import RecoveryEmailPanel from '@/components/settings/RecoveryEmailPanel'
 import ActionRow from '@/components/settings/ActionRow'
 import AppPinPanel from '@/components/settings/AppPinPanel'
 import BiometricPanel from '@/components/settings/BiometricPanel'
@@ -13,6 +14,9 @@ import { getApiErrorMessage } from '@/utils/api'
 
 export default function RecoveryMethodPanel({
   email,
+  recoveryEmail,
+  recoveryEmailVerified = false,
+  onRecoveryEmailChange,
   onChangePassword,
   totpEnabled = false,
   onTotpStatusChange,
@@ -54,17 +58,17 @@ export default function RecoveryMethodPanel({
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-card-foreground">Email recovery</p>
+                <p className="text-sm font-semibold text-card-foreground">Login email</p>
                 <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
                   <CheckCircle2 className="h-3 w-3" />
-                  Active
+                  Sign-in
                 </span>
               </div>
               <p className="mt-1 break-all text-sm font-medium text-card-foreground">
                 {hasEmail ? email : 'No account email loaded'}
               </p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Reset links are sent to the email address used for sign-in.
+                Used to sign in. Password reset goes to your verified recovery email when set.
               </p>
             </div>
           </div>
@@ -72,9 +76,16 @@ export default function RecoveryMethodPanel({
         </div>
       </div>
 
+      <RecoveryEmailPanel
+        recoveryEmail={recoveryEmail}
+        recoveryEmailVerified={recoveryEmailVerified}
+        totpEnabled={totpEnabled}
+        onStatusChange={onRecoveryEmailChange}
+      />
+
       <ActionRow
         label="Send reset email"
-        hint="Sends a time-limited password reset link to your account email."
+        hint="Sends a password reset link to your verified recovery email, or login email if none is set."
         action={
           <Button
             className="w-full sm:w-auto"

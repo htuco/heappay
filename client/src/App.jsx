@@ -13,6 +13,7 @@ import DashboardPage from './pages/Dashboard'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PaymentPage from './pages/PaymentPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import VerifyRecoveryEmailPage from './pages/VerifyRecoveryEmailPage'
 import SettingsPage from './pages/SettingsPage'
 import WalletPage from './pages/WalletPage'
 import RegisterPage from './pages/RegisterPage'
@@ -211,6 +212,7 @@ export default function App() {
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
       <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordPage /></PublicOnlyRoute>} />
       <Route path="/reset-password" element={<PublicOnlyRoute><ResetPasswordPage /></PublicOnlyRoute>} />
+      <Route path="/verify-recovery-email" element={<PublicOnlyRoute><VerifyRecoveryEmailPage /></PublicOnlyRoute>} />
       <Route
         path="/account/suspended"
         element={

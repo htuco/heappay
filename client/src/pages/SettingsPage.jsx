@@ -21,6 +21,8 @@ import DefaultCardPicker from '@/components/settings/DefaultCardPicker'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 import { Button } from '@/components/ui/button'
 
+import { maskEmail } from '@/utils/maskEmail'
+
 const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 
 function prefEnabled(user, key) {
@@ -53,7 +55,6 @@ export default function SettingsPage() {
   const { cards, setMainCard, removeCard } = useWalletCards()
   const { preference: themePreference, isDark, setTheme } = useTheme()
 
-  const [draftTheme, setDraftTheme] = useState(themePreference)
   const [draftBillingReminders, setDraftBillingReminders] = useState(true)
   const [draftEmailPaymentSent, setDraftEmailPaymentSent] = useState(true)
   const [draftEmailPaymentReceived, setDraftEmailPaymentReceived] = useState(true)
@@ -63,10 +64,6 @@ export default function SettingsPage() {
   const [draftPaymentConfirmAboveAmount, setDraftPaymentConfirmAboveAmount] = useState('0')
   const [savePending, setSavePending] = useState(false)
   const [saveError, setSaveError] = useState(null)
-
-  useEffect(() => {
-    setDraftTheme(themePreference)
-  }, [themePreference])
 
   useEffect(() => {
     if (user) {
@@ -85,7 +82,6 @@ export default function SettingsPage() {
   const saved = useMemo(() => savedNotificationPrefs(user), [user])
   const savedPayment = useMemo(() => savedPaymentSecurityPrefs(user), [user])
 
-  const isThemeDirty = useMemo(() => draftTheme !== themePreference, [draftTheme, themePreference])
   const isBillingDirty = useMemo(
     () =>
       Boolean(user) &&
@@ -111,10 +107,9 @@ export default function SettingsPage() {
         draftPaymentConfirmAboveAmount !== savedPayment.paymentConfirmAboveAmount),
     [user, draftPaymentConfirmEnabled, draftPaymentConfirmAboveAmount, savedPayment],
   )
-  const isDirty = isThemeDirty || isBillingDirty || isPaymentSecurityDirty
+  const isDirty = isBillingDirty || isPaymentSecurityDirty
 
   function handleDiscard() {
-    setDraftTheme(themePreference)
     if (user) {
       const next = savedNotificationPrefs(user)
       setDraftBillingReminders(next.billingReminders)
@@ -158,9 +153,6 @@ export default function SettingsPage() {
     } finally {
       setSavePending(false)
     }
-    if (isThemeDirty) {
-      setTheme(draftTheme)
-    }
   }
 
   return (
@@ -201,10 +193,13 @@ export default function SettingsPage() {
         <SettingsCard
           title="Account Recovery"
           icon={KeyRound}
-          description="Manage password recovery methods for your account."
+          description="Login email, recovery email, password reset, and payment security."
         >
           <RecoveryMethodPanel
             email={user?.email}
+            recoveryEmail={user?.recovery_email}
+            recoveryEmailVerified={user?.recovery_email_verified ?? false}
+            onRecoveryEmailChange={() => dispatch(refreshSession())}
             onChangePassword={() => setIsChangePasswordOpen(true)}
             totpEnabled={user?.totp_enabled ?? false}
             onTotpStatusChange={() => dispatch(refreshSession())}
@@ -235,7 +230,14 @@ export default function SettingsPage() {
             {user?.email ? (
               <p className="rounded-surface border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
                 Transaction emails are sent to{' '}
-                <span className="break-all font-medium text-card-foreground">{user.email}</span>
+                <span className="break-all font-medium text-card-foreground">
+                  {user.recovery_email_verified && user.recovery_email
+                    ? maskEmail(user.recovery_email)
+                    : user.email}
+                </span>
+                {user.recovery_email_verified && user.recovery_email ? (
+                  <span> (verified recovery email)</span>
+                ) : null}
               </p>
             ) : null}
             <ControlRow
@@ -313,7 +315,7 @@ export default function SettingsPage() {
         <SettingsCard
           title="Theme & Preferences"
           icon={Paintbrush}
-          description="Control how the app looks. Theme is stored on this device only; use Save changes below to apply."
+          description="Control how the app looks. Changes apply immediately on this device."
         >
           <div className="space-y-3">
             <ControlRow
@@ -325,10 +327,8 @@ export default function SettingsPage() {
             >
               <OptionGroup
                 options={['Light', 'Dark', 'System']}
-                active={formatPreference(draftTheme)}
-                onSelect={(label) =>
-                  setDraftTheme(label.toLowerCase())
-                }
+                active={formatPreference(themePreference)}
+                onSelect={(label) => setTheme(label.toLowerCase())}
               />
             </ControlRow>
           </div>
@@ -342,8 +342,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <ActionRow
               label="Deactivate account"
-              value="Permanent"
-              hint="Permanently disables your account. You will be signed out."
+              hint="Disables your account and signs you out."
               tone="danger"
               action={
                 <Button
@@ -365,19 +364,11 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-semibold text-card-foreground">Unsaved changes</p>
               <p className="text-xs text-muted-foreground">
-                {isBillingDirty && isPaymentSecurityDirty && isThemeDirty
-                  ? 'Account preferences sync to your account; theme applies on this device only.'
-                  : isBillingDirty && isPaymentSecurityDirty
-                    ? 'Account preferences will sync to your account when you save.'
-                  : isBillingDirty && isThemeDirty
-                  ? 'Notification preferences sync to your account; theme applies on this device only.'
-                  : isPaymentSecurityDirty && isThemeDirty
-                    ? 'Payment security syncs to your account; theme applies on this device only.'
+                {isBillingDirty && isPaymentSecurityDirty
+                  ? 'Account preferences will sync to your account when you save.'
                   : isBillingDirty
                     ? 'Notification preferences will sync to your account when you save.'
-                    : isPaymentSecurityDirty
-                      ? 'Payment security preferences will sync to your account when you save.'
-                    : 'Theme is kept on this device. Save to apply, or discard.'}
+                    : 'Payment security preferences will sync to your account when you save.'}
               </p>
               {saveError ? (
                 <p className="mt-2 text-xs text-destructive">{saveError}</p>
