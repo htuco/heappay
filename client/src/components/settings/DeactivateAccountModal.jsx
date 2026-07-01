@@ -54,10 +54,10 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 		<Modal isOpen={isOpen} onClose={handleClose} title="Deactivate Account">
 			<form className="space-y-4" onSubmit={handleSubmit}>
 				<div className="rounded-input border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-					<p className="font-semibold">This action is permanent.</p>
+					<p className="font-semibold">This deactivation is permanent.</p>
 					<p className="mt-1 text-destructive/80">
-						Your account will be deactivated and you will be signed out immediately.
-						This cannot be undone without contacting support.
+						Your account will be disabled and you will be signed out immediately.
+						You cannot undo this yourself — contact support if you need help later.
 					</p>
 				</div>
 

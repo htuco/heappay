@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     password_reset_token_expire_minutes: int = 30
     password_reset_url: str = "http://localhost:5173/reset-password"
+    recovery_email_verify_url: str = "http://localhost:5173/verify-recovery-email"
+    recovery_email_token_expire_hours: int = 24
 
     # hCaptcha bot protection. Verification is disabled until a secret key is set.
     hcaptcha_secret_key: str = ""

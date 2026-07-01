@@ -228,6 +228,8 @@ class UserResponse(BaseModel):
     totp_enabled: bool = False
     payment_confirm_enabled: bool = True
     payment_confirm_above_amount: Decimal = Decimal("0")
+    recovery_email: str | None = None
+    recovery_email_verified: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -275,3 +277,28 @@ class TotpConfirmRequest(BaseModel):
 class TotpDisableRequest(BaseModel):
     """Disable 2FA — requires current TOTP code to prevent disabling via stolen password alone."""
     code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class RecoveryEmailSetRequest(BaseModel):
+    email: EmailStr
+
+
+class RecoveryEmailUpdateRequest(BaseModel):
+    email: EmailStr
+
+
+class RecoveryEmailVerifyRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=512)
+
+
+class RecoveryEmailRemoveRequest(BaseModel):
+    password: str | None = Field(default=None, min_length=1)
+    totp_code: str | None = Field(default=None, min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+    @model_validator(mode="after")
+    def require_one_method(self) -> "RecoveryEmailRemoveRequest":
+        has_password = bool(self.password)
+        has_totp = bool(self.totp_code)
+        if has_password == has_totp:
+            raise ValueError("Provide either password or authenticator code, not both.")
+        return self

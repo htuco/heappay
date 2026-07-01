@@ -50,6 +50,10 @@ from schemas.user.auth import (
     PasswordResetConfirmRequest,
     PasswordResetRequest,
     ProfileUpdateRequest,
+    RecoveryEmailRemoveRequest,
+    RecoveryEmailSetRequest,
+    RecoveryEmailUpdateRequest,
+    RecoveryEmailVerifyRequest,
     RegisterRequest,
     TokenResponse,
     TotpRequiredResponse,
@@ -57,7 +61,9 @@ from schemas.user.auth import (
     UserResponse,
 )
 from services.user.password_reset_mailer import PasswordResetMailer
+from services.user.recovery_email_mailer import RecoveryEmailMailer
 from settings import get_settings
+from utils.user_notification_email import is_recovery_email_verified, notification_email_for_user
 from utils.totp import (
     build_totp_uri,
     decrypt_secret,
@@ -100,6 +106,7 @@ class UserAuthService:
         self.repo = repo
         self.settings = get_settings()
         self.password_reset_mailer = PasswordResetMailer(self.settings)
+        self.recovery_email_mailer = RecoveryEmailMailer(self.settings)
 
     def hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt(rounds=12)
@@ -161,6 +168,16 @@ class UserAuthService:
         separator = "&" if "?" in self.settings.password_reset_url else "?"
         return f"{self.settings.password_reset_url}{separator}{urlencode({'token': token})}"
 
+    def _build_recovery_email_verify_url(self, token: str) -> str:
+        separator = "&" if "?" in self.settings.recovery_email_verify_url else "?"
+        return (
+            f"{self.settings.recovery_email_verify_url}"
+            f"{separator}{urlencode({'token': token})}"
+        )
+
+    def _recovery_email_verified_flag(self, user) -> bool:
+        return is_recovery_email_verified(user)
+
     def _is_expired(self, value: datetime) -> bool:
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
@@ -208,6 +225,8 @@ class UserAuthService:
             totp_enabled=user.totp_enabled,
             payment_confirm_enabled=user.payment_confirm_enabled,
             payment_confirm_above_amount=user.payment_confirm_above_amount,
+            recovery_email=getattr(user, "recovery_email", None),
+            recovery_email_verified=self._recovery_email_verified_flag(user),
         )
         return TokenResponse(
             access_token=access_token or self.create_access_token(user.user_id),
@@ -631,8 +650,9 @@ class UserAuthService:
         self.repo.create_password_reset_token(user.user_id, token_hash, expires_at)
 
         try:
+            delivery_email = notification_email_for_user(user)
             self.password_reset_mailer.send_reset_link(
-                user.email,
+                delivery_email,
                 self._build_password_reset_url(token),
             )
         except Exception as exc:
@@ -789,4 +809,127 @@ class UserAuthService:
             user,
             user.refresh_token or "",
             access_token=token,
+        )
+
+    def _validate_recovery_email_available(self, user_id: int, email: str, login_email: str) -> None:
+        normalized = email.strip().lower()
+        if normalized == login_email.strip().lower():
+            raise ValueError("RECOVERY_EMAIL_SAME_AS_LOGIN")
+        existing_login = self.repo.get_user_by_email(normalized)
+        if existing_login and existing_login.user_id != user_id:
+            raise ValueError("RECOVERY_EMAIL_UNAVAILABLE")
+        existing_recovery = self.repo.get_user_by_recovery_email(normalized)
+        if existing_recovery and existing_recovery.user_id != user_id:
+            raise ValueError("RECOVERY_EMAIL_UNAVAILABLE")
+
+    def _issue_recovery_email_verification(self, user_id: int, email: str) -> None:
+        token = secrets.token_urlsafe(48)
+        token_hash = self._hash_reset_token(token)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            hours=self.settings.recovery_email_token_expire_hours
+        )
+        try:
+            self.repo.set_recovery_email_pending(
+                user_id,
+                recovery_email=email,
+                token_hash=token_hash,
+                expires_at=expires_at,
+            )
+        except IntegrityError:
+            raise ValueError("RECOVERY_EMAIL_UNAVAILABLE") from None
+
+        try:
+            self.recovery_email_mailer.send_verification_link(
+                email,
+                self._build_recovery_email_verify_url(token),
+            )
+        except Exception as exc:
+            raise ValueError("MAIL_DELIVERY_FAILED") from exc
+
+    def add_recovery_email(self, user_id: int, payload: RecoveryEmailSetRequest) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if user.recovery_email:
+            raise ValueError("RECOVERY_EMAIL_ALREADY_SET")
+
+        email = str(payload.email).strip().lower()
+        self._validate_recovery_email_available(user_id, email, user.email)
+        self._issue_recovery_email_verification(user_id, email)
+        self.repo.record_security_audit_event(
+            user_id,
+            event_type="recovery_email_added",
+            detail=email,
+        )
+
+    def change_recovery_email(self, user_id: int, payload: RecoveryEmailUpdateRequest) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if not user.recovery_email:
+            raise ValueError("RECOVERY_EMAIL_NOT_SET")
+
+        email = str(payload.email).strip().lower()
+        if email == (user.recovery_email or "").strip().lower():
+            raise ValueError("RECOVERY_EMAIL_UNCHANGED")
+        self._validate_recovery_email_available(user_id, email, user.email)
+        self._issue_recovery_email_verification(user_id, email)
+        self.repo.record_security_audit_event(
+            user_id,
+            event_type="recovery_email_changed",
+            detail=email,
+        )
+
+    def resend_recovery_email_verification(self, user_id: int) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if not user.recovery_email or user.recovery_email_verified_at is not None:
+            raise ValueError("RECOVERY_EMAIL_NOT_PENDING")
+
+        self._issue_recovery_email_verification(user_id, user.recovery_email)
+
+    def verify_recovery_email(self, payload: RecoveryEmailVerifyRequest) -> None:
+        token_hash = self._hash_reset_token(payload.token)
+        user = self.repo.get_user_by_recovery_verification_token(token_hash)
+        if user is None or user.deleted_at is not None:
+            raise ValueError("INVALID_OR_EXPIRED_RECOVERY_TOKEN")
+        if (
+            user.recovery_email_verification_expires_at is None
+            or self._is_expired(user.recovery_email_verification_expires_at)
+        ):
+            raise ValueError("INVALID_OR_EXPIRED_RECOVERY_TOKEN")
+
+        self.repo.verify_recovery_email(user.user_id)
+        self.repo.record_security_audit_event(
+            user.user_id,
+            event_type="recovery_email_verified",
+            detail=user.recovery_email,
+        )
+
+    def _verify_password_or_totp(self, user, payload: RecoveryEmailRemoveRequest) -> None:
+        if payload.password:
+            if not self.verify_password(payload.password, user.password_hash):
+                raise ValueError("WRONG_PASSWORD")
+            return
+        if not user.totp_enabled or not user.totp_secret:
+            raise ValueError("TOTP_REQUIRED")
+        plain_secret = decrypt_secret(user.totp_secret)
+        if not verify_totp_code(plain_secret, payload.totp_code or ""):
+            raise ValueError("INVALID_TOTP_CODE")
+
+    def remove_recovery_email(self, user_id: int, payload: RecoveryEmailRemoveRequest) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if not user or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if not user.recovery_email:
+            raise ValueError("RECOVERY_EMAIL_NOT_SET")
+
+        self._verify_password_or_totp(user, payload)
+        previous = user.recovery_email
+        self.repo.clear_recovery_email(user_id)
+        self.repo.record_security_audit_event(
+            user_id,
+            event_type="recovery_email_removed",
+            detail=previous,
         )

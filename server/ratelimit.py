@@ -13,6 +13,7 @@ limiter = Limiter(key_func=get_remote_address)
 # Conservative defaults — enough to stop brute-forcing without tripping a normal
 # user who mistypes a password a few times.
 AUTH_RATE_LIMIT = "10/minute"
+RECOVERY_EMAIL_RATE_LIMIT = "5/minute"
 DEFAULT_RATE_LIMIT_MESSAGE = "Too many attempts. Please wait a moment and try again."
 
 # Throttle authenticated transaction creation so a single user cannot spam the

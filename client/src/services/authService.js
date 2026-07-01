@@ -201,6 +201,53 @@ export async function updatePaymentSecurityPreferences({
 	return user
 }
 
+export async function addRecoveryEmail({ email }) {
+	const { data } = await api.post('/auth/recovery-email', { email })
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token)
+	}
+	if (td?.user) {
+		setAuthUser(td.user, { remember: getAuthRememberPreference() })
+	}
+	return data
+}
+
+export async function changeRecoveryEmail({ email }) {
+	const { data } = await api.patch('/auth/recovery-email', { email })
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token)
+	}
+	if (td?.user) {
+		setAuthUser(td.user, { remember: getAuthRememberPreference() })
+	}
+	return data
+}
+
+export async function resendRecoveryEmailVerification() {
+	const { data } = await api.post('/auth/recovery-email/resend')
+	return data
+}
+
+export async function verifyRecoveryEmail({ token }) {
+	const { data } = await api.post('/auth/recovery-email/verify', { token })
+	return data
+}
+
+export async function removeRecoveryEmail({ password, totpCode }) {
+	const payload = password ? { password } : { totp_code: totpCode }
+	const { data } = await api.delete('/auth/recovery-email', { data: payload })
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token)
+	}
+	if (td?.user) {
+		setAuthUser(td.user, { remember: getAuthRememberPreference() })
+	}
+	return data
+}
+
 export async function logout() {
 	try {
 		await api.post('/auth/logout')
