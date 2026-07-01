@@ -2,7 +2,7 @@ export default function ControlRow({ label, hint, children, emphasize = false, a
   return (
     <div
       className={`rounded-surface border border-border px-4 py-4 ${
-        emphasize ? 'bg-emphasis' : 'bg-background'
+        emphasize ? 'bg-muted/30' : 'bg-background'
       }`}
     >
       <div

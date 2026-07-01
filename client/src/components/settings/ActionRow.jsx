@@ -1,7 +1,7 @@
 export default function ActionRow({ label, value, hint, action, tone = 'default' }) {
   return (
     <div
-      className={`flex flex-col gap-3 rounded-surface border border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between ${
+      className={`flex flex-col gap-3 rounded-surface border border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
         tone === 'danger' ? 'bg-destructive/5' : 'bg-background'
       }`}
     >
