@@ -179,7 +179,7 @@ TOOL_DEFS = [
                 "properties": {
                     "sender_card_id": {"type": "integer", "description": "One of the user's own card IDs."},
                     "recipient_card_id": {"type": "integer"},
-                    "amount": {"type": "number", "description": "Amount in EUR, up to 2 decimals."},
+                    "amount": {"type": "number", "description": "Amount in USD, up to 2 decimals."},
                     "note": {"type": "string"},
                 },
                 "required": ["sender_card_id", "recipient_card_id", "amount"],
@@ -307,7 +307,7 @@ class AgentTools:
                         "This irreversible action was NOT performed. It requires the "
                         "user's explicit confirmation in a new message. State exactly "
                         "what will happen — including the integer IDs and the amount in "
-                        "euros — and ask the user to reply to confirm. Do NOT claim it "
+                        "USD — and ask the user to reply to confirm. Do NOT claim it "
                         "is done; nothing has happened yet."
                     ),
                 })
