@@ -22,7 +22,11 @@ import FormBanner from '@/components/ui/FormBanner'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 import { HCaptchaModal } from '@/components/auth-ui/HCaptchaField'
-import { isHCaptchaEnabled } from '@/utils/hcaptcha'
+import {
+	clearLoginFailures,
+	isLoginCaptchaRequiredError,
+	syncLoginFailedAttempts,
+} from '@/utils/loginAttempts'
 
 const INITIAL_FORM_STATE = { email: '', password: '', rememberMe: false }
 
@@ -118,22 +122,37 @@ export default function LoginForm() {
 		setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
 	}
 
-	const submitLogin = async (values, hcaptchaToken = '') => {
+	const submitLogin = async (values, hcaptchaToken) => {
 		try {
 			const user = await login({
 				email: values.email,
 				password: values.password,
 				remember: form.rememberMe,
-				hcaptchaToken,
+				...(hcaptchaToken ? { hcaptchaToken } : {}),
 			})
 			if (user?.requiresTotp) return
+			clearLoginFailures(values.email)
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
 			setPendingLogin(null)
 			const accountStatus = resolveUserAccountStatus(user?.status_id, userStatuses)
 			setTimeout(() => navigate(getStatusHomePath(accountStatus), { replace: true }), 400)
 		} catch (err) {
-			setError(getApiErrorMessage(err, 'Invalid email or password.'))
+			if (isLoginCaptchaRequiredError(err)) {
+				setPendingLogin(values)
+				setCaptchaOpen(true)
+				setError('')
+				captchaRef.current?.resetCaptcha()
+				return
+			}
+
+			const failedAttempts = err?.details?.failed_login_attempts
+				?? err?.response?.data?.details?.failed_login_attempts
+			if (typeof failedAttempts === 'number') {
+				syncLoginFailedAttempts(values.email, failedAttempts)
+			}
+
+			setError(typeof err === 'string' ? err : err?.message ?? getApiErrorMessage(err, 'Invalid email or password.'))
 			setPendingLogin(null)
 			captchaRef.current?.resetCaptcha()
 		}
@@ -149,12 +168,6 @@ export default function LoginForm() {
 			const fieldErrors = {}
 			result.error.issues.forEach(err => { fieldErrors[err.path[0]] = err.message })
 			setErrors(fieldErrors)
-			return
-		}
-
-		if (isHCaptchaEnabled()) {
-			setPendingLogin(result.data)
-			setCaptchaOpen(true)
 			return
 		}
 

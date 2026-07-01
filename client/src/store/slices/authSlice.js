@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import * as authService from '@/services/authService'
 import { getAuthRefreshToken, getAuthToken } from '@/utils/authStorage'
-import { getApiErrorMessage } from '@/utils/api'
+import { getApiErrorMessage, getApiErrorPayload } from '@/utils/api'
 
 export const hydrateSession = createAsyncThunk(
   'auth/hydrateSession',
@@ -54,7 +54,7 @@ export const loginUser = createAsyncThunk(
     try {
       return await authService.login({ email, password, remember, hcaptchaToken })
     } catch (error) {
-      return rejectWithValue(getApiErrorMessage(error, 'Could not log in. Please try again.'))
+      return rejectWithValue(getApiErrorPayload(error, 'Could not log in. Please try again.'))
     }
   },
 )
@@ -218,7 +218,9 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.user = null
         state.status = 'unauthenticated'
-        state.error = action.payload ?? 'Could not log in. Please try again.'
+        state.error = typeof action.payload === 'string'
+          ? action.payload
+          : action.payload?.message ?? 'Could not log in. Please try again.'
       })
       .addCase(verifyTotpLogin.pending, (state) => {
         state.status = 'totp_pending'

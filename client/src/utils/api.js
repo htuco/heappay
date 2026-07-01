@@ -139,6 +139,25 @@ export const getApiErrorMessage = (error, fallback = 'Something went wrong') => 
 	return fallback
 }
 
+export function getApiErrorPayload(error, fallback = 'Something went wrong') {
+	if (error && typeof error === 'object' && !error.response && typeof error.message === 'string') {
+		return {
+			message: mapApiErrorMessage(error.message),
+			code: error.code ?? null,
+			details: error.details ?? null,
+			status: error.status ?? null,
+		}
+	}
+
+	const data = typeof error === 'object' ? error?.response?.data : null
+	return {
+		message: getApiErrorMessage(error, fallback),
+		code: data?.code ?? null,
+		details: data?.details ?? null,
+		status: typeof error === 'object' ? error?.response?.status ?? null : null,
+	}
+}
+
 const existingInterceptors = globalThis[API_INTERCEPTORS_KEY]
 
 if (existingInterceptors) {

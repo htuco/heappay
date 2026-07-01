@@ -40,6 +40,11 @@ from schemas.user.biometric import (
 from services.storage.supabase_image_storage import SupabaseImageStorageService
 from services.user.auth import UserAuthService
 from utils.hcaptcha import HCAPTCHA_FAILURE_MESSAGE, verify_hcaptcha_token
+from utils.login_attempts import (
+    clear_failed_login_attempts,
+    login_requires_hcaptcha,
+    record_failed_login,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -50,14 +55,27 @@ def get_auth_service(db: Session = Depends(get_db)) -> UserAuthService:
     return UserAuthService(UserAuthRepository(db))
 
 
+def _client_ip(request: Request) -> str | None:
+    return request.client.host if request.client is not None else None
+
+
 def verify_auth_hcaptcha(request: Request, token: str | None) -> None:
     try:
-        verify_hcaptcha_token(
-            token,
-            request.client.host if request.client is not None else None,
-        )
+        verify_hcaptcha_token(token, _client_ip(request))
     except ValueError:
         raise InvalidInput(HCAPTCHA_FAILURE_MESSAGE) from None
+
+
+def verify_login_hcaptcha(request: Request, token: str | None, email: str) -> None:
+    if not login_requires_hcaptcha(email, _client_ip(request)):
+        return
+    try:
+        verify_hcaptcha_token(token, _client_ip(request))
+    except ValueError:
+        raise InvalidInput(
+            HCAPTCHA_FAILURE_MESSAGE,
+            code="HCAPTCHA_REQUIRED",
+        ) from None
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
@@ -83,12 +101,21 @@ def login(
     payload: LoginRequest,
     service: UserAuthService = Depends(get_auth_service),
 ) -> TotpLoginResponse:
-    verify_auth_hcaptcha(request, payload.hcaptcha_token)
+    client_ip = _client_ip(request)
+    verify_login_hcaptcha(request, payload.hcaptcha_token, payload.email)
     try:
         result = service.login(payload)
     except ValueError:
-        raise Unauthorized("Invalid email or password.") from None
+        attempts = record_failed_login(payload.email, client_ip)
+        raise Unauthorized(
+            "Invalid email or password.",
+            details={
+                "failed_login_attempts": attempts,
+                "requires_hcaptcha": login_requires_hcaptcha(payload.email, client_ip),
+            },
+        ) from None
 
+    clear_failed_login_attempts(payload.email, client_ip)
     return TotpLoginResponse(success=True, message="Login successful", data=result)
 
 

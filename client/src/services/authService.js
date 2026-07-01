@@ -6,14 +6,20 @@ import {
 	writeAuthTokens,
 } from '@/utils/authStorage'
 
+function withHcaptchaToken(payload, hcaptchaToken) {
+	if (hcaptchaToken) {
+		return { ...payload, hcaptcha_token: hcaptchaToken }
+	}
+	return payload
+}
+
 export async function register({ firstName, lastName, email, password, hcaptchaToken }) {
-	const { data } = await api.post('/auth/register', {
+	const { data } = await api.post('/auth/register', withHcaptchaToken({
 		first_name: firstName,
 		last_name: lastName,
 		email,
 		password,
-		hcaptcha_token: hcaptchaToken,
-	})
+	}, hcaptchaToken))
 	clearAuthSession()
 	writeAuthTokens(data.data.access_token, data.data.refresh_token, { remember: true })
 	setAuthUser(data.data.user, { remember: true })
@@ -21,11 +27,10 @@ export async function register({ firstName, lastName, email, password, hcaptchaT
 }
 
 export async function login({ email, password, remember = true, hcaptchaToken }) {
-	const { data } = await api.post('/auth/login', {
+	const { data } = await api.post('/auth/login', withHcaptchaToken({
 		email,
 		password,
-		hcaptcha_token: hcaptchaToken,
-	})
+	}, hcaptchaToken))
 	clearAuthSession()
 	if (data.data?.requires_totp) {
 		return { requiresTotp: true, partialToken: data.data.partial_token, remember }
@@ -216,10 +221,9 @@ export async function changePassword({ currentPassword, newPassword }) {
 }
 
 export async function requestPasswordReset({ email, hcaptchaToken }) {
-	const { data } = await api.post('/auth/password-reset/request', {
+	const { data } = await api.post('/auth/password-reset/request', withHcaptchaToken({
 		email,
-		hcaptcha_token: hcaptchaToken,
-	})
+	}, hcaptchaToken))
 	return data
 }
 

@@ -296,20 +296,153 @@ def test_login_invalid_credentials_returns_401() -> None:
     assert resp.status_code == 401
 
 
+def test_login_accepts_empty_hcaptcha_token_string() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/login",
+        json={
+            "email": "test@example.com",
+            "password": "password123",
+            "hcaptcha_token": "",
+        },
+    )
+    assert resp.status_code == 200
+
+
 def test_login_hcaptcha_failure_returns_friendly_error(monkeypatch) -> None:
     from routes.user import auth as auth_route_module
+    from utils import login_attempts as login_attempts_module
+
+    login_attempts_module._failed_attempts.clear()
+    login_attempts_module.record_failed_login("test@example.com", "testclient")
+    login_attempts_module.record_failed_login("test@example.com", "testclient")
 
     def fail_hcaptcha(_request, _token):
-        raise auth_route_module.InvalidInput(auth_route_module.HCAPTCHA_FAILURE_MESSAGE)
+        raise auth_route_module.InvalidInput(
+            auth_route_module.HCAPTCHA_FAILURE_MESSAGE,
+            code="HCAPTCHA_REQUIRED",
+        )
 
-    monkeypatch.setattr(auth_route_module, "verify_auth_hcaptcha", fail_hcaptcha)
+    monkeypatch.setattr(auth_route_module, "verify_hcaptcha_token", fail_hcaptcha)
     client = _build_client()
     resp = client.post(
         "/auth/login",
         json={"email": "test@example.com", "password": "password123"},
     )
     assert resp.status_code == 400
+    assert resp.json()["code"] == "HCAPTCHA_REQUIRED"
     assert resp.json()["message"] == "Please complete the security check and try again."
+
+
+def test_login_hcaptcha_not_required_before_third_failed_attempt(monkeypatch) -> None:
+    from routes.user import auth as auth_route_module
+    from utils import login_attempts as login_attempts_module
+
+    login_attempts_module._failed_attempts.clear()
+    hcaptcha_calls: list[str | None] = []
+
+    def track_hcaptcha(token, remote_ip=None):
+        hcaptcha_calls.append(token)
+        if not token:
+            raise ValueError("HCAPTCHA_REQUIRED")
+
+    monkeypatch.setattr(auth_route_module, "verify_hcaptcha_token", track_hcaptcha)
+
+    class _FailService(_FakeAuthService):
+        def login(self, _payload):
+            raise ValueError("Invalid email or password")
+
+    client = _build_client(_FailService())
+    for _ in range(2):
+        resp = client.post(
+            "/auth/login",
+            json={"email": "fail@example.com", "password": "wrongpassword"},
+        )
+        assert resp.status_code == 401
+
+    assert hcaptcha_calls == []
+
+
+def test_login_requires_hcaptcha_on_third_failed_attempt(monkeypatch) -> None:
+    from routes.user import auth as auth_route_module
+    from utils import login_attempts as login_attempts_module
+
+    login_attempts_module._failed_attempts.clear()
+
+    def require_token(token, remote_ip=None):
+        if not token:
+            raise ValueError("HCAPTCHA_REQUIRED")
+
+    monkeypatch.setattr(auth_route_module, "verify_hcaptcha_token", require_token)
+
+    class _FailService(_FakeAuthService):
+        def login(self, _payload):
+            raise ValueError("Invalid email or password")
+
+    client = _build_client(_FailService())
+    email = "third@example.com"
+    for _ in range(2):
+        client.post(
+            "/auth/login",
+            json={"email": email, "password": "wrongpassword"},
+        )
+
+    resp = client.post(
+        "/auth/login",
+        json={"email": email, "password": "wrongpassword"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["code"] == "HCAPTCHA_REQUIRED"
+    assert resp.json()["message"] == "Please complete the security check and try again."
+
+    resp = client.post(
+        "/auth/login",
+        json={
+            "email": email,
+            "password": "wrongpassword",
+            "hcaptcha_token": "valid-looking-token",
+        },
+    )
+    assert resp.status_code == 401
+
+
+def test_successful_login_clears_failed_attempt_counter(monkeypatch) -> None:
+    from routes.user import auth as auth_route_module
+    from utils import login_attempts as login_attempts_module
+
+    login_attempts_module._failed_attempts.clear()
+
+    def require_token(token, remote_ip=None):
+        if not token:
+            raise ValueError("HCAPTCHA_REQUIRED")
+
+    monkeypatch.setattr(auth_route_module, "verify_hcaptcha_token", require_token)
+
+    class _FailService(_FakeAuthService):
+        def login(self, _payload):
+            raise ValueError("Invalid email or password")
+
+    client = _build_client(_FailService())
+    email = "reset@example.com"
+    for _ in range(2):
+        client.post(
+            "/auth/login",
+            json={"email": email, "password": "wrongpassword"},
+        )
+
+    assert login_attempts_module.login_requires_hcaptcha(email, "testclient")
+
+    client = _build_client()
+    resp = client.post(
+        "/auth/login",
+        json={
+            "email": email,
+            "password": "password123",
+            "hcaptcha_token": "valid-looking-token",
+        },
+    )
+    assert resp.status_code == 200
+    assert login_attempts_module.login_requires_hcaptcha(email, "testclient") is False
 
 
 # ---------------------------------------------------------------------------
