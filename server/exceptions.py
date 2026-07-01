@@ -43,18 +43,29 @@ class CardStatusInUse(AppException):
 
 
 class Unauthorized(AppException):
-    def __init__(self, message: str = "Authentication required.") -> None:
+    def __init__(
+        self,
+        message: str = "Authentication required.",
+        details: Any = None,
+    ) -> None:
         super().__init__(
             status_code=401,
             code="UNAUTHORIZED",
             message=message,
+            details=details,
         )
 
 
 class InvalidInput(AppException):
-    def __init__(self, message: str) -> None:
+    def __init__(
+        self,
+        message: str,
+        code: str = "INVALID_INPUT",
+        details: Any = None,
+    ) -> None:
         super().__init__(
             status_code=400,
-            code="INVALID_INPUT",
+            code=code,
             message=message,
+            details=details,
         )

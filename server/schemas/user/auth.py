@@ -18,18 +18,34 @@ LoginPasswordStr = Annotated[str, Field(min_length=1, max_length=255)]
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
 
 
-class RegisterRequest(BaseModel):
+class HcaptchaRequestMixin(BaseModel):
+    hcaptcha_token: str | None = None
+
+    @field_validator("hcaptcha_token", mode="before")
+    @classmethod
+    def normalize_hcaptcha_token(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            if len(stripped) > 4096:
+                raise ValueError("hCaptcha token is too long.")
+            return stripped
+        return value
+
+
+class RegisterRequest(HcaptchaRequestMixin):
     email: EmailStr
     first_name: str
     last_name: str
     password: StrongPasswordStr
-    hcaptcha_token: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(HcaptchaRequestMixin):
     email: EmailStr
     password: LoginPasswordStr
-    hcaptcha_token: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
 class RefreshRequest(BaseModel):
@@ -48,9 +64,8 @@ class ChangePasswordRequest(BaseModel):
         return self
 
 
-class PasswordResetRequest(BaseModel):
+class PasswordResetRequest(HcaptchaRequestMixin):
     email: EmailStr
-    hcaptcha_token: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
 class PasswordResetConfirmRequest(BaseModel):
