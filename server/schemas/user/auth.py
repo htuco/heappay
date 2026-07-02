@@ -80,6 +80,10 @@ class PasswordResetConfirmRequest(BaseModel):
         return self
 
 
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=512)
+
+
 class AcceptInvitationRequest(BaseModel):
     """Set password for invited users (no current password)."""
 
@@ -230,6 +234,7 @@ class UserResponse(BaseModel):
     payment_confirm_above_amount: Decimal = Decimal("0")
     recovery_email: str | None = None
     recovery_email_verified: bool = False
+    email_verified_at: datetime | None = None
 
 
 class TokenResponse(BaseModel):
