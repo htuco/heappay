@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { Download, Search, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,8 @@ import { useDashboardCards } from '@/hooks/useDashboardCards'
 import { useAppSelector } from '@/store/hooks'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
+import { exportService } from '@/services/exportService'
+import { useNotifications } from '@/context/NotificationContext'
 import {
   TRANSACTION_STATUS_OPTIONS,
   TRANSACTION_TYPE_OPTIONS,
@@ -59,7 +61,9 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
   const [cardFilter, setCardFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [dateSort, setDateSort] = useState('newest')
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
 
+  const { notify } = useNotifications()
   const categories = useAppSelector(selectTransactionCategories)
   const categoryOptions = useMemo(() => buildCategoryOptions(categories), [categories])
 
@@ -145,6 +149,23 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     categoryFilter !== 'all' ||
     dateSort !== 'newest'
 
+  async function handleExportPdf() {
+    if (isExportingPdf) return
+    setIsExportingPdf(true)
+    try {
+      await exportService.transactionsPdf({ statusId, transactionTypeId, categoryId, sort: dateSort })
+      notify({ type: 'success', message: 'Transactions exported as PDF.', surface: 'toast' })
+    } catch (err) {
+      notify({
+        type: 'error',
+        message: err?.message ?? 'Could not export transactions.',
+        surface: 'toast',
+      })
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }
+
   function clearFilters() {
     setLookupValue('')
     setDateFilter('')
@@ -227,7 +248,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
             />
           </div>
 
-          {/* Clear + count — one row on phone, inline at md+ */}
+          {/* Clear + export + count — one row on phone, inline at md+ */}
           <div className="flex items-center gap-2 md:contents">
             {isFilterActive ? (
               <Button
@@ -237,6 +258,19 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
               >
                 <X className="h-3 w-3" />
                 Clear
+              </Button>
+            ) : null}
+
+            {hasTransactions ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 rounded-input border-border/70 px-2.5 text-xs shadow-none"
+                disabled={isExportingPdf}
+                onClick={handleExportPdf}
+              >
+                <Download className="h-3.5 w-3.5" />
+                {isExportingPdf ? 'Exporting…' : 'Export PDF'}
               </Button>
             ) : null}
 
