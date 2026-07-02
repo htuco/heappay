@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from jobs.nexus_claim import apply_nexus_request_credit
 from repositories.card.card import CardRepository
-from routes.dependencies import get_current_user_id
+from routes.dependencies import get_current_user_id, require_verified_user
 from schemas.nexus import FundRequestCreate, FundRequestResponse
 from schemas.response import ApiResponse
 from services.nexus.funding import (
@@ -60,7 +60,7 @@ def fund_request_config() -> ApiResponse[dict]:
 async def create_fund_request(
     card_id: int,
     payload: FundRequestCreate,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: NexusFundingService = Depends(get_nexus_funding_service),
 ) -> ApiResponse[FundRequestResponse]:
     try:
