@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from models.biometric_authentication_challenge import BiometricAuthenticationChallenge
 from models.biometric_credential import BiometricCredential
 from models.biometric_registration_challenge import BiometricRegistrationChallenge
+from models.email_verification_token import EmailVerificationToken
 from models.user_role import UserRole
 from models.user_status import UserStatus
 from models.password_reset_token import PasswordResetToken
@@ -135,6 +136,47 @@ class UserAuthRepository:
                 PasswordResetToken.used_at.is_(None),
             )
             .values(used_at=datetime.now(timezone.utc))
+        )
+        self._db.commit()
+
+    def create_email_verification_token(
+        self,
+        user_id: int,
+        token_hash: str,
+        expires_at: datetime,
+    ) -> EmailVerificationToken:
+        row = EmailVerificationToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        self._db.add(row)
+        self._db.commit()
+        self._db.refresh(row)
+        return row
+
+    def get_email_verification_token(self, token_hash: str) -> EmailVerificationToken | None:
+        stmt = select(EmailVerificationToken).where(
+            EmailVerificationToken.token_hash == token_hash
+        )
+        return self._db.scalars(stmt).first()
+
+    def mark_email_verification_tokens_used_for_user(self, user_id: int) -> None:
+        self._db.execute(
+            update(EmailVerificationToken)
+            .where(
+                EmailVerificationToken.user_id == user_id,
+                EmailVerificationToken.used_at.is_(None),
+            )
+            .values(used_at=datetime.now(timezone.utc))
+        )
+        self._db.commit()
+
+    def mark_email_verified(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(email_verified_at=datetime.now(timezone.utc))
         )
         self._db.commit()
 
