@@ -5,7 +5,13 @@ from database import get_db
 from ratelimit import TRANSACTION_RATE_LIMIT, limiter, user_id_key_func
 from repositories.transaction.transaction import TransactionRepository
 from repositories.user.auth import UserAuthRepository
-from routes.dependencies import get_current_user_id, get_user_context, require_admin, require_staff
+from routes.dependencies import (
+    get_current_user_id,
+    get_user_context,
+    require_admin,
+    require_staff,
+    require_verified_user,
+)
 from schemas.pagination import Page
 from schemas.response import ApiResponse
 from schemas.transaction import (
@@ -436,7 +442,7 @@ def get_transaction(
     summary="Start biometric verification before creating a transaction.",
 )
 def transaction_biometric_options(
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[BiometricApprovalOptionsResponse]:
     try:
@@ -463,7 +469,7 @@ def create_transaction(
     payload: TransactionCreate,
     response: Response,
     background_tasks: BackgroundTasks,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionResponse]:
     try:
@@ -527,7 +533,7 @@ def create_transaction(
 )
 def biometric_approval_options(
     transaction_id: int,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[BiometricApprovalOptionsResponse]:
     try:
@@ -563,7 +569,7 @@ def biometric_approval_options(
 def approve_transaction(
     transaction_id: int,
     payload: TransactionApproveRequest,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionResponse]:
     try:
