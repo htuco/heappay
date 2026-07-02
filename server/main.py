@@ -22,6 +22,7 @@ from routes.card.card import router as card_router
 from routes.card.card_status import router as card_status_router
 from routes.card.card_type import router as card_type_router
 from routes.chat.chat import router as chat_router
+from routes.export.export import router as export_router
 from routes.storage.images import router as storage_router
 from routes.transaction.transaction import router as transaction_router
 from routes.transaction.transaction_category import router as transaction_category_router
@@ -126,6 +127,7 @@ def create_app() -> FastAPI:
     app.include_router(card_status_router)
     app.include_router(card_type_router)
     app.include_router(transaction_router)
+    app.include_router(export_router)
     app.include_router(transaction_type_router)
     app.include_router(transaction_category_router)
     app.include_router(chat_router)

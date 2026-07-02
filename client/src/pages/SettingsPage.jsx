@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bell, CreditCard, Eye, KeyRound, Paintbrush } from 'lucide-react'
+import { Bell, CreditCard, Download, Eye, FileDown, KeyRound, Paintbrush } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
@@ -22,6 +22,29 @@ import AllCardsModal from '@/components/wallet/AllCardsModal'
 import { Button } from '@/components/ui/button'
 
 import { maskEmail } from '@/utils/maskEmail'
+import { exportService } from '@/services/exportService'
+import { useNotifications } from '@/context/NotificationContext'
+
+const EXPORT_REPORTS = [
+  {
+    key: 'walletSummary',
+    label: 'Wallet summary',
+    hint: 'Total balance and a breakdown of every card.',
+    run: () => exportService.walletSummaryPdf(),
+  },
+  {
+    key: 'transactions',
+    label: 'All transactions',
+    hint: 'Your full transaction history as a PDF statement.',
+    run: () => exportService.transactionsPdf(),
+  },
+  {
+    key: 'monthlyReport',
+    label: 'Monthly report',
+    hint: "Last month's income, expenses, and spending by category.",
+    run: () => exportService.monthlyReportPdf({ months: 1 }),
+  },
+]
 
 const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 
@@ -54,6 +77,8 @@ export default function SettingsPage() {
   const { user } = useAuth()
   const { cards, setMainCard, removeCard } = useWalletCards()
   const { preference: themePreference, isDark, setTheme } = useTheme()
+  const { notify } = useNotifications()
+  const [exportingReport, setExportingReport] = useState(null)
 
   const [draftBillingReminders, setDraftBillingReminders] = useState(true)
   const [draftEmailPaymentSent, setDraftEmailPaymentSent] = useState(true)
@@ -108,6 +133,23 @@ export default function SettingsPage() {
     [user, draftPaymentConfirmEnabled, draftPaymentConfirmAboveAmount, savedPayment],
   )
   const isDirty = isBillingDirty || isPaymentSecurityDirty
+
+  async function handleExportReport(report) {
+    if (exportingReport) return
+    setExportingReport(report.key)
+    try {
+      await report.run()
+      notify({ type: 'success', message: `${report.label} exported as PDF.`, surface: 'toast' })
+    } catch (err) {
+      notify({
+        type: 'error',
+        message: err?.message ?? `Could not export ${report.label.toLowerCase()}.`,
+        surface: 'toast',
+      })
+    } finally {
+      setExportingReport(null)
+    }
+  }
 
   function handleDiscard() {
     if (user) {
@@ -331,6 +373,33 @@ export default function SettingsPage() {
                 onSelect={(label) => setTheme(label.toLowerCase())}
               />
             </ControlRow>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Data & Reports"
+          icon={FileDown}
+          description="Download a branded PDF of your wallet, transactions, or monthly activity."
+        >
+          <div className="space-y-3">
+            {EXPORT_REPORTS.map((report) => (
+              <ActionRow
+                key={report.key}
+                label={report.label}
+                hint={report.hint}
+                action={
+                  <Button
+                    variant="outline"
+                    className="w-full gap-1.5 sm:w-auto"
+                    disabled={exportingReport !== null}
+                    onClick={() => handleExportReport(report)}
+                  >
+                    <Download className="h-4 w-4" />
+                    {exportingReport === report.key ? 'Exporting…' : 'Download PDF'}
+                  </Button>
+                }
+              />
+            ))}
           </div>
         </SettingsCard>
 
