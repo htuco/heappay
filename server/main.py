@@ -30,6 +30,7 @@ from routes.transaction.transaction_type import router as transaction_type_route
 from routes.nexus.funding import router as nexus_funding_router
 from routes.recurring_payment.recurring_payment import router as recurring_payment_router
 from routes.request.request import router as request_router
+from routes.audit_log.audit_log import router as audit_log_router
 from routes.user.auth import router as auth_router
 from routes.user.user import router as users_router
 from routes.user.user_role import router as user_role_router
@@ -132,6 +133,7 @@ def create_app() -> FastAPI:
     app.include_router(transaction_category_router)
     app.include_router(chat_router)
     app.include_router(request_router)
+    app.include_router(audit_log_router)
     app.include_router(nexus_funding_router)
     app.include_router(recurring_payment_router)
 
