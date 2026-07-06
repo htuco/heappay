@@ -1,8 +1,8 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import delete as sa_delete, func, or_, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
 from models.card_status import CardStatus
@@ -355,6 +355,21 @@ class CardRepository:
             .with_for_update(skip_locked=True)
         )
         return list(self._db.scalars(stmt).all())
+
+    def list_expiring_soon(self, *, days: int, limit: int) -> list[Card]:
+        """Non-deleted cards whose expires_at falls within [today, today + days]."""
+        today = date.today()
+        stmt = (
+            select(Card)
+            .options(joinedload(Card.user))
+            .where(
+                Card.deleted_at.is_(None),
+                Card.expires_at.between(today, today + timedelta(days=days)),
+            )
+            .order_by(Card.expires_at.asc(), Card.card_id.asc())
+            .limit(limit)
+        )
+        return list(self._db.scalars(stmt).unique().all())
 
     def has_pending_transactions(self, card_id: int) -> bool:
         """True if a pending transaction references this card on either side."""
