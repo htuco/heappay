@@ -22,6 +22,7 @@ from schemas.user.biometric import (  # noqa: E402
     BiometricStatusResponse,
 )
 from utils.password_policy import PASSWORD_RULES_MESSAGE  # noqa: E402
+from utils.person_name import PERSON_NAME_DIGITS_MESSAGE  # noqa: E402
 
 
 _NOW = datetime.now(timezone.utc)
@@ -247,6 +248,21 @@ def test_register_rejects_weak_password() -> None:
     )
     assert resp.status_code == 422
     assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
+
+
+def test_register_rejects_invalid_first_name() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "John3",
+            "last_name": "User",
+            "password": "Password1!",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PERSON_NAME_DIGITS_MESSAGE
 
 
 def test_register_hcaptcha_failure_returns_friendly_error(monkeypatch) -> None:

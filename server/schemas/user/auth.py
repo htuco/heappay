@@ -13,6 +13,7 @@ from pydantic import (
 )
 
 from utils.password_policy import StrongPasswordStr
+from utils.person_name import PersonNameStr, validate_person_name
 
 LoginPasswordStr = Annotated[str, Field(min_length=1, max_length=255)]
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
@@ -38,8 +39,8 @@ class HcaptchaRequestMixin(BaseModel):
 
 class RegisterRequest(HcaptchaRequestMixin):
     email: EmailStr
-    first_name: str
-    last_name: str
+    first_name: PersonNameStr
+    last_name: PersonNameStr
     password: StrongPasswordStr
 
 
@@ -140,15 +141,14 @@ class ProfileUpdateRequest(BaseModel):
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     avatar_url: str | None = Field(default=None, max_length=2048)
 
-    @field_validator("first_name", "last_name")
+    @field_validator("first_name", "last_name", mode="before")
     @classmethod
-    def strip_text(cls, value: str | None) -> str | None:
+    def validate_name_fields(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("value cannot be empty or whitespace only")
-        return stripped
+        if not isinstance(value, str):
+            raise ValueError("Name must be a string.")
+        return validate_person_name(value)
 
     @field_validator("avatar_url")
     @classmethod
