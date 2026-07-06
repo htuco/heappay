@@ -159,8 +159,8 @@ const TYPE_LABELS = Object.fromEntries(
   Object.values(TX_TYPE_META).map((meta) => [meta.label.toLowerCase(), meta.label])
 )
 
-export default function AdminInsightsPanel() {
-  const { txStats, requestStats, isLoading, error, refresh } = useAdminStats({ months: MONTHS })
+export default function AdminInsightsPanel({ filters = null }) {
+  const { txStats, requestStats, isLoading, error, refresh } = useAdminStats({ months: MONTHS, filters })
 
   const chartData = useMemo(
     () => buildChartData(txStats?.monthly, txStats?.amounts_hidden),
@@ -194,6 +194,7 @@ export default function AdminInsightsPanel() {
           <h2 className="text-base font-semibold text-card-foreground sm:text-lg">Platform Activity</h2>
           <p className="text-xs text-muted-foreground">
             {amountsHidden ? `Transaction count, last ${MONTHS} months` : `Completed volume, last ${MONTHS} months`}
+            {filters?.from || filters?.to ? ' (filtered by date)' : ''}
           </p>
         </div>
       </header>
@@ -203,7 +204,7 @@ export default function AdminInsightsPanel() {
           icon={Activity}
           label="Transactions"
           value={txStats?.total_count?.toLocaleString('en-US') ?? '0'}
-          hint="All time"
+          hint={filters?.status || filters?.type || filters?.segment ? 'Filtered' : 'All time'}
         />
         <HeadlineStat
           icon={TrendingUp}
