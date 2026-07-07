@@ -10,6 +10,7 @@ import {
   removeRecoveryEmail,
   resendRecoveryEmailVerification,
 } from '@/services/authService'
+import { strictEmailSchema } from '@/schemas/emailSchema'
 import { getApiErrorMessage } from '@/utils/api'
 import { maskEmail } from '@/utils/maskEmail'
 
@@ -30,9 +31,14 @@ function EmailModal({ title, subtitle, initialEmail = '', submitLabel, onClose, 
     event.preventDefault()
     if (isSaving) return
     setError('')
+    const parsed = strictEmailSchema().safeParse(email)
+    if (!parsed.success) {
+      setError(parsed.error.issues[0].message)
+      return
+    }
     setIsSaving(true)
     try {
-      await onSubmit(email.trim())
+      await onSubmit(parsed.data)
       onClose()
     } catch (err) {
       setError(getApiErrorMessage(err, 'Could not save recovery email.'))
