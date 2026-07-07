@@ -11,8 +11,14 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic_core import PydanticCustomError
 
-from utils.password_policy import StrongPasswordStr
+from utils.password_policy import (
+    PASSWORD_CONTAINS_EMAIL_MESSAGE,
+    PASSWORD_SAME_AS_CURRENT_MESSAGE,
+    StrongPasswordStr,
+    password_contains_email_local_part,
+)
 
 LoginPasswordStr = Annotated[str, Field(min_length=1, max_length=255)]
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
@@ -42,6 +48,15 @@ class RegisterRequest(HcaptchaRequestMixin):
     last_name: str
     password: StrongPasswordStr
 
+    @model_validator(mode="after")
+    def validate_password_against_email(self) -> "RegisterRequest":
+        if password_contains_email_local_part(self.password, str(self.email)):
+            raise PydanticCustomError(
+                "password_contains_email",
+                PASSWORD_CONTAINS_EMAIL_MESSAGE,
+            )
+        return self
+
 
 class LoginRequest(HcaptchaRequestMixin):
     email: EmailStr
@@ -61,6 +76,11 @@ class ChangePasswordRequest(BaseModel):
     def passwords_match(self) -> "ChangePasswordRequest":
         if self.new_password != self.confirm_password:
             raise ValueError("Passwords do not match.")
+        if self.new_password == self.current_password:
+            raise PydanticCustomError(
+                "password_same_as_current",
+                PASSWORD_SAME_AS_CURRENT_MESSAGE,
+            )
         return self
 
 
@@ -83,8 +103,8 @@ class PasswordResetConfirmRequest(BaseModel):
 class AcceptInvitationRequest(BaseModel):
     """Set password for invited users (no current password)."""
 
-    new_password: PasswordStr
-    confirm_password: PasswordStr
+    new_password: StrongPasswordStr
+    confirm_password: StrongPasswordStr
 
     @model_validator(mode="after")
     def passwords_match(self) -> "AcceptInvitationRequest":

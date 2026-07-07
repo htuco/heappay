@@ -49,6 +49,7 @@ from utils.login_attempts import (
     login_requires_hcaptcha,
     record_failed_login,
 )
+from utils.password_policy import is_password_policy_message
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -479,8 +480,11 @@ def change_password(
     try:
         service.change_password(user_id, payload)
     except ValueError as exc:
-        if str(exc) == "WRONG_CURRENT_PASSWORD":
+        msg = str(exc)
+        if msg == "WRONG_CURRENT_PASSWORD":
             raise InvalidInput("Current password is incorrect.") from None
+        if is_password_policy_message(msg):
+            raise InvalidInput(msg) from None
         raise InvalidInput("Could not update password.") from None
 
     return AuthResponse(success=True, message="Password updated successfully.", data=None)
@@ -514,7 +518,10 @@ def confirm_password_reset(
 ) -> AuthResponse:
     try:
         service.confirm_password_reset(payload)
-    except ValueError:
+    except ValueError as exc:
+        msg = str(exc)
+        if is_password_policy_message(msg):
+            raise InvalidInput(msg) from None
         raise InvalidInput("Password reset link is invalid or expired.") from None
 
     return AuthResponse(success=True, message="Password reset successfully.", data=None)
@@ -540,10 +547,13 @@ def accept_invitation(
             credentials.credentials,
         )
     except ValueError as exc:
-        if str(exc) == "NOT_INVITED":
+        msg = str(exc)
+        if msg == "NOT_INVITED":
             raise InvalidInput(
                 "Only invited accounts can complete onboarding here.",
             ) from None
+        if is_password_policy_message(msg):
+            raise InvalidInput(msg) from None
         raise InvalidInput("Could not complete invitation.") from None
 
     return AuthResponse(

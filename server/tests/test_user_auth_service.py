@@ -11,6 +11,11 @@ from schemas.user.auth import (  # noqa: E402
     AppPinDisableRequest,
     AppPinSetRequest,
     ChangePasswordRequest,
+    PasswordResetConfirmRequest,
+)
+from utils.password_policy import (  # noqa: E402
+    PASSWORD_CONTAINS_EMAIL_MESSAGE,
+    PASSWORD_SAME_AS_CURRENT_MESSAGE,
 )
 from schemas.user.biometric import (  # noqa: E402
     BiometricDisableRequest,
@@ -173,11 +178,11 @@ class _AuthRepo:
     def mark_biometric_authentication_challenge_used(self, challenge_id):
         self.challenges[challenge_id].used_at = datetime.now(timezone.utc)
 
-    def update_biometric_credential_usage(self, *, credential_row_id, sign_count):
-        for row in self.credentials:
-            if row.credential_row_id == credential_row_id:
-                row.sign_count = sign_count
-                row.last_used_at = datetime.now(timezone.utc)
+    def mark_password_reset_tokens_used_for_user(self, user_id: int) -> None:
+        return None
+
+    def get_password_reset_token(self, token_hash: str):
+        return None
 
 
 def test_change_password_invalidates_existing_refresh_token() -> None:
@@ -190,7 +195,11 @@ def test_change_password_invalidates_existing_refresh_token() -> None:
     )
 
     with (
-        patch.object(service, "verify_password", return_value=True),
+        patch.object(
+            service,
+            "verify_password",
+            side_effect=lambda plain, _hash: plain == payload.current_password,
+        ),
         patch.object(service, "hash_password", return_value="new-hash"),
         patch.object(service, "verify_refresh_token", return_value=repo.user.user_id),
     ):
@@ -199,6 +208,74 @@ def test_change_password_invalidates_existing_refresh_token() -> None:
         assert repo.user.password_hash == "new-hash"
         assert repo.user.refresh_token is None
         assert service.refresh("old.refresh.token") is None
+
+
+def test_change_password_rejects_password_containing_email_local_part() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    payload = ChangePasswordRequest(
+        current_password="OldPassword123!",
+        new_password="TestPass1!",
+        confirm_password="TestPass1!",
+    )
+
+    with patch.object(service, "verify_password", side_effect=lambda plain, _hash: plain == "OldPassword123!"):
+        try:
+            service.change_password(repo.user.user_id, payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_CONTAINS_EMAIL_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected password containing email local part to be rejected")
+
+
+def test_change_password_rejects_same_password_hash() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    payload = ChangePasswordRequest(
+        current_password="OldPassword123!",
+        new_password="DifferentPass1!",
+        confirm_password="DifferentPass1!",
+    )
+
+    with (
+        patch.object(service, "verify_password", return_value=True),
+        patch.object(service, "hash_password", return_value="new-hash"),
+    ):
+        try:
+            service.change_password(repo.user.user_id, payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_SAME_AS_CURRENT_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected identical password hash to be rejected")
+
+
+def test_confirm_password_reset_rejects_same_password_hash() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    token_row = SimpleNamespace(
+        user_id=repo.user.user_id,
+        used_at=None,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+    )
+    repo.get_password_reset_token = lambda _token_hash: token_row
+
+    with (
+        patch.object(repo, "update_password_and_clear_refresh_token"),
+        patch.object(repo, "mark_password_reset_tokens_used_for_user"),
+        patch.object(service, "verify_password", return_value=True),
+        patch.object(service, "hash_password", return_value="new-hash"),
+    ):
+        payload = PasswordResetConfirmRequest(
+            token="a" * 32,
+            new_password="BrandNewPass1!",
+            confirm_password="BrandNewPass1!",
+        )
+        try:
+            service.confirm_password_reset(payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_SAME_AS_CURRENT_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected reset to reject the current password")
 
 
 def test_set_app_pin_requires_current_password() -> None:

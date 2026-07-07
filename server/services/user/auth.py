@@ -63,6 +63,10 @@ from schemas.user.auth import (
 from services.user.password_reset_mailer import PasswordResetMailer
 from services.user.recovery_email_mailer import RecoveryEmailMailer
 from settings import get_settings
+from utils.password_policy import (
+    validate_new_password_differs_from_hash,
+    validate_password_not_contains_email,
+)
 from utils.user_notification_email import is_recovery_email_verified, notification_email_for_user
 from utils.totp import (
     build_totp_uri,
@@ -634,6 +638,12 @@ class UserAuthService:
             raise ValueError("USER_NOT_FOUND")
         if not self.verify_password(payload.current_password, user.password_hash):
             raise ValueError("WRONG_CURRENT_PASSWORD")
+        validate_password_not_contains_email(payload.new_password, user.email)
+        validate_new_password_differs_from_hash(
+            payload.new_password,
+            user.password_hash,
+            verify_password=self.verify_password,
+        )
         new_hash = self.hash_password(payload.new_password)
         self.repo.update_password_and_clear_refresh_token(user_id, new_hash)
 
@@ -668,6 +678,13 @@ class UserAuthService:
         if user is None or user.deleted_at is not None:
             raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
 
+        validate_password_not_contains_email(payload.new_password, user.email)
+        validate_new_password_differs_from_hash(
+            payload.new_password,
+            user.password_hash,
+            verify_password=self.verify_password,
+        )
+
         new_hash = self.hash_password(payload.new_password)
         self.repo.update_password_and_clear_refresh_token(user.user_id, new_hash)
         self.repo.mark_password_reset_tokens_used_for_user(user.user_id)
@@ -681,6 +698,8 @@ class UserAuthService:
         user = self.repo.get_user_by_id(user_id)
         if not user or user.deleted_at is not None:
             raise ValueError("USER_NOT_FOUND")
+
+        validate_password_not_contains_email(payload.new_password, user.email)
 
         new_hash = self.hash_password(payload.new_password)
         try:

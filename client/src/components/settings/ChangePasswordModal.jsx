@@ -20,6 +20,11 @@ function mapApiError(message) {
 	const lower = message.toLowerCase()
 	if (lower.includes('current password')) return { field: 'currentPassword', message }
 	if (lower.includes('passwords do not match')) return { field: 'confirmPassword', message }
+	if (lower.includes('new password must be different')) return { field: 'newPassword', message }
+	if (lower.includes('must not contain your email')) return { field: 'newPassword', message }
+	if (lower.includes('password must')) return { field: 'newPassword', message }
+	if (lower.includes('password is too common')) return { field: 'newPassword', message }
+	if (lower.includes('repeated patterns')) return { field: 'newPassword', message }
 	return { field: null, message }
 }
 
