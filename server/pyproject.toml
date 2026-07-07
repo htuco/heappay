@@ -25,6 +25,7 @@ dependencies = [
     "pyotp>=2.9.0",
     "google-genai>=2.9.0",
     "webauthn>=2.8.0",
+    "reportlab>=5.0.0",
 ]
 
 [dependency-groups]

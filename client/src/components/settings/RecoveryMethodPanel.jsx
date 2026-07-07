@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { KeyRound, Mail, Send, ShieldCheck, Wallet } from 'lucide-react'
+import { CheckCircle2, KeyRound, Mail, Send, ShieldCheck, Wallet } from 'lucide-react'
 
+import RecoveryEmailPanel from '@/components/settings/RecoveryEmailPanel'
 import ActionRow from '@/components/settings/ActionRow'
 import AppPinPanel from '@/components/settings/AppPinPanel'
 import BiometricPanel from '@/components/settings/BiometricPanel'
 import PaymentConfirmPanel from '@/components/settings/PaymentConfirmPanel'
 import SettingsSubsection from '@/components/settings/SettingsSubsection'
 import TwoFactorPanel from '@/components/settings/TwoFactorPanel'
-import VerificationMethodRow from '@/components/settings/VerificationMethodRow'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import { requestPasswordReset } from '@/services/authService'
@@ -15,6 +15,9 @@ import { getApiErrorMessage } from '@/utils/api'
 
 export default function RecoveryMethodPanel({
   email,
+  recoveryEmail,
+  recoveryEmailVerified = false,
+  onRecoveryEmailChange,
   onChangePassword,
   totpEnabled = false,
   onTotpStatusChange,
@@ -60,18 +63,42 @@ export default function RecoveryMethodPanel({
         open={openSection === 'recovery'}
         onToggle={toggleSection('recovery')}
       >
-        <VerificationMethodRow
-          icon={Mail}
-          label="Email recovery"
-          active={hasEmail}
-          statusLabel={hasEmail ? 'Active' : 'Not set'}
-          detail={hasEmail ? email : 'No account email loaded'}
-          hint="Reset links are sent to the email address used for sign-in."
+        <div className="rounded-surface border border-border bg-emphasis px-4 py-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-primary/20 bg-primary/10 text-primary">
+                <Mail className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-card-foreground">Login email</p>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Sign-in
+                  </span>
+                </div>
+                <p className="mt-1 break-all text-sm font-medium text-card-foreground">
+                  {hasEmail ? email : 'No account email loaded'}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Used to sign in. Password reset goes to your verified recovery email when set.
+                </p>
+              </div>
+            </div>
+            <ShieldCheck className="hidden h-5 w-5 shrink-0 text-primary sm:block" />
+          </div>
+        </div>
+
+        <RecoveryEmailPanel
+          recoveryEmail={recoveryEmail}
+          recoveryEmailVerified={recoveryEmailVerified}
+          totpEnabled={totpEnabled}
+          onStatusChange={onRecoveryEmailChange}
         />
 
         <ActionRow
           label="Send reset email"
-          hint="Sends a time-limited password reset link to your account email."
+          hint="Sends a password reset link to your verified recovery email, or login email if none is set."
           action={
             <Button
               className="w-full sm:w-auto"

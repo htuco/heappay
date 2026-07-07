@@ -20,6 +20,7 @@ from models.request import Request  # noqa: F401
 from models.refund_request_detail import RefundRequestDetail  # noqa: F401
 from models.card_freeze_request_detail import CardFreezeRequestDetail  # noqa: F401
 from models.payment_approval_event import PaymentApprovalEvent  # noqa: F401
+from models.user_security_audit_event import UserSecurityAuditEvent  # noqa: F401
 from models.biometric_credential import BiometricCredential  # noqa: F401
 from models.biometric_registration_challenge import BiometricRegistrationChallenge  # noqa: F401
 from models.biometric_authentication_challenge import BiometricAuthenticationChallenge  # noqa: F401

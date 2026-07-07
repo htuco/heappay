@@ -13,6 +13,7 @@ from repositories.transaction.transaction import TransactionRepository
 from services.email import templates
 from services.email.mailer import EmailMailer
 from settings import get_settings
+from utils.user_notification_email import notification_email_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class TransactionEmailNotifier:
             request_id=request_id,
             transaction_id=tx_id,
         )
-        self._send(user.email, subject, body)
+        self._send(notification_email_for_user(user), subject, body)
 
     def notify_refund_declined(self, request_id: int) -> None:
         request = self._load_refund_request(request_id)
@@ -95,7 +96,7 @@ class TransactionEmailNotifier:
             request_id=request_id,
             transaction_id=tx_id,
         )
-        self._send(user.email, subject, body)
+        self._send(notification_email_for_user(user), subject, body)
 
     def _notify_topup(self, tx: Transaction) -> None:
         user = tx.recipient_card.user if tx.recipient_card else None
@@ -157,7 +158,7 @@ class TransactionEmailNotifier:
         ):
             return
         subject, body = subject_body
-        self._send(user.email, subject, body)
+        self._send(notification_email_for_user(user), subject, body)
 
     def _send(self, email: str, subject: str, body: str) -> None:
         try:

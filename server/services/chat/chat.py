@@ -31,26 +31,32 @@ _GEMINI_RETRY_CODES = {429, 503}
 
 _AGENT_FALLBACK_REPLY = "Sorry, I couldn't complete that. Could you rephrase or be more specific?"
 
+_NO_IBAN_RULE = (
+    "This app never uses or displays IBANs. Never state, generate, or imply an IBAN for any "
+    "user, account, or card — including in card-related answers — even if explicitly asked."
+)
+
 _ASK_MODE_REDIRECT = """\
-You are in "Chat" mode, which only ANSWERS questions — it cannot perform actions.
-If the user asks you to DO something that changes their account (send or transfer money, top up a card, freeze or unfreeze a card, request a refund), do NOT attempt it and never claim it was done. Briefly tell them, in their own language, to switch to "Actions" mode using the Chat / Actions toggle at the top of the assistant, and to make the request there.
+You are in "Chat" mode, which only ANSWERS questions. You CANNOT perform actions and you have NO tools available to perform them with — anything you say is just text, nothing you say changes the user's account.
+If the user asks you to DO something that changes their account (send or transfer money, top up a card, freeze or unfreeze a card, request a refund) — even if they only hint at it, or reply to your own earlier question about it (e.g. naming which card) — do NOT ask follow-up questions to prepare the action and do NOT proceed with it in any way. NEVER simulate, describe, or claim an outcome (e.g. never say a card was frozen/unfrozen, money was sent, or a refund was filed) — you have no way to make that true or even know if it happened. In your very next reply, tell them, in their own language, to switch to "Actions" mode using the Chat / Actions toggle at the top of the assistant, and to make the request there. Do nothing else.
 """
 
 _ACTION_MODE_REDIRECT = """
-You are in "Actions" mode, which exists ONLY to perform actions on the user's account. If the user's request does not require performing an action — for example any general or how-to question (how a feature works, how to create a card), OR any informational question about their own data (their balance, their transactions, a spending summary) — do NOT answer it and do NOT call read-only tools to answer it. Briefly tell them, in their own language, to switch to "Chat" mode using the Chat / Actions toggle at the top of the assistant, where questions are answered. Only proceed when the user's intent is to actually perform an action (send money, freeze/unfreeze a card, request a refund); in that case you may use the read-only tools as needed to look up the IDs that action requires.
+You are in "Actions" mode, which exists ONLY to perform actions on the user's account (send money, freeze/unfreeze a card, request a refund). It is NOT for answering questions.
+If the user's request does not itself require performing one of those actions — any general or how-to question, OR any informational question about their own data (balance, transactions, spending summary, "what is my X") — do NOT answer it, do NOT call list_cards / search_transactions / get_spending_summary / find_recipient to gather the answer, and do NOT ask a follow-up question about it. The ONLY tool calls allowed here are ones that directly prepare an action the user has already asked to perform (e.g. looking up a card_id right before freezing it). In your very next reply, tell them, in their own language, to switch to "Chat" mode using the Chat / Actions toggle at the top of the assistant, where questions are answered. Do nothing else.
 """
 
 _AGENT_SYSTEM_SUFFIX = """
 You can take actions on the user's behalf using the available tools.
 
 Rules:
-- For irreversible actions (send_money, request_card_freeze, create_refund_request): once you have looked up the required IDs, CALL the tool. The system does NOT execute it right away — it returns a "confirmation_required" response. When you get that, relay it to the user: state the exact integer IDs and the euro amount and ask them to confirm. When the user confirms in their next message, CALL THE SAME TOOL AGAIN with identical arguments to actually perform it. Only tell the user an action happened when the tool returns a success result (e.g. ok=true or a request_id) — never on a "confirmation_required" response.
+- For irreversible actions (send_money, request_card_freeze, create_refund_request): once you have looked up the required IDs, CALL the tool. The system does NOT execute it right away — it returns a "confirmation_required" response. When you get that, relay it to the user: state the exact integer IDs and the USD amount and ask them to confirm. When the user confirms in their next message, CALL THE SAME TOOL AGAIN with identical arguments to actually perform it. Only tell the user an action happened when the tool returns a success result (e.g. ok=true or a request_id) — never on a "confirmation_required" response.
 - Never guess IDs and never pass a placeholder. Use list_cards / search_transactions / find_recipient to look up card and transaction IDs first.
 - Tool results from EARLIER messages are NOT remembered. In the current turn, before calling an action tool, look up every ID again (e.g. call find_recipient again before send_money). Do not rely on an ID you found in a previous message.
-- When you ask the user to confirm an action, state the exact integer IDs in your confirmation message (e.g. "send 20€ from card_id=18 to card_id=22"). That way the IDs are still visible when they reply "yes".
+- When you ask the user to confirm an action, state the exact integer IDs in your confirmation message (e.g. "send $20 from card_id=18 to card_id=22"). That way the IDs are still visible when they reply "yes".
 - Freezing/unfreezing a card and refunds are REQUESTS that an admin must approve. After calling those tools, tell the user the request was submitted and is pending approval — do NOT claim the card is already frozen/unfrozen or that the money was refunded.
 - A "top up" between the user's own cards is just a send_money from one of their cards to another (sender and recipient must be different cards). The sender card must not be frozen.
-- All amounts are in euros (€). The app does not use US dollars — do not convert currencies; treat the number the user gives as euros.
+- All amounts are in US dollars (USD). The app does not use euros — do not convert currencies; treat the number the user gives as USD.
 - Take one step at a time and explain what you did after each action.
 """
 
@@ -97,7 +103,7 @@ class ChatService:
             card_type = f"{card.card_type.vendor} {card.card_type.type_name}" if card.card_type else "Card"
             status = card.status.status_name if card.status else "unknown"
             lines.append(
-                f"   - {card_type} (*{card.last_four}) | Balance: {card.balance}€"
+                f"   - {card_type} (*{card.last_four}) | Balance: ${card.balance}"
                 f" | Status: {status} | Expires: {card.expires_at}"
             )
         return lines
@@ -113,7 +119,7 @@ class ChatService:
             status = txn.status.name if txn.status else "unknown"
             note = f" [{txn.note}]" if txn.note else ""
             created = txn.created_at.strftime("%Y-%m-%d")
-            amount_part = "[amount hidden]" if mask_amounts else f"{txn.amount}€"
+            amount_part = "[amount hidden]" if mask_amounts else f"${txn.amount}"
             lines.append(f"   - {created}: {txn_type} {amount_part}{note} — {status}")
         return lines
 
@@ -145,7 +151,7 @@ class ChatService:
                 card_type = f"{card.card_type.vendor} {card.card_type.type_name}" if card.card_type else "Card"
                 status = card.status.status_name if card.status else "unknown"
                 lines.append(
-                    f"- {card_type} (*{card.last_four}) | Balance: {card.balance}€"
+                    f"- {card_type} (*{card.last_four}) | Balance: ${card.balance}"
                     f" | Status: {status} | Expires: {card.expires_at}"
                 )
         else:
@@ -159,7 +165,7 @@ class ChatService:
                 status = txn.status.name if txn.status else "unknown"
                 note = f" [{txn.note}]" if txn.note else ""
                 created = txn.created_at.strftime("%Y-%m-%d")
-                lines.append(f"- {created}: {txn_type} {txn.amount}€{note} — {status}")
+                lines.append(f"- {created}: {txn_type} ${txn.amount}{note} — {status}")
         else:
             lines.append("- No transactions found.")
 
@@ -178,7 +184,7 @@ class ChatService:
             for c in cards:
                 status = c.status.status_name if c.status else "unknown"
                 lines.append(
-                    f"- card_id={c.card_id}: *{c.last_four}, balance {c.balance}€, status {status}"
+                    f"- card_id={c.card_id}: *{c.last_four}, balance ${c.balance}, status {status}"
                 )
         else:
             lines.append("- (none)")
@@ -188,7 +194,7 @@ class ChatService:
                 ttype = t.transaction_type.name if t.transaction_type else "transfer"
                 created = t.created_at.strftime("%Y-%m-%d")
                 lines.append(
-                    f"- transaction_id={t.transaction_id}: {created} {ttype} {t.amount}€"
+                    f"- transaction_id={t.transaction_id}: {created} {ttype} ${t.amount}"
                 )
         else:
             lines.append("- (none)")
@@ -202,13 +208,35 @@ class ChatService:
         if is_admin:
             lines = [
                 'You are an admin assistant for "heap", a digital wallet app.',
-                "You have access to user, card, and transaction metadata across the platform.",
-                "Transaction monetary amounts are hidden from admins for privacy — you can see ids, users, status, dates, and types, but not euro amounts.",
-                "Help the admin with anything they ask about users and the platform within those limits.",
                 "Always respond in the same language the admin writes in. Always use Latin script (never Cyrillic).",
                 "Be concise and precise. Today's date is " + today + ".",
+                _NO_IBAN_RULE,
                 "",
             ]
+        else:
+            lines = [
+                'You are a helpful assistant for "heap", a digital wallet app.',
+                "Help the user with anything they ask — prioritise questions about their finances, cards, and transactions, but you may answer general questions too.",
+                "Always respond in the same language the user writes in. Always use Latin script (never Cyrillic).",
+                "Be concise and friendly. Today's date is " + today + ".",
+                _NO_IBAN_RULE,
+                "",
+            ]
+
+        if agent_mode:
+            # Shared for admins and regular users: an admin's own cards/transactions
+            # and their ability to act on their own account work the same way.
+            lines.append(self._agent_id_reference(user_id))
+            lines.append(_AGENT_SYSTEM_SUFFIX)
+            lines.append(_ACTION_MODE_REDIRECT)
+        elif is_admin:
+            lines.append(_ASK_MODE_REDIRECT)
+            lines.append("You have access to user, card, and transaction metadata across the platform.")
+            lines.append(
+                "Transaction monetary amounts are hidden from admins for privacy — you can see ids, users, status, dates, and types, but not USD amounts."
+            )
+            lines.append("Help the admin with anything they ask about users and the platform within those limits.")
+            lines.append("")
             all_users = self._user_repo.list_users(
                 email=None, status_id=None, user_role_id=None,
                 include_deleted=False, limit=200, offset=0,
@@ -223,21 +251,9 @@ class ChatService:
                 lines.extend(self._format_transactions(txns, 3, mask_amounts=True))
                 lines.append("")
         else:
-            lines = [
-                'You are a helpful assistant for "heap", a digital wallet app.',
-                "Help the user with anything they ask — prioritise questions about their finances, cards, and transactions, but you may answer general questions too.",
-                "Always respond in the same language the user writes in. Always use Latin script (never Cyrillic).",
-                "Be concise and friendly. Today's date is " + today + ".",
-                "",
-            ]
-            if agent_mode:
-                lines.append(self._agent_id_reference(user_id))
-                lines.append(_AGENT_SYSTEM_SUFFIX)
-                lines.append(_ACTION_MODE_REDIRECT)
-            else:
-                lines.append(_ASK_MODE_REDIRECT)
-                context = self._user_context_from_vector(user_id, message) or self._user_context_from_repo(user_id)
-                lines.append(context)
+            lines.append(_ASK_MODE_REDIRECT)
+            context = self._user_context_from_vector(user_id, message) or self._user_context_from_repo(user_id)
+            lines.append(context)
 
         return "\n".join(lines)
 
@@ -248,7 +264,7 @@ class ChatService:
         is_admin: bool = False,
         agent_mode: bool = False,
     ) -> tuple[str, list[ChatMessage]]:
-        use_agent = agent_mode and not is_admin and self._agent_tools is not None
+        use_agent = agent_mode and self._agent_tools is not None
         use_gemini_agent = use_agent and self._gemini_client is not None
 
         if use_agent:
@@ -258,7 +274,7 @@ class ChatService:
             user_id, agent_mode=agent_mode, limit=8 if use_agent else 20
         )
 
-        system_content = self._build_system_message(user_id, message, is_admin, agent_mode=use_agent)
+        system_content = self._build_system_message(user_id, message, is_admin, agent_mode=agent_mode)
 
         def _groq_messages() -> list[dict]:
             msgs = [{"role": "system", "content": system_content}]

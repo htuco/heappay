@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, CreditCard, KeyRound, Paintbrush, SlidersHorizontal, TriangleAlert, UserRound, WalletCards } from 'lucide-react'
+import { Bell, CreditCard, Download, FileDown, KeyRound, Paintbrush, SlidersHorizontal, TriangleAlert, UserRound, WalletCards } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
@@ -9,6 +9,7 @@ import { useWalletCards } from '@/hooks/useWalletCards'
 
 import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
 import DeactivateAccountModal from '@/components/settings/DeactivateAccountModal'
+import ActionRow from '@/components/settings/ActionRow'
 import ControlRow from '@/components/settings/ControlRow'
 import OptionGroup from '@/components/settings/OptionGroup'
 import RecoveryMethodPanel from '@/components/settings/RecoveryMethodPanel'
@@ -19,13 +20,38 @@ import DefaultCardPicker from '@/components/settings/DefaultCardPicker'
 import SettingsNav from '@/components/settings/SettingsNav'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 import { Button } from '@/components/ui/button'
+import { exportService } from '@/services/exportService'
+import { maskEmail } from '@/utils/maskEmail'
+import { useNotifications } from '@/context/NotificationContext'
 
 const NAV_ITEMS = [
   { id: 'profile', label: 'Profile', description: 'Personal information', icon: UserRound },
   { id: 'security', label: 'Security', description: 'Password and 2FA', icon: KeyRound },
   { id: 'notifications', label: 'Notifications', description: 'Email and in-app', icon: Bell },
   { id: 'payment', label: 'Payment methods', description: 'Cards and defaults', icon: CreditCard },
+  { id: 'data', label: 'Data & reports', description: 'Export PDFs', icon: FileDown },
   { id: 'preferences', label: 'Preferences', description: 'Appearance and theme', icon: SlidersHorizontal },
+]
+
+const EXPORT_REPORTS = [
+  {
+    key: 'walletSummary',
+    label: 'Wallet summary',
+    hint: 'Total balance and a breakdown of every card.',
+    run: () => exportService.walletSummaryPdf(),
+  },
+  {
+    key: 'transactions',
+    label: 'All transactions',
+    hint: 'Your full transaction history as a PDF statement.',
+    run: () => exportService.transactionsPdf(),
+  },
+  {
+    key: 'monthlyReport',
+    label: 'Monthly report',
+    hint: "Last month's income, expenses, and spending by category.",
+    run: () => exportService.monthlyReportPdf({ months: 1 }),
+  },
 ]
 
 const formatPreference = (value) => value.charAt(0).toUpperCase() + value.slice(1)
@@ -60,6 +86,8 @@ export default function SettingsPage() {
   const { user } = useAuth()
   const { cards, setMainCard, removeCard } = useWalletCards()
   const { preference: themePreference, isDark, setTheme } = useTheme()
+  const { notify } = useNotifications()
+  const [exportingReport, setExportingReport] = useState(null)
 
   // Auto-save model: preferences are mirrored locally for instant feedback, the
   // change is applied optimistically, and the update is dispatched right away.
@@ -76,6 +104,23 @@ export default function SettingsPage() {
     setSyncedUserId(user.id)
     setNotifPrefs(savedNotificationPrefs(user))
     setPaymentPrefs(savedPaymentSecurityPrefs(user))
+  }
+
+  async function handleExportReport(report) {
+    if (exportingReport) return
+    setExportingReport(report.key)
+    try {
+      await report.run()
+      notify({ type: 'success', message: `${report.label} exported as PDF.`, surface: 'toast' })
+    } catch (err) {
+      notify({
+        type: 'error',
+        message: err?.message ?? `Could not export ${report.label.toLowerCase()}.`,
+        surface: 'toast',
+      })
+    } finally {
+      setExportingReport(null)
+    }
   }
 
   async function persistNotifPrefs(next) {
@@ -189,6 +234,9 @@ export default function SettingsPage() {
     >
       <RecoveryMethodPanel
         email={user?.email}
+        recoveryEmail={user?.recovery_email}
+        recoveryEmailVerified={user?.recovery_email_verified ?? false}
+        onRecoveryEmailChange={() => dispatch(refreshSession())}
         onChangePassword={() => setIsChangePasswordOpen(true)}
         totpEnabled={user?.totp_enabled ?? false}
         onTotpStatusChange={() => dispatch(refreshSession())}
@@ -221,7 +269,14 @@ export default function SettingsPage() {
         {user?.email ? (
           <p className="rounded-surface border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
             Transaction emails are sent to{' '}
-            <span className="break-all font-medium text-card-foreground">{user.email}</span>
+            <span className="break-all font-medium text-card-foreground">
+              {user.recovery_email_verified && user.recovery_email
+                ? maskEmail(user.recovery_email)
+                : user.email}
+            </span>
+            {user.recovery_email_verified && user.recovery_email ? (
+              <span> (verified recovery email)</span>
+            ) : null}
           </p>
         ) : null}
         {notificationRows.map(({ key, label, hint, emphasize }) => (
@@ -261,6 +316,35 @@ export default function SettingsPage() {
           onSelect={(label) => handleThemeSelect(label.toLowerCase())}
         />
       </ControlRow>
+    </SettingsCard>
+  )
+
+  const dataReportsCard = (
+    <SettingsCard
+      title="Data & Reports"
+      icon={FileDown}
+      description="Download a branded PDF of your wallet, transactions, or monthly activity."
+    >
+      <div className="space-y-3">
+        {EXPORT_REPORTS.map((report) => (
+          <ActionRow
+            key={report.key}
+            label={report.label}
+            hint={report.hint}
+            action={
+              <Button
+                variant="outline"
+                className="w-full gap-1.5 sm:w-auto"
+                disabled={exportingReport !== null}
+                onClick={() => handleExportReport(report)}
+              >
+                <Download className="h-4 w-4" />
+                {exportingReport === report.key ? 'Exporting…' : 'Download PDF'}
+              </Button>
+            }
+          />
+        ))}
+      </div>
     </SettingsCard>
   )
 
@@ -307,6 +391,7 @@ export default function SettingsPage() {
     ),
     notifications: notificationsCard,
     payment: defaultCardCard,
+    data: dataReportsCard,
     preferences: appearanceCard,
   }
 

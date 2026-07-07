@@ -12,6 +12,7 @@ from models.user_role import UserRole
 from models.user_status import UserStatus
 from models.password_reset_token import PasswordResetToken
 from models.user import User
+from models.user_security_audit_event import UserSecurityAuditEvent
 from schemas.user.auth import ProfileUpdateRequest, RegisterRequest
 
 _ACTIVE_STATUS_NAME = "active"
@@ -474,4 +475,75 @@ class UserAuthRepository:
             .where(User.user_id == user_id)
             .values(totp_secret=None, totp_enabled=False, modified_at=datetime.now(timezone.utc))
         )
+        self._db.commit()
+
+    def get_user_by_recovery_email(self, email: str) -> User | None:
+        stmt = select(User).where(User.recovery_email == email)
+        return self._db.scalars(stmt).first()
+
+    def set_recovery_email_pending(
+        self,
+        user_id: int,
+        *,
+        recovery_email: str,
+        token_hash: str,
+        expires_at: datetime,
+    ) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                recovery_email=recovery_email,
+                recovery_email_verified_at=None,
+                recovery_email_verification_token=token_hash,
+                recovery_email_verification_expires_at=expires_at,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
+    def verify_recovery_email(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                recovery_email_verified_at=datetime.now(timezone.utc),
+                recovery_email_verification_token=None,
+                recovery_email_verification_expires_at=None,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
+    def clear_recovery_email(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                recovery_email=None,
+                recovery_email_verified_at=None,
+                recovery_email_verification_token=None,
+                recovery_email_verification_expires_at=None,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
+    def get_user_by_recovery_verification_token(self, token_hash: str) -> User | None:
+        stmt = select(User).where(User.recovery_email_verification_token == token_hash)
+        return self._db.scalars(stmt).first()
+
+    def record_security_audit_event(
+        self,
+        user_id: int,
+        *,
+        event_type: str,
+        detail: str | None = None,
+    ) -> None:
+        row = UserSecurityAuditEvent(
+            user_id=user_id,
+            event_type=event_type,
+            detail=detail,
+        )
+        self._db.add(row)
         self._db.commit()

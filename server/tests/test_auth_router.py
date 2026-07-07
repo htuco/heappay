@@ -79,6 +79,21 @@ class _FakeAuthService:
     def update_payment_security_preferences(self, _token, _payload):
         return _token_response()
 
+    def add_recovery_email(self, _user_id, _payload):
+        return None
+
+    def change_recovery_email(self, _user_id, _payload):
+        return None
+
+    def resend_recovery_email_verification(self, _user_id):
+        return None
+
+    def verify_recovery_email(self, _payload):
+        return None
+
+    def remove_recovery_email(self, _user_id, _payload):
+        return None
+
     def change_password(self, _user_id, _payload):
         return None
 
@@ -884,6 +899,60 @@ def test_update_payment_security_preferences_persists_flag() -> None:
     assert resp.json()["message"] == "Payment security preferences updated."
     assert service.last_payload.payment_confirm_enabled is True
     assert str(service.last_payload.payment_confirm_above_amount) == "10.00"
+
+
+# ---------------------------------------------------------------------------
+# Recovery email
+# ---------------------------------------------------------------------------
+
+
+def test_add_recovery_email_returns_200() -> None:
+    class _RecoveryService(_FakeAuthService):
+        last_user_id = None
+        last_payload = None
+
+        def add_recovery_email(self, user_id, payload):
+            self.last_user_id = user_id
+            self.last_payload = payload
+
+    service = _RecoveryService()
+    client = _build_client(service)
+    resp = client.post(
+        "/auth/recovery-email",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={"email": "recovery@example.com"},
+    )
+    assert resp.status_code == 200
+    assert service.last_user_id == 42
+    assert str(service.last_payload.email) == "recovery@example.com"
+
+
+def test_verify_recovery_email_returns_200() -> None:
+    class _VerifyService(_FakeAuthService):
+        last_token = None
+
+        def verify_recovery_email(self, payload):
+            self.last_token = payload.token
+
+    service = _VerifyService()
+    client = _build_client(service)
+    resp = client.post(
+        "/auth/recovery-email/verify",
+        json={"token": "a" * 48},
+    )
+    assert resp.status_code == 200
+    assert service.last_token == "a" * 48
+
+
+def test_remove_recovery_email_requires_step_up_payload() -> None:
+    client = _build_client()
+    resp = client.request(
+        "DELETE",
+        "/auth/recovery-email",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={},
+    )
+    assert resp.status_code == 422
 
 
 # ---------------------------------------------------------------------------

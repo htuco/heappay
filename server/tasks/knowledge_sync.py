@@ -35,7 +35,7 @@ class KnowledgeSyncTask:
             status = card.status.status_name if card.status else "unknown"
             text = (
                 f"Card: {card_type} *{card.last_four}, "
-                f"balance {card.balance}€, status {status}, expires {card.expires_at}"
+                f"balance ${card.balance}, status {status}, expires {card.expires_at}"
             )
             chunks.append({"content": text, "source_type": "card", "source_id": card.card_id})
 
@@ -44,7 +44,7 @@ class KnowledgeSyncTask:
             status = txn.status.name if txn.status else "unknown"
             note = f" ({txn.note})" if txn.note else ""
             created = txn.created_at.strftime("%Y-%m-%d")
-            text = f"Transaction: {created}, {txn_type}, {txn.amount}€{note}, status {status}"
+            text = f"Transaction: {created}, {txn_type}, ${txn.amount}{note}, status {status}"
             chunks.append({"content": text, "source_type": "transaction", "source_id": txn.transaction_id})
 
         return chunks

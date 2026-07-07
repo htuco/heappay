@@ -3,7 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from database import get_db
-from ratelimit import AUTH_RATE_LIMIT, limiter
+from ratelimit import AUTH_RATE_LIMIT, RECOVERY_EMAIL_RATE_LIMIT, limiter, user_id_key_func
 from exceptions import InvalidInput, Unauthorized
 from repositories.user.auth import UserAuthRepository
 from routes.storage.deps import get_supabase_image_storage_service
@@ -22,6 +22,10 @@ from schemas.user.auth import (
     PasswordResetConfirmRequest,
     PasswordResetRequest,
     ProfileUpdateRequest,
+    RecoveryEmailRemoveRequest,
+    RecoveryEmailSetRequest,
+    RecoveryEmailUpdateRequest,
+    RecoveryEmailVerifyRequest,
     RefreshRequest,
     RegisterRequest,
     TotpConfirmRequest,
@@ -701,5 +705,146 @@ def update_payment_security_preferences(
     return AuthResponse(
         success=True,
         message="Payment security preferences updated.",
+        data=token_data,
+    )
+
+
+def _recovery_email_error(exc: ValueError) -> None:
+    code = str(exc)
+    messages = {
+        "RECOVERY_EMAIL_SAME_AS_LOGIN": "Recovery email must be different from your login email.",
+        "RECOVERY_EMAIL_UNAVAILABLE": "That email address is not available.",
+        "RECOVERY_EMAIL_ALREADY_SET": "A recovery email is already set. Use change instead.",
+        "RECOVERY_EMAIL_NOT_SET": "No recovery email is set on this account.",
+        "RECOVERY_EMAIL_UNCHANGED": "Enter a different recovery email address.",
+        "RECOVERY_EMAIL_NOT_PENDING": "No pending recovery email verification.",
+        "MAIL_DELIVERY_FAILED": "Could not send verification email.",
+        "INVALID_OR_EXPIRED_RECOVERY_TOKEN": "Verification link is invalid or has expired.",
+        "WRONG_PASSWORD": "Current password is incorrect.",
+        "INVALID_TOTP_CODE": "Invalid authenticator code.",
+        "TOTP_REQUIRED": "Authenticator code is required to remove your recovery email.",
+    }
+    if code in messages:
+        raise InvalidInput(messages[code]) from None
+    raise InvalidInput("Could not update recovery email.") from None
+
+
+@router.post("/recovery-email", response_model=AuthResponse)
+@limiter.limit(RECOVERY_EMAIL_RATE_LIMIT, key_func=user_id_key_func)
+def add_recovery_email(
+    request: Request,
+    payload: RecoveryEmailSetRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+    try:
+        service.add_recovery_email(user_id, payload)
+    except ValueError as exc:
+        _recovery_email_error(exc)
+
+    token_data = service.get_me(credentials.credentials)
+    return AuthResponse(
+        success=True,
+        message="Verification link sent to your recovery email.",
+        data=token_data,
+    )
+
+
+@router.patch("/recovery-email", response_model=AuthResponse)
+@limiter.limit(RECOVERY_EMAIL_RATE_LIMIT, key_func=user_id_key_func)
+def change_recovery_email(
+    request: Request,
+    payload: RecoveryEmailUpdateRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+    try:
+        service.change_recovery_email(user_id, payload)
+    except ValueError as exc:
+        _recovery_email_error(exc)
+
+    token_data = service.get_me(credentials.credentials)
+    return AuthResponse(
+        success=True,
+        message="Verification link sent to your new recovery email.",
+        data=token_data,
+    )
+
+
+@router.post("/recovery-email/resend", response_model=AuthResponse)
+@limiter.limit(RECOVERY_EMAIL_RATE_LIMIT, key_func=user_id_key_func)
+def resend_recovery_email_verification(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+    try:
+        service.resend_recovery_email_verification(user_id)
+    except ValueError as exc:
+        _recovery_email_error(exc)
+
+    return AuthResponse(
+        success=True,
+        message="Verification link resent.",
+        data=None,
+    )
+
+
+@router.post("/recovery-email/verify", response_model=AuthResponse)
+@limiter.limit(AUTH_RATE_LIMIT)
+def verify_recovery_email(
+    request: Request,
+    payload: RecoveryEmailVerifyRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    try:
+        service.verify_recovery_email(payload)
+    except ValueError as exc:
+        _recovery_email_error(exc)
+
+    return AuthResponse(
+        success=True,
+        message="Recovery email verified.",
+        data=None,
+    )
+
+
+@router.delete("/recovery-email", response_model=AuthResponse)
+@limiter.limit(RECOVERY_EMAIL_RATE_LIMIT, key_func=user_id_key_func)
+def remove_recovery_email(
+    request: Request,
+    payload: RecoveryEmailRemoveRequest,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+    try:
+        service.remove_recovery_email(user_id, payload)
+    except ValueError as exc:
+        _recovery_email_error(exc)
+
+    token_data = service.get_me(credentials.credentials)
+    return AuthResponse(
+        success=True,
+        message="Recovery email removed.",
         data=token_data,
     )
