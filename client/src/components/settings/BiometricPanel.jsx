@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CheckCircle2, Fingerprint } from 'lucide-react'
+import { Fingerprint } from 'lucide-react'
 
-import ActionRow from '@/components/settings/ActionRow'
+import VerificationMethodRow from '@/components/settings/VerificationMethodRow'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import {
@@ -125,42 +125,14 @@ export default function BiometricPanel() {
 			<FormBanner variant="success" message={success} />
 			<FormBanner variant="error" message={error} />
 
-			<div className="rounded-surface border border-border bg-emphasis px-4 py-4">
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-					<div className="flex min-w-0 gap-3">
-						<span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-input border ${enabled ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border bg-muted/40 text-muted-foreground'}`}>
-							<Fingerprint className="h-4 w-4" />
-						</span>
-						<div className="min-w-0">
-							<div className="flex flex-wrap items-center gap-2">
-								<p className="text-sm font-semibold text-card-foreground">Face ID / fingerprint</p>
-								{enabled ? (
-									<span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-										<CheckCircle2 className="h-3 w-3" />
-										Active
-									</span>
-								) : (
-									<span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-										Not enabled
-									</span>
-								)}
-							</div>
-							<p className="mt-1 text-xs leading-5 text-muted-foreground">
-								{enabled
-									? 'Biometric approval is enabled. Disabling requires Face ID or fingerprint.'
-									: 'Enroll this device now. Password, PIN, and authenticator fallback stay available.'}
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<ActionRow
-				label="Biometric authentication"
+			<VerificationMethodRow
+				icon={Fingerprint}
+				label="Face ID / fingerprint"
+				active={enabled}
 				hint={
 					enabled
-						? `${status.credential_count || 1} credential enrolled. Disabling verifies your biometrics first, then revokes server access.`
-						: 'Use the secure biometric prompt on this device to enroll a passkey credential.'
+						? 'Approve payments with a biometric prompt on this device. Disabling verifies your biometrics first.'
+						: 'Enroll this device to approve payments with Face ID or fingerprint. Password and PIN fallback stay available.'
 				}
 				action={
 					<Button
