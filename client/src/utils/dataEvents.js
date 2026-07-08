@@ -20,4 +20,5 @@ export function emitDataChange(kind) {
 export const DATA_CHANGE_KINDS = Object.freeze({
   TRANSACTION: 'transaction',
   CARD: 'card',
+  WALLET: 'wallet',
 })

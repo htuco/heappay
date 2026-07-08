@@ -136,6 +136,46 @@ class CardRepository:
         to_card.balance = to_card.balance + amount
         self._db.commit()
 
+    def _get_user_for_update(self, user_id: int) -> User | None:
+        stmt = select(User).where(User.user_id == user_id).with_for_update()
+        return self._db.scalars(stmt).first()
+
+    def transfer_wallet_to_card(
+        self, *, user_id: int, to_card_id: int, amount: Decimal
+    ) -> None:
+        """Atomically move *amount* from the user's wallet balance onto a card."""
+        if amount <= 0:
+            return
+        user = self._get_user_for_update(user_id)
+        to_card = self.get_by_id_for_update(to_card_id)
+        if user is None or to_card is None:
+            raise ValueError("User or card not found for wallet transfer.")
+        if to_card.user_id != user_id:
+            raise ValueError("Card is not owned by the wallet's user.")
+        if user.wallet_balance < amount:
+            raise ValueError("Insufficient wallet balance.")
+        user.wallet_balance = user.wallet_balance - amount
+        to_card.balance = to_card.balance + amount
+        self._db.commit()
+
+    def transfer_card_to_wallet(
+        self, *, user_id: int, from_card_id: int, amount: Decimal
+    ) -> None:
+        """Atomically move *amount* from a card back into the user's wallet balance."""
+        if amount <= 0:
+            return
+        user = self._get_user_for_update(user_id)
+        from_card = self.get_by_id_for_update(from_card_id)
+        if user is None or from_card is None:
+            raise ValueError("User or card not found for wallet transfer.")
+        if from_card.user_id != user_id:
+            raise ValueError("Card is not owned by the wallet's user.")
+        if from_card.balance < amount:
+            raise ValueError("Insufficient card balance.")
+        from_card.balance = from_card.balance - amount
+        user.wallet_balance = user.wallet_balance + amount
+        self._db.commit()
+
     def create_completed_sweep_transaction(
         self,
         *,

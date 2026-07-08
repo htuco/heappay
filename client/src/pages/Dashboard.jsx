@@ -102,6 +102,8 @@ export default function DashboardPage() {
   const { cards, isLoading, error, refetch } = useDashboardCards()
   const {
     formattedBalance,
+    formattedWallet,
+    formattedCards,
     formattedReserved,
     hasReserved,
     isLoading: balanceLoading,
@@ -185,6 +187,8 @@ export default function DashboardPage() {
         <div className="min-w-0">
           <TotalBalanceWidget
             totalBalance={formattedBalance}
+            walletBalance={formattedWallet}
+            cardsBalance={formattedCards}
             reservedBalance={formattedReserved}
             hasReserved={hasReserved}
             monthlyGrowth={monthlyGrowth}
