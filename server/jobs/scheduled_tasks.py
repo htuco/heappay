@@ -8,6 +8,7 @@ from repositories.card.card import CardRepository
 from repositories.recurring_payment.recurring_payment import RecurringPaymentRepository
 from repositories.transaction.transaction import TransactionRepository
 from services.card.card import CardService
+from services.email.card_expiry_notifier import CardExpiryNotifier
 from services.nexus.funding import is_nexus_configured
 from services.recurring_payment.recurring_payment import RecurringPaymentService
 from services.transaction.transaction_processor import TransactionProcessorService
@@ -29,6 +30,10 @@ def run() -> dict[str, int]:
             TransactionRepository(db),
         ).run_due_payments()
         nexus_stats = claim_approved_funds(db) if is_nexus_configured() else {}
-        return {**card_stats, **tx_stats, **recurring_stats, **nexus_stats}
+        card_expiry_stats = CardExpiryNotifier(db).notify_expiring_cards(
+            days=settings.card_expiry_warning_days,
+            limit=settings.card_expiration_batch_size,
+        )
+        return {**card_stats, **tx_stats, **recurring_stats, **nexus_stats, **card_expiry_stats}
     finally:
         db.close()

@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     tx_processor_interval_seconds: int = 60
     tx_processor_batch_size: int = 100
     card_expiration_batch_size: int = 100
+    card_expiry_warning_days: int = 30
     tx_min_processing_delay_seconds: int = 3
     # Amounts above this stay pending for staff; everything else auto-allows if rules pass.
     tx_manual_review_above_amount: Decimal = Decimal("500000.00")
