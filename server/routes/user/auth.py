@@ -49,6 +49,7 @@ from utils.login_attempts import (
     login_requires_hcaptcha,
     record_failed_login,
 )
+from utils.pwned_passwords import PASSWORD_PWNED_MESSAGE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -92,7 +93,9 @@ def register(
     verify_auth_hcaptcha(request, payload.hcaptcha_token)
     try:
         token_response = service.register(payload)
-    except ValueError:
+    except ValueError as exc:
+        if str(exc) == PASSWORD_PWNED_MESSAGE:
+            raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("An account with this email already exists.") from None
 
     return AuthResponse(success=True, message="Registration successful", data=token_response)
@@ -479,8 +482,13 @@ def change_password(
     try:
         service.change_password(user_id, payload)
     except ValueError as exc:
-        if str(exc) == "WRONG_CURRENT_PASSWORD":
+        code = str(exc)
+        if code == "WRONG_CURRENT_PASSWORD":
             raise InvalidInput("Current password is incorrect.") from None
+        if code == "SAME_AS_CURRENT_PASSWORD":
+            raise InvalidInput("New password must be different from your current password.") from None
+        if code == PASSWORD_PWNED_MESSAGE:
+            raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("Could not update password.") from None
 
     return AuthResponse(success=True, message="Password updated successfully.", data=None)
@@ -514,7 +522,12 @@ def confirm_password_reset(
 ) -> AuthResponse:
     try:
         service.confirm_password_reset(payload)
-    except ValueError:
+    except ValueError as exc:
+        code = str(exc)
+        if code == "SAME_AS_CURRENT_PASSWORD":
+            raise InvalidInput("New password must be different from your current password.") from None
+        if code == PASSWORD_PWNED_MESSAGE:
+            raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("Password reset link is invalid or expired.") from None
 
     return AuthResponse(success=True, message="Password reset successfully.", data=None)
