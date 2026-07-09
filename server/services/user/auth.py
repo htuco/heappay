@@ -63,6 +63,7 @@ from schemas.user.auth import (
 from services.user.password_reset_mailer import PasswordResetMailer
 from services.user.recovery_email_mailer import RecoveryEmailMailer
 from settings import get_settings
+from utils.pwned_passwords import validate_password_not_pwned
 from utils.user_notification_email import is_recovery_email_verified, notification_email_for_user
 from utils.totp import (
     build_totp_uri,
@@ -183,6 +184,14 @@ class UserAuthService:
             value = value.replace(tzinfo=timezone.utc)
         return value <= datetime.now(timezone.utc)
 
+    def _validate_not_pwned(self, password: str) -> None:
+        validate_password_not_pwned(
+            password,
+            hibp_enabled=self.settings.hibp_enabled,
+            hibp_api_base_url=self.settings.hibp_api_base_url,
+            hibp_timeout_seconds=self.settings.hibp_timeout_seconds,
+        )
+
     def resolve_active_user_id(self, access_token: str) -> int | None:
         """Valid access JWT + existing user + not soft-deleted (deactivated)."""
         user_id = self.verify_access_token(access_token)
@@ -240,6 +249,7 @@ class UserAuthService:
         if existing_user:
             raise ValueError("EMAIL_NOT_AVAILABLE")
 
+        self._validate_not_pwned(register_data.password)
         hashed_password = self.hash_password(register_data.password)
         user = self.repo.create_user(register_data, hashed_password)
         refresh_token = self.create_refresh_token(user.user_id)
@@ -634,6 +644,9 @@ class UserAuthService:
             raise ValueError("USER_NOT_FOUND")
         if not self.verify_password(payload.current_password, user.password_hash):
             raise ValueError("WRONG_CURRENT_PASSWORD")
+        if self.verify_password(payload.new_password, user.password_hash):
+            raise ValueError("SAME_AS_CURRENT_PASSWORD")
+        self._validate_not_pwned(payload.new_password)
         new_hash = self.hash_password(payload.new_password)
         self.repo.update_password_and_clear_refresh_token(user_id, new_hash)
 
@@ -668,6 +681,9 @@ class UserAuthService:
         if user is None or user.deleted_at is not None:
             raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
 
+        if self.verify_password(payload.new_password, user.password_hash):
+            raise ValueError("SAME_AS_CURRENT_PASSWORD")
+        self._validate_not_pwned(payload.new_password)
         new_hash = self.hash_password(payload.new_password)
         self.repo.update_password_and_clear_refresh_token(user.user_id, new_hash)
         self.repo.mark_password_reset_tokens_used_for_user(user.user_id)

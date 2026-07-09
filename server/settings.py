@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     password_reset_token_expire_minutes: int = 30
+    hibp_enabled: bool = False
+    hibp_timeout_seconds: float = 3.0
+    hibp_api_base_url: str = "https://api.pwnedpasswords.com"
     password_reset_url: str = "http://localhost:5173/reset-password"
     recovery_email_verify_url: str = "http://localhost:5173/verify-recovery-email"
     recovery_email_token_expire_hours: int = 24
