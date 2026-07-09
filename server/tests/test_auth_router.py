@@ -21,7 +21,7 @@ from schemas.user.biometric import (  # noqa: E402
     BiometricRegistrationOptionsResponse,
     BiometricStatusResponse,
 )
-from utils.password_policy import PASSWORD_RULES_MESSAGE  # noqa: E402
+from utils.password_policy import PASSWORD_REUSE_MESSAGE, PASSWORD_RULES_MESSAGE  # noqa: E402
 
 
 _NOW = datetime.now(timezone.utc)
@@ -694,6 +694,49 @@ def test_password_reset_confirm_rejects_weak_new_password() -> None:
     )
     assert resp.status_code == 422
     assert resp.json()["details"][0]["msg"] == PASSWORD_RULES_MESSAGE
+
+
+def test_change_password_rejects_reused_recent_password() -> None:
+    app = create_app()
+
+    class ReuseAuthService(_FakeAuthService):
+        def change_password(self, _user_id, _payload):
+            raise ValueError(PASSWORD_REUSE_MESSAGE)
+
+    app.dependency_overrides[get_auth_service] = lambda: ReuseAuthService()
+    client = TestClient(app)
+    resp = client.post(
+        "/auth/change-password",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_password": "OldPassword123!",
+            "new_password": "HistoryPass123!",
+            "confirm_password": "HistoryPass123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == PASSWORD_REUSE_MESSAGE
+
+
+def test_password_reset_confirm_rejects_reused_recent_password() -> None:
+    app = create_app()
+
+    class ReuseAuthService(_FakeAuthService):
+        def confirm_password_reset(self, _payload):
+            raise ValueError(PASSWORD_REUSE_MESSAGE)
+
+    app.dependency_overrides[get_auth_service] = lambda: ReuseAuthService()
+    client = TestClient(app)
+    resp = client.post(
+        "/auth/password-reset/confirm",
+        json={
+            "token": "a" * 32,
+            "new_password": "HistoryPass123!",
+            "confirm_password": "HistoryPass123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == PASSWORD_REUSE_MESSAGE
 
 
 # ---------------------------------------------------------------------------

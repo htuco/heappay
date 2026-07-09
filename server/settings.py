@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     password_reset_token_expire_minutes: int = 30
+    password_history_limit: int = 5
     password_reset_url: str = "http://localhost:5173/reset-password"
     recovery_email_verify_url: str = "http://localhost:5173/verify-recovery-email"
     recovery_email_token_expire_hours: int = 24

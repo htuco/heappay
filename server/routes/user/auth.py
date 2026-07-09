@@ -49,6 +49,7 @@ from utils.login_attempts import (
     login_requires_hcaptcha,
     record_failed_login,
 )
+from utils.password_policy import PASSWORD_REUSE_MESSAGE, PASSWORD_SAME_AS_CURRENT_MESSAGE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -479,8 +480,14 @@ def change_password(
     try:
         service.change_password(user_id, payload)
     except ValueError as exc:
-        if str(exc) == "WRONG_CURRENT_PASSWORD":
+        msg = str(exc)
+        if msg == "WRONG_CURRENT_PASSWORD":
             raise InvalidInput("Current password is incorrect.") from None
+        if msg in {
+            PASSWORD_REUSE_MESSAGE,
+            PASSWORD_SAME_AS_CURRENT_MESSAGE,
+        }:
+            raise InvalidInput(msg) from None
         raise InvalidInput("Could not update password.") from None
 
     return AuthResponse(success=True, message="Password updated successfully.", data=None)
@@ -514,7 +521,13 @@ def confirm_password_reset(
 ) -> AuthResponse:
     try:
         service.confirm_password_reset(payload)
-    except ValueError:
+    except ValueError as exc:
+        msg = str(exc)
+        if msg in {
+            PASSWORD_REUSE_MESSAGE,
+            PASSWORD_SAME_AS_CURRENT_MESSAGE,
+        }:
+            raise InvalidInput(msg) from None
         raise InvalidInput("Password reset link is invalid or expired.") from None
 
     return AuthResponse(success=True, message="Password reset successfully.", data=None)
