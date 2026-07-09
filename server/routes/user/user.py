@@ -16,6 +16,14 @@ from services.user.user import (
     UserService,
 )
 from settings import get_settings
+from utils.audit_log import (
+    EVENT_USER_ACTIVATED,
+    EVENT_USER_CREATED,
+    EVENT_USER_DELETED,
+    EVENT_USER_SUSPENDED,
+    EVENT_USER_UPDATED,
+    record_audit_log,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -101,7 +109,8 @@ def get_user(
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     payload: UserCreateRequest,
-    _: int = Depends(require_admin),
+    actor_id: int = Depends(require_admin),
+    db: Session = Depends(get_db),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -116,6 +125,15 @@ def create_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_STATUS_DETAIL
         ) from exc
+    record_audit_log(
+        db,
+        event_type=EVENT_USER_CREATED,
+        actor_user_id=actor_id,
+        target_user_id=row.user_id,
+        resource_type="user",
+        resource_id=row.user_id,
+        detail=f"email={row.email}",
+    )
     return _user_response_with_signed_avatar(row)
 
 
@@ -123,7 +141,8 @@ def create_user(
 def update_user(
     user_id: int,
     payload: UserUpdateRequest,
-    _: int = Depends(require_admin),
+    actor_id: int = Depends(require_admin),
+    db: Session = Depends(get_db),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
@@ -140,13 +159,22 @@ def update_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_STATUS_DETAIL
         ) from exc
+    record_audit_log(
+        db,
+        event_type=EVENT_USER_UPDATED,
+        actor_user_id=actor_id,
+        target_user_id=user_id,
+        resource_type="user",
+        resource_id=user_id,
+    )
     return _user_response_with_signed_avatar(row)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
-    _: int = Depends(require_admin),
+    actor_id: int = Depends(require_admin),
+    db: Session = Depends(get_db),
     service: UserService = Depends(get_user_service),
 ) -> Response:
     try:
@@ -155,6 +183,14 @@ def delete_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
     except UserHasPendingTransactionError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_PENDING_TX_DETAIL) from exc
+    record_audit_log(
+        db,
+        event_type=EVENT_USER_DELETED,
+        actor_user_id=actor_id,
+        target_user_id=user_id,
+        resource_type="user",
+        resource_id=user_id,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -163,24 +199,42 @@ def delete_user(
 @router.post("/{user_id}/suspend", response_model=UserResponse, summary="(Admin) Suspend a user account.")
 def suspend_user(
     user_id: int,
-    _: int = Depends(require_admin),
+    actor_id: int = Depends(require_admin),
+    db: Session = Depends(get_db),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
         row = service.update_user(user_id, UserUpdateRequest(status_id=3))
     except UserNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
+    record_audit_log(
+        db,
+        event_type=EVENT_USER_SUSPENDED,
+        actor_user_id=actor_id,
+        target_user_id=user_id,
+        resource_type="user",
+        resource_id=user_id,
+    )
     return UserResponse.model_validate(row)
 
 
 @router.post("/{user_id}/activate", response_model=UserResponse, summary="(Admin) Activate a user account.")
 def activate_user(
     user_id: int,
-    _: int = Depends(require_admin),
+    actor_id: int = Depends(require_admin),
+    db: Session = Depends(get_db),
     service: UserService = Depends(get_user_service),
 ) -> UserResponse:
     try:
         row = service.update_user(user_id, UserUpdateRequest(status_id=1))
     except UserNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
+    record_audit_log(
+        db,
+        event_type=EVENT_USER_ACTIVATED,
+        actor_user_id=actor_id,
+        target_user_id=user_id,
+        resource_type="user",
+        resource_id=user_id,
+    )
     return UserResponse.model_validate(row)

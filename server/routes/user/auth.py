@@ -31,8 +31,10 @@ from schemas.user.auth import (
     TotpConfirmRequest,
     TotpDisableRequest,
     TotpLoginResponse,
+    TokenResponse,
     TotpVerifyRequest,
 )
+from utils.audit_log import EVENT_LOGIN_FAILED, EVENT_LOGIN_SUCCESS, record_audit_log
 from schemas.user.biometric import (
     BiometricAuthenticationOptionsResponse,
     BiometricCredentialResponse,
@@ -106,6 +108,7 @@ def register(
 def login(
     request: Request,
     payload: LoginRequest,
+    db: Session = Depends(get_db),
     service: UserAuthService = Depends(get_auth_service),
 ) -> TotpLoginResponse:
     client_ip = _client_ip(request)
@@ -113,6 +116,12 @@ def login(
     try:
         result = service.login(payload)
     except ValueError:
+        record_audit_log(
+            db,
+            event_type=EVENT_LOGIN_FAILED,
+            detail=f"email={payload.email}",
+            ip_address=client_ip,
+        )
         attempts = record_failed_login(payload.email, client_ip)
         raise Unauthorized(
             "Invalid email or password.",
@@ -123,6 +132,16 @@ def login(
         ) from None
 
     clear_failed_login_attempts(payload.email, client_ip)
+    if isinstance(result, TokenResponse):
+        record_audit_log(
+            db,
+            event_type=EVENT_LOGIN_SUCCESS,
+            actor_user_id=result.user.user_id,
+            target_user_id=result.user.user_id,
+            resource_type="user",
+            resource_id=result.user.user_id,
+            ip_address=client_ip,
+        )
     return TotpLoginResponse(success=True, message="Login successful", data=result)
 
 
@@ -131,9 +150,11 @@ def login(
 def totp_verify(
     request: Request,
     payload: TotpVerifyRequest,
+    db: Session = Depends(get_db),
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:
     """Second step of 2FA login — exchange partial_token + 6-digit code for real JWT tokens."""
+    client_ip = _client_ip(request)
     try:
         token_response = service.verify_totp_login(payload.partial_token, payload.code)
     except ValueError as exc:
@@ -142,6 +163,15 @@ def totp_verify(
             raise Unauthorized("Invalid authentication code.") from None
         raise Unauthorized("Session expired. Please log in again.") from None
 
+    record_audit_log(
+        db,
+        event_type=EVENT_LOGIN_SUCCESS,
+        actor_user_id=token_response.user.user_id,
+        target_user_id=token_response.user.user_id,
+        resource_type="user",
+        resource_id=token_response.user.user_id,
+        ip_address=client_ip,
+    )
     return AuthResponse(success=True, message="Login successful", data=token_response)
 
 
