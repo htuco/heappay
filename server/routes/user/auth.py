@@ -51,6 +51,7 @@ from utils.login_attempts import (
     login_requires_hcaptcha,
     record_failed_login,
 )
+from utils.password_policy import PASSWORD_REUSE_MESSAGE, PASSWORD_SAME_AS_CURRENT_MESSAGE
 from utils.pwned_passwords import PASSWORD_PWNED_MESSAGE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -512,12 +513,14 @@ def change_password(
     try:
         service.change_password(user_id, payload)
     except ValueError as exc:
-        code = str(exc)
-        if code == "WRONG_CURRENT_PASSWORD":
+        msg = str(exc)
+        if msg == "WRONG_CURRENT_PASSWORD":
             raise InvalidInput("Current password is incorrect.") from None
-        if code == "SAME_AS_CURRENT_PASSWORD":
-            raise InvalidInput("New password must be different from your current password.") from None
-        if code == PASSWORD_PWNED_MESSAGE:
+        if msg == PASSWORD_SAME_AS_CURRENT_MESSAGE:
+            raise InvalidInput(PASSWORD_SAME_AS_CURRENT_MESSAGE) from None
+        if msg == PASSWORD_REUSE_MESSAGE:
+            raise InvalidInput(PASSWORD_REUSE_MESSAGE) from None
+        if msg == PASSWORD_PWNED_MESSAGE:
             raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("Could not update password.") from None
 
@@ -553,10 +556,12 @@ def confirm_password_reset(
     try:
         service.confirm_password_reset(payload)
     except ValueError as exc:
-        code = str(exc)
-        if code == "SAME_AS_CURRENT_PASSWORD":
-            raise InvalidInput("New password must be different from your current password.") from None
-        if code == PASSWORD_PWNED_MESSAGE:
+        msg = str(exc)
+        if msg == PASSWORD_SAME_AS_CURRENT_MESSAGE:
+            raise InvalidInput(PASSWORD_SAME_AS_CURRENT_MESSAGE) from None
+        if msg == PASSWORD_REUSE_MESSAGE:
+            raise InvalidInput(PASSWORD_REUSE_MESSAGE) from None
+        if msg == PASSWORD_PWNED_MESSAGE:
             raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("Password reset link is invalid or expired.") from None
 

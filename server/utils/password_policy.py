@@ -8,6 +8,8 @@ PASSWORD_RULES_MESSAGE = (
     "Password must include at least one uppercase letter, one lowercase letter, "
     "one number, and one special character."
 )
+PASSWORD_REUSE_MESSAGE = "You cannot reuse a recent password."
+PASSWORD_SAME_AS_CURRENT_MESSAGE = "New password must be different from your current password."
 
 
 def validate_password_strength(value: str) -> str:

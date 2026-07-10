@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     password_reset_token_expire_minutes: int = 30
+    password_history_limit: int = 5
     hibp_enabled: bool = False
     hibp_timeout_seconds: float = 3.0
     hibp_api_base_url: str = "https://api.pwnedpasswords.com"
