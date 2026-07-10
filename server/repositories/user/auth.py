@@ -573,10 +573,22 @@ class UserAuthRepository:
         event_type: str,
         detail: str | None = None,
     ) -> None:
+        from models.audit_log_event import AuditLogEvent
+
         row = UserSecurityAuditEvent(
             user_id=user_id,
             event_type=event_type,
             detail=detail,
         )
         self._db.add(row)
+        self._db.add(
+            AuditLogEvent(
+                event_type=event_type,
+                actor_user_id=user_id,
+                target_user_id=user_id,
+                resource_type="user",
+                resource_id=str(user_id),
+                detail=detail,
+            )
+        )
         self._db.commit()

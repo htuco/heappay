@@ -31,6 +31,15 @@ from services.request.request import (
     TransactionNotFoundError,
 )
 from utils.transaction_privacy import mask_refund_detail
+from utils.audit_log import (
+    EVENT_FREEZE_APPROVED,
+    EVENT_FREEZE_DECLINED,
+    EVENT_REFUND_APPROVED,
+    EVENT_REFUND_DECLINED,
+    EVENT_UNFREEZE_APPROVED,
+    EVENT_UNFREEZE_DECLINED,
+    record_audit_log,
+)
 
 router = APIRouter(prefix="/requests", tags=["requests"])
 
@@ -58,6 +67,24 @@ _CARD_STATUS_NOT_FOUND = "The frozen card status is not configured."
 
 def get_request_service(db: Session = Depends(get_db)) -> RequestService:
     return RequestService(RequestRepository(db))
+
+
+def _log_request_decision(
+    db: Session,
+    *,
+    actor_user_id: int,
+    event_type: str,
+    req,
+) -> None:
+    record_audit_log(
+        db,
+        event_type=event_type,
+        actor_user_id=actor_user_id,
+        target_user_id=req.requester_user_id,
+        resource_type="request",
+        resource_id=req.request_id,
+        detail=req.note,
+    )
 
 
 def _user_name(user) -> str | None:
@@ -158,8 +185,9 @@ def create_refund_request(
 )
 def approve_refund(
     request_id: int,
-    _: int = Depends(require_staff),
+    actor_id: int = Depends(require_staff),
     ctx=Depends(get_user_context),
+    db: Session = Depends(get_db),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -174,6 +202,7 @@ def approve_refund(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_INSUFFICIENT_BALANCE
         ) from None
+    _log_request_decision(db, actor_user_id=actor_id, event_type=EVENT_REFUND_APPROVED, req=req)
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund approved. Balance reversed.",
@@ -187,8 +216,9 @@ def approve_refund(
 )
 def decline_refund(
     request_id: int,
-    _: int = Depends(require_staff),
+    actor_id: int = Depends(require_staff),
     ctx=Depends(get_user_context),
+    db: Session = Depends(get_db),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -197,6 +227,7 @@ def decline_refund(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
     except RequestNotPendingError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    _log_request_decision(db, actor_user_id=actor_id, event_type=EVENT_REFUND_DECLINED, req=req)
     return ApiResponse[RequestResponse](
         success=True,
         message="Refund request declined.",
@@ -245,8 +276,9 @@ def create_card_freeze_request(
 )
 def approve_card_freeze(
     request_id: int,
-    _: int = Depends(require_staff),
+    actor_id: int = Depends(require_staff),
     ctx=Depends(get_user_context),
+    db: Session = Depends(get_db),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -259,6 +291,7 @@ def approve_card_freeze(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_CARD_STATUS_NOT_FOUND
         ) from None
+    _log_request_decision(db, actor_user_id=actor_id, event_type=EVENT_FREEZE_APPROVED, req=req)
     return ApiResponse[RequestResponse](
         success=True,
         message="Freeze approved. The card is now frozen.",
@@ -272,8 +305,9 @@ def approve_card_freeze(
 )
 def decline_card_freeze(
     request_id: int,
-    _: int = Depends(require_staff),
+    actor_id: int = Depends(require_staff),
     ctx=Depends(get_user_context),
+    db: Session = Depends(get_db),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -282,6 +316,7 @@ def decline_card_freeze(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
     except RequestNotPendingError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    _log_request_decision(db, actor_user_id=actor_id, event_type=EVENT_FREEZE_DECLINED, req=req)
     return ApiResponse[RequestResponse](
         success=True,
         message="Freeze request declined.",
@@ -330,8 +365,9 @@ def create_card_unfreeze_request(
 )
 def approve_card_unfreeze(
     request_id: int,
-    _: int = Depends(require_staff),
+    actor_id: int = Depends(require_staff),
     ctx=Depends(get_user_context),
+    db: Session = Depends(get_db),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -344,6 +380,7 @@ def approve_card_unfreeze(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_CARD_STATUS_NOT_FOUND
         ) from None
+    _log_request_decision(db, actor_user_id=actor_id, event_type=EVENT_UNFREEZE_APPROVED, req=req)
     return ApiResponse[RequestResponse](
         success=True,
         message="Unfreeze approved. The card is now active.",
@@ -357,8 +394,9 @@ def approve_card_unfreeze(
 )
 def decline_card_unfreeze(
     request_id: int,
-    _: int = Depends(require_staff),
+    actor_id: int = Depends(require_staff),
     ctx=Depends(get_user_context),
+    db: Session = Depends(get_db),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -367,6 +405,7 @@ def decline_card_unfreeze(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
     except RequestNotPendingError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    _log_request_decision(db, actor_user_id=actor_id, event_type=EVENT_UNFREEZE_DECLINED, req=req)
     return ApiResponse[RequestResponse](
         success=True,
         message="Unfreeze request declined.",

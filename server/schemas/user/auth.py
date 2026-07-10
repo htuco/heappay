@@ -12,6 +12,7 @@ from pydantic import (
     model_validator,
 )
 
+from utils.email_policy import StrictEmailStr
 from utils.password_policy import StrongPasswordStr
 
 LoginPasswordStr = Annotated[str, Field(min_length=1, max_length=255)]
@@ -37,7 +38,7 @@ class HcaptchaRequestMixin(BaseModel):
 
 
 class RegisterRequest(HcaptchaRequestMixin):
-    email: EmailStr
+    email: StrictEmailStr
     first_name: str
     last_name: str
     password: StrongPasswordStr
@@ -135,7 +136,7 @@ class AppPinDisableRequest(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
-    email: EmailStr | None = None
+    email: StrictEmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     avatar_url: str | None = Field(default=None, max_length=2048)
@@ -280,11 +281,11 @@ class TotpDisableRequest(BaseModel):
 
 
 class RecoveryEmailSetRequest(BaseModel):
-    email: EmailStr
+    email: StrictEmailStr
 
 
 class RecoveryEmailUpdateRequest(BaseModel):
-    email: EmailStr
+    email: StrictEmailStr
 
 
 class RecoveryEmailVerifyRequest(BaseModel):

@@ -21,6 +21,7 @@ function mapApiError(message) {
 	if (lower.includes('current password')) return { field: 'currentPassword', message }
 	if (lower.includes('passwords do not match')) return { field: 'confirmPassword', message }
 	if (lower.includes('cannot reuse a recent password')) return { field: 'newPassword', message }
+	if (lower.includes('appeared in a data breach')) return { field: 'newPassword', message }
 	if (lower.includes('different from your current password')) return { field: 'newPassword', message }
 	return { field: null, message }
 }

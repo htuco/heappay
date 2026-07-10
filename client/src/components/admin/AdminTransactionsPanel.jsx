@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeftRight, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Select } from '@/components/ui/select'
+import AdminTransactionFilters from '@/components/admin/AdminTransactionFilters'
 import transactionsService from '@/services/transactionsService'
+import { toApiFilterParams } from '@/utils/transactionFilterParams'
 import {
-  TRANSACTION_STATUS_OPTIONS,
-  TRANSACTION_TYPE_OPTIONS,
   formatTransactionAmount,
   formatTransactionDate,
   getTransactionStatus,
@@ -13,11 +12,6 @@ import {
 } from '@/components/payment/transactionHistory.utils'
 
 const PAGE_SIZE = 20
-
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest first' },
-  { value: 'oldest', label: 'Oldest first' },
-]
 
 const STATUS_CHIP = {
   warning: 'border-warning/30 bg-warning/10 text-warning',
@@ -42,25 +36,23 @@ function PartyCell({ party }) {
   )
 }
 
-export default function AdminTransactionsPanel() {
+export default function AdminTransactionsPanel({ filters, onFilterChange, onClearFilters, hasActiveFilters }) {
   const [transactions, setTransactions] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [sort, setSort] = useState('newest')
-  const [statusId, setStatusId] = useState('')
-  const [typeId, setTypeId] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const load = useCallback(async (p, currentSort, currentStatusId, currentTypeId) => {
+  const load = useCallback(async (p, currentFilters) => {
     setIsLoading(true)
     setError(null)
     try {
-      const params = { page: p, pageSize: PAGE_SIZE, sort: currentSort }
-      if (currentStatusId) params.statusId = Number(currentStatusId)
-      if (currentTypeId) params.transactionTypeId = Number(currentTypeId)
-      const result = await transactionsService.listAll(params)
+      const result = await transactionsService.listAll({
+        page: p,
+        pageSize: PAGE_SIZE,
+        ...toApiFilterParams(currentFilters),
+      })
       setTransactions(result.items ?? [])
       setTotal(result.total ?? 0)
       setPage(p)
@@ -72,8 +64,12 @@ export default function AdminTransactionsPanel() {
   }, [])
 
   useEffect(() => {
-    load(1, sort, statusId, typeId)
-  }, [load, sort, statusId, typeId])
+    load(1, filters)
+  }, [filters, load])
+
+  const handleFilterChange = (patch) => {
+    onFilterChange(patch)
+  }
 
   return (
     <article className="rounded-panel border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -91,28 +87,16 @@ export default function AdminTransactionsPanel() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={statusId}
-            onChange={(e) => setStatusId(e.target.value)}
-            options={[{ value: '', label: 'All statuses' }, ...TRANSACTION_STATUS_OPTIONS]}
-            className="h-8 w-auto rounded-input border-border bg-background py-0 text-xs shadow-none"
-          />
-          <Select
-            value={typeId}
-            onChange={(e) => setTypeId(e.target.value)}
-            options={[{ value: '', label: 'All types' }, ...TRANSACTION_TYPE_OPTIONS]}
-            className="h-8 w-auto rounded-input border-border bg-background py-0 text-xs shadow-none"
-          />
-          <Select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            options={SORT_OPTIONS}
-            className="h-8 w-auto rounded-input border-border bg-background py-0 text-xs shadow-none"
+          <AdminTransactionFilters
+            filters={filters}
+            onChange={handleFilterChange}
+            onClear={onClearFilters}
+            hasActiveFilters={hasActiveFilters}
           />
           <Button
             variant="outline"
             className="h-8 rounded-input border-border text-xs font-medium shadow-none"
-            onClick={() => load(page, sort, statusId, typeId)}
+            onClick={() => load(page, filters)}
             disabled={isLoading}
           >
             <RotateCcw className="mr-1 size-3" />
@@ -204,7 +188,7 @@ export default function AdminTransactionsPanel() {
             variant="outline"
             className="h-8 rounded-input border-border text-xs shadow-none"
             disabled={page <= 1 || isLoading}
-            onClick={() => load(page - 1, sort, statusId, typeId)}
+            onClick={() => load(page - 1, filters)}
           >
             Previous
           </Button>
@@ -215,7 +199,7 @@ export default function AdminTransactionsPanel() {
             variant="outline"
             className="h-8 rounded-input border-border text-xs shadow-none"
             disabled={page >= totalPages || isLoading}
-            onClick={() => load(page + 1, sort, statusId, typeId)}
+            onClick={() => load(page + 1, filters)}
           >
             Next
           </Button>

@@ -67,6 +67,7 @@ from utils.password_policy import (
     PASSWORD_REUSE_MESSAGE,
     PASSWORD_SAME_AS_CURRENT_MESSAGE,
 )
+from utils.pwned_passwords import validate_password_not_pwned
 from utils.user_notification_email import is_recovery_email_verified, notification_email_for_user
 from utils.totp import (
     build_totp_uri,
@@ -205,6 +206,14 @@ class UserAuthService:
             value = value.replace(tzinfo=timezone.utc)
         return value <= datetime.now(timezone.utc)
 
+    def _validate_not_pwned(self, password: str) -> None:
+        validate_password_not_pwned(
+            password,
+            hibp_enabled=self.settings.hibp_enabled,
+            hibp_api_base_url=self.settings.hibp_api_base_url,
+            hibp_timeout_seconds=self.settings.hibp_timeout_seconds,
+        )
+
     def resolve_active_user_id(self, access_token: str) -> int | None:
         """Valid access JWT + existing user + not soft-deleted (deactivated)."""
         user_id = self.verify_access_token(access_token)
@@ -262,6 +271,7 @@ class UserAuthService:
         if existing_user:
             raise ValueError("EMAIL_NOT_AVAILABLE")
 
+        self._validate_not_pwned(register_data.password)
         hashed_password = self.hash_password(register_data.password)
         user = self.repo.create_user(register_data, hashed_password)
         refresh_token = self.create_refresh_token(user.user_id)
@@ -656,6 +666,7 @@ class UserAuthService:
             raise ValueError("USER_NOT_FOUND")
         if not self.verify_password(payload.current_password, user.password_hash):
             raise ValueError("WRONG_CURRENT_PASSWORD")
+        self._validate_not_pwned(payload.new_password)
         self._rotate_password(
             user_id,
             old_hash=user.password_hash,
@@ -693,6 +704,7 @@ class UserAuthService:
         if user is None or user.deleted_at is not None:
             raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
 
+        self._validate_not_pwned(payload.new_password)
         self._rotate_password(
             user.user_id,
             old_hash=user.password_hash,

@@ -27,3 +27,4 @@ from models.biometric_registration_challenge import BiometricRegistrationChallen
 from models.biometric_authentication_challenge import BiometricAuthenticationChallenge  # noqa: F401
 from models.email_notification_log import EmailNotificationLog  # noqa: F401
 from models.recurring_payment import RecurringPayment  # noqa: F401
+from models.audit_log_event import AuditLogEvent  # noqa: F401

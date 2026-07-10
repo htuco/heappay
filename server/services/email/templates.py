@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 
@@ -68,6 +69,20 @@ def refund_approved(
         f"{tx_line}"
         f"{amount_line}\n"
         "Funds will appear on your card per the refund policy.\n\n"
+        "— Heap"
+    )
+    return subject, body
+
+
+def card_expiring_soon(
+    *, first_name: str | None, last_four: str, expires_at: date
+) -> tuple[str, str]:
+    formatted = expires_at.strftime("%B %d, %Y")
+    subject = f"Your card ending in {last_four} expires soon"
+    body = (
+        f"{_greeting(first_name)}\n\n"
+        f"Your Heap card ending in {last_four} expires on {formatted}.\n"
+        "Add a replacement card in Wallet to avoid any interruption to your payments.\n\n"
         "— Heap"
     )
     return subject, body
