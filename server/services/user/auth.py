@@ -66,6 +66,7 @@ from settings import get_settings
 from utils.password_policy import (
     PASSWORD_REUSE_MESSAGE,
     PASSWORD_SAME_AS_CURRENT_MESSAGE,
+    validate_password_not_contains_email,
 )
 from utils.pwned_passwords import validate_password_not_pwned
 from utils.user_notification_email import is_recovery_email_verified, notification_email_for_user
@@ -666,6 +667,7 @@ class UserAuthService:
             raise ValueError("USER_NOT_FOUND")
         if not self.verify_password(payload.current_password, user.password_hash):
             raise ValueError("WRONG_CURRENT_PASSWORD")
+        validate_password_not_contains_email(payload.new_password, user.email)
         self._validate_not_pwned(payload.new_password)
         self._rotate_password(
             user_id,
@@ -704,6 +706,7 @@ class UserAuthService:
         if user is None or user.deleted_at is not None:
             raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
 
+        validate_password_not_contains_email(payload.new_password, user.email)
         self._validate_not_pwned(payload.new_password)
         self._rotate_password(
             user.user_id,
@@ -721,6 +724,8 @@ class UserAuthService:
         user = self.repo.get_user_by_id(user_id)
         if not user or user.deleted_at is not None:
             raise ValueError("USER_NOT_FOUND")
+
+        validate_password_not_contains_email(payload.new_password, user.email)
 
         new_hash = self.hash_password(payload.new_password)
         try:

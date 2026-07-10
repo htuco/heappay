@@ -46,9 +46,9 @@ function LoginStatusBanner() {
 
   return (
     <div
-      className={`mx-6 mt-6 flex items-start justify-between gap-3 rounded-input border px-4 py-3 text-sm ${banner.className}`}
+      className={`mb-4 ml-16 mr-6 mt-16 flex items-start justify-between gap-3 rounded-input border px-4 py-3 text-sm ${banner.className}`}
     >
-      <p>{banner.message}</p>
+      <p className="min-w-0 flex-1 leading-snug">{banner.message}</p>
       <button
         type="button"
         onClick={() => setDismissed((prev) => ({ ...prev, [activeKey]: true }))}
