@@ -13,6 +13,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from utils.email_policy import StrictEmailStr
 from utils.password_policy import (
     PASSWORD_CONTAINS_EMAIL_MESSAGE,
     PASSWORD_SAME_AS_CURRENT_MESSAGE,
@@ -43,7 +44,7 @@ class HcaptchaRequestMixin(BaseModel):
 
 
 class RegisterRequest(HcaptchaRequestMixin):
-    email: EmailStr
+    email: StrictEmailStr
     first_name: str
     last_name: str
     password: StrongPasswordStr
@@ -155,7 +156,7 @@ class AppPinDisableRequest(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
-    email: EmailStr | None = None
+    email: StrictEmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     avatar_url: str | None = Field(default=None, max_length=2048)
@@ -300,11 +301,11 @@ class TotpDisableRequest(BaseModel):
 
 
 class RecoveryEmailSetRequest(BaseModel):
-    email: EmailStr
+    email: StrictEmailStr
 
 
 class RecoveryEmailUpdateRequest(BaseModel):
-    email: EmailStr
+    email: StrictEmailStr
 
 
 class RecoveryEmailVerifyRequest(BaseModel):

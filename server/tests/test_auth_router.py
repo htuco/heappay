@@ -24,8 +24,10 @@ from schemas.user.biometric import (  # noqa: E402
 from utils.password_policy import (  # noqa: E402
     PASSWORD_CONTAINS_EMAIL_MESSAGE,
     PASSWORD_REQUIRES_UPPERCASE_MESSAGE,
+    PASSWORD_REUSE_MESSAGE,
     PASSWORD_SAME_AS_CURRENT_MESSAGE,
 )
+from utils.pwned_passwords import PASSWORD_PWNED_MESSAGE  # noqa: E402
 
 
 _NOW = datetime.now(timezone.utc)
@@ -742,6 +744,107 @@ def test_accept_invitation_rejects_weak_password() -> None:
     )
     assert resp.status_code == 422
     assert resp.json()["details"][0]["msg"] == PASSWORD_REQUIRES_UPPERCASE_MESSAGE
+
+
+def test_change_password_rejects_reused_recent_password() -> None:
+    class ReuseAuthService(_FakeAuthService):
+        def change_password(self, _user_id, _payload):
+            raise ValueError(PASSWORD_REUSE_MESSAGE)
+
+    client = _build_client(ReuseAuthService())
+    resp = client.post(
+        "/auth/change-password",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_password": "OldPassword123!",
+            "new_password": "HistoryPass123!",
+            "confirm_password": "HistoryPass123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == PASSWORD_REUSE_MESSAGE
+
+
+def test_register_rejects_pwned_password_message(monkeypatch) -> None:
+    from routes.user import auth as auth_route_module
+
+    class _PwnedRegisterService(_FakeAuthService):
+        def register(self, _payload):
+            raise ValueError(PASSWORD_PWNED_MESSAGE)
+
+    monkeypatch.setattr(auth_route_module, "verify_auth_hcaptcha", lambda _request, _token: None)
+    client = _build_client(_PwnedRegisterService())
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "Password123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == PASSWORD_PWNED_MESSAGE
+
+
+def test_change_password_rejects_pwned_password_message() -> None:
+    class _PwnedChangeService(_FakeAuthService):
+        def change_password(self, _user_id, _payload):
+            raise ValueError(PASSWORD_PWNED_MESSAGE)
+
+    client = _build_client(_PwnedChangeService())
+    resp = client.post(
+        "/auth/change-password",
+        headers={"Authorization": "Bearer access.token.here"},
+        json={
+            "current_password": "OldPassword123!",
+            "new_password": "Password123!",
+            "confirm_password": "Password123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == PASSWORD_PWNED_MESSAGE
+
+
+def test_password_reset_confirm_rejects_reused_recent_password() -> None:
+    class ReuseAuthService(_FakeAuthService):
+        def confirm_password_reset(self, _payload):
+            raise ValueError(PASSWORD_REUSE_MESSAGE)
+
+    client = _build_client(ReuseAuthService())
+    resp = client.post(
+        "/auth/password-reset/confirm",
+        json={
+            "token": "a" * 32,
+            "new_password": "HistoryPass123!",
+            "confirm_password": "HistoryPass123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == PASSWORD_REUSE_MESSAGE
+
+
+def test_password_reset_confirm_rejects_pwned_password_message() -> None:
+    class _PwnedResetService(_FakeAuthService):
+        def confirm_password_reset(self, _payload):
+            raise ValueError(PASSWORD_PWNED_MESSAGE)
+
+    client = _build_client(_PwnedResetService())
+    resp = client.post(
+        "/auth/password-reset/confirm",
+        json={
+            "token": "a" * 32,
+            "new_password": "Password123!",
+            "confirm_password": "Password123!",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["message"] == PASSWORD_PWNED_MESSAGE
+
+
+# ---------------------------------------------------------------------------
+# /me
+# ---------------------------------------------------------------------------
 
 def test_me_returns_200_with_role_fields() -> None:
     client = _build_client()

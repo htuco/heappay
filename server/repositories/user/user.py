@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import Select, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -54,6 +55,36 @@ class UserRepository:
     def get_by_id(self, user_id: int) -> User | None:
         stmt = select(User).where(User.user_id == user_id)
         return self._db.scalars(stmt).first()
+
+    def get_by_id_for_update(self, user_id: int) -> User | None:
+        stmt = select(User).where(User.user_id == user_id).with_for_update()
+        return self._db.scalars(stmt).first()
+
+    def credit_wallet(self, user_id: int, amount: Decimal) -> User:
+        """Atomically add *amount* to the user's wallet balance."""
+        if amount <= 0:
+            raise ValueError("Credit amount must be positive.")
+        user = self.get_by_id_for_update(user_id)
+        if user is None:
+            raise ValueError("User not found for wallet credit.")
+        user.wallet_balance = user.wallet_balance + amount
+        self._db.commit()
+        self._db.refresh(user)
+        return user
+
+    def debit_wallet(self, user_id: int, amount: Decimal) -> User:
+        """Atomically subtract *amount* from the user's wallet balance."""
+        if amount <= 0:
+            raise ValueError("Debit amount must be positive.")
+        user = self.get_by_id_for_update(user_id)
+        if user is None:
+            raise ValueError("User not found for wallet debit.")
+        if user.wallet_balance < amount:
+            raise ValueError("Insufficient wallet balance.")
+        user.wallet_balance = user.wallet_balance - amount
+        self._db.commit()
+        self._db.refresh(user)
+        return user
 
     def get_by_email(self, email: str) -> User | None:
         stmt = select(User).where(User.email == email)

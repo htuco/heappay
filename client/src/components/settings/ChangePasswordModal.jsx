@@ -25,6 +25,9 @@ function mapApiError(message) {
 	if (lower.includes('password must')) return { field: 'newPassword', message }
 	if (lower.includes('password is too common')) return { field: 'newPassword', message }
 	if (lower.includes('repeated patterns')) return { field: 'newPassword', message }
+	if (lower.includes('cannot reuse a recent password')) return { field: 'newPassword', message }
+	if (lower.includes('appeared in a data breach')) return { field: 'newPassword', message }
+	if (lower.includes('different from your current password')) return { field: 'newPassword', message }
 	return { field: null, message }
 }
 

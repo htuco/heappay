@@ -85,6 +85,11 @@ function buildPageParams(params = {}) {
 	if (typeof params.statusId === 'number') query.status_id = params.statusId
 	if (typeof params.transactionTypeId === 'number') query.transaction_type_id = params.transactionTypeId
 	if (typeof params.categoryId === 'number') query.category_id = params.categoryId
+	if (typeof params.fromDate === 'string' && params.fromDate) query.from_date = params.fromDate
+	if (typeof params.toDate === 'string' && params.toDate) query.to_date = params.toDate
+	if (typeof params.userRoleName === 'string' && params.userRoleName) {
+		query.user_role_name = params.userRoleName
+	}
 	if (typeof params.sort === 'string') query.sort = params.sort
 	return query
 }
@@ -535,6 +540,15 @@ export const transactionsService = {
 		try {
 			const query = {}
 			if (typeof params.months === 'number') query.months = params.months
+			if (typeof params.statusId === 'number') query.status_id = params.statusId
+			if (typeof params.transactionTypeId === 'number') {
+				query.transaction_type_id = params.transactionTypeId
+			}
+			if (typeof params.fromDate === 'string' && params.fromDate) query.from_date = params.fromDate
+			if (typeof params.toDate === 'string' && params.toDate) query.to_date = params.toDate
+			if (typeof params.userRoleName === 'string' && params.userRoleName) {
+				query.user_role_name = params.userRoleName
+			}
 			const { data } = await api.get('/transactions/stats', { params: query })
 			return data.data
 		} catch (error) {

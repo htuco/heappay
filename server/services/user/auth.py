@@ -64,9 +64,11 @@ from services.user.password_reset_mailer import PasswordResetMailer
 from services.user.recovery_email_mailer import RecoveryEmailMailer
 from settings import get_settings
 from utils.password_policy import (
-    validate_new_password_differs_from_hash,
+    PASSWORD_REUSE_MESSAGE,
+    PASSWORD_SAME_AS_CURRENT_MESSAGE,
     validate_password_not_contains_email,
 )
+from utils.pwned_passwords import validate_password_not_pwned
 from utils.user_notification_email import is_recovery_email_verified, notification_email_for_user
 from utils.totp import (
     build_totp_uri,
@@ -121,6 +123,24 @@ class UserAuthService:
         return bcrypt.checkpw(
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
         )
+
+    def _assert_password_not_reused(self, user_id: int, new_password: str, current_hash: str) -> None:
+        if self.verify_password(new_password, current_hash):
+            raise ValueError(PASSWORD_SAME_AS_CURRENT_MESSAGE)
+
+        limit = self.settings.password_history_limit
+        history = self.repo.list_password_history(user_id, limit=limit)
+        for row in history:
+            if self.verify_password(new_password, row.password_hash):
+                raise ValueError(PASSWORD_REUSE_MESSAGE)
+
+    def _rotate_password(self, user_id: int, *, old_hash: str, new_password: str) -> None:
+        """Block reuse, store the old hash in history, set the new password, trim history."""
+        self._assert_password_not_reused(user_id, new_password, old_hash)
+        self.repo.append_password_history(user_id, old_hash)
+        new_hash = self.hash_password(new_password)
+        self.repo.update_password_and_clear_refresh_token(user_id, new_hash)
+        self.repo.trim_password_history(user_id, keep=self.settings.password_history_limit)
 
     def hash_app_pin(self, pin: str) -> str:
         salt = bcrypt.gensalt(rounds=12)
@@ -187,6 +207,14 @@ class UserAuthService:
             value = value.replace(tzinfo=timezone.utc)
         return value <= datetime.now(timezone.utc)
 
+    def _validate_not_pwned(self, password: str) -> None:
+        validate_password_not_pwned(
+            password,
+            hibp_enabled=self.settings.hibp_enabled,
+            hibp_api_base_url=self.settings.hibp_api_base_url,
+            hibp_timeout_seconds=self.settings.hibp_timeout_seconds,
+        )
+
     def resolve_active_user_id(self, access_token: str) -> int | None:
         """Valid access JWT + existing user + not soft-deleted (deactivated)."""
         user_id = self.verify_access_token(access_token)
@@ -244,6 +272,7 @@ class UserAuthService:
         if existing_user:
             raise ValueError("EMAIL_NOT_AVAILABLE")
 
+        self._validate_not_pwned(register_data.password)
         hashed_password = self.hash_password(register_data.password)
         user = self.repo.create_user(register_data, hashed_password)
         refresh_token = self.create_refresh_token(user.user_id)
@@ -639,13 +668,12 @@ class UserAuthService:
         if not self.verify_password(payload.current_password, user.password_hash):
             raise ValueError("WRONG_CURRENT_PASSWORD")
         validate_password_not_contains_email(payload.new_password, user.email)
-        validate_new_password_differs_from_hash(
-            payload.new_password,
-            user.password_hash,
-            verify_password=self.verify_password,
+        self._validate_not_pwned(payload.new_password)
+        self._rotate_password(
+            user_id,
+            old_hash=user.password_hash,
+            new_password=payload.new_password,
         )
-        new_hash = self.hash_password(payload.new_password)
-        self.repo.update_password_and_clear_refresh_token(user_id, new_hash)
 
     def request_password_reset(self, payload: PasswordResetRequest) -> None:
         user = self.repo.get_user_by_email(str(payload.email))
@@ -679,14 +707,12 @@ class UserAuthService:
             raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
 
         validate_password_not_contains_email(payload.new_password, user.email)
-        validate_new_password_differs_from_hash(
-            payload.new_password,
-            user.password_hash,
-            verify_password=self.verify_password,
+        self._validate_not_pwned(payload.new_password)
+        self._rotate_password(
+            user.user_id,
+            old_hash=user.password_hash,
+            new_password=payload.new_password,
         )
-
-        new_hash = self.hash_password(payload.new_password)
-        self.repo.update_password_and_clear_refresh_token(user.user_id, new_hash)
         self.repo.mark_password_reset_tokens_used_for_user(user.user_id)
 
     def accept_invitation(

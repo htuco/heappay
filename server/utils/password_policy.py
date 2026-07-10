@@ -14,6 +14,7 @@ PASSWORD_SAME_AS_CURRENT_MESSAGE = "New password must be different from your cur
 PASSWORD_CONTAINS_EMAIL_MESSAGE = "Password must not contain your email address."
 PASSWORD_REPEATED_PATTERN_MESSAGE = "Password must not contain obvious repeated patterns."
 PASSWORD_TOO_COMMON_MESSAGE = "Password is too common. Choose a more unique password."
+PASSWORD_REUSE_MESSAGE = "You cannot reuse a recent password."
 
 PASSWORD_POLICY_CLIENT_MESSAGES = frozenset(
     {
@@ -27,6 +28,7 @@ PASSWORD_POLICY_CLIENT_MESSAGES = frozenset(
         PASSWORD_CONTAINS_EMAIL_MESSAGE,
         PASSWORD_REPEATED_PATTERN_MESSAGE,
         PASSWORD_TOO_COMMON_MESSAGE,
+        PASSWORD_REUSE_MESSAGE,
     }
 )
 

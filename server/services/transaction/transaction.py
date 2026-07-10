@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import base64
 import json
 from decimal import Decimal
@@ -123,6 +123,8 @@ class TransactionService:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
         sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
         if status_id is not None and not self._repo.transaction_status_exists(status_id):
@@ -142,6 +144,8 @@ class TransactionService:
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            from_date=from_date,
+            to_date=to_date,
             sort=sort,
         )
         total = self._repo.count_for_user(
@@ -149,6 +153,8 @@ class TransactionService:
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            from_date=from_date,
+            to_date=to_date,
         )
         return items, total
 
@@ -160,6 +166,9 @@ class TransactionService:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        user_role_name: str | None = None,
         sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
         if status_id is not None and not self._repo.transaction_status_exists(status_id):
@@ -178,17 +187,45 @@ class TransactionService:
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            from_date=from_date,
+            to_date=to_date,
+            user_role_name=user_role_name,
             sort=sort,
         )
         total = self._repo.count_all(
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            from_date=from_date,
+            to_date=to_date,
+            user_role_name=user_role_name,
         )
         return items, total
 
-    def get_platform_stats(self, *, months: int = 6) -> dict:
-        return self._repo.get_platform_stats(months=months)
+    def get_platform_stats(
+        self,
+        *,
+        months: int = 6,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        user_role_name: str | None = None,
+    ) -> dict:
+        if status_id is not None and not self._repo.transaction_status_exists(status_id):
+            raise TransactionStatusNotFoundError()
+        if transaction_type_id is not None and not self._repo.transaction_type_exists(
+            transaction_type_id
+        ):
+            raise TransactionTypeNotFoundError()
+        return self._repo.get_platform_stats(
+            months=months,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            from_date=from_date,
+            to_date=to_date,
+            user_role_name=user_role_name,
+        )
 
     def get_summary_for_user(
         self,

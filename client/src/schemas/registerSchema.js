@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { strictEmailSchema } from '@/schemas/emailSchema'
 import { strongPasswordSchema } from '@/schemas/passwordSchema'
 
 export const registerSchema = z
@@ -11,7 +12,7 @@ export const registerSchema = z
 			.string()
 			.min(1, 'Last name is required')
 			.min(2, 'Last name must be at least 2 characters'),
-		email: z.string().min(1, 'Email is required').email('Invalid email format'),
+		email: strictEmailSchema('Email is required'),
 		password: z.string().min(1, 'Password is required'),
 		confirmPassword: z.string().min(1, 'Confirm password is required'),
 		agreedToTerms: z

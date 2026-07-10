@@ -33,7 +33,9 @@ def main() -> int:
         "cards_skipped_pending=%(cards_skipped_pending)d "
         "cards_skipped_no_destination=%(cards_skipped_no_destination)d "
         "cards_errors=%(cards_errors)d processed=%(processed)d allowed=%(allowed)d "
-        "denied=%(denied)d skipped=%(skipped)d errors=%(errors)d",
+        "denied=%(denied)d skipped=%(skipped)d errors=%(errors)d "
+        "card_expiry_emails_sent=%(card_expiry_emails_sent)d "
+        "card_expiry_emails_skipped=%(card_expiry_emails_skipped)d",
         stats,
     )
     return 0

@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     password_reset_token_expire_minutes: int = 30
+    password_history_limit: int = 5
+    hibp_enabled: bool = False
+    hibp_timeout_seconds: float = 3.0
+    hibp_api_base_url: str = "https://api.pwnedpasswords.com"
     password_reset_url: str = "http://localhost:5173/reset-password"
     recovery_email_verify_url: str = "http://localhost:5173/verify-recovery-email"
     recovery_email_token_expire_hours: int = 24
@@ -55,6 +59,7 @@ class Settings(BaseSettings):
     tx_processor_interval_seconds: int = 60
     tx_processor_batch_size: int = 100
     card_expiration_batch_size: int = 100
+    card_expiry_warning_days: int = 30
     tx_min_processing_delay_seconds: int = 3
     # Amounts above this stay pending for staff; everything else auto-allows if rules pass.
     tx_manual_review_above_amount: Decimal = Decimal("500000.00")

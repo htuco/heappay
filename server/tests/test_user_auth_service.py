@@ -12,16 +12,19 @@ from schemas.user.auth import (  # noqa: E402
     AppPinSetRequest,
     ChangePasswordRequest,
     PasswordResetConfirmRequest,
-)
-from utils.password_policy import (  # noqa: E402
-    PASSWORD_CONTAINS_EMAIL_MESSAGE,
-    PASSWORD_SAME_AS_CURRENT_MESSAGE,
+    RegisterRequest,
 )
 from schemas.user.biometric import (  # noqa: E402
     BiometricDisableRequest,
     BiometricRegistrationCompleteRequest,
 )
 from services.user.auth import UserAuthService  # noqa: E402
+from utils.password_policy import (  # noqa: E402
+    PASSWORD_CONTAINS_EMAIL_MESSAGE,
+    PASSWORD_REUSE_MESSAGE,
+    PASSWORD_SAME_AS_CURRENT_MESSAGE,
+)
+from utils.pwned_passwords import PASSWORD_PWNED_MESSAGE  # noqa: E402
 
 
 class _UserRow:
@@ -48,9 +51,16 @@ class _AuthRepo:
         self.user = _UserRow()
         self.challenges = {}
         self.credentials = []
+        self.password_history: list[SimpleNamespace] = []
+        self._history_id = 0
 
     def get_user_by_id(self, user_id: int):
         if user_id == self.user.user_id:
+            return self.user
+        return None
+
+    def get_user_by_email(self, email: str):
+        if email == self.user.email:
             return self.user
         return None
 
@@ -67,6 +77,52 @@ class _AuthRepo:
         if user_id == self.user.user_id:
             self.user.password_hash = hashed_password
             self.user.refresh_token = None
+
+    def list_password_history(self, user_id: int, *, limit: int):
+        rows = [row for row in self.password_history if row.user_id == user_id]
+        rows.sort(key=lambda row: (row.created_at, row.history_id), reverse=True)
+        return rows[:limit]
+
+    def append_password_history(self, user_id: int, password_hash: str):
+        self._history_id += 1
+        row = SimpleNamespace(
+            history_id=self._history_id,
+            user_id=user_id,
+            password_hash=password_hash,
+            created_at=datetime.now(timezone.utc),
+        )
+        self.password_history.append(row)
+        return row
+
+    def trim_password_history(self, user_id: int, *, keep: int) -> int:
+        rows = [row for row in self.password_history if row.user_id == user_id]
+        rows.sort(key=lambda row: (row.created_at, row.history_id), reverse=True)
+        keep_ids = {row.history_id for row in rows[:keep]}
+        before = len(self.password_history)
+        self.password_history = [
+            row
+            for row in self.password_history
+            if row.user_id != user_id or row.history_id in keep_ids
+        ]
+        return before - len(self.password_history)
+
+    def create_user(self, register_data, hashed_password: str):
+        self.user.email = str(register_data.email)
+        self.user.password_hash = hashed_password
+        return self.user
+
+    def save_refresh_token(self, user_id: int, refresh_token: str) -> None:
+        if user_id == self.user.user_id:
+            self.user.refresh_token = refresh_token
+
+    def get_role_name_for_user(self, _role_id: int) -> str:
+        return "user"
+
+    def get_password_reset_token(self, _token_hash: str):
+        return None
+
+    def mark_password_reset_tokens_used_for_user(self, _user_id: int) -> None:
+        return None
 
     def update_app_pin(self, user_id: int, pin_hash: str) -> None:
         if user_id == self.user.user_id:
@@ -198,15 +254,19 @@ def test_change_password_invalidates_existing_refresh_token() -> None:
         patch.object(
             service,
             "verify_password",
-            side_effect=lambda plain, _hash: plain == payload.current_password,
+            side_effect=lambda plain, hashed: plain == payload.current_password
+            and hashed == "old-hash",
         ),
         patch.object(service, "hash_password", return_value="new-hash"),
         patch.object(service, "verify_refresh_token", return_value=repo.user.user_id),
+        patch.object(service, "_validate_not_pwned", return_value=None),
     ):
         service.change_password(repo.user.user_id, payload)
 
         assert repo.user.password_hash == "new-hash"
         assert repo.user.refresh_token is None
+        assert len(repo.password_history) == 1
+        assert repo.password_history[0].password_hash == "old-hash"
         assert service.refresh("old.refresh.token") is None
 
 
@@ -228,6 +288,25 @@ def test_change_password_rejects_password_containing_email_local_part() -> None:
             raise AssertionError("Expected password containing email local part to be rejected")
 
 
+def test_register_rejects_pwned_password() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    payload = RegisterRequest(
+        email="new@example.com",
+        first_name="Test",
+        last_name="User",
+        password="StrongPass1!",
+        hcaptcha_token=None,
+    )
+    with patch.object(service, "_validate_not_pwned", side_effect=ValueError(PASSWORD_PWNED_MESSAGE)):
+        try:
+            service.register(payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_PWNED_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected breached password to be rejected")
+
+
 def test_change_password_rejects_same_password_hash() -> None:
     repo = _AuthRepo()
     service = UserAuthService(repo)
@@ -237,16 +316,127 @@ def test_change_password_rejects_same_password_hash() -> None:
         confirm_password="DifferentPass1!",
     )
 
-    with (
-        patch.object(service, "verify_password", return_value=True),
-        patch.object(service, "hash_password", return_value="new-hash"),
-    ):
+    with patch.object(service, "verify_password", return_value=True):
         try:
             service.change_password(repo.user.user_id, payload)
         except ValueError as exc:
             assert str(exc) == PASSWORD_SAME_AS_CURRENT_MESSAGE
         else:  # pragma: no cover
             raise AssertionError("Expected identical password hash to be rejected")
+
+
+def test_change_password_rejects_reused_history_password() -> None:
+    repo = _AuthRepo()
+    repo.append_password_history(repo.user.user_id, "history-hash-1")
+    service = UserAuthService(repo)
+    payload = ChangePasswordRequest(
+        current_password="OldPassword123!",
+        new_password="HistoryPass123!",
+        confirm_password="HistoryPass123!",
+    )
+
+    def verify(plain: str, hashed: str) -> bool:
+        if hashed == "old-hash":
+            return plain == "OldPassword123!"
+        if hashed == "history-hash-1":
+            return plain == "HistoryPass123!"
+        return False
+
+    with patch.object(service, "verify_password", side_effect=verify):
+        try:
+            service.change_password(repo.user.user_id, payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_REUSE_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected password history reuse to be rejected")
+
+
+def test_change_password_trims_history_to_limit() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    for index in range(5):
+        repo.append_password_history(repo.user.user_id, f"old-{index}")
+
+    payload = ChangePasswordRequest(
+        current_password="OldPassword123!",
+        new_password="BrandNewPass123!",
+        confirm_password="BrandNewPass123!",
+    )
+
+    with (
+        patch.object(
+            service,
+            "verify_password",
+            side_effect=lambda plain, hashed: plain == "OldPassword123!" and hashed == "old-hash",
+        ),
+        patch.object(service, "hash_password", return_value="new-hash"),
+        patch.object(service, "_validate_not_pwned", return_value=None),
+        patch.object(service.settings, "password_history_limit", 5),
+    ):
+        service.change_password(repo.user.user_id, payload)
+
+    assert repo.user.password_hash == "new-hash"
+    assert len(repo.password_history) == 5
+    assert repo.password_history[-1].password_hash == "old-hash"
+    assert all(row.password_hash != "old-0" for row in repo.password_history)
+
+
+def test_change_password_rejects_pwned_password() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    payload = ChangePasswordRequest(
+        current_password="OldPassword123!",
+        new_password="StrongPass1!",
+        confirm_password="StrongPass1!",
+    )
+    with (
+        patch.object(
+            service,
+            "verify_password",
+            side_effect=lambda plain, hashed: plain == payload.current_password and hashed == "old-hash",
+        ),
+        patch.object(service, "_validate_not_pwned", side_effect=ValueError(PASSWORD_PWNED_MESSAGE)),
+    ):
+        try:
+            service.change_password(repo.user.user_id, payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_PWNED_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected pwned password to be rejected")
+
+
+def test_confirm_password_reset_rejects_reused_history_password() -> None:
+    repo = _AuthRepo()
+    repo.append_password_history(repo.user.user_id, "history-hash-1")
+    service = UserAuthService(repo)
+    token_row = SimpleNamespace(
+        user_id=repo.user.user_id,
+        used_at=None,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+    )
+
+    def verify(plain: str, hashed: str) -> bool:
+        if hashed == "old-hash":
+            return False
+        if hashed == "history-hash-1":
+            return plain == "HistoryPass123!"
+        return False
+
+    with (
+        patch.object(repo, "get_password_reset_token", return_value=token_row),
+        patch.object(service, "verify_password", side_effect=verify),
+    ):
+        payload = PasswordResetConfirmRequest(
+            token="a" * 32,
+            new_password="HistoryPass123!",
+            confirm_password="HistoryPass123!",
+        )
+        try:
+            service.confirm_password_reset(payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_REUSE_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected reset history reuse to be rejected")
 
 
 def test_confirm_password_reset_rejects_same_password_hash() -> None:
@@ -257,13 +447,10 @@ def test_confirm_password_reset_rejects_same_password_hash() -> None:
         used_at=None,
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
     )
-    repo.get_password_reset_token = lambda _token_hash: token_row
 
     with (
-        patch.object(repo, "update_password_and_clear_refresh_token"),
-        patch.object(repo, "mark_password_reset_tokens_used_for_user"),
+        patch.object(repo, "get_password_reset_token", return_value=token_row),
         patch.object(service, "verify_password", return_value=True),
-        patch.object(service, "hash_password", return_value="new-hash"),
     ):
         payload = PasswordResetConfirmRequest(
             token="a" * 32,
@@ -276,6 +463,33 @@ def test_confirm_password_reset_rejects_same_password_hash() -> None:
             assert str(exc) == PASSWORD_SAME_AS_CURRENT_MESSAGE
         else:  # pragma: no cover
             raise AssertionError("Expected reset to reject the current password")
+
+
+def test_confirm_password_reset_rejects_pwned_password() -> None:
+    repo = _AuthRepo()
+    service = UserAuthService(repo)
+    token_row = SimpleNamespace(
+        user_id=repo.user.user_id,
+        used_at=None,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+    )
+    payload = PasswordResetConfirmRequest(
+        token="a" * 32,
+        new_password="StrongPass1!",
+        confirm_password="StrongPass1!",
+    )
+
+    with (
+        patch.object(repo, "get_password_reset_token", return_value=token_row),
+        patch.object(service, "verify_password", return_value=False),
+        patch.object(service, "_validate_not_pwned", side_effect=ValueError(PASSWORD_PWNED_MESSAGE)),
+    ):
+        try:
+            service.confirm_password_reset(payload)
+        except ValueError as exc:
+            assert str(exc) == PASSWORD_PWNED_MESSAGE
+        else:  # pragma: no cover
+            raise AssertionError("Expected pwned password to be rejected")
 
 
 def test_set_app_pin_requires_current_password() -> None:

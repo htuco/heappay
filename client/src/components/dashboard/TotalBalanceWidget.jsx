@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUpRight, Eye, EyeOff, HelpCircle, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, CreditCard, Eye, EyeOff, HelpCircle, TrendingUp, Wallet } from 'lucide-react'
 
 function ReservedHelp() {
   return (
@@ -25,6 +25,8 @@ function ReservedHelp() {
 
 export default function TotalBalanceWidget({
   totalBalance = '$0.00',
+  walletBalance = null,
+  cardsBalance = null,
   reservedBalance = null,
   hasReserved = false,
   currency = 'USD',
@@ -33,6 +35,7 @@ export default function TotalBalanceWidget({
   isLoading = false,
   noMainCardCta,
 }) {
+  const hasBreakdown = walletBalance != null && cardsBalance != null
   const [isBalanceVisible, setIsBalanceVisible] = useState(true)
   const visibleBalance = isBalanceVisible ? totalBalance : '••••••••'
 
@@ -85,6 +88,24 @@ export default function TotalBalanceWidget({
                 </span>
               ) : null}
             </p>
+            {hasBreakdown ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-input border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
+                  <Wallet className="h-3.5 w-3.5" strokeWidth={2} />
+                  Wallet
+                  <span className="tabular font-semibold text-white">
+                    {isBalanceVisible ? walletBalance : '••••'}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-input border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
+                  <CreditCard className="h-3.5 w-3.5" strokeWidth={2} />
+                  On cards
+                  <span className="tabular font-semibold text-white">
+                    {isBalanceVisible ? cardsBalance : '••••'}
+                  </span>
+                </span>
+              </div>
+            ) : null}
           </>
         )}
       </div>
