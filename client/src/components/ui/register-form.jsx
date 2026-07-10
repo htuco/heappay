@@ -13,6 +13,7 @@ import { HCaptchaModal } from '@/components/auth-ui/HCaptchaField'
 import { isHCaptchaEnabled } from '@/utils/hcaptcha'
 import { getApiErrorMessage } from '@/utils/api'
 import { PASSWORD_RULES_HINT } from '@/schemas/passwordSchema'
+import { PERSON_NAME_RULES_MESSAGE } from '@/schemas/personNameSchema'
 
 const INITIAL_FORM_STATE = {
 	firstName: '',
@@ -176,6 +177,9 @@ export default function RegisterForm() {
 								error={errors.lastName}
 							/>
 						</div>
+						{!errors.firstName && !errors.lastName ? (
+							<p className="-mt-1 text-xs text-muted-foreground">{PERSON_NAME_RULES_MESSAGE}</p>
+						) : null}
 
 						<AuthTextInput
 							id="email"

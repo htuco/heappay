@@ -27,6 +27,7 @@ from utils.password_policy import (  # noqa: E402
     PASSWORD_REUSE_MESSAGE,
     PASSWORD_SAME_AS_CURRENT_MESSAGE,
 )
+from utils.person_name import PERSON_NAME_DIGITS_MESSAGE  # noqa: E402
 from utils.pwned_passwords import PASSWORD_PWNED_MESSAGE  # noqa: E402
 
 
@@ -268,6 +269,21 @@ def test_register_rejects_password_containing_email_local_part() -> None:
     )
     assert resp.status_code == 422
     assert resp.json()["details"][0]["msg"] == PASSWORD_CONTAINS_EMAIL_MESSAGE
+
+
+def test_register_rejects_invalid_first_name() -> None:
+    client = _build_client()
+    resp = client.post(
+        "/auth/register",
+        json={
+            "email": "new@example.com",
+            "first_name": "John3",
+            "last_name": "User",
+            "password": "Password1!",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["details"][0]["msg"] == PERSON_NAME_DIGITS_MESSAGE
 
 
 def test_register_hcaptcha_failure_returns_friendly_error(monkeypatch) -> None:
