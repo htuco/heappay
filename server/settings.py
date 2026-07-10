@@ -87,6 +87,16 @@ class Settings(BaseSettings):
     app_pin_max_failed_attempts: int = 5
     app_pin_lockout_minutes: int = 5
 
+    # Indicative currency conversion for the AI assistant (informational only —
+    # it never moves money). Live rates come from FX_API_URL (frankfurter.app,
+    # keyless) with a short cache; FX_RATES is the offline fallback, quoted as
+    # units of the base currency per 1 unit of the listed currency
+    # (e.g. with base USD, "EUR:1.08" => 1 EUR = 1.08 USD).
+    fx_api_url: str = "https://api.frankfurter.dev/v1"
+    fx_base_currency: str = "USD"
+    fx_rates: str = "EUR:1.08,GBP:1.27,CHF:1.12,JPY:0.0064,BAM:0.55"
+    fx_cache_ttl_seconds: int = 3600
+
     # FEP Nexus funding integration (card top-ups via external treasury)
     nexus_url: str = ""
     nexus_secret_key: str = ""

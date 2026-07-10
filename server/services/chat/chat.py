@@ -13,7 +13,12 @@ from repositories.chat.chat import ChatRepository
 from repositories.transaction.transaction import TransactionRepository
 from repositories.user.user import UserRepository
 from repositories.vector.knowledge import VectorRepository
-from services.chat.agent_tools import TOOL_DEFS, AgentTools, gemini_tool_declarations
+from services.chat.agent_tools import (
+    INFO_TOOLS,
+    TOOL_DEFS,
+    AgentTools,
+    gemini_tool_declarations,
+)
 from services.embedding.embedding import EmbeddingService
 from services.request.request import RequestService
 from services.transaction.transaction import TransactionService
@@ -56,8 +61,16 @@ Rules:
 - When you ask the user to confirm an action, state the exact integer IDs in your confirmation message (e.g. "send $20 from card_id=18 to card_id=22"). That way the IDs are still visible when they reply "yes".
 - Freezing/unfreezing a card and refunds are REQUESTS that an admin must approve. After calling those tools, tell the user the request was submitted and is pending approval — do NOT claim the card is already frozen/unfrozen or that the money was refunded.
 - A "top up" between the user's own cards is just a send_money from one of their cards to another (sender and recipient must be different cards). The sender card must not be frozen.
-- All amounts are in US dollars (USD). The app does not use euros — do not convert currencies; treat the number the user gives as USD.
+- Account balances, card balances and transaction amounts are all in US dollars (USD); when the user gives a bare number for an action, treat it as USD. Indicative currency-conversion questions are answered in "Chat" mode, not here.
 - Take one step at a time and explain what you did after each action.
+"""
+
+_FX_CURRENCY_GUIDANCE = """
+Currency conversion:
+- You have exactly ONE tool available here: convert_currency. It returns an INDICATIVE exchange-rate estimate and moves no money.
+- When the user asks what an amount is worth in another currency (e.g. "convert €50 to dollars", "how much is 20 GBP in USD?"), CALL convert_currency with the amount and the ISO 4217 currency codes, then give them the result.
+- Always make clear the figure is an indicative rate for information only and that no money was actually converted — converting real money only happens as part of a transaction, which you cannot perform here.
+- Do NOT invent exchange rates from memory — always use the tool. If it returns an error (e.g. an unsupported currency), tell the user you can't convert that currency rather than guessing.
 """
 
 
@@ -255,6 +268,9 @@ class ChatService:
             context = self._user_context_from_vector(user_id, message) or self._user_context_from_repo(user_id)
             lines.append(context)
 
+        if not agent_mode:
+            lines.append(_FX_CURRENCY_GUIDANCE)
+
         return "\n".join(lines)
 
     def send_message(
@@ -297,6 +313,12 @@ class ChatService:
                     reply = self._run_agent_loop(_groq_messages(), user_id)
             elif use_agent:
                 reply = self._run_agent_loop(_groq_messages(), user_id)
+            elif self._agent_tools is not None:
+                # "Chat" mode: offer only the read-only informational tools
+                # (currency conversion) — no account-changing actions.
+                reply = self._run_agent_loop(
+                    _groq_messages(), user_id, tools=INFO_TOOLS
+                )
             else:
                 response = self._client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
@@ -313,14 +335,17 @@ class ChatService:
         updated_history = self._repo.get_history(user_id, agent_mode=agent_mode)
         return reply, updated_history
 
-    def _run_agent_loop(self, messages: list[dict], user_id: int) -> str:
+    def _run_agent_loop(
+        self, messages: list[dict], user_id: int, tools: list | None = None
+    ) -> str:
+        tools = tools if tools is not None else TOOL_DEFS
         reply = ""
         for _ in range(_MAX_AGENT_STEPS):
             try:
                 response = self._client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=messages,
-                    tools=TOOL_DEFS,
+                    tools=tools,
                     tool_choice="auto",
                 )
             except BadRequestError as exc:

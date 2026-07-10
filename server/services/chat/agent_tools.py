@@ -7,6 +7,7 @@ from repositories.card.card import CardRepository
 from repositories.transaction.transaction import TransactionRepository
 from repositories.user.user import UserRepository
 from schemas.transaction import TransactionCreate
+from services.fx.fx import FxError, FxService
 from services.request.request import (
     CardAlreadyFrozenError,
     CardNotFoundError as RequestCardNotFoundError,
@@ -219,6 +220,42 @@ TOOL_DEFS = [
     },
 ]
 
+# Read-only, informational tools offered in "Chat" (ask) mode. They never change
+# the user's account, so they are kept separate from the action TOOL_DEFS above.
+CONVERT_CURRENCY_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "convert_currency",
+        "description": (
+            "Convert an amount from one currency to another at an INDICATIVE exchange "
+            "rate (e.g. 'convert 50 EUR to USD', 'how much is £20 in dollars?'). This is "
+            "an informational estimate only — it does NOT move or convert any real money. "
+            "Use it whenever the user asks what an amount is worth in another currency. "
+            "Currency codes are ISO 4217 (USD, EUR, GBP, ...)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "description": "The amount to convert. Must be greater than zero.",
+                },
+                "from_currency": {
+                    "type": "string",
+                    "description": "ISO 4217 code of the source currency, e.g. EUR.",
+                },
+                "to_currency": {
+                    "type": "string",
+                    "description": "ISO 4217 code of the target currency, e.g. USD.",
+                },
+            },
+            "required": ["amount", "from_currency", "to_currency"],
+        },
+    },
+}
+
+INFO_TOOLS = [CONVERT_CURRENCY_TOOL]
+
 
 def gemini_tool_declarations():
     from google.genai import types
@@ -266,12 +303,14 @@ class AgentTools:
         user_repo: UserRepository,
         transaction_service: TransactionService,
         request_service: RequestService,
+        fx_service: FxService | None = None,
     ) -> None:
         self._card_repo = card_repo
         self._transaction_repo = transaction_repo
         self._user_repo = user_repo
         self._transaction_service = transaction_service
         self._request_service = request_service
+        self._fx = fx_service or FxService()
 
     def begin_turn(self, user_id: int) -> None:
         _GATE.begin_turn(user_id)
@@ -402,6 +441,23 @@ class AgentTools:
     def _tool_get_refund_status(self, args: dict, user_id: int) -> str:
         transaction_id = int(args["transaction_id"])
         return json.dumps(self._request_service.get_refund_status(transaction_id))
+
+    def _tool_convert_currency(self, args: dict, user_id: int) -> str:
+        try:
+            amount = Decimal(str(args["amount"]))
+        except (KeyError, TypeError, InvalidOperation):
+            return json.dumps({"error": "A numeric amount is required."})
+        from_currency = str(args.get("from_currency", "")).strip()
+        to_currency = str(args.get("to_currency", "")).strip()
+        if not from_currency or not to_currency:
+            return json.dumps({"error": "from_currency and to_currency are required."})
+        try:
+            result = self._fx.convert(
+                amount=amount, from_currency=from_currency, to_currency=to_currency
+            )
+        except FxError as exc:
+            return json.dumps({"error": str(exc)})
+        return json.dumps(result)
 
     def _tool_send_money(self, args: dict, user_id: int) -> str:
         type_id = self._transaction_repo.get_type_id_by_name(_PAYMENT_TYPE_NAME)
