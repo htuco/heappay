@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text
@@ -10,6 +10,7 @@ from models.refund_request_detail import RefundRequestDetail
 from models.request import Request
 from models.transaction import Transaction
 from models.user import User
+from models.user_role import UserRole
 from models.transaction_status import TransactionStatus
 from models.transaction_type import TransactionType
 
@@ -46,6 +47,8 @@ class TransactionRepository:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
         sort: str = "newest",
     ) -> list[Transaction]:
         """List transactions where the user owns either the sender or recipient card."""
@@ -55,6 +58,8 @@ class TransactionRepository:
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
                 category_id=category_id,
+                from_date=from_date,
+                to_date=to_date,
             )
             .options(*self._party_load_options())
             .order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["newest"]))
@@ -70,6 +75,8 @@ class TransactionRepository:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
     ) -> int:
         stmt = select(func.count()).select_from(
             self._filtered_user_transactions_stmt(
@@ -77,6 +84,8 @@ class TransactionRepository:
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
                 category_id=category_id,
+                from_date=from_date,
+                to_date=to_date,
             ).subquery()
         )
         return int(self._db.execute(stmt).scalar_one())
@@ -89,6 +98,9 @@ class TransactionRepository:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        user_role_name: str | None = None,
         sort: str = "newest",
     ) -> list[Transaction]:
         stmt = (
@@ -96,6 +108,9 @@ class TransactionRepository:
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
                 category_id=category_id,
+                from_date=from_date,
+                to_date=to_date,
+                user_role_name=user_role_name,
             )
             .options(*self._party_load_options())
             .order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["newest"]))
@@ -110,15 +125,57 @@ class TransactionRepository:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        user_role_name: str | None = None,
     ) -> int:
         stmt = select(func.count()).select_from(
             self._filtered_all_transactions_stmt(
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
                 category_id=category_id,
+                from_date=from_date,
+                to_date=to_date,
+                user_role_name=user_role_name,
             ).subquery()
         )
         return int(self._db.execute(stmt).scalar_one())
+
+    def _transaction_filter_clauses(
+        self,
+        *,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        user_role_name: str | None = None,
+    ) -> list:
+        clauses = []
+        if status_id is not None:
+            clauses.append(Transaction.status_id == status_id)
+        if transaction_type_id is not None:
+            clauses.append(Transaction.transaction_type_id == transaction_type_id)
+        if category_id is not None:
+            clauses.append(Transaction.category_id == category_id)
+        if from_date is not None:
+            clauses.append(func.date(Transaction.created_at) >= from_date)
+        if to_date is not None:
+            clauses.append(func.date(Transaction.created_at) <= to_date)
+        if user_role_name is not None:
+            role_card_ids = (
+                select(Card.card_id)
+                .join(User, Card.user_id == User.user_id)
+                .join(UserRole, User.user_role_id == UserRole.role_id)
+                .where(UserRole.role_name == user_role_name)
+            )
+            clauses.append(
+                or_(
+                    Transaction.sender_card_id.in_(role_card_ids),
+                    Transaction.recipient_card_id.in_(role_card_ids),
+                )
+            )
+        return clauses
 
     def _filtered_all_transactions_stmt(
         self,
@@ -126,14 +183,20 @@ class TransactionRepository:
         status_id: int | None,
         transaction_type_id: int | None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        user_role_name: str | None = None,
     ):
         stmt = select(Transaction)
-        if status_id is not None:
-            stmt = stmt.where(Transaction.status_id == status_id)
-        if transaction_type_id is not None:
-            stmt = stmt.where(Transaction.transaction_type_id == transaction_type_id)
-        if category_id is not None:
-            stmt = stmt.where(Transaction.category_id == category_id)
+        for clause in self._transaction_filter_clauses(
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            category_id=category_id,
+            from_date=from_date,
+            to_date=to_date,
+            user_role_name=user_role_name,
+        ):
+            stmt = stmt.where(clause)
         return stmt
 
     def _user_transactions_stmt(self, user_id: int):
@@ -152,14 +215,18 @@ class TransactionRepository:
         status_id: int | None,
         transaction_type_id: int | None,
         category_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
     ):
         stmt = self._user_transactions_stmt(user_id)
-        if status_id is not None:
-            stmt = stmt.where(Transaction.status_id == status_id)
-        if transaction_type_id is not None:
-            stmt = stmt.where(Transaction.transaction_type_id == transaction_type_id)
-        if category_id is not None:
-            stmt = stmt.where(Transaction.category_id == category_id)
+        for clause in self._transaction_filter_clauses(
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            category_id=category_id,
+            from_date=from_date,
+            to_date=to_date,
+        ):
+            stmt = stmt.where(clause)
         return stmt
 
     def get_summary_for_user(
@@ -278,15 +345,36 @@ class TransactionRepository:
 
         return [dict(r) for r in self._db.execute(stmt).mappings().all()]
 
-    def get_platform_stats(self, *, months: int = 6) -> dict:
-        since = func.now() - text(f"INTERVAL '{int(months)} months'")
-        completed_id = self.get_status_id_by_name("completed")
+    def get_platform_stats(
+        self,
+        *,
+        months: int = 6,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        user_role_name: str | None = None,
+    ) -> dict:
+        filter_clauses = self._transaction_filter_clauses(
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            from_date=from_date,
+            to_date=to_date,
+            user_role_name=user_role_name,
+        )
 
         period_col = func.to_char(
             func.date_trunc("month", Transaction.created_at), "YYYY-MM"
         )
-        monthly_filters = [Transaction.created_at >= since]
-        if completed_id is not None:
+        monthly_filters = list(filter_clauses)
+        if from_date is not None or to_date is not None:
+            pass
+        else:
+            since = func.now() - text(f"INTERVAL '{int(months)} months'")
+            monthly_filters.append(Transaction.created_at >= since)
+
+        completed_id = self.get_status_id_by_name("completed")
+        if completed_id is not None and status_id is None:
             monthly_filters.append(Transaction.status_id == completed_id)
 
         monthly_stmt = (
@@ -306,10 +394,11 @@ class TransactionRepository:
                 func.count(Transaction.transaction_id).label("count"),
             )
             .select_from(TransactionStatus)
-            .outerjoin(
+            .join(
                 Transaction,
                 Transaction.status_id == TransactionStatus.transaction_status_id,
             )
+            .where(*filter_clauses)
             .group_by(TransactionStatus.name)
             .order_by(TransactionStatus.name.asc())
         )
@@ -320,20 +409,33 @@ class TransactionRepository:
                 func.count(Transaction.transaction_id).label("count"),
             )
             .select_from(TransactionType)
-            .outerjoin(
+            .join(
                 Transaction,
                 Transaction.transaction_type_id == TransactionType.transaction_type_id,
             )
+            .where(*filter_clauses)
             .group_by(TransactionType.name)
             .order_by(TransactionType.name.asc())
         )
 
         completed_volume = Decimal("0")
+        completed_clauses = list(filter_clauses)
         if completed_id is not None:
-            completed_volume_stmt = select(
-                func.coalesce(func.sum(Transaction.amount), Decimal("0"))
-            ).where(Transaction.status_id == completed_id)
-            completed_volume = self._db.execute(completed_volume_stmt).scalar_one()
+            completed_clauses.append(Transaction.status_id == completed_id)
+        completed_volume_stmt = select(
+            func.coalesce(func.sum(Transaction.amount), Decimal("0"))
+        ).where(*completed_clauses)
+        completed_volume = self._db.execute(completed_volume_stmt).scalar_one()
+
+        total_count_stmt = select(func.count()).select_from(
+            self._filtered_all_transactions_stmt(
+                status_id=status_id,
+                transaction_type_id=transaction_type_id,
+                from_date=from_date,
+                to_date=to_date,
+                user_role_name=user_role_name,
+            ).subquery()
+        )
 
         return {
             "monthly": [dict(r) for r in self._db.execute(monthly_stmt).mappings().all()],
@@ -345,7 +447,7 @@ class TransactionRepository:
                 row["name"]: int(row["count"])
                 for row in self._db.execute(type_stmt).mappings().all()
             },
-            "total_count": self.count_all(),
+            "total_count": int(self._db.execute(total_count_stmt).scalar_one()),
             "completed_volume": completed_volume,
             "months": months,
         }

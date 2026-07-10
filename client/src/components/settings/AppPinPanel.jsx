@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { KeyRound, X } from 'lucide-react'
+import { KeyRound, Lock, X } from 'lucide-react'
 
-import ActionRow from '@/components/settings/ActionRow'
+import VerificationMethodRow from '@/components/settings/VerificationMethodRow'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import { Input } from '@/components/ui/input'
@@ -281,14 +281,16 @@ export default function AppPinPanel() {
 			<FormBanner variant="success" message={success} />
 			<FormBanner variant="error" message={error} />
 
-			<ActionRow
+			<VerificationMethodRow
+				icon={Lock}
 				label="App PIN"
+				active={enabled}
 				hint={
 					status.locked
 						? `Too many failed attempts. Try again${lockedUntil ? ` after ${lockedUntil}` : ' later'}.`
 						: enabled
-							? `${status.failed_attempts_remaining ?? 5} attempt(s) remaining before lockout.`
-							: 'Requires your current password for first-time setup.'
+							? `A 4-digit PIN can approve payments. ${status.failed_attempts_remaining ?? 5} attempt(s) remaining before lockout.`
+							: 'Set a 4-digit PIN to approve payments. Requires your current password for first-time setup.'
 				}
 				action={
 					<div className="flex w-full flex-col gap-2 sm:w-auto">

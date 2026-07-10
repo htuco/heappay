@@ -6,6 +6,7 @@ import AddCardModal from '@/components/AddCardModal'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 import CardStatsRow from '@/components/wallet/CardStatsRow'
 import CardWidget from '@/components/wallet/CardWidget'
+import WalletBalanceCard from '@/components/wallet/WalletBalanceCard'
 import WalletQuickActions from '@/components/wallet/WalletQuickActions'
 import WalletTransactionsTable, {
   WalletTransactionsTableSkeleton,
@@ -105,13 +106,19 @@ export default function WalletPage() {
             highlight ? 'rounded-panel ring-2 ring-primary ring-offset-2 ring-offset-background transition-shadow duration-500' : ''
           }`}
         >
-          <WalletQuickActions
-            onAddCard={addCard}
-            isAddingCard={isSaving}
-            addCardError={saveError}
-            onClearAddCardError={clearSaveError}
-            isLoading={isLoading && cards.length === 0}
-          />
+          <div className="space-y-4">
+            <WalletBalanceCard
+              cards={cards}
+              isLoading={isLoading && cards.length === 0}
+            />
+            <WalletQuickActions
+              onAddCard={addCard}
+              isAddingCard={isSaving}
+              addCardError={saveError}
+              onClearAddCardError={clearSaveError}
+              isLoading={isLoading && cards.length === 0}
+            />
+          </div>
         </div>
 
         {/* Card widget (carousel + balance) — first on mobile, right rail on desktop */}

@@ -62,7 +62,7 @@ class FakeTransactionService:
     def list_all(self, **_kwargs):
         return [_FakeTransaction(1)], 1
 
-    def get_platform_stats(self, *, months: int):
+    def get_platform_stats(self, *, months: int, **_kwargs):
         return {
             "monthly": [{"period": "2026-06", "count": 5, "volume": Decimal("100.00")}],
             "by_status": {"completed": 5},

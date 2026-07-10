@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle2, ShieldOff, Smartphone, X } from 'lucide-react'
+import { ShieldOff, Smartphone, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
-import ActionRow from '@/components/settings/ActionRow'
+import VerificationMethodRow from '@/components/settings/VerificationMethodRow'
 import { confirmTotp, disableTotp, setupTotp } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
 
@@ -260,56 +260,27 @@ export default function TwoFactorPanel({ enabled, onStatusChange }) {
         />
       )}
 
-      <div className="rounded-surface border border-border bg-emphasis px-4 py-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 gap-3">
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-input border ${enabled ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border bg-muted/40 text-muted-foreground'}`}>
-              <Smartphone className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-card-foreground">Authenticator app</p>
-                {enabled ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Active
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                    Not enabled
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {enabled
-                  ? 'Login requires a code from your authenticator app.'
-                  : 'Add a second layer of security to your account.'}
-              </p>
-            </div>
-          </div>
-          {enabled && <ShieldOff className="hidden h-5 w-5 shrink-0 text-muted-foreground sm:block" />}
-        </div>
-      </div>
-
-      <ActionRow
-        label="Two-factor authentication"
+      <VerificationMethodRow
+        icon={Smartphone}
+        label="Authenticator app"
+        active={enabled}
         hint={enabled
-          ? 'Requires your current authenticator code to disable.'
-          : 'Use an authenticator app like Google Authenticator or Authy.'}
+          ? 'Login requires a code from your authenticator app. Disabling needs a current code.'
+          : 'Use an app like Google Authenticator or Authy for a code at login.'}
         action={
           enabled ? (
             <Button
               variant="outline"
-              className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50"
+              className="w-full border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50 sm:w-auto"
               onClick={() => setShowDisable(true)}
             >
               <ShieldOff className="h-4 w-4" />
-              Disable 2FA
+              Disable
             </Button>
           ) : (
             <Button className="w-full sm:w-auto" onClick={() => setShowSetup(true)}>
               <Smartphone className="h-4 w-4" />
-              Enable 2FA
+              Enable
             </Button>
           )
         }

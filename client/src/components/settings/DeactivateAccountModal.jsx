@@ -53,12 +53,24 @@ export default function DeactivateAccountModal({ isOpen, onClose }) {
 	return (
 		<Modal isOpen={isOpen} onClose={handleClose} title="Deactivate Account">
 			<form className="space-y-4" onSubmit={handleSubmit}>
-				<div className="rounded-input border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-					<p className="font-semibold">This deactivation is permanent.</p>
-					<p className="mt-1 text-destructive/80">
-						Your account will be disabled and you will be signed out immediately.
-						You cannot undo this yourself — contact support if you need help later.
+				<div className="space-y-2 rounded-input border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+					<p className="font-semibold text-amber-700 dark:text-amber-300">
+						Before you deactivate
 					</p>
+					<ul className="space-y-1.5 text-amber-800/90 dark:text-amber-200/90">
+						<li className="flex gap-2">
+							<span aria-hidden="true">•</span>
+							<span>You&apos;ll be signed out right away on every device.</span>
+						</li>
+						<li className="flex gap-2">
+							<span aria-hidden="true">•</span>
+							<span>Your account, cards, and history are hidden, not deleted.</span>
+						</li>
+						<li className="flex gap-2">
+							<span aria-hidden="true">•</span>
+							<span>You can restore access later by contacting support.</span>
+						</li>
+					</ul>
 				</div>
 
 				<AuthTextInput

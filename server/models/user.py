@@ -26,6 +26,9 @@ class User(Base):
     )
     refresh_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    wallet_balance: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0", default=Decimal("0.00")
+    )
     billing_reminders_enabled: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
@@ -83,6 +86,7 @@ class User(Base):
     role = relationship("UserRole", back_populates="users")
     cards = relationship("Card", back_populates="user")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user")
+    password_history = relationship("PasswordHistory", back_populates="user")
     biometric_credentials = relationship("BiometricCredential", back_populates="user")
     biometric_registration_challenges = relationship(
         "BiometricRegistrationChallenge",

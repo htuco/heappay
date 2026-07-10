@@ -3,13 +3,14 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+from utils.email_policy import StrictEmailStr
 from utils.person_name import PersonNameStr, validate_person_name
 
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
 
 
 class UserCreateRequest(BaseModel):
-    email: EmailStr
+    email: StrictEmailStr
     first_name: PersonNameStr
     last_name: PersonNameStr
     password: PasswordStr
@@ -29,7 +30,7 @@ class UserCreateRequest(BaseModel):
 
 
 class UserUpdateRequest(BaseModel):
-    email: EmailStr | None = None
+    email: StrictEmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     password: PasswordStr | None = None

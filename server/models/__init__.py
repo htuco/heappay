@@ -13,6 +13,7 @@ from models.user import User  # noqa: F401
 from models.user_role import UserRole  # noqa: F401
 from models.user_status import UserStatus  # noqa: F401
 from models.password_reset_token import PasswordResetToken  # noqa: F401
+from models.password_history import PasswordHistory  # noqa: F401
 from models.chat_message import ChatMessage  # noqa: F401
 from models.request_type import RequestType  # noqa: F401
 from models.request_status import RequestStatus  # noqa: F401
@@ -26,3 +27,4 @@ from models.biometric_registration_challenge import BiometricRegistrationChallen
 from models.biometric_authentication_challenge import BiometricAuthenticationChallenge  # noqa: F401
 from models.email_notification_log import EmailNotificationLog  # noqa: F401
 from models.recurring_payment import RecurringPayment  # noqa: F401
+from models.audit_log_event import AuditLogEvent  # noqa: F401

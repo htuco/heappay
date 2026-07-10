@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Download, Search, X } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +10,7 @@ import TransactionHistoryErrorState from '@/components/payment/TransactionHistor
 import TransactionHistoryRow from '@/components/payment/TransactionHistoryRow'
 import TransactionHistorySkeleton from '@/components/payment/TransactionHistorySkeleton'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useTransactionFilterParams } from '@/hooks/useTransactionFilterParams'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
 import { useAppSelector } from '@/store/hooks'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
@@ -20,7 +22,6 @@ import {
   TRANSACTION_TYPE_OPTIONS,
   buildCategoryOptions,
   getTransactionStatus,
-  transactionMatchesFilters,
   transactionMatchesLookup,
 } from '@/components/payment/transactionHistory.utils'
 
@@ -55,13 +56,31 @@ function getTransactionMonthGroup(transaction) {
 
 export default function TransactionHistory({ onTransactionSelect, onRefreshReady, pageSize = 20 }) {
   const [lookupValue, setLookupValue] = useState('')
-  const [dateFilter, setDateFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [cardFilter, setCardFilter] = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [dateSort, setDateSort] = useState('newest')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { filters, setFilters, clearFilters: clearUrlFilters } = useTransactionFilterParams()
   const [isExportingPdf, setIsExportingPdf] = useState(false)
+
+  const cardFilter = searchParams.get('card') || 'all'
+  const categoryFilter = searchParams.get('category') || 'all'
+  const dateFilter = filters.from
+
+  const setCardFilter = (value) => {
+    const params = new URLSearchParams(searchParams)
+    if (!value || value === 'all') params.delete('card')
+    else params.set('card', String(value))
+    setSearchParams(params, { replace: true })
+  }
+
+  const setCategoryFilter = (value) => {
+    const params = new URLSearchParams(searchParams)
+    if (!value || value === 'all') params.delete('category')
+    else params.set('category', String(value))
+    setSearchParams(params, { replace: true })
+  }
+
+  const statusFilter = filters.status || 'all'
+  const typeFilter = filters.type || 'all'
+  const dateSort = filters.sort || 'newest'
 
   const { notify } = useNotifications()
   const categories = useAppSelector(selectTransactionCategories)
@@ -85,9 +104,20 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
   const transactionTypeId = typeFilter === 'all' ? undefined : Number(typeFilter)
   const cardId = cardFilter === 'all' ? undefined : Number(cardFilter)
   const categoryId = categoryFilter === 'all' ? undefined : Number(categoryFilter)
+  const fromDate = dateFilter || undefined
+  const toDate = filters.to || dateFilter || undefined
 
   const { transactions, isLoading, error, page, totalPages, total, setPage, refresh } =
-    useTransactions({ pageSize, statusId, transactionTypeId, cardId, categoryId })
+    useTransactions({
+      pageSize,
+      statusId,
+      transactionTypeId,
+      cardId,
+      categoryId,
+      fromDate,
+      toDate,
+      sort: dateSort,
+    })
 
   // Expose the list refresh to the parent (PaymentPage) so actions that change a
   // transaction's status — e.g. cancelling a pending payment — can refetch.
@@ -96,15 +126,8 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
   }, [onRefreshReady, refresh])
 
   const filteredTransactions = useMemo(() => {
-    return transactions
-      .filter((t) => transactionMatchesLookup(t, lookupValue))
-      .filter((t) => transactionMatchesFilters(t, { date: dateFilter }))
-      .sort((a, b) => {
-        const aTime = new Date(a.created_at).getTime() || 0
-        const bTime = new Date(b.created_at).getTime() || 0
-        return dateSort === 'newest' ? bTime - aTime : aTime - bTime
-      })
-  }, [transactions, lookupValue, dateFilter, dateSort])
+    return transactions.filter((t) => transactionMatchesLookup(t, lookupValue))
+  }, [transactions, lookupValue])
 
   const hasTransactions = transactions.length > 0
   const hasFiltered = filteredTransactions.length > 0
@@ -168,12 +191,9 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
 
   function clearFilters() {
     setLookupValue('')
-    setDateFilter('')
-    setStatusFilter('all')
-    setTypeFilter('all')
+    clearUrlFilters()
     setCardFilter('all')
     setCategoryFilter('all')
-    setDateSort('newest')
   }
 
   return (
@@ -199,14 +219,17 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
             <Input
               type="date"
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setFilters({ from: value, to: value })
+              }}
               disabled={!hasTransactions && !isLoading}
               className="h-8 rounded-input border-border/70 bg-background text-sm shadow-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:w-auto"
             />
 
             <Select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => setFilters({ status: e.target.value === 'all' ? '' : e.target.value })}
               disabled={!hasTransactions && !isLoading}
               options={[{ value: 'all', label: 'All statuses' }, ...TRANSACTION_STATUS_OPTIONS]}
               className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
@@ -214,7 +237,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
 
             <Select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => setFilters({ type: e.target.value === 'all' ? '' : e.target.value })}
               disabled={!hasTransactions && !isLoading}
               options={[{ value: 'all', label: 'All types' }, ...TRANSACTION_TYPE_OPTIONS]}
               className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
@@ -241,7 +264,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
 
             <Select
               value={dateSort}
-              onChange={(e) => setDateSort(e.target.value)}
+              onChange={(e) => setFilters({ sort: e.target.value })}
               disabled={!hasTransactions && !isLoading}
               options={DATE_SORT_OPTIONS}
               className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
