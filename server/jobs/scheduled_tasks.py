@@ -6,11 +6,13 @@ from database import SessionLocal
 from jobs.nexus_claim import claim_approved_funds
 from repositories.card.card import CardRepository
 from repositories.recurring_payment.recurring_payment import RecurringPaymentRepository
+from repositories.request.request import RequestRepository
 from repositories.transaction.transaction import TransactionRepository
 from services.card.card import CardService
 from services.email.card_expiry_notifier import CardExpiryNotifier
 from services.nexus.funding import is_nexus_configured
 from services.recurring_payment.recurring_payment import RecurringPaymentService
+from services.request.refund_processor import RefundProcessorService
 from services.transaction.transaction_processor import TransactionProcessorService
 from settings import get_settings
 
@@ -25,6 +27,9 @@ def run() -> dict[str, int]:
         tx_stats = TransactionProcessorService(
             TransactionRepository(db), settings=settings
         ).process_batch()
+        refund_stats = RefundProcessorService(
+            RequestRepository(db), settings=settings
+        ).process_batch()
         recurring_stats = RecurringPaymentService(
             RecurringPaymentRepository(db),
             TransactionRepository(db),
@@ -34,6 +39,13 @@ def run() -> dict[str, int]:
             days=settings.card_expiry_warning_days,
             limit=settings.card_expiration_batch_size,
         )
-        return {**card_stats, **tx_stats, **recurring_stats, **nexus_stats, **card_expiry_stats}
+        return {
+            **card_stats,
+            **tx_stats,
+            **refund_stats,
+            **recurring_stats,
+            **nexus_stats,
+            **card_expiry_stats,
+        }
     finally:
         db.close()
