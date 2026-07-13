@@ -33,6 +33,7 @@ from schemas.user.auth import (
     TotpLoginResponse,
     TokenResponse,
     TotpVerifyRequest,
+    VerifyEmailRequest,
 )
 from utils.audit_log import EVENT_LOGIN_FAILED, EVENT_LOGIN_SUCCESS, record_audit_log
 from schemas.user.biometric import (
@@ -562,6 +563,45 @@ def confirm_password_reset(
         raise InvalidInput("Password reset link is invalid or expired.") from None
 
     return AuthResponse(success=True, message="Password reset successfully.", data=None)
+
+
+@router.post("/verify-email", response_model=AuthResponse)
+@limiter.limit(AUTH_RATE_LIMIT)
+def verify_email(
+    request: Request,
+    payload: VerifyEmailRequest,
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    try:
+        service.verify_email(payload)
+    except ValueError:
+        raise InvalidInput("Verification link is invalid or expired.") from None
+
+    return AuthResponse(success=True, message="Email verified successfully.", data=None)
+
+
+@router.post("/verify-email/resend", response_model=AuthResponse)
+@limiter.limit(AUTH_RATE_LIMIT)
+def resend_verification_email(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    user_id = service.resolve_active_user_id(credentials.credentials)
+    if user_id is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    try:
+        service.resend_verification_email(user_id)
+    except ValueError as exc:
+        if str(exc) == "ALREADY_VERIFIED":
+            raise InvalidInput("Your email is already verified.") from None
+        raise InvalidInput("Could not resend verification email.") from None
+
+    return AuthResponse(success=True, message="Verification email sent.", data=None)
 
 
 @router.post("/accept-invitation", response_model=AuthResponse)

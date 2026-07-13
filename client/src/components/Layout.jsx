@@ -8,6 +8,7 @@ import ToastStack from './ui/ToastStack'
 import NotificationPanel from './notifications/NotificationPanel'
 import { useTheme } from '@/hooks/useTheme'
 import ChatWidget from './chat/ChatWidget'
+import EmailVerificationBanner from './EmailVerificationBanner'
 
 const PAGE_META = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Your financial overview.' },
@@ -78,6 +79,7 @@ export default function Layout() {
         </header>
 
         <main className="flex-1 overflow-auto overflow-x-hidden px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 md:px-8 md:py-8 md:pb-8">
+          {!isLanding && <EmailVerificationBanner />}
           <Outlet />
         </main>
 

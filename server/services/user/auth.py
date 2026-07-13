@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import base64
 import hashlib
 import json
+import logging
 import secrets
 from typing import Optional
 from urllib.parse import urlencode
@@ -59,7 +60,9 @@ from schemas.user.auth import (
     TotpRequiredResponse,
     TotpSetupResponse,
     UserResponse,
+    VerifyEmailRequest,
 )
+from services.user.email_verification_mailer import EmailVerificationMailer
 from services.user.password_reset_mailer import PasswordResetMailer
 from services.user.recovery_email_mailer import RecoveryEmailMailer
 from settings import get_settings
@@ -77,6 +80,8 @@ from utils.totp import (
     generate_totp_secret,
     verify_totp_code,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def decode_access_token_subject(token: str) -> int | None:
@@ -113,6 +118,7 @@ class UserAuthService:
         self.settings = get_settings()
         self.password_reset_mailer = PasswordResetMailer(self.settings)
         self.recovery_email_mailer = RecoveryEmailMailer(self.settings)
+        self.email_verification_mailer = EmailVerificationMailer(self.settings)
 
     def hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt(rounds=12)
@@ -185,7 +191,7 @@ class UserAuthService:
         except InvalidTokenError:
             return None
 
-    def _hash_reset_token(self, token: str) -> str:
+    def _hash_token(self, token: str) -> str:
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     def _build_password_reset_url(self, token: str) -> str:
@@ -201,6 +207,10 @@ class UserAuthService:
 
     def _recovery_email_verified_flag(self, user) -> bool:
         return is_recovery_email_verified(user)
+
+    def _build_email_verification_url(self, token: str) -> str:
+        separator = "&" if "?" in self.settings.email_verification_url else "?"
+        return f"{self.settings.email_verification_url}{separator}{urlencode({'token': token})}"
 
     def _is_expired(self, value: datetime) -> bool:
         if value.tzinfo is None:
@@ -259,6 +269,7 @@ class UserAuthService:
             payment_confirm_above_amount=user.payment_confirm_above_amount,
             recovery_email=getattr(user, "recovery_email", None),
             recovery_email_verified=self._recovery_email_verified_flag(user),
+            email_verified_at=user.email_verified_at,
         )
         return TokenResponse(
             access_token=access_token or self.create_access_token(user.user_id),
@@ -275,9 +286,26 @@ class UserAuthService:
         self._validate_not_pwned(register_data.password)
         hashed_password = self.hash_password(register_data.password)
         user = self.repo.create_user(register_data, hashed_password)
+        self._send_verification_email(user)
         refresh_token = self.create_refresh_token(user.user_id)
         self.repo.save_refresh_token(user.user_id, refresh_token)
         return self._build_token_response(user.user_id, refresh_token)
+
+    def _send_verification_email(self, user) -> None:
+        token = secrets.token_urlsafe(48)
+        token_hash = self._hash_token(token)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=self.settings.email_verification_token_expire_minutes
+        )
+        self.repo.create_email_verification_token(user.user_id, token_hash, expires_at)
+
+        try:
+            self.email_verification_mailer.send_verification_link(
+                user.email,
+                self._build_email_verification_url(token),
+            )
+        except Exception:
+            logger.warning("Failed to send verification email to user %s", user.user_id)
 
     def create_partial_token(self, user_id: int) -> str:
         """Short-lived token issued after correct password when 2FA is enabled.
@@ -681,7 +709,7 @@ class UserAuthService:
             return
 
         token = secrets.token_urlsafe(48)
-        token_hash = self._hash_reset_token(token)
+        token_hash = self._hash_token(token)
         expires_at = datetime.now(timezone.utc) + timedelta(
             minutes=self.settings.password_reset_token_expire_minutes
         )
@@ -697,7 +725,7 @@ class UserAuthService:
             raise ValueError("MAIL_DELIVERY_FAILED") from exc
 
     def confirm_password_reset(self, payload: PasswordResetConfirmRequest) -> None:
-        token_hash = self._hash_reset_token(payload.token)
+        token_hash = self._hash_token(payload.token)
         row = self.repo.get_password_reset_token(token_hash)
         if row is None or row.used_at is not None or self._is_expired(row.expires_at):
             raise ValueError("INVALID_OR_EXPIRED_RESET_TOKEN")
@@ -714,6 +742,29 @@ class UserAuthService:
             new_password=payload.new_password,
         )
         self.repo.mark_password_reset_tokens_used_for_user(user.user_id)
+
+    def verify_email(self, payload: VerifyEmailRequest) -> None:
+        token_hash = self._hash_token(payload.token)
+        row = self.repo.get_email_verification_token(token_hash)
+        if row is None or row.used_at is not None or self._is_expired(row.expires_at):
+            raise ValueError("INVALID_OR_EXPIRED_VERIFICATION_TOKEN")
+
+        user = self.repo.get_user_by_id(row.user_id)
+        if user is None or user.deleted_at is not None:
+            raise ValueError("INVALID_OR_EXPIRED_VERIFICATION_TOKEN")
+
+        self.repo.mark_email_verified(user.user_id)
+        self.repo.mark_email_verification_tokens_used_for_user(user.user_id)
+
+    def resend_verification_email(self, user_id: int) -> None:
+        user = self.repo.get_user_by_id(user_id)
+        if user is None or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        if user.email_verified_at is not None:
+            raise ValueError("ALREADY_VERIFIED")
+
+        self.repo.mark_email_verification_tokens_used_for_user(user.user_id)
+        self._send_verification_email(user)
 
     def accept_invitation(
         self,

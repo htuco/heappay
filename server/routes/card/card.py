@@ -6,7 +6,13 @@ from sqlalchemy.orm import Session
 from database import get_db
 from tasks.sync import run_sync_for_user
 from repositories.card.card import CardRepository
-from routes.dependencies import UserContext, get_user_context, require_admin, require_staff
+from routes.dependencies import (
+    UserContext,
+    get_user_context,
+    require_admin,
+    require_staff,
+    require_verified_context,
+)
 from schemas.card import CardCreate, CardLookupResponse, CardPatch, CardResponse
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
 from services.card.card import (
@@ -238,6 +244,7 @@ def create_card(
     payload: CardCreate,
     background_tasks: BackgroundTasks,
     ctx: UserContext = Depends(get_user_context),
+    _ctx_verified: UserContext = Depends(require_verified_context),
     service: CardService = Depends(get_card_service),
 ) -> CardResponse:
     if not ctx.is_staff and payload.user_id != ctx.user_id:
@@ -278,6 +285,7 @@ def patch_card(
     card_id: int,
     payload: CardPatch,
     ctx: UserContext = Depends(get_user_context),
+    _ctx_verified: UserContext = Depends(require_verified_context),
     service: CardService = Depends(get_card_service),
 ) -> CardResponse:
     row = service.get_by_id(card_id)
@@ -311,6 +319,7 @@ def patch_card(
 def delete_card(
     card_id: int,
     ctx: UserContext = Depends(get_user_context),
+    _ctx_verified: UserContext = Depends(require_verified_context),
     service: CardService = Depends(get_card_service),
 ) -> Response:
     row = service.get_by_id(card_id)
@@ -389,6 +398,7 @@ def unblock_card(
 def restore_card(
     card_id: int,
     ctx: UserContext = Depends(get_user_context),
+    _ctx_verified: UserContext = Depends(require_verified_context),
     service: CardService = Depends(get_card_service),
 ) -> CardResponse:
     row = service.get_by_id_including_deleted(card_id)
@@ -410,6 +420,7 @@ def restore_card(
 def set_main_card(
     card_id: int,
     ctx: UserContext = Depends(get_user_context),
+    _ctx_verified: UserContext = Depends(require_verified_context),
     service: CardService = Depends(get_card_service),
 ) -> CardResponse:
     row = service.get_by_id(card_id)

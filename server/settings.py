@@ -30,12 +30,14 @@ class Settings(BaseSettings):
     password_reset_url: str = "http://localhost:5173/reset-password"
     recovery_email_verify_url: str = "http://localhost:5173/verify-recovery-email"
     recovery_email_token_expire_hours: int = 24
+    email_verification_token_expire_minutes: int = 60 * 24
+    email_verification_url: str = "http://localhost:5173/verify-email"
 
     # hCaptcha bot protection. Verification is disabled until a secret key is set.
     hcaptcha_secret_key: str = ""
     hcaptcha_verify_url: str = "https://api.hcaptcha.com/siteverify"
 
-    # Optional SMTP mail delivery for password reset links.
+    # Optional SMTP mail delivery for password reset and email verification links.
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_username: str | None = None

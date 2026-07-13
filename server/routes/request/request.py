@@ -3,7 +3,13 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.request.request import RequestRepository
-from routes.dependencies import get_current_user_id, get_user_context, require_admin, require_staff
+from routes.dependencies import (
+    get_current_user_id,
+    get_user_context,
+    require_admin,
+    require_staff,
+    require_verified_user,
+)
 from schemas.pagination import Page
 from schemas.request import (
     CardFreezeRequestCreate,
@@ -154,7 +160,7 @@ def _to_response(req, *, mask_amounts: bool = False) -> RequestResponse:
 )
 def create_refund_request(
     payload: RefundRequestCreate,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -242,7 +248,7 @@ def decline_refund(
 )
 def create_card_freeze_request(
     payload: CardFreezeRequestCreate,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:
@@ -331,7 +337,7 @@ def decline_card_freeze(
 )
 def create_card_unfreeze_request(
     payload: CardFreezeRequestCreate,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: RequestService = Depends(get_request_service),
 ) -> ApiResponse[RequestResponse]:
     try:

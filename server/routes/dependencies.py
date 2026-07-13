@@ -23,6 +23,7 @@ class UserContext:
     user_id: int
     is_admin: bool
     is_staff: bool
+    is_verified: bool = True
 
 
 def get_current_user_id(
@@ -44,17 +45,20 @@ def get_user_context(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ) -> UserContext:
-    """Return the current user's id and whether they hold the admin role."""
+    """Return the current user's id, role, and email verification status."""
     stmt = (
-        select(UserRole.role_name)
+        select(UserRole.role_name, User.email_verified_at)
         .join(User, User.user_role_id == UserRole.role_id)
         .where(User.user_id == user_id)
     )
-    role_name = db.execute(stmt).scalar_one_or_none()
+    row = db.execute(stmt).one_or_none()
+    role_name = row[0] if row else None
+    verified_at = row[1] if row else None
     return UserContext(
         user_id=user_id,
         is_admin=(role_name == ADMIN_ROLE_NAME),
         is_staff=(role_name in STAFF_ROLE_NAMES),
+        is_verified=(verified_at is not None),
     )
 
 
@@ -94,3 +98,31 @@ def require_staff(
             detail="Staff privileges required.",
         )
     return user_id
+
+
+def require_verified_user(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> int:
+    """Authorize that the current user has verified their email. Returns user_id; raises 403 otherwise."""
+    verified_at = db.execute(
+        select(User.email_verified_at).where(User.user_id == user_id)
+    ).scalar_one_or_none()
+    if verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email address before completing this action.",
+        )
+    return user_id
+
+
+def require_verified_context(
+    ctx: UserContext = Depends(get_user_context),
+) -> UserContext:
+    """Authorize that the current user has verified their email. Returns ctx; raises 403 otherwise."""
+    if not ctx.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email address before completing this action.",
+        )
+    return ctx

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import bcrypt
 from sqlalchemy.exc import IntegrityError
 
@@ -102,6 +104,9 @@ class UserService:
             address=payload.address,
             status_id=payload.status_id,
             user_role_id=payload.user_role_id,
+            # Admin-created accounts are trusted out of band — exempt from the
+            # self-registration email verification gate.
+            email_verified_at=datetime.now(timezone.utc),
         )
         try:
             return self._repo.create(user)

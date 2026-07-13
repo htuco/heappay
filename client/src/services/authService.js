@@ -283,6 +283,16 @@ export async function confirmPasswordReset({ token, newPassword }) {
 	return data
 }
 
+export async function verifyEmail({ token }) {
+	const { data } = await api.post('/auth/verify-email', { token })
+	return data
+}
+
+export async function resendVerificationEmail() {
+	const { data } = await api.post('/auth/verify-email/resend')
+	return data
+}
+
 /** Invited users: set password and move status to active (no current password). */
 export async function acceptInvitation({ newPassword }) {
 	const { data } = await api.post('/auth/accept-invitation', {

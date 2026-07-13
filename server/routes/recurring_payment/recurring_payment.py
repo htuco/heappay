@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from repositories.recurring_payment.recurring_payment import RecurringPaymentRepository
 from repositories.transaction.transaction import TransactionRepository
-from routes.dependencies import get_current_user_id
+from routes.dependencies import get_current_user_id, require_verified_user
 from schemas.recurring_payment import (
     RecurringPaymentCreate,
     RecurringPaymentResponse,
@@ -39,7 +39,7 @@ def get_recurring_payment_service(db: Session = Depends(get_db)) -> RecurringPay
 )
 def create_recurring_payment(
     payload: RecurringPaymentCreate,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: RecurringPaymentService = Depends(get_recurring_payment_service),
 ) -> ApiResponse[RecurringPaymentResponse]:
     try:
@@ -89,7 +89,7 @@ def get_recurring_payment(
 def update_recurring_payment(
     recurring_payment_id: int,
     payload: RecurringPaymentUpdate,
-    user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(require_verified_user),
     service: RecurringPaymentService = Depends(get_recurring_payment_service),
 ) -> ApiResponse[RecurringPaymentResponse]:
     try:
