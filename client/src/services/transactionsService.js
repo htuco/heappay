@@ -431,6 +431,37 @@ export const transactionsService = {
 	},
 
 	/**
+	 * (Admin) Get the current refund auto-approval rules.
+	 * @returns {Promise<object>}
+	 */
+	async getRefundApprovalRules() {
+		try {
+			const { data } = await api.get('/refund-approval-rules')
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * (Admin) Update the refund auto-approval rules.
+	 * @param {{ enabled: boolean, autoApproveMaxAmount: number | string, maxAgeDays: number }} payload
+	 * @returns {Promise<object>}
+	 */
+	async updateRefundApprovalRules({ enabled, autoApproveMaxAmount, maxAgeDays }) {
+		try {
+			const { data } = await api.put('/refund-approval-rules', {
+				enabled,
+				auto_approve_max_amount: autoApproveMaxAmount,
+				max_age_days: maxAgeDays,
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * Request that one of the user's own cards be frozen (e.g. lost/stolen).
 	 * Staff approve the request, which freezes the card.
 	 * @param {number} cardId
