@@ -30,6 +30,11 @@ async def _scheduled_tasks_loop(interval_seconds: int) -> None:
                 "cards_skipped_no_destination=%(cards_skipped_no_destination)d "
                 "processed=%(processed)d allowed=%(allowed)d denied=%(denied)d "
                 "skipped=%(skipped)d errors=%(errors)d "
+                "refund_processed=%(refund_processed)d "
+                "refund_auto_approved=%(refund_auto_approved)d "
+                "refund_auto_declined=%(refund_auto_declined)d "
+                "refund_left_manual=%(refund_left_manual)d "
+                "refund_errors=%(refund_errors)d "
                 "nexus_claimed=%(nexus_claimed)d nexus_skipped=%(nexus_skipped)d "
                 "nexus_errors=%(nexus_errors)d",
                 {
@@ -43,6 +48,11 @@ async def _scheduled_tasks_loop(interval_seconds: int) -> None:
                     "denied": stats.get("denied", 0),
                     "skipped": stats.get("skipped", 0),
                     "errors": stats.get("errors", 0),
+                    "refund_processed": stats.get("refund_processed", 0),
+                    "refund_auto_approved": stats.get("refund_auto_approved", 0),
+                    "refund_auto_declined": stats.get("refund_auto_declined", 0),
+                    "refund_left_manual": stats.get("refund_left_manual", 0),
+                    "refund_errors": stats.get("refund_errors", 0),
                     "nexus_claimed": stats.get("nexus_claimed", 0),
                     "nexus_skipped": stats.get("nexus_skipped", 0),
                     "nexus_errors": stats.get("nexus_errors", 0),
