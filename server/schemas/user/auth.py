@@ -11,8 +11,16 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic_core import PydanticCustomError
 
-from utils.password_policy import StrongPasswordStr
+from utils.email_policy import StrictEmailStr
+from utils.password_policy import (
+    PASSWORD_CONTAINS_EMAIL_MESSAGE,
+    PASSWORD_SAME_AS_CURRENT_MESSAGE,
+    StrongPasswordStr,
+    password_contains_email_local_part,
+)
+from utils.person_name import PersonNameStr, validate_person_name
 
 LoginPasswordStr = Annotated[str, Field(min_length=1, max_length=255)]
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
@@ -37,10 +45,19 @@ class HcaptchaRequestMixin(BaseModel):
 
 
 class RegisterRequest(HcaptchaRequestMixin):
-    email: EmailStr
-    first_name: str
-    last_name: str
+    email: StrictEmailStr
+    first_name: PersonNameStr
+    last_name: PersonNameStr
     password: StrongPasswordStr
+
+    @model_validator(mode="after")
+    def validate_password_against_email(self) -> "RegisterRequest":
+        if password_contains_email_local_part(self.password, str(self.email)):
+            raise PydanticCustomError(
+                "password_contains_email",
+                PASSWORD_CONTAINS_EMAIL_MESSAGE,
+            )
+        return self
 
 
 class LoginRequest(HcaptchaRequestMixin):
@@ -61,6 +78,11 @@ class ChangePasswordRequest(BaseModel):
     def passwords_match(self) -> "ChangePasswordRequest":
         if self.new_password != self.confirm_password:
             raise ValueError("Passwords do not match.")
+        if self.new_password == self.current_password:
+            raise PydanticCustomError(
+                "password_same_as_current",
+                PASSWORD_SAME_AS_CURRENT_MESSAGE,
+            )
         return self
 
 
@@ -87,8 +109,8 @@ class VerifyEmailRequest(BaseModel):
 class AcceptInvitationRequest(BaseModel):
     """Set password for invited users (no current password)."""
 
-    new_password: PasswordStr
-    confirm_password: PasswordStr
+    new_password: StrongPasswordStr
+    confirm_password: StrongPasswordStr
 
     @model_validator(mode="after")
     def passwords_match(self) -> "AcceptInvitationRequest":
@@ -139,20 +161,19 @@ class AppPinDisableRequest(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
-    email: EmailStr | None = None
+    email: StrictEmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     avatar_url: str | None = Field(default=None, max_length=2048)
 
-    @field_validator("first_name", "last_name")
+    @field_validator("first_name", "last_name", mode="before")
     @classmethod
-    def strip_text(cls, value: str | None) -> str | None:
+    def validate_name_fields(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("value cannot be empty or whitespace only")
-        return stripped
+        if not isinstance(value, str):
+            raise ValueError("Name must be a string.")
+        return validate_person_name(value)
 
     @field_validator("avatar_url")
     @classmethod
@@ -285,11 +306,11 @@ class TotpDisableRequest(BaseModel):
 
 
 class RecoveryEmailSetRequest(BaseModel):
-    email: EmailStr
+    email: StrictEmailStr
 
 
 class RecoveryEmailUpdateRequest(BaseModel):
-    email: EmailStr
+    email: StrictEmailStr
 
 
 class RecoveryEmailVerifyRequest(BaseModel):

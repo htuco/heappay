@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   CreditCard,
   LayoutDashboard,
+  ScrollText,
   Settings,
   ShieldUser,
   TicketCheck,
@@ -19,6 +20,7 @@ export const ADMIN_NAV_LINKS = [
   { name: 'Users', path: '/admin/users', icon: ShieldUser },
   { name: 'Transactions', path: '/admin/transactions', icon: ArrowLeftRight },
   { name: 'Requests', path: '/admin/requests', icon: TicketCheck },
+  { name: 'Audit log', path: '/admin/audit-log', icon: ScrollText },
 ]
 
 export const SUPPORT_NAV_LINKS = [

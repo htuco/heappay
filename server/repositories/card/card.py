@@ -1,8 +1,8 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import delete as sa_delete, func, or_, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
 from models.card_status import CardStatus
@@ -134,6 +134,46 @@ class CardRepository:
             raise ValueError("Insufficient balance for sweep.")
         from_card.balance = from_card.balance - amount
         to_card.balance = to_card.balance + amount
+        self._db.commit()
+
+    def _get_user_for_update(self, user_id: int) -> User | None:
+        stmt = select(User).where(User.user_id == user_id).with_for_update()
+        return self._db.scalars(stmt).first()
+
+    def transfer_wallet_to_card(
+        self, *, user_id: int, to_card_id: int, amount: Decimal
+    ) -> None:
+        """Atomically move *amount* from the user's wallet balance onto a card."""
+        if amount <= 0:
+            return
+        user = self._get_user_for_update(user_id)
+        to_card = self.get_by_id_for_update(to_card_id)
+        if user is None or to_card is None:
+            raise ValueError("User or card not found for wallet transfer.")
+        if to_card.user_id != user_id:
+            raise ValueError("Card is not owned by the wallet's user.")
+        if user.wallet_balance < amount:
+            raise ValueError("Insufficient wallet balance.")
+        user.wallet_balance = user.wallet_balance - amount
+        to_card.balance = to_card.balance + amount
+        self._db.commit()
+
+    def transfer_card_to_wallet(
+        self, *, user_id: int, from_card_id: int, amount: Decimal
+    ) -> None:
+        """Atomically move *amount* from a card back into the user's wallet balance."""
+        if amount <= 0:
+            return
+        user = self._get_user_for_update(user_id)
+        from_card = self.get_by_id_for_update(from_card_id)
+        if user is None or from_card is None:
+            raise ValueError("User or card not found for wallet transfer.")
+        if from_card.user_id != user_id:
+            raise ValueError("Card is not owned by the wallet's user.")
+        if from_card.balance < amount:
+            raise ValueError("Insufficient card balance.")
+        from_card.balance = from_card.balance - amount
+        user.wallet_balance = user.wallet_balance + amount
         self._db.commit()
 
     def create_completed_sweep_transaction(
@@ -355,6 +395,21 @@ class CardRepository:
             .with_for_update(skip_locked=True)
         )
         return list(self._db.scalars(stmt).all())
+
+    def list_expiring_soon(self, *, days: int, limit: int) -> list[Card]:
+        """Non-deleted cards whose expires_at falls within [today, today + days]."""
+        today = date.today()
+        stmt = (
+            select(Card)
+            .options(joinedload(Card.user))
+            .where(
+                Card.deleted_at.is_(None),
+                Card.expires_at.between(today, today + timedelta(days=days)),
+            )
+            .order_by(Card.expires_at.asc(), Card.card_id.asc())
+            .limit(limit)
+        )
+        return list(self._db.scalars(stmt).unique().all())
 
     def has_pending_transactions(self, card_id: int) -> bool:
         """True if a pending transaction references this card on either side."""

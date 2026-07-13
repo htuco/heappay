@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
+from datetime import date
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -110,6 +111,14 @@ def list_transactions(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     category_id: int | None = Query(default=None, ge=1),
+    status_id: int | None = Query(default=None, ge=1),
+    transaction_type_id: int | None = Query(default=None, ge=1),
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    sort: str = Query(
+        default="newest",
+        pattern="^(newest|oldest|amount_desc|amount_asc)$",
+    ),
     user_id: int = Depends(get_current_user_id),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[Page[TransactionResponse]]:
@@ -120,10 +129,23 @@ def list_transactions(
             limit=page_size,
             offset=offset,
             category_id=category_id,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            from_date=from_date,
+            to_date=to_date,
+            sort=sort,
         )
     except TransactionCategoryNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
+        ) from None
+    except TransactionStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionTypeNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
         ) from None
     items = [_to_detail_response(r) for r in rows]
     page_data = Page[TransactionResponse].build(
@@ -150,6 +172,12 @@ def list_all_transactions(
     status_id: int | None = Query(default=None, ge=1),
     transaction_type_id: int | None = Query(default=None, ge=1),
     category_id: int | None = Query(default=None, ge=1),
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    user_role_name: str | None = Query(
+        default=None,
+        pattern="^(user|admin|support)$",
+    ),
     sort: str = Query(
         default="newest",
         pattern="^(newest|oldest|amount_desc|amount_asc)$",
@@ -165,6 +193,9 @@ def list_all_transactions(
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            from_date=from_date,
+            to_date=to_date,
+            user_role_name=user_role_name,
             sort=sort,
         )
     except TransactionStatusNotFoundError:
@@ -200,10 +231,34 @@ def list_all_transactions(
 )
 def get_transaction_stats(
     months: int = Query(default=6, ge=1, le=24),
+    status_id: int | None = Query(default=None, ge=1),
+    transaction_type_id: int | None = Query(default=None, ge=1),
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    user_role_name: str | None = Query(
+        default=None,
+        pattern="^(user|admin|support)$",
+    ),
     _: int = Depends(require_admin),
     service: TransactionService = Depends(get_transaction_service),
 ) -> ApiResponse[TransactionStatsResponse]:
-    raw = service.get_platform_stats(months=months)
+    try:
+        raw = service.get_platform_stats(
+            months=months,
+            status_id=status_id,
+            transaction_type_id=transaction_type_id,
+            from_date=from_date,
+            to_date=to_date,
+            user_role_name=user_role_name,
+        )
+    except TransactionStatusNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_STATUS_NOT_FOUND
+        ) from None
+    except TransactionTypeNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_TYPE_NOT_FOUND
+        ) from None
     data = build_masked_stats(raw)
     return ApiResponse[TransactionStatsResponse](
         success=True,

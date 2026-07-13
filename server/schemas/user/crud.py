@@ -3,21 +3,24 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+from utils.email_policy import StrictEmailStr
+from utils.person_name import PersonNameStr, validate_person_name
+
 PasswordStr = Annotated[str, Field(min_length=8, max_length=255)]
 
 
 class UserCreateRequest(BaseModel):
-    email: EmailStr
-    first_name: str = Field(min_length=1, max_length=100)
-    last_name: str = Field(min_length=1, max_length=100)
+    email: StrictEmailStr
+    first_name: PersonNameStr
+    last_name: PersonNameStr
     password: PasswordStr
     address: str | None = Field(default=None, max_length=255)
     status_id: int = Field(ge=1)
     user_role_id: int = Field(ge=1)
 
-    @field_validator("first_name", "last_name", "address")
+    @field_validator("address")
     @classmethod
-    def strip_text(cls, value: str | None) -> str | None:
+    def strip_address(cls, value: str | None) -> str | None:
         if value is None:
             return None
         stripped = value.strip()
@@ -27,7 +30,7 @@ class UserCreateRequest(BaseModel):
 
 
 class UserUpdateRequest(BaseModel):
-    email: EmailStr | None = None
+    email: StrictEmailStr | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     password: PasswordStr | None = None
@@ -36,9 +39,18 @@ class UserUpdateRequest(BaseModel):
     user_role_id: int | None = Field(default=None, ge=1)
     avatar_url: str | None = Field(default=None, max_length=2048)
 
-    @field_validator("first_name", "last_name", "address")
+    @field_validator("first_name", "last_name", mode="before")
     @classmethod
-    def strip_text(cls, value: str | None) -> str | None:
+    def validate_name_fields(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("Name must be a string.")
+        return validate_person_name(value)
+
+    @field_validator("address")
+    @classmethod
+    def strip_address(cls, value: str | None) -> str | None:
         if value is None:
             return None
         stripped = value.strip()

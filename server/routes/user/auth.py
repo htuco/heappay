@@ -31,9 +31,11 @@ from schemas.user.auth import (
     TotpConfirmRequest,
     TotpDisableRequest,
     TotpLoginResponse,
+    TokenResponse,
     TotpVerifyRequest,
     VerifyEmailRequest,
 )
+from utils.audit_log import EVENT_LOGIN_FAILED, EVENT_LOGIN_SUCCESS, record_audit_log
 from schemas.user.biometric import (
     BiometricAuthenticationOptionsResponse,
     BiometricCredentialResponse,
@@ -50,6 +52,8 @@ from utils.login_attempts import (
     login_requires_hcaptcha,
     record_failed_login,
 )
+from utils.password_policy import is_password_policy_message
+from utils.pwned_passwords import PASSWORD_PWNED_MESSAGE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -93,7 +97,9 @@ def register(
     verify_auth_hcaptcha(request, payload.hcaptcha_token)
     try:
         token_response = service.register(payload)
-    except ValueError:
+    except ValueError as exc:
+        if str(exc) == PASSWORD_PWNED_MESSAGE:
+            raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("An account with this email already exists.") from None
 
     return AuthResponse(success=True, message="Registration successful", data=token_response)
@@ -104,6 +110,7 @@ def register(
 def login(
     request: Request,
     payload: LoginRequest,
+    db: Session = Depends(get_db),
     service: UserAuthService = Depends(get_auth_service),
 ) -> TotpLoginResponse:
     client_ip = _client_ip(request)
@@ -111,6 +118,12 @@ def login(
     try:
         result = service.login(payload)
     except ValueError:
+        record_audit_log(
+            db,
+            event_type=EVENT_LOGIN_FAILED,
+            detail=f"email={payload.email}",
+            ip_address=client_ip,
+        )
         attempts = record_failed_login(payload.email, client_ip)
         raise Unauthorized(
             "Invalid email or password.",
@@ -121,6 +134,16 @@ def login(
         ) from None
 
     clear_failed_login_attempts(payload.email, client_ip)
+    if isinstance(result, TokenResponse):
+        record_audit_log(
+            db,
+            event_type=EVENT_LOGIN_SUCCESS,
+            actor_user_id=result.user.user_id,
+            target_user_id=result.user.user_id,
+            resource_type="user",
+            resource_id=result.user.user_id,
+            ip_address=client_ip,
+        )
     return TotpLoginResponse(success=True, message="Login successful", data=result)
 
 
@@ -129,9 +152,11 @@ def login(
 def totp_verify(
     request: Request,
     payload: TotpVerifyRequest,
+    db: Session = Depends(get_db),
     service: UserAuthService = Depends(get_auth_service),
 ) -> AuthResponse:
     """Second step of 2FA login — exchange partial_token + 6-digit code for real JWT tokens."""
+    client_ip = _client_ip(request)
     try:
         token_response = service.verify_totp_login(payload.partial_token, payload.code)
     except ValueError as exc:
@@ -140,6 +165,15 @@ def totp_verify(
             raise Unauthorized("Invalid authentication code.") from None
         raise Unauthorized("Session expired. Please log in again.") from None
 
+    record_audit_log(
+        db,
+        event_type=EVENT_LOGIN_SUCCESS,
+        actor_user_id=token_response.user.user_id,
+        target_user_id=token_response.user.user_id,
+        resource_type="user",
+        resource_id=token_response.user.user_id,
+        ip_address=client_ip,
+    )
     return AuthResponse(success=True, message="Login successful", data=token_response)
 
 
@@ -480,8 +514,13 @@ def change_password(
     try:
         service.change_password(user_id, payload)
     except ValueError as exc:
-        if str(exc) == "WRONG_CURRENT_PASSWORD":
+        msg = str(exc)
+        if msg == "WRONG_CURRENT_PASSWORD":
             raise InvalidInput("Current password is incorrect.") from None
+        if is_password_policy_message(msg):
+            raise InvalidInput(msg) from None
+        if msg == PASSWORD_PWNED_MESSAGE:
+            raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("Could not update password.") from None
 
     return AuthResponse(success=True, message="Password updated successfully.", data=None)
@@ -515,7 +554,12 @@ def confirm_password_reset(
 ) -> AuthResponse:
     try:
         service.confirm_password_reset(payload)
-    except ValueError:
+    except ValueError as exc:
+        msg = str(exc)
+        if is_password_policy_message(msg):
+            raise InvalidInput(msg) from None
+        if msg == PASSWORD_PWNED_MESSAGE:
+            raise InvalidInput(PASSWORD_PWNED_MESSAGE) from None
         raise InvalidInput("Password reset link is invalid or expired.") from None
 
     return AuthResponse(success=True, message="Password reset successfully.", data=None)
@@ -580,10 +624,13 @@ def accept_invitation(
             credentials.credentials,
         )
     except ValueError as exc:
-        if str(exc) == "NOT_INVITED":
+        msg = str(exc)
+        if msg == "NOT_INVITED":
             raise InvalidInput(
                 "Only invited accounts can complete onboarding here.",
             ) from None
+        if is_password_policy_message(msg):
+            raise InvalidInput(msg) from None
         raise InvalidInput("Could not complete invitation.") from None
 
     return AuthResponse(

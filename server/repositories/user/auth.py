@@ -12,6 +12,7 @@ from models.email_verification_token import EmailVerificationToken
 from models.user_role import UserRole
 from models.user_status import UserStatus
 from models.password_reset_token import PasswordResetToken
+from models.password_history import PasswordHistory
 from models.user import User
 from models.user_security_audit_event import UserSecurityAuditEvent
 from schemas.user.auth import ProfileUpdateRequest, RegisterRequest
@@ -219,6 +220,38 @@ class UserAuthRepository:
             .values(password_hash=hashed_password, refresh_token=None)
         )
         self._db.commit()
+
+    def list_password_history(self, user_id: int, *, limit: int) -> list[PasswordHistory]:
+        stmt = (
+            select(PasswordHistory)
+            .where(PasswordHistory.user_id == user_id)
+            .order_by(PasswordHistory.created_at.desc(), PasswordHistory.history_id.desc())
+            .limit(limit)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def append_password_history(self, user_id: int, password_hash: str) -> PasswordHistory:
+        row = PasswordHistory(user_id=user_id, password_hash=password_hash)
+        self._db.add(row)
+        self._db.commit()
+        self._db.refresh(row)
+        return row
+
+    def trim_password_history(self, user_id: int, *, keep: int) -> int:
+        """Delete older history rows beyond ``keep``. Returns deleted count."""
+        keep_ids_stmt = (
+            select(PasswordHistory.history_id)
+            .where(PasswordHistory.user_id == user_id)
+            .order_by(PasswordHistory.created_at.desc(), PasswordHistory.history_id.desc())
+            .limit(keep)
+        )
+        keep_ids = list(self._db.scalars(keep_ids_stmt).all())
+        stmt = delete(PasswordHistory).where(PasswordHistory.user_id == user_id)
+        if keep_ids:
+            stmt = stmt.where(PasswordHistory.history_id.not_in(keep_ids))
+        result = self._db.execute(stmt)
+        self._db.commit()
+        return int(result.rowcount or 0)
 
     def update_app_pin(self, user_id: int, pin_hash: str) -> None:
         self._db.execute(
@@ -582,10 +615,22 @@ class UserAuthRepository:
         event_type: str,
         detail: str | None = None,
     ) -> None:
+        from models.audit_log_event import AuditLogEvent
+
         row = UserSecurityAuditEvent(
             user_id=user_id,
             event_type=event_type,
             detail=detail,
         )
         self._db.add(row)
+        self._db.add(
+            AuditLogEvent(
+                event_type=event_type,
+                actor_user_id=user_id,
+                target_user_id=user_id,
+                resource_type="user",
+                resource_id=str(user_id),
+                detail=detail,
+            )
+        )
         self._db.commit()

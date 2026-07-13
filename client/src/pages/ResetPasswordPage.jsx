@@ -8,13 +8,12 @@ import AuthCloseButton from '@/components/auth-ui/AuthCloseButton'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 import FormBanner from '@/components/ui/FormBanner'
-import { changePasswordSchema } from '@/schemas/changePasswordSchema'
+import { resetPasswordSchema } from '@/schemas/resetPasswordSchema'
 import { confirmPasswordReset } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
 import { PASSWORD_RULES_HINT } from '@/schemas/passwordSchema'
 
 const INITIAL_FORM = {
-  currentPassword: 'reset-token',
   newPassword: '',
   confirmPassword: '',
 }
@@ -45,11 +44,11 @@ export default function ResetPasswordPage() {
       return
     }
 
-    const result = changePasswordSchema.safeParse(form)
+    const result = resetPasswordSchema.safeParse(form)
     if (!result.success) {
       const errors = {}
       result.error.issues.forEach((issue) => {
-        if (issue.path[0] && issue.path[0] !== 'currentPassword') {
+        if (issue.path[0]) {
           errors[issue.path[0]] = issue.message
         }
       })

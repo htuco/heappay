@@ -5,9 +5,10 @@ import AuthButton from '@/components/auth-ui/AuthButton'
 import AuthPageHeader from '@/components/auth-ui/AuthPageHeader'
 import AuthTextInput from '@/components/auth-ui/AuthTextInput'
 import FormBanner from '@/components/ui/FormBanner'
-import { invitationPasswordSchema } from '@/schemas/invitationPasswordSchema'
+import { createInvitationPasswordSchema } from '@/schemas/invitationPasswordSchema'
 import { acceptInvitation } from '@/services/authService'
 import { getApiErrorMessage } from '@/utils/api'
+import { PASSWORD_RULES_HINT } from '@/schemas/passwordSchema'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppDispatch } from '@/store/hooks'
 import { refreshSession } from '@/store/slices/authSlice'
@@ -33,7 +34,8 @@ export default function OnboardingSetPasswordPage() {
     setFieldErrors({})
     setBannerError('')
 
-    const result = invitationPasswordSchema.safeParse(form)
+    const schema = createInvitationPasswordSchema(user?.email)
+    const result = schema.safeParse(form)
     if (!result.success) {
       const errs = {}
       result.error.issues.forEach((issue) => {
@@ -98,9 +100,7 @@ export default function OnboardingSetPasswordPage() {
             error={fieldErrors.confirmPassword}
           />
 
-          <p className="text-xs text-muted-foreground">
-            Password must be between 8 and 255 characters.
-          </p>
+          <p className="text-xs text-muted-foreground">{PASSWORD_RULES_HINT}</p>
 
           <AuthButton type="submit" disabled={loading}>
             {loading ? 'Saving…' : 'Activate account'}
