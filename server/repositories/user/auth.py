@@ -181,6 +181,14 @@ class UserAuthRepository:
         )
         self._db.commit()
 
+    def clear_email_verified(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(email_verified_at=None)
+        )
+        self._db.commit()
+
     def update_profile(self, user_id: int, payload: ProfileUpdateRequest) -> User | None:
         values = payload.model_dump(exclude_unset=True)
         if not values:

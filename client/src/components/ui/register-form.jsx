@@ -34,6 +34,7 @@ export default function RegisterForm() {
 	const [error, setError] = useState('')
 	const [errors, setErrors] = useState({})
 	const [success, setSuccess] = useState(false)
+	const [registeredEmail, setRegisteredEmail] = useState('')
 	const [captchaOpen, setCaptchaOpen] = useState(false)
 	const [pendingRegistration, setPendingRegistration] = useState(null)
 	const captchaRef = useRef(null)
@@ -69,10 +70,10 @@ export default function RegisterForm() {
 				password: values.password,
 				hcaptchaToken,
 			})
+			setRegisteredEmail(values.email)
 			setSuccess(true)
 			setForm(INITIAL_FORM_STATE)
 			setPendingRegistration(null)
-			setTimeout(() => navigate('/dashboard'), 1000)
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Could not create your account. Please try again.')
 			setError(message)
@@ -128,12 +129,62 @@ export default function RegisterForm() {
 		captchaRef.current?.resetCaptcha()
 	}
 
+	const handleStartOver = () => {
+		setSuccess(false)
+		setRegisteredEmail('')
+		setError('')
+		setErrors({})
+	}
+
 	const getPasswordStrengthColor = () => {
 		if (passwordStrength === 0) return 'bg-muted-foreground'
 		if (passwordStrength === 1) return 'bg-destructive'
 		if (passwordStrength === 2) return 'bg-warning'
 		if (passwordStrength === 3) return 'bg-info'
 		return 'bg-success'
+	}
+
+	if (success) {
+		return (
+			<div className="flex items-center justify-center px-4 py-8 text-foreground min-h-svh sm:px-6 sm:py-10">
+				<div className="mx-auto w-full max-w-110 mt-5">
+					<div className="space-y-6">
+						<AuthPageHeader
+							title="Check your email"
+							subtitle="One more step to secure your account"
+							icon={<BrandLogo className="h-10 w-auto" />}
+							iconWrapperClassName="!bg-none !bg-transparent !text-foreground h-12 w-auto"
+						/>
+
+						<div className="space-y-4 rounded-xl border border-border bg-card/50 p-6 text-sm">
+							<p className="text-foreground">
+								We sent a verification link to{' '}
+								<span className="font-semibold break-all">{registeredEmail}</span>.
+								Open it to confirm your address.
+							</p>
+							<p className="text-muted-foreground">
+								You're already signed in and can look around, but sending money and
+								managing cards stay locked until your email is verified.
+							</p>
+							<p className="text-muted-foreground">
+								Didn't get it? Check your spam folder, or resend it from the banner
+								inside the app.
+							</p>
+						</div>
+
+						<AuthButton type="button" onClick={() => navigate('/dashboard')}>
+							Continue to dashboard
+						</AuthButton>
+
+						<AuthLinkLabel
+							label="Used the wrong email?"
+							actionText="Start over"
+							onAction={handleStartOver}
+						/>
+					</div>
+				</div>
+			</div>
+		)
 	}
 
 	return (
@@ -149,9 +200,6 @@ export default function RegisterForm() {
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
 						<FormBanner variant="error" message={error} />
-						{success && (
-							<FormBanner variant="success" message="Account created successfully!" />
-						)}
 
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<AuthTextInput
