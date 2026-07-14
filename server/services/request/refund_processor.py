@@ -6,35 +6,28 @@ from models.request import Request
 from repositories.refund_approval.refund_approval_rule import RefundApprovalRuleRepository
 from repositories.request.request import RequestRepository
 from services.request.request import (
-    InsufficientBalanceError,
     RequestNotFoundError,
     RequestNotPendingError,
     RequestService,
-    TransactionNotFoundError,
 )
 from settings import Settings, get_settings
 
-Decision = Literal["auto_approve", "auto_decline", "manual"]
+Decision = Literal["auto_decline", "manual"]
 
 
 def evaluate_refund(request: Request, rule: RefundApprovalRule, *, now: datetime) -> Decision:
     """Pure rule evaluation — no balance or status changes.
 
-    Age wins over amount: a refund that has sat pending longer than
-    `max_age_days` is auto-declined even if it's small — staff had the whole
-    review window and letting it silently auto-approve that late defeats the
-    point of having one.
+    A refund that has sat pending longer than `max_age_days` is auto-declined
+    — staff had the whole review window. Everything else is left for manual
+    review: reversing money out of another user's wallet always requires a
+    human decision, so there is no auto-approve path here.
     """
     created = request.created_at
     if created.tzinfo is None:
         created = created.replace(tzinfo=timezone.utc)
     if now - created > timedelta(days=rule.max_age_days):
         return "auto_decline"
-
-    detail = request.refund_detail
-    tx = detail.transaction if detail is not None else None
-    if tx is not None and tx.amount <= rule.auto_approve_max_amount:
-        return "auto_approve"
     return "manual"
 
 
@@ -53,7 +46,6 @@ class RefundProcessorService:
     def process_batch(self, *, limit: int = 100) -> dict[str, int]:
         stats = {
             "refund_processed": 0,
-            "refund_auto_approved": 0,
             "refund_auto_declined": 0,
             "refund_left_manual": 0,
             "refund_errors": 0,
@@ -75,19 +67,11 @@ class RefundProcessorService:
             decision = evaluate_refund(request, rule, now=now)
             stats["refund_processed"] += 1
             try:
-                if decision == "auto_approve":
-                    self._request_service.approve_refund(request_id=request.request_id)
-                    stats["refund_auto_approved"] += 1
-                elif decision == "auto_decline":
+                if decision == "auto_decline":
                     self._request_service.decline_refund(request_id=request.request_id)
                     stats["refund_auto_declined"] += 1
                 else:
                     stats["refund_left_manual"] += 1
-            except (
-                RequestNotFoundError,
-                RequestNotPendingError,
-                TransactionNotFoundError,
-                InsufficientBalanceError,
-            ):
+            except (RequestNotFoundError, RequestNotPendingError):
                 stats["refund_errors"] += 1
         return stats

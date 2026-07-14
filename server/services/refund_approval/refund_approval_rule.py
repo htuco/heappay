@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from models.refund_approval_rule import RefundApprovalRule
 from repositories.refund_approval.refund_approval_rule import RefundApprovalRuleRepository
 
@@ -15,13 +13,11 @@ class RefundApprovalRuleService:
         self,
         *,
         enabled: bool,
-        auto_approve_max_amount: Decimal,
         max_age_days: int,
         updated_by_user_id: int,
     ) -> RefundApprovalRule:
         return self._repo.update(
             enabled=enabled,
-            auto_approve_max_amount=auto_approve_max_amount,
             max_age_days=max_age_days,
             updated_by_user_id=updated_by_user_id,
         )

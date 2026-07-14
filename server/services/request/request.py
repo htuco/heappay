@@ -91,6 +91,7 @@ class RequestService:
         self,
         *,
         transaction_id: int,
+        reason_code: str,
         note: str | None,
         user_id: int,
     ) -> Request:
@@ -124,6 +125,7 @@ class RequestService:
         return self._repo.create_refund_request(
             requester_user_id=user_id,
             transaction_id=transaction_id,
+            reason_code=reason_code,
             note=note,
         )
 

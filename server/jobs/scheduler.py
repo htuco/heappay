@@ -31,7 +31,6 @@ async def _scheduled_tasks_loop(interval_seconds: int) -> None:
                 "processed=%(processed)d allowed=%(allowed)d denied=%(denied)d "
                 "skipped=%(skipped)d errors=%(errors)d "
                 "refund_processed=%(refund_processed)d "
-                "refund_auto_approved=%(refund_auto_approved)d "
                 "refund_auto_declined=%(refund_auto_declined)d "
                 "refund_left_manual=%(refund_left_manual)d "
                 "refund_errors=%(refund_errors)d "
@@ -49,7 +48,6 @@ async def _scheduled_tasks_loop(interval_seconds: int) -> None:
                     "skipped": stats.get("skipped", 0),
                     "errors": stats.get("errors", 0),
                     "refund_processed": stats.get("refund_processed", 0),
-                    "refund_auto_approved": stats.get("refund_auto_approved", 0),
                     "refund_auto_declined": stats.get("refund_auto_declined", 0),
                     "refund_left_manual": stats.get("refund_left_manual", 0),
                     "refund_errors": stats.get("refund_errors", 0),

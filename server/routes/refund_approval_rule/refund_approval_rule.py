@@ -23,7 +23,6 @@ def _to_response(rule) -> RefundApprovalRuleResponse:
         updated_by_name = f"{rule.updated_by.first_name} {rule.updated_by.last_name}".strip() or None
     return RefundApprovalRuleResponse(
         enabled=rule.enabled,
-        auto_approve_max_amount=rule.auto_approve_max_amount,
         max_age_days=rule.max_age_days,
         updated_at=rule.updated_at,
         updated_by_user_id=rule.updated_by_user_id,
@@ -60,7 +59,6 @@ def update_refund_approval_rules(
 ) -> ApiResponse[RefundApprovalRuleResponse]:
     rule = service.update(
         enabled=payload.enabled,
-        auto_approve_max_amount=payload.auto_approve_max_amount,
         max_age_days=payload.max_age_days,
         updated_by_user_id=user_id,
     )

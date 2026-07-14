@@ -291,7 +291,6 @@ function FreezeTab() {
 function RulesTab() {
   const { notify } = useNotifications()
   const [enabled, setEnabled] = useState(false)
-  const [autoApproveMaxAmount, setAutoApproveMaxAmount] = useState('')
   const [maxAgeDays, setMaxAgeDays] = useState('')
   const [meta, setMeta] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -300,7 +299,6 @@ function RulesTab() {
 
   function applyRules(rules) {
     setEnabled(Boolean(rules.enabled))
-    setAutoApproveMaxAmount(String(rules.auto_approve_max_amount))
     setMaxAgeDays(String(rules.max_age_days))
     setMeta({ updatedAt: rules.updated_at, updatedByName: rules.updated_by_name })
   }
@@ -323,7 +321,6 @@ function RulesTab() {
     try {
       const rules = await transactionsService.updateRefundApprovalRules({
         enabled,
-        autoApproveMaxAmount: Number(autoApproveMaxAmount),
         maxAgeDays: Number(maxAgeDays),
       })
       applyRules(rules)
@@ -350,35 +347,21 @@ function RulesTab() {
   return (
     <div className="max-w-xl space-y-4 rounded-surface border border-border bg-card p-5 shadow-xs">
       <div>
-        <h2 className="text-sm font-semibold text-card-foreground">Automatic refund approval</h2>
+        <h2 className="text-sm font-semibold text-card-foreground">Automatic stale refund decline</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          When enabled, pending refunds are evaluated on a schedule: small, recent ones are
-          auto-approved, and refunds left pending longer than the age limit are auto-declined.
-          Everything else stays pending for manual review.
+          When enabled, pending refunds are evaluated on a schedule and auto-declined once they've
+          sat pending longer than the age limit below, so nothing lingers unresolved forever.
+          Every refund still requires a staff decision to approve — reversing money out of another
+          user's wallet is never automated.
         </p>
       </div>
 
       <Toggle
         enabled={enabled}
-        label="Enable automatic approval"
+        label="Enable automatic decline"
         onToggle={() => setEnabled((v) => !v)}
         disabled={isSaving}
       />
-
-      <div className="space-y-1.5">
-        <label htmlFor="auto-approve-max-amount" className="text-sm font-medium text-card-foreground">
-          Auto-approve refunds under ($)
-        </label>
-        <Input
-          id="auto-approve-max-amount"
-          type="number"
-          min="0"
-          step="0.01"
-          value={autoApproveMaxAmount}
-          onChange={(e) => setAutoApproveMaxAmount(e.target.value)}
-          disabled={isSaving}
-        />
-      </div>
 
       <div className="space-y-1.5">
         <label htmlFor="max-age-days" className="text-sm font-medium text-card-foreground">
