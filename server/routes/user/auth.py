@@ -138,10 +138,10 @@ def login(
         record_audit_log(
             db,
             event_type=EVENT_LOGIN_SUCCESS,
-            actor_user_id=result.user.user_id,
-            target_user_id=result.user.user_id,
+            actor_user_id=result.user.id,
+            target_user_id=result.user.id,
             resource_type="user",
-            resource_id=result.user.user_id,
+            resource_id=result.user.id,
             ip_address=client_ip,
         )
     return TotpLoginResponse(success=True, message="Login successful", data=result)
@@ -168,10 +168,10 @@ def totp_verify(
     record_audit_log(
         db,
         event_type=EVENT_LOGIN_SUCCESS,
-        actor_user_id=token_response.user.user_id,
-        target_user_id=token_response.user.user_id,
+        actor_user_id=token_response.user.id,
+        target_user_id=token_response.user.id,
         resource_type="user",
-        resource_id=token_response.user.user_id,
+        resource_id=token_response.user.id,
         ip_address=client_ip,
     )
     return AuthResponse(success=True, message="Login successful", data=token_response)
