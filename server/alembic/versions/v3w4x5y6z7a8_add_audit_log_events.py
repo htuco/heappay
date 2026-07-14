@@ -1,7 +1,7 @@
 """add audit log events
 
-Revision ID: t1u2v3w4x5y6
-Revises: s0t1u2v3w4x5
+Revision ID: v3w4x5y6z7a8
+Revises: u2v3w4x5y6z7
 """
 
 from typing import Sequence, Union
@@ -9,13 +9,18 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "t1u2v3w4x5y6"
-down_revision: Union[str, Sequence[str], None] = "s0t1u2v3w4x5"
+revision: str = "v3w4x5y6z7a8"
+down_revision: Union[str, Sequence[str], None] = "u2v3w4x5y6z7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # This revision previously shipped as t1u2v3w4x5y6, an ID it accidentally
+    # shared with add_wallet_balance_to_users. Databases migrated from the
+    # audit-log feature branch already have this table under the old ID.
+    if sa.inspect(op.get_bind()).has_table("audit_log_events"):
+        return
     op.create_table(
         "audit_log_events",
         sa.Column("event_id", sa.Integer(), autoincrement=True, nullable=False),
