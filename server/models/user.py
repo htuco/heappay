@@ -45,6 +45,12 @@ class User(Base):
     email_refund_status_enabled: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
+    # Staff opt-in: email me when a user submits a refund/freeze request or a
+    # transaction is flagged for manual review. Off by default; only meaningful
+    # for admin/support roles.
+    notify_on_user_requests: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default="false"
+    )
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default="false")

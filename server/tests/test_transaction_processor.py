@@ -71,7 +71,7 @@ def test_auto_allow_under_manual_review_threshold():
 def test_skip_above_manual_review_threshold():
     decision = evaluate_transaction(_tx(amount="500001.00"), _settings())
     assert decision.action == "skip"
-    assert decision.reason_code is None
+    assert decision.reason_code == "MANUAL_REVIEW"
 
 
 def test_deny_self_transfer():

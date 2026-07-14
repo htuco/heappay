@@ -121,10 +121,24 @@ class RequestService:
             status = self._repo.status_name_for(existing.request_status_id)
             raise RefundAlreadyExistsError(status)
 
-        return self._repo.create_refund_request(
+        req = self._repo.create_refund_request(
             requester_user_id=user_id,
             transaction_id=transaction_id,
             note=note,
+        )
+        self._notify_admins_refund(req.request_id)
+        return req
+
+    def _notify_admins_refund(self, request_id: int) -> None:
+        from services.admin_notification.admin_notification import AdminNotificationService
+
+        AdminNotificationService(self._repo._db).notify_refund_requested(request_id)
+
+    def _notify_admins_card_action(self, request_id: int, *, action: str) -> None:
+        from services.admin_notification.admin_notification import AdminNotificationService
+
+        AdminNotificationService(self._repo._db).notify_card_action_requested(
+            request_id, action=action
         )
 
     def get_refund_status(self, transaction_id: int) -> dict[str, object]:
@@ -217,11 +231,13 @@ class RequestService:
         if existing is not None:
             raise FreezeRequestAlreadyPendingError()
 
-        return self._repo.create_freeze_request(
+        req = self._repo.create_freeze_request(
             requester_user_id=user_id,
             card_id=card_id,
             note=note,
         )
+        self._notify_admins_card_action(req.request_id, action="card_freeze")
+        return req
 
     def approve_card_freeze(self, *, request_id: int) -> Request:
         request = self._repo.get_by_id(request_id)
@@ -270,12 +286,14 @@ class RequestService:
         if existing is not None:
             raise FreezeRequestAlreadyPendingError()
 
-        return self._repo.create_freeze_request(
+        req = self._repo.create_freeze_request(
             requester_user_id=user_id,
             card_id=card_id,
             note=note,
             type_name="card_unfreeze",
         )
+        self._notify_admins_card_action(req.request_id, action="card_unfreeze")
+        return req
 
     def approve_card_unfreeze(self, *, request_id: int) -> Request:
         request = self._repo.get_by_id(request_id)

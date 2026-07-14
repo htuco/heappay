@@ -68,6 +68,8 @@ function savedNotificationPrefs(user) {
     emailPaymentReceived: prefEnabled(user, 'email_payment_received_enabled'),
     emailTopup: prefEnabled(user, 'email_topup_enabled'),
     emailRefundStatus: prefEnabled(user, 'email_refund_status_enabled'),
+    // Opt-out by default (staff only) — treat missing as false.
+    notifyOnUserRequests: user?.notify_on_user_requests === true,
   }
 }
 
@@ -83,7 +85,7 @@ export default function SettingsPage() {
   const [section, setSection] = useState('profile')
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isDeactivateOpen, setIsDeactivateOpen] = useState(false)
-  const { user } = useAuth()
+  const { user, isStaff } = useAuth()
   const { cards, setMainCard, removeCard } = useWalletCards()
   const { preference: themePreference, isDark, setTheme } = useTheme()
   const { notify } = useNotifications()
@@ -135,6 +137,7 @@ export default function SettingsPage() {
           emailPaymentReceivedEnabled: next.emailPaymentReceived,
           emailTopupEnabled: next.emailTopup,
           emailRefundStatusEnabled: next.emailRefundStatus,
+          notifyOnUserRequests: next.notifyOnUserRequests,
         }),
       ).unwrap()
     } catch (err) {
@@ -290,6 +293,26 @@ export default function SettingsPage() {
             />
           </ControlRow>
         ))}
+        {user && isStaff ? (
+          <div className="mt-2 border-t border-border pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Staff
+            </p>
+            <ControlRow
+              label="User request alerts"
+              hint="Email me when a user submits a refund or card freeze/unfreeze request, or a transaction is flagged for manual review."
+              alignToggle
+            >
+              <Toggle
+                compact
+                enabled={notifPrefs.notifyOnUserRequests}
+                label={notifPrefs.notifyOnUserRequests ? 'Enabled' : 'Disabled'}
+                onToggle={toggleNotif('notifyOnUserRequests')}
+                disabled={!user}
+              />
+            </ControlRow>
+          </div>
+        ) : null}
         {!user ? (
           <p className="text-xs text-muted-foreground">Sign in to manage notification preferences.</p>
         ) : null}
