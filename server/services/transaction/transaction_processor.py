@@ -25,6 +25,7 @@ PENDING_TIMEOUT_ALLOW = "PENDING_TIMEOUT_ALLOW"
 PENDING_TIMEOUT_DENY = "PENDING_TIMEOUT_DENY"
 APPROVAL_TIMEOUT = "APPROVAL_TIMEOUT"
 AWAITING_USER_APPROVAL = "AWAITING_USER_APPROVAL"
+MANUAL_REVIEW = "MANUAL_REVIEW"
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,8 @@ class TransactionProcessorService:
     def process_one(self, tx: Transaction) -> ProcessResult:
         decision = evaluate_transaction(tx, self._settings)
         if decision.action == "skip":
+            if decision.reason_code == MANUAL_REVIEW:
+                self._notify_admins_flagged(tx.transaction_id)
             return "skipped"
         if decision.action == "allow":
             self._repo.complete(tx.transaction_id, processed_by="system")
@@ -90,6 +93,13 @@ class TransactionProcessorService:
             )
             self._repo._db.commit()
         return "denied"
+
+    def _notify_admins_flagged(self, transaction_id: int) -> None:
+        from services.admin_notification.admin_notification import AdminNotificationService
+
+        AdminNotificationService(self._repo._db).notify_transaction_flagged(
+            transaction_id, reason="Amount exceeds the manual-review threshold."
+        )
 
 
 def evaluate_transaction(tx: Transaction, settings: Settings) -> ProcessorDecision:
@@ -118,7 +128,7 @@ def evaluate_transaction(tx: Transaction, settings: Settings) -> ProcessorDecisi
             return ProcessorDecision("deny", SELF_TRANSFER)
 
     if tx.amount > settings.tx_manual_review_above_amount:
-        return ProcessorDecision("skip")
+        return ProcessorDecision("skip", MANUAL_REVIEW)
 
     if getattr(tx, "requires_user_approval", False) and tx.user_approved_at is None:
         expires = getattr(tx, "user_approval_expires_at", None)

@@ -167,6 +167,7 @@ export async function updateNotificationPreferences({
 	emailPaymentReceivedEnabled,
 	emailTopupEnabled,
 	emailRefundStatusEnabled,
+	notifyOnUserRequests,
 }) {
 	const { data } = await api.patch('/auth/notification-preferences', {
 		billing_reminders_enabled: billingRemindersEnabled,
@@ -174,6 +175,7 @@ export async function updateNotificationPreferences({
 		email_payment_received_enabled: emailPaymentReceivedEnabled,
 		email_topup_enabled: emailTopupEnabled,
 		email_refund_status_enabled: emailRefundStatusEnabled,
+		notify_on_user_requests: notifyOnUserRequests,
 	})
 	const td = data.data
 	if (td?.access_token && td?.refresh_token) {
