@@ -181,6 +181,14 @@ class UserAuthRepository:
         )
         self._db.commit()
 
+    def clear_email_verified(self, user_id: int) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(email_verified_at=None)
+        )
+        self._db.commit()
+
     def update_profile(self, user_id: int, payload: ProfileUpdateRequest) -> User | None:
         values = payload.model_dump(exclude_unset=True)
         if not values:
@@ -349,6 +357,7 @@ class UserAuthRepository:
         email_payment_received_enabled: bool | None = None,
         email_topup_enabled: bool | None = None,
         email_refund_status_enabled: bool | None = None,
+        notify_on_user_requests: bool | None = None,
     ) -> None:
         values: dict = {"modified_at": datetime.now(timezone.utc)}
         if billing_reminders_enabled is not None:
@@ -361,6 +370,8 @@ class UserAuthRepository:
             values["email_topup_enabled"] = email_topup_enabled
         if email_refund_status_enabled is not None:
             values["email_refund_status_enabled"] = email_refund_status_enabled
+        if notify_on_user_requests is not None:
+            values["notify_on_user_requests"] = notify_on_user_requests
         self._db.execute(
             update(User).where(User.user_id == user_id).values(**values)
         )

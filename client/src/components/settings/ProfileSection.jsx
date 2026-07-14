@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Camera, UserRound } from 'lucide-react'
 
 import AvatarUploadModal from '@/components/settings/AvatarUploadModal'
+import LoginEmailPanel from '@/components/settings/LoginEmailPanel'
 import SettingsCard from '@/components/settings/SettingsCard'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
@@ -132,15 +133,7 @@ export default function ProfileSection() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="profile-email" className="text-sm font-semibold text-card-foreground">
-            Email address
-          </label>
-          <Input id="profile-email" value={email} disabled readOnly aria-readonly="true" />
-          <p className="text-xs text-muted-foreground">
-            Used for sign-in and recovery. Contact support to change it.
-          </p>
-        </div>
+        <LoginEmailPanel />
 
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
 

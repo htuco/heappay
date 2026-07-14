@@ -13,6 +13,7 @@ import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PaymentPage from './pages/PaymentPage'
+import ConverterPage from './pages/ConverterPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyRecoveryEmailPage from './pages/VerifyRecoveryEmailPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
@@ -246,6 +247,7 @@ export default function App() {
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
         <Route path="/payments" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+        <Route path="/converter" element={<ProtectedRoute><ConverterPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       </Route>
 

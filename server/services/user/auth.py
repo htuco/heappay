@@ -263,6 +263,7 @@ class UserAuthService:
             email_payment_received_enabled=user.email_payment_received_enabled,
             email_topup_enabled=user.email_topup_enabled,
             email_refund_status_enabled=user.email_refund_status_enabled,
+            notify_on_user_requests=getattr(user, "notify_on_user_requests", False),
             avatar_url=resolve_avatar_url_for_client(raw_avatar, self.settings),
             totp_enabled=user.totp_enabled,
             payment_confirm_enabled=user.payment_confirm_enabled,
@@ -755,6 +756,11 @@ class UserAuthService:
 
         self.repo.mark_email_verified(user.user_id)
         self.repo.mark_email_verification_tokens_used_for_user(user.user_id)
+        self.repo.record_security_audit_event(
+            user.user_id,
+            event_type="email_verified",
+            detail=user.email,
+        )
 
     def resend_verification_email(self, user_id: int) -> None:
         user = self.repo.get_user_by_id(user_id)
@@ -815,10 +821,13 @@ class UserAuthService:
         if not current_user or current_user.deleted_at is not None:
             return None
 
+        email_changed = False
         if payload.email is not None:
-            existing_user = self.repo.get_user_by_email(str(payload.email))
+            new_email = str(payload.email)
+            existing_user = self.repo.get_user_by_email(new_email)
             if existing_user and existing_user.user_id != user_id:
                 raise ValueError("EMAIL_NOT_AVAILABLE")
+            email_changed = new_email.strip().lower() != (current_user.email or "").strip().lower()
 
         previous_avatar_url = getattr(current_user, "avatar_url", None)
         payload_keys = payload.model_dump(exclude_unset=True)
@@ -827,6 +836,17 @@ class UserAuthService:
         updated_user = self.repo.update_profile(user_id, payload)
         if not updated_user:
             return None
+
+        if email_changed:
+            self.repo.clear_email_verified(user_id)
+            self.repo.mark_email_verification_tokens_used_for_user(user_id)
+            self._send_verification_email(updated_user)
+            self.repo.record_security_audit_event(
+                user_id,
+                event_type="email_changed",
+                detail=updated_user.email,
+            )
+            updated_user = self.repo.get_user_by_id(user_id) or updated_user
 
         if updating_avatar and previous_avatar_url:
             new_avatar_url = getattr(updated_user, "avatar_url", None)
@@ -874,6 +894,7 @@ class UserAuthService:
             email_payment_received_enabled=preferences.email_payment_received_enabled,
             email_topup_enabled=preferences.email_topup_enabled,
             email_refund_status_enabled=preferences.email_refund_status_enabled,
+            notify_on_user_requests=preferences.notify_on_user_requests,
         )
         user = self.repo.get_user_by_id(user_id)
         if user is None:

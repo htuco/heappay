@@ -26,6 +26,7 @@ from models.biometric_credential import BiometricCredential  # noqa: F401
 from models.biometric_registration_challenge import BiometricRegistrationChallenge  # noqa: F401
 from models.biometric_authentication_challenge import BiometricAuthenticationChallenge  # noqa: F401
 from models.email_notification_log import EmailNotificationLog  # noqa: F401
+from models.admin_notification_log import AdminNotificationLog  # noqa: F401
 from models.recurring_payment import RecurringPayment  # noqa: F401
 from models.audit_log_event import AuditLogEvent  # noqa: F401
 from models.refund_approval_rule import RefundApprovalRule  # noqa: F401

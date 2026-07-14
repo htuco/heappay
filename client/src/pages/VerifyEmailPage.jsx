@@ -1,6 +1,6 @@
 import logo from '@/assets/logo.png'
 import { CheckCircle2, MailCheck } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import AuthButton from '@/components/auth-ui/AuthButton'
@@ -20,26 +20,21 @@ export default function VerifyEmailPage() {
     token ? '' : 'Verification link is missing a token.'
   )
   const isLoggedIn = Boolean(getAuthToken() || getAuthRefreshToken())
+  // Verification tokens are single-use. Guard against React StrictMode's
+  // double-invoked effect firing a second request that fails as "already used".
+  const verifiedTokenRef = useRef('')
 
   useEffect(() => {
     if (!token) return
+    if (verifiedTokenRef.current === token) return
+    verifiedTokenRef.current = token
 
-    let ignore = false
-    async function run() {
-      try {
-        await verifyEmail({ token })
-        if (!ignore) setStatus('success')
-      } catch (err) {
-        if (!ignore) {
-          setStatus('error')
-          setErrorMessage(getApiErrorMessage(err, 'Verification link is invalid or expired.'))
-        }
-      }
-    }
-    run()
-    return () => {
-      ignore = true
-    }
+    verifyEmail({ token })
+      .then(() => setStatus('success'))
+      .catch((err) => {
+        setStatus('error')
+        setErrorMessage(getApiErrorMessage(err, 'Verification link is invalid or expired.'))
+      })
   }, [token])
 
   return (
