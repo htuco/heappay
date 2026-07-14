@@ -45,6 +45,9 @@ class User(Base):
     email_refund_status_enabled: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
+    email_outflow_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
     # Staff opt-in: email me when a user submits a refund/freeze request or a
     # transaction is flagged for manual review. Off by default; only meaningful
     # for admin/support roles.

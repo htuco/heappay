@@ -216,6 +216,7 @@ class NotificationPreferencesUpdate(BaseModel):
     email_payment_received_enabled: bool | None = None
     email_topup_enabled: bool | None = None
     email_refund_status_enabled: bool | None = None
+    email_outflow_enabled: bool | None = None
     notify_on_user_requests: bool | None = None
 
     @model_validator(mode="after")
@@ -228,6 +229,7 @@ class NotificationPreferencesUpdate(BaseModel):
                 self.email_payment_received_enabled,
                 self.email_topup_enabled,
                 self.email_refund_status_enabled,
+                self.email_outflow_enabled,
                 self.notify_on_user_requests,
             )
         ):
@@ -251,6 +253,7 @@ class UserResponse(BaseModel):
     email_payment_received_enabled: bool = True
     email_topup_enabled: bool = True
     email_refund_status_enabled: bool = True
+    email_outflow_enabled: bool = True
     notify_on_user_requests: bool = False
     avatar_url: str | None = None
     totp_enabled: bool = False
