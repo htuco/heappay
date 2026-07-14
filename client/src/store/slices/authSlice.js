@@ -114,6 +114,7 @@ export const updateNotificationPreferences = createAsyncThunk(
       emailPaymentReceivedEnabled,
       emailTopupEnabled,
       emailRefundStatusEnabled,
+      emailOutflowEnabled,
       notifyOnUserRequests,
     },
     { rejectWithValue },
@@ -125,6 +126,7 @@ export const updateNotificationPreferences = createAsyncThunk(
         emailPaymentReceivedEnabled,
         emailTopupEnabled,
         emailRefundStatusEnabled,
+        emailOutflowEnabled,
         notifyOnUserRequests,
       })
     } catch (error) {
