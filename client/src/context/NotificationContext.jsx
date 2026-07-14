@@ -20,6 +20,7 @@ import {
 } from './notifications/storage'
 import { CATEGORIES } from './notifications/categories'
 import { useIncomingTransferWatcher } from './notifications/useIncomingTransferWatcher'
+import { useOutflowWatcher } from './notifications/useOutflowWatcher'
 import { useAccountEventsWatcher } from './notifications/useAccountEventsWatcher'
 import { useCardExpiryWatcher } from './notifications/useCardExpiryWatcher'
 import { useCardExpirySweepWatcher } from './notifications/useCardExpirySweepWatcher'
@@ -169,6 +170,7 @@ export function NotificationProvider({ children }) {
 	}, [])
 
 	useIncomingTransferWatcher({ userId, notify })
+	useOutflowWatcher({ userId, notify })
 	useAccountEventsWatcher({ userId, notify, selfActionRef: selfCardActionRef })
 	useCardExpiryWatcher({ userId, notify })
 	useCardExpirySweepWatcher({ userId, notify, selfActionRef: selfCardActionRef })
