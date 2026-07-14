@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   CreditCard,
   LayoutDashboard,
+  Repeat,
   ScrollText,
   Settings,
   ShieldUser,
@@ -13,6 +14,7 @@ export const MAIN_NAV_LINKS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
   { name: 'Transactions', path: '/payments', icon: ArrowLeftRight },
+  { name: 'Converter', path: '/converter', icon: Repeat },
 ]
 
 export const ADMIN_NAV_LINKS = [
