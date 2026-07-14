@@ -103,37 +103,123 @@ function RateCard({ pair, rate, change, trend, note }) {
   )
 }
 
-function Sparkline({ points }) {
+// "2026-07-03" -> "3 Jul" — a compact, readable day label for the x-axis.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+function formatDay(iso) {
+  const [, m, d] = iso.split('-')
+  return `${Number(d)} ${MONTHS[Number(m) - 1] ?? m}`
+}
+
+function formatValue(v) {
+  const a = Math.abs(v)
+  if (a >= 10) return v.toFixed(2)
+  if (a >= 1) return v.toFixed(4)
+  if (a >= 0.1) return v.toFixed(4)
+  return v.toFixed(5)
+}
+
+function InsightChart({ points }) {
   if (!points || points.length < 2) return null
+
+  const W = 600
+  const H = 220
+  const PAD = { top: 18, right: 52, bottom: 34, left: 16 }
+  const plotW = W - PAD.left - PAD.right
+  const plotH = H - PAD.top - PAD.bottom
+
   const nums = points.map((p) => Number(p.rate))
   const min = Math.min(...nums)
   const max = Math.max(...nums)
   const span = max - min || 1
-  const coords = points.map((p, i) => {
-    const x = (i / (points.length - 1)) * 100
-    const y = 72 - ((Number(p.rate) - min) / span) * 64
-    return [Number(x.toFixed(2)), Number(y.toFixed(2))]
-  })
+  // Pad the value range so the line never hugs the top/bottom edge.
+  const lo = min - span * 0.18
+  const hi = max + span * 0.18
+  const vSpan = hi - lo || 1
+
+  const n = points.length
+  const xAt = (i) => PAD.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW)
+  const yAt = (v) => PAD.top + (1 - (v - lo) / vSpan) * plotH
+  const baseY = PAD.top + plotH
+
+  const coords = points.map((p, i) => [xAt(i), yAt(Number(p.rate))])
+  const linePath = coords
+    .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`)
+    .join(' ')
+  const areaPath = `${linePath} L${coords[n - 1][0].toFixed(1)} ${baseY} L${coords[0][0].toFixed(1)} ${baseY} Z`
+
+  // Three horizontal gridlines (top / middle / bottom) with value labels.
+  const gridLines = [0, 0.5, 1].map((t) => ({
+    y: PAD.top + t * plotH,
+    value: hi - t * vSpan,
+  }))
 
   return (
     <svg
-      viewBox="0 0 100 80"
-      preserveAspectRatio="none"
-      className="h-28 w-full"
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-48 w-full"
       role="img"
       aria-label="Exchange rate trend over the last week"
     >
-      <polyline
-        points={coords.map((c) => c.join(',')).join(' ')}
+      <defs>
+        <linearGradient id="fx-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {gridLines.map((g) => (
+        <g key={g.y}>
+          <line
+            x1={PAD.left}
+            y1={g.y}
+            x2={W - PAD.right}
+            y2={g.y}
+            stroke="var(--border)"
+            strokeWidth="1"
+            strokeDasharray="3 4"
+          />
+          <text
+            x={W - PAD.right + 8}
+            y={g.y + 4}
+            textAnchor="start"
+            fill="var(--muted-foreground)"
+            fontSize="12"
+          >
+            {formatValue(g.value)}
+          </text>
+        </g>
+      ))}
+
+      <path d={areaPath} fill="url(#fx-area)" />
+      <path
+        d={linePath}
         fill="none"
         stroke="var(--primary)"
-        strokeWidth="2"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
       />
+
       {coords.map(([x, y], i) => (
-        <circle key={points[i].date} cx={x} cy={y} r="2.5" fill="var(--primary)" />
+        <g key={points[i].date}>
+          <circle
+            cx={x}
+            cy={y}
+            r="3.5"
+            fill="var(--card)"
+            stroke="var(--primary)"
+            strokeWidth="2"
+          />
+          <text
+            x={x}
+            y={H - 10}
+            textAnchor="middle"
+            fill="var(--muted-foreground)"
+            fontSize="12"
+          >
+            {formatDay(points[i].date)}
+          </text>
+        </g>
       ))}
     </svg>
   )
@@ -412,7 +498,17 @@ export default function ConverterPage() {
           {insight?.available ? (
             <>
               <div className="rounded-panel border border-border bg-muted/30 p-4">
-                <Sparkline points={insight.points} />
+                <div className="mb-1 flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-bold text-foreground">
+                    1 {insight.from_currency} = {insight.latest} {insight.to_currency}
+                  </span>
+                  {insight.points?.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      as of {formatDay(insight.points[insight.points.length - 1].date)}
+                    </span>
+                  )}
+                </div>
+                <InsightChart points={insight.points} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
