@@ -29,3 +29,4 @@ from models.email_notification_log import EmailNotificationLog  # noqa: F401
 from models.admin_notification_log import AdminNotificationLog  # noqa: F401
 from models.recurring_payment import RecurringPayment  # noqa: F401
 from models.audit_log_event import AuditLogEvent  # noqa: F401
+from models.contact import Contact  # noqa: F401

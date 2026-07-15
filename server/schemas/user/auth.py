@@ -165,6 +165,7 @@ class ProfileUpdateRequest(BaseModel):
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     avatar_url: str | None = Field(default=None, max_length=2048)
+    is_discoverable: bool | None = None
 
     @field_validator("first_name", "last_name", mode="before")
     @classmethod
@@ -259,6 +260,7 @@ class UserResponse(BaseModel):
     recovery_email: str | None = None
     recovery_email_verified: bool = False
     email_verified_at: datetime | None = None
+    is_discoverable: bool = True
 
 
 class TokenResponse(BaseModel):

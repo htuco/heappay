@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, CreditCard, Download, FileDown, KeyRound, Paintbrush, SlidersHorizontal, TriangleAlert, UserRound, WalletCards } from 'lucide-react'
+import { Bell, CreditCard, Download, Eye, FileDown, KeyRound, Paintbrush, SlidersHorizontal, TriangleAlert, UserRound, WalletCards } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
-import { refreshSession, updateNotificationPreferences, updatePaymentSecurityPreferences } from '@/store/slices/authSlice'
+import { refreshSession, updateNotificationPreferences, updatePaymentSecurityPreferences, updateProfileUser } from '@/store/slices/authSlice'
 
 import { useWalletCards } from '@/hooks/useWalletCards'
 
@@ -96,6 +96,7 @@ export default function SettingsPage() {
   // On failure we roll back to the last saved value and surface the error.
   const [notifPrefs, setNotifPrefs] = useState(() => savedNotificationPrefs(user))
   const [paymentPrefs, setPaymentPrefs] = useState(() => savedPaymentSecurityPrefs(user))
+  const [discoverable, setDiscoverable] = useState(() => user?.is_discoverable !== false)
   const [saveError, setSaveError] = useState(null)
 
   // Re-sync the local mirror when the server-side user record changes (login,
@@ -106,6 +107,7 @@ export default function SettingsPage() {
     setSyncedUserId(user.id)
     setNotifPrefs(savedNotificationPrefs(user))
     setPaymentPrefs(savedPaymentSecurityPrefs(user))
+    setDiscoverable(user.is_discoverable !== false)
   }
 
   async function handleExportReport(report) {
@@ -149,6 +151,20 @@ export default function SettingsPage() {
   const toggleNotif = (key) => () => {
     if (!user) return
     persistNotifPrefs({ ...notifPrefs, [key]: !notifPrefs[key] })
+  }
+
+  async function toggleDiscoverable() {
+    if (!user) return
+    const previous = discoverable
+    const next = !previous
+    setDiscoverable(next)
+    setSaveError(null)
+    try {
+      await dispatch(updateProfileUser({ isDiscoverable: next })).unwrap()
+    } catch (err) {
+      setDiscoverable(previous)
+      setSaveError(typeof err === 'string' ? err : 'Could not save your privacy settings.')
+    }
   }
 
   const savedPaymentRef = useRef(paymentPrefs)
@@ -320,6 +336,29 @@ export default function SettingsPage() {
     </SettingsCard>
   )
 
+  const privacyCard = (
+    <SettingsCard
+      title="Privacy"
+      icon={Eye}
+      description="Control how others can find you when sending money. Changes save automatically."
+    >
+      <ControlRow
+        label="Discoverable in search"
+        hint="When on, others can find you by name or email. When off, you stay hidden from search but people can still reach you by your exact email or if you're already in their contacts."
+        emphasize
+        alignToggle
+      >
+        <Toggle
+          compact
+          enabled={discoverable}
+          label={discoverable ? 'Discoverable' : 'Hidden'}
+          onToggle={toggleDiscoverable}
+          disabled={!user}
+        />
+      </ControlRow>
+    </SettingsCard>
+  )
+
   const appearanceCard = (
     <SettingsCard
       title="Appearance"
@@ -412,7 +451,12 @@ export default function SettingsPage() {
         {dangerZoneCard}
       </div>
     ),
-    notifications: notificationsCard,
+    notifications: (
+      <div className="space-y-4">
+        {notificationsCard}
+        {privacyCard}
+      </div>
+    ),
     payment: defaultCardCard,
     data: dataReportsCard,
     preferences: appearanceCard,
