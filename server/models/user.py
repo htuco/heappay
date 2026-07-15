@@ -82,6 +82,9 @@ class User(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    is_discoverable: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
 
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")
@@ -99,3 +102,9 @@ class User(Base):
         back_populates="user",
     )
     security_audit_events = relationship("UserSecurityAuditEvent", back_populates="user")
+    contacts = relationship(
+        "Contact",
+        foreign_keys="Contact.owner_user_id",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
