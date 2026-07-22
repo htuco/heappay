@@ -262,8 +262,8 @@ class FxService:
         return {"base": base, "cards": cards}
 
     def pair_insight(self, *, from_currency: str, to_currency: str, days: int = 7) -> dict:
-        """Real recent history for a pair: sparkline points, 24h movement, and
-        the range over the window. Returns available=False if the live source
+        """Real recent history for a pair: line-chart points, movement across the
+        window, and the range over it. Returns available=False if the live source
         has no history for the pair (e.g. an unsupported currency)."""
         src = _normalize_code(from_currency)
         dst = _normalize_code(to_currency)
@@ -290,16 +290,22 @@ class FxService:
 
         values = [rate for _, rate in rows]
         latest = values[-1]
-        change_pct = (latest - values[-2]) / values[-2] * 100
+        change_pct = (latest - values[0]) / values[0] * 100 if values[0] > 0 else Decimal("0")
         low, high = min(values), max(values)
         range_pct = (high - low) / low * 100 if low > 0 else Decimal("0")
 
+        window_label = {
+            7: "the last week",
+            30: "the last month",
+            90: "the last quarter",
+            365: "the last year",
+        }.get(days, f"the last {days} days")
         if change_pct > 0:
-            summary = f"{dst} is weaker against {src} over the last week."
+            summary = f"{dst} is weaker against {src} over {window_label}."
         elif change_pct < 0:
-            summary = f"{dst} is stronger against {src} over the last week."
+            summary = f"{dst} is stronger against {src} over {window_label}."
         else:
-            summary = f"{src} is steady against {dst} over the last week."
+            summary = f"{src} is steady against {dst} over {window_label}."
 
         return {
             "from_currency": src,
