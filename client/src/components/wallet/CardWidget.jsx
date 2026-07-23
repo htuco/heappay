@@ -38,6 +38,7 @@ export default function CardWidget({
   isLoading = false,
   addCardSlot,
   manageCardsSlot,
+  statusSlot,
 }) {
   // Loading = cards still fetching and none resolved yet. Once a card exists we
   // render the real carousel/balance even if a background refresh is in flight,
@@ -121,6 +122,12 @@ export default function CardWidget({
           {addCardSlot}
           {manageCardsSlot}
         </div>
+
+        {/* Aggregate card-status line — a quiet footer sitting with the cards it
+            describes, in place of the old standalone panel at the page bottom. */}
+        {statusSlot ? (
+          <div className="mt-5 border-t border-border/70 pt-4">{statusSlot}</div>
+        ) : null}
       </div>
     </section>
   )
