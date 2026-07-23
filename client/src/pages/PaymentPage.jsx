@@ -178,7 +178,7 @@ export default function PaymentPage() {
         </div>
         <Button onClick={() => setPaymentWizardOpen(true)} className="shrink-0 gap-2">
           <Send className="size-4" />
-          Send
+          New Transaction
         </Button>
       </div>
 
