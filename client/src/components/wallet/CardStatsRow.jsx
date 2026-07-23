@@ -1,3 +1,5 @@
+import { Fragment } from 'react'
+
 import StatTile from './StatTile'
 import Skeleton from '@/components/ui/skeleton'
 import {
@@ -10,10 +12,12 @@ const ACCENT_CLASS = {
   inactive: 'bg-muted-foreground/40',
 }
 
+// Dots share the Dashboard CardStatusOverview treatment (soft ring halo) so the
+// status reads in one visual language across the app.
 const DOT_CLASS = {
-  active: 'bg-success',
-  disabled: 'bg-destructive',
-  inactive: 'bg-muted-foreground/50',
+  active: 'bg-success shadow-[0_0_0_3px_rgba(34,197,94,0.14)]',
+  disabled: 'bg-destructive shadow-[0_0_0_3px_rgba(239,68,68,0.14)]',
+  inactive: 'bg-muted-foreground/50 shadow-[0_0_0_3px_rgba(100,116,139,0.14)]',
 }
 
 export default function CardStatsRow({
@@ -27,31 +31,34 @@ export default function CardStatsRow({
 
   if (compact) {
     return (
-      <section className="rounded-panel border border-border bg-card px-5 py-4 shadow-sm">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Card status
-        </p>
-        <dl className="space-y-2.5">
-          {statuses.map((status) => (
-            <div key={status.id} className="flex items-center justify-between gap-3 text-sm">
-              <dt className="flex items-center gap-2 text-muted-foreground">
-                <span
-                  className={`size-1.5 rounded-full ${DOT_CLASS[status.id] ?? DOT_CLASS.inactive}`}
-                  aria-hidden
-                />
-                {status.label}
-              </dt>
-              <dd className="tabular font-semibold text-card-foreground">
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs"
+        aria-label="Card status"
+      >
+        {statuses.map((status, index) => (
+          <Fragment key={status.id}>
+            {index > 0 && (
+              <span className="text-muted-foreground/40" aria-hidden>
+                ·
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className={`size-2 shrink-0 rounded-full ${DOT_CLASS[status.id] ?? DOT_CLASS.inactive}`}
+                aria-hidden
+              />
+              <span className="text-muted-foreground">{status.label}</span>
+              <span className="tabular font-semibold text-card-foreground">
                 {isLoading ? (
-                  <Skeleton className="h-4 w-5 rounded" />
+                  <Skeleton className="inline-block h-3 w-4 rounded align-middle" />
                 ) : (
                   (statusCounts[status.id] ?? 0)
                 )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+              </span>
+            </span>
+          </Fragment>
+        ))}
+      </div>
     )
   }
 
