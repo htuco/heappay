@@ -64,8 +64,8 @@ export function DayOfMonthPicker({ value, onChange }) {
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex flex-1 items-center rounded-input border border-border bg-card">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-36 flex-1 items-center rounded-input border border-border bg-card">
           <button
             type="button"
             onClick={() => step(-1)}
@@ -96,7 +96,7 @@ export function DayOfMonthPicker({ value, onChange }) {
           </button>
         </div>
 
-        <div className="flex shrink-0 gap-1.5">
+        <div className="flex shrink-0 flex-wrap gap-1.5">
           {QUICK_DAYS.map(({ day, label }) => {
             const active = selected === day
             return (
@@ -105,7 +105,7 @@ export function DayOfMonthPicker({ value, onChange }) {
                 type="button"
                 aria-pressed={active}
                 onClick={() => onChange(String(day))}
-                className={`min-h-11 rounded-chip px-2.5 text-xs font-semibold transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:min-h-0 sm:py-2 ${
+                className={`min-h-11 whitespace-nowrap rounded-chip px-2.5 text-xs font-semibold transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:min-h-0 sm:py-2 ${
                   active
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground'
