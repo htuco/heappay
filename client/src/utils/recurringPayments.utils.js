@@ -50,6 +50,22 @@ export function formatMonthsLabel(months) {
 }
 
 /**
+ * Prose form of the month restriction, for sentences like
+ * "Every 15th of Jan, Mar and Jun".
+ * @param {number[] | null | undefined} months
+ * @returns {string}
+ */
+export function formatMonthsPhrase(months) {
+  if (!months || months.length === 0) return 'every month'
+  const names = months
+    .slice()
+    .sort((a, b) => a - b)
+    .map((m) => MONTH_OPTIONS.find((o) => o.value === m)?.label ?? String(m))
+  if (names.length === 1) return names[0]
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
+/**
  * Currency display for a recurring rule amount (the API sends it as a string).
  * @param {string | number} amount
  * @returns {string}

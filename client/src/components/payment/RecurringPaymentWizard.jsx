@@ -30,6 +30,7 @@ import {
 } from '@/components/payment/recurringFormControls'
 import {
   formatMonthsLabel,
+  formatMonthsPhrase,
   formatRawCardNumber,
   ordinal,
   parseDueDate,
@@ -360,15 +361,28 @@ function StepSchedule({ form, set, onNext, onBack }) {
 
       <MonthPicker value={form.months} onChange={(v) => set('months', v)} />
 
+      {/* The plain-language restatement of day + months — the one thing the user
+          should be able to read back before continuing. */}
       {form.day_of_month && (
-        <p className="flex items-start gap-1.5 rounded-input bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-          <CalendarClock className="mt-px size-3.5 shrink-0" aria-hidden />
-          Payments will be deducted on the {form.day_of_month}
-          {ordinal(Number(form.day_of_month))}{' '}
-          {form.months.length === 0
-            ? 'of each month.'
-            : `of ${formatMonthsLabel(form.months)}.`}
-        </p>
+        <div className="flex items-center gap-3 rounded-surface border border-primary/25 bg-primary/8 px-4 py-3.5">
+          <span
+            className="flex size-10 shrink-0 items-center justify-center rounded-input bg-primary/15 text-primary"
+            aria-hidden
+          >
+            <CalendarClock className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-bold leading-snug tracking-tight text-card-foreground sm:text-lg">
+              Every {form.day_of_month}
+              {ordinal(Number(form.day_of_month))} of {formatMonthsPhrase(form.months)}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {form.amount
+                ? `${formatMoney(form.amount)} leaves your card on that day.`
+                : 'The payment leaves your card on that day.'}
+            </p>
+          </div>
+        </div>
       )}
 
       <WizardFooter>

@@ -60,7 +60,7 @@ export function DayOfMonthPicker({ value, onChange }) {
           Day of month
         </label>
         <span className="text-[11px] font-medium text-muted-foreground">
-          {selected ? `Every ${selected}${ordinal(selected)}` : 'Pick a day'}
+          {selected ? `${selected}${ordinal(selected)}` : 'Pick a day'}
         </span>
       </div>
 
