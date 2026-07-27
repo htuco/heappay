@@ -35,6 +35,16 @@ const REFUND_REASON_OPTIONS = REFUND_REASONS.map((reason) => ({
   value: reason,
   label: reason,
 }))
+// Stable codes the backend branches on (e.g. auto-approval only fires for
+// "duplicate_payment") — decoupled from the display label above so wording
+// changes here can't silently change backend behavior.
+const REFUND_REASON_CODES = {
+  'Duplicate payment': 'duplicate_payment',
+  'Wrong recipient': 'wrong_recipient',
+  'Incorrect amount': 'incorrect_amount',
+  'Service or item was not delivered': 'not_delivered',
+  Other: 'other',
+}
 
 // Status-aware copy when a refund already exists for the transaction being
 // viewed in the refund modal. `null` status (optimistic, this-session) falls
@@ -129,7 +139,8 @@ export default function PaymentPage() {
     setIsSubmittingRefund(true)
     setRefundError(null)
     try {
-      await transactionsService.requestRefund(refundTransactionId, resolvedRefundReason)
+      const reasonCode = REFUND_REASON_CODES[refundReason] ?? 'other'
+      await transactionsService.requestRefund(refundTransactionId, reasonCode, resolvedRefundReason)
       setRefundedTransactionIds((prev) => new Set(prev).add(refundTransactionId))
       notify({
         type: 'success',

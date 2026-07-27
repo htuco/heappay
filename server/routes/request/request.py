@@ -113,6 +113,7 @@ def _to_response(req, *, mask_amounts: bool = False) -> RequestResponse:
         detail = RefundRequestDetailResponse(
             request_id=req.refund_detail.request_id,
             transaction_id=req.refund_detail.transaction_id,
+            reason_code=req.refund_detail.reason_code,
             transaction_amount=tx.amount if tx is not None else None,
             transaction_note=tx.note if tx is not None else None,
             sender_name=sender_name,
@@ -166,6 +167,7 @@ def create_refund_request(
     try:
         req = service.request_refund(
             transaction_id=payload.transaction_id,
+            reason_code=payload.reason_code,
             note=payload.note,
             user_id=user_id,
         )
