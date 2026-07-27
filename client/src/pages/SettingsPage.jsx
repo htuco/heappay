@@ -68,6 +68,7 @@ function savedNotificationPrefs(user) {
     emailPaymentReceived: prefEnabled(user, 'email_payment_received_enabled'),
     emailTopup: prefEnabled(user, 'email_topup_enabled'),
     emailRefundStatus: prefEnabled(user, 'email_refund_status_enabled'),
+    emailOutflow: prefEnabled(user, 'email_outflow_enabled'),
     // Opt-out by default (staff only) — treat missing as false.
     notifyOnUserRequests: user?.notify_on_user_requests === true,
   }
@@ -139,6 +140,7 @@ export default function SettingsPage() {
           emailPaymentReceivedEnabled: next.emailPaymentReceived,
           emailTopupEnabled: next.emailTopup,
           emailRefundStatusEnabled: next.emailRefundStatus,
+          emailOutflowEnabled: next.emailOutflow,
           notifyOnUserRequests: next.notifyOnUserRequests,
         }),
       ).unwrap()
@@ -272,6 +274,7 @@ export default function SettingsPage() {
 
   const notificationRows = [
     { key: 'emailPaymentSent', label: 'Payment sent', hint: 'Email when money you send completes.', emphasize: true },
+    { key: 'emailOutflow', label: 'Outflow alert', hint: 'Email with your new balance whenever money leaves your account.' },
     { key: 'emailPaymentReceived', label: 'Payment received', hint: 'Email when you receive a transfer.' },
     { key: 'emailTopup', label: 'Top-up', hint: 'Email when a card top-up completes.' },
     { key: 'emailRefundStatus', label: 'Refund status', hint: 'Email when a refund request is approved or declined.' },

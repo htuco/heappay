@@ -38,6 +38,25 @@ def payment_received(
     return subject, body
 
 
+def outflow_alert(
+    *,
+    first_name: str | None,
+    amount: Decimal,
+    balance: Decimal,
+    transaction_id: int,
+) -> tuple[str, str]:
+    subject = f"You had an outflow — {_amount(amount)}"
+    body = (
+        f"{_greeting(first_name)}\n\n"
+        f"You had an outflow. Your current balance is {_amount(balance)}.\n"
+        f"Amount: {_amount(amount)}\n"
+        f"Transaction #{transaction_id}\n\n"
+        "You can view details in Heap under Transactions.\n\n"
+        "— Heap"
+    )
+    return subject, body
+
+
 def topup_completed(
     *, first_name: str | None, amount: Decimal, transaction_id: int
 ) -> tuple[str, str]:
