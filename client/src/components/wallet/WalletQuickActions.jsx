@@ -1,7 +1,6 @@
 import { createElement, useState } from 'react'
 import { CreditCard, Plus } from 'lucide-react'
 
-import AddCardModal from '@/components/AddCardModal'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import Skeleton from '@/components/ui/skeleton'
 
@@ -50,17 +49,10 @@ function ActionTileSkeleton() {
 
 /**
  * Wallet-specific quick actions, shown under the Available Balance panel.
- * Add Card opens the shared AddCardModal (controlled here); Transfer routes to
- * the payments page.
+ * Add Card asks the page to open its single AddCardModal — the same one the
+ * top-bar action and the empty state use; Send Money opens the payment wizard.
  */
-export default function WalletQuickActions({
-  onAddCard,
-  isAddingCard = false,
-  addCardError = null,
-  onClearAddCardError,
-  isLoading = false,
-}) {
-  const [addCardOpen, setAddCardOpen] = useState(false)
+export default function WalletQuickActions({ onAddCard, isLoading = false }) {
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
 
   return (
@@ -81,7 +73,7 @@ export default function WalletQuickActions({
               icon={Plus}
               title="Add Card"
               subtitle="Add a new card"
-              onClick={() => setAddCardOpen(true)}
+              onClick={onAddCard}
             />
             <ActionTile
               icon={CreditCard}
@@ -92,15 +84,6 @@ export default function WalletQuickActions({
           </>
         )}
       </div>
-
-      <AddCardModal
-        open={addCardOpen}
-        onOpenChange={setAddCardOpen}
-        onSubmit={onAddCard}
-        isSubmitting={isAddingCard}
-        submitError={addCardError}
-        onClearSubmitError={onClearAddCardError}
-      />
 
       {/* No initialCardId — the wizard opens on the "Choose a card" step so the
           user picks the source card here. */}

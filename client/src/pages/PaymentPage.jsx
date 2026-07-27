@@ -7,6 +7,7 @@ import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import { Button } from '@/components/ui/button'
+import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
 import {
   DialogClose,
   DialogContent,
@@ -170,13 +171,14 @@ export default function PaymentPage() {
 
   return (
     <div>
-      {/* Title/subtitle live in the Layout hero — this row only carries the page action. */}
-      <div className="mx-auto mb-4 flex max-w-5xl justify-end">
-        <Button onClick={() => setPaymentWizardOpen(true)} className="shrink-0 gap-2">
-          <Send className="size-4" />
-          Send
-        </Button>
-      </div>
+      {/* Title, subtitle and now the page action all live in the Layout top bar. */}
+      <PageActionSlot>
+        <PageActionButton
+          icon={Send}
+          label="Send"
+          onClick={() => setPaymentWizardOpen(true)}
+        />
+      </PageActionSlot>
 
       {/* No initialCardId — opens on the "Choose a card" step. */}
       <PaymentWizard
