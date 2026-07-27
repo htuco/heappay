@@ -417,8 +417,8 @@ export default function TopUpModal({
       category: CATEGORIES.PAYMENT_RECEIVED,
       message: `${formatMoney(amountNum)} added to card ****${card.last_four}.`,
       link: created?.transaction_id
-        ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
-        : { route: '/payments' },
+        ? { route: '/transactions', modal: { kind: 'transaction', id: created.transaction_id } }
+        : { route: '/transactions' },
     })
     emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
     onSuccess?.()

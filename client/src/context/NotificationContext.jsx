@@ -56,7 +56,7 @@ function nextNotificationId() {
  *   message,     // string
  *   category,    // semantic kind — drives icon + link routing
  *                // see CATEGORIES below
- *   link,        // optional { route: '/payments', modal?: { kind, id } }
+ *   link,        // optional { route: '/transactions', modal?: { kind, id } }
  *   surface,     // 'toast' | 'panel' | 'both'  (default 'both')
  *   duration,    // toast auto-dismiss ms; 0 = sticky; ignored if surface === 'panel'
  *   dedupKey,    // optional — if a row with this key already exists, the new

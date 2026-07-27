@@ -127,7 +127,7 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 				type: 'success',
 				category: CATEGORIES.PAYMENT_RECEIVED,
 				message: `${formatAmount(tx.amount)} received from ${senderLabel(tx)}.`,
-				link: { route: '/payments', modal: { kind: 'transaction', id: tx.transaction_id } },
+				link: { route: '/transactions', modal: { kind: 'transaction', id: tx.transaction_id } },
 				surface: 'panel',
 				dedupKey: `tx:${tx.transaction_id}:received`,
 			})
@@ -147,7 +147,7 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 					type: 'success',
 					category: CATEGORIES.REFUND_APPROVED,
 					message: `Your refund for ${formatAmount(tx.amount)} was approved.`,
-					link: { route: '/payments', modal: { kind: 'transaction', id: tx.transaction_id } },
+					link: { route: '/transactions', modal: { kind: 'transaction', id: tx.transaction_id } },
 					surface: 'panel',
 					dedupKey: `tx:${tx.transaction_id}:refund_approved`,
 				})
