@@ -165,6 +165,7 @@ class ProfileUpdateRequest(BaseModel):
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     avatar_url: str | None = Field(default=None, max_length=2048)
+    is_discoverable: bool | None = None
 
     @field_validator("first_name", "last_name", mode="before")
     @classmethod
@@ -216,6 +217,7 @@ class NotificationPreferencesUpdate(BaseModel):
     email_payment_received_enabled: bool | None = None
     email_topup_enabled: bool | None = None
     email_refund_status_enabled: bool | None = None
+    email_outflow_enabled: bool | None = None
     notify_on_user_requests: bool | None = None
 
     @model_validator(mode="after")
@@ -228,6 +230,7 @@ class NotificationPreferencesUpdate(BaseModel):
                 self.email_payment_received_enabled,
                 self.email_topup_enabled,
                 self.email_refund_status_enabled,
+                self.email_outflow_enabled,
                 self.notify_on_user_requests,
             )
         ):
@@ -251,6 +254,7 @@ class UserResponse(BaseModel):
     email_payment_received_enabled: bool = True
     email_topup_enabled: bool = True
     email_refund_status_enabled: bool = True
+    email_outflow_enabled: bool = True
     notify_on_user_requests: bool = False
     avatar_url: str | None = None
     totp_enabled: bool = False
@@ -259,6 +263,7 @@ class UserResponse(BaseModel):
     recovery_email: str | None = None
     recovery_email_verified: bool = False
     email_verified_at: datetime | None = None
+    is_discoverable: bool = True
 
 
 class TokenResponse(BaseModel):

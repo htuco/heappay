@@ -1,6 +1,7 @@
 import logging
+from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 EVENT_PAYMENT_SENT = "payment_sent"
 EVENT_PAYMENT_RECEIVED = "payment_received"
 EVENT_TOPUP = "topup"
+EVENT_OUTFLOW = "outflow"
 EVENT_REFUND_APPROVED = "refund_approved"
 EVENT_REFUND_DECLINED = "refund_declined"
 
@@ -44,6 +46,7 @@ class TransactionEmailNotifier:
 
         if tx.sender_card_id is not None and tx.sender_card is not None:
             self._notify_payment_sent(tx)
+            self._notify_outflow(tx)
         if tx.recipient_card is not None:
             self._notify_payment_received(tx)
 
@@ -128,6 +131,28 @@ class TransactionEmailNotifier:
             ),
         )
 
+    def _notify_outflow(self, tx: Transaction) -> None:
+        user = tx.sender_card.user if tx.sender_card else None
+        if user is None or not user.email_outflow_enabled:
+            return
+        # Self-transfers (sender and recipient are the same user) don't change the
+        # user's net balance, so they are not an outflow.
+        recipient_user = tx.recipient_card.user if tx.recipient_card else None
+        if recipient_user is not None and recipient_user.user_id == user.user_id:
+            return
+        balance = self._current_balance_for_user(user.user_id)
+        self._send_transaction_email(
+            user=user,
+            event_type=EVENT_OUTFLOW,
+            reference_id=str(tx.transaction_id),
+            subject_body=templates.outflow_alert(
+                first_name=user.first_name,
+                amount=tx.amount,
+                balance=balance,
+                transaction_id=tx.transaction_id,
+            ),
+        )
+
     def _notify_payment_received(self, tx: Transaction) -> None:
         user = tx.recipient_card.user if tx.recipient_card else None
         if user is None or not user.email_payment_received_enabled:
@@ -159,6 +184,23 @@ class TransactionEmailNotifier:
             return
         subject, body = subject_body
         self._send(notification_email_for_user(user), subject, body)
+
+    def _current_balance_for_user(self, user_id: int) -> Decimal:
+        """The user's spendable balance: wallet pool + sum of active card balances.
+
+        Card balances are already net of escrow holds (the debit is applied on
+        create), so by the time an outgoing transaction settles this reflects the
+        balance after the outflow. Mirrors the client's Total Balance headline.
+        """
+        wallet = self._db.scalar(
+            select(User.wallet_balance).where(User.user_id == user_id)
+        ) or Decimal("0")
+        cards = self._db.scalar(
+            select(func.coalesce(func.sum(Card.balance), 0)).where(
+                Card.user_id == user_id, Card.deleted_at.is_(None)
+            )
+        ) or Decimal("0")
+        return Decimal(wallet) + Decimal(cards)
 
     def _send(self, email: str, subject: str, body: str) -> None:
         try:

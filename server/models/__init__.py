@@ -30,3 +30,4 @@ from models.admin_notification_log import AdminNotificationLog  # noqa: F401
 from models.recurring_payment import RecurringPayment  # noqa: F401
 from models.audit_log_event import AuditLogEvent  # noqa: F401
 from models.refund_approval_rule import RefundApprovalRule  # noqa: F401
+from models.contact import Contact  # noqa: F401

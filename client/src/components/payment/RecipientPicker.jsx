@@ -1,7 +1,8 @@
-import { CheckCircle2, CreditCard, Loader2, Search } from 'lucide-react'
+import { CheckCircle2, CreditCard, Loader2, Search, Star } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import UserAvatar from '@/components/ui/UserAvatar'
 import useUserSearch from '@/hooks/useUserSearch'
+import useContacts from '@/hooks/useContacts'
 import { maskCardNumber } from '@/utils/cardMask'
 
 export default function RecipientPicker({
@@ -12,8 +13,16 @@ export default function RecipientPicker({
   currentUserId,
 }) {
   const { results, isLoading, error } = useUserSearch(query)
+  const { contacts } = useContacts()
   const visibleResults = results.filter((user) => user.default_card)
   const showResults = query.trim().length >= 3 && !selectedRecipient
+  // Saved contacts double as quick picks. Only those with an active card can be
+  // paid; a contact row has the same shape a search result does, so handleSelect
+  // works on it directly.
+  const payableContacts = contacts.filter(
+    (c) => c.default_card && c.user_id !== currentUserId,
+  )
+  const showContacts = !selectedRecipient && query.trim().length < 3 && payableContacts.length > 0
 
   function handleSelect(user) {
     if (user.user_id === currentUserId) return
@@ -69,6 +78,39 @@ export default function RecipientPicker({
             <p className="truncate text-xs text-muted-foreground">
               {selectedRecipient.owner_email} · ****{selectedRecipient.last_four}
             </p>
+          </div>
+        </div>
+      ) : null}
+
+      {showContacts ? (
+        <div className="space-y-1">
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Your contacts
+          </p>
+          <div className="max-h-56 overflow-y-auto rounded-surface border border-border bg-card shadow-sm">
+            {payableContacts.map((contact) => (
+              <button
+                key={contact.contact_id}
+                type="button"
+                onClick={() => handleSelect(contact)}
+                className="flex min-h-11 w-full items-center gap-3 px-3 py-3 text-left transition-colors touch-manipulation hover:bg-muted/40"
+              >
+                <UserAvatar user={contact} className="h-9 w-9 text-xs" />
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 truncate text-sm font-semibold text-card-foreground">
+                    {contact.is_favorite && (
+                      <Star className="size-3 shrink-0 fill-primary text-primary" aria-hidden />
+                    )}
+                    {contact.display_name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{contact.email}</p>
+                </div>
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
+                  <CreditCard className="h-3 w-3" />
+                  ****{contact.default_card.last_four}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       ) : null}

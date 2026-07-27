@@ -69,7 +69,7 @@ export function useRecurringPaymentWatcher({ userId, notify }) {
 					type: 'error',
 					category: CATEGORIES.BILL_FAILED,
 					message: `Recurring payment of ${formatAmount(r.amount)} to ${recipientLabel(r)} failed. Check your balance.`,
-					link: { route: '/payments' },
+					link: { route: '/recurring' },
 					surface: 'both',
 					dedupKey: `bill:${r.recurring_payment_id}:failed:${r.next_due_at}`,
 				})
@@ -78,7 +78,7 @@ export function useRecurringPaymentWatcher({ userId, notify }) {
 					type: 'success',
 					category: CATEGORIES.BILL_PAID,
 					message: `Recurring payment of ${formatAmount(r.amount)} to ${recipientLabel(r)} was sent.`,
-					link: { route: '/payments' },
+					link: { route: '/recurring' },
 					surface: 'panel',
 					dedupKey: `bill:${r.recurring_payment_id}:paid:${prev.next_due_at}`,
 				})

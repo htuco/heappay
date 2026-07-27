@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models.card import Card
 from models.card_status import CardStatus
 from models.card_type import CardType
+from models.contact import Contact
 from models.user import User
 from models.user_role import UserRole
 from models.user_status import UserStatus
@@ -105,6 +106,14 @@ class UserRepository:
             .scalar_subquery()
         )
         pattern = f"%{q}%"
+        # Non-discoverable users stay hidden from general search, but remain
+        # findable by their exact email or if they're already a contact of the
+        # searcher — so people can still be paid.
+        contact_ids = (
+            select(Contact.contact_user_id)
+            .where(Contact.owner_user_id == exclude_user_id)
+            .scalar_subquery()
+        )
         stmt = (
             select(User, Card, CardType.vendor)
             .select_from(User)
@@ -117,6 +126,11 @@ class UserRepository:
                     User.email.ilike(pattern),
                     User.first_name.ilike(pattern),
                     User.last_name.ilike(pattern),
+                ),
+                or_(
+                    User.is_discoverable.is_(True),
+                    func.lower(User.email) == q.strip().lower(),
+                    User.user_id.in_(contact_ids),
                 ),
             )
             .order_by(User.first_name, User.last_name, User.user_id)

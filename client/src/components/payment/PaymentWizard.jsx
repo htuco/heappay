@@ -472,13 +472,27 @@ function StepFrom({ state, onChange, cards, txTypes, onNext }) {
 
 // ─── Step 2: Recipient + amount + note ────────────────────────────────────────
 
-function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
+function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId, lockedRecipient = null }) {
   const [lookupState, setLookupState] = useState(
     state.recipientInfo
       ? { status: 'found', info: state.recipientInfo }
       : { status: 'idle' }
   )
   const [recipientError, setRecipientError] = useState('')
+  // When the payment was opened from a saved contact the recipient is fixed.
+  // Show it read-only so a stray keystroke can't silently redirect the money;
+  // "Change" unlocks the normal picker.
+  const [isChangingRecipient, setIsChangingRecipient] = useState(false)
+  const recipientLocked = Boolean(lockedRecipient) && !isChangingRecipient
+
+  function unlockRecipient() {
+    setIsChangingRecipient(true)
+    onChange('recipientInfo', null)
+    onChange('recipientCardNumber', '')
+    onChange('recipientEmailQuery', '')
+    setLookupState({ status: 'idle' })
+    setRecipientError('')
+  }
   const debounceRef = useRef(null)
   const amountInputRef = useRef(null)
   const categories = useAppSelector(selectTransactionCategories)
@@ -570,18 +584,48 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
   return (
     <div className="space-y-5">
       <section className="space-y-3">
-        <FieldLabel>Recipient method</FieldLabel>
-        <SegmentedControl
-          options={[
-            { value: 'email', label: 'By email' },
-            { value: 'card', label: 'By card number' },
-          ]}
-          value={state.recipientMode}
-          onChange={handleRecipientModeChange}
-          ariaLabel="Recipient method"
-        />
+        {recipientLocked ? (
+          <>
+            <FieldLabel>Recipient</FieldLabel>
+            <div className="flex items-center gap-3 rounded-input border border-success/30 bg-success/8 px-3 py-2.5">
+              <UserAvatar
+                user={{
+                  full_name: lockedRecipient.owner_name,
+                  avatar_url: lockedRecipient.avatar_url,
+                }}
+                className="h-9 w-9 text-xs ring-1 ring-success/30"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-card-foreground">
+                  {lockedRecipient.owner_name}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {lockedRecipient.owner_email} · ****{lockedRecipient.last_four}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={unlockRecipient}
+                className="shrink-0 text-xs font-semibold text-primary hover:underline"
+              >
+                Change
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <FieldLabel>Recipient method</FieldLabel>
+            <SegmentedControl
+              options={[
+                { value: 'email', label: 'By email' },
+                { value: 'card', label: 'By card number' },
+              ]}
+              value={state.recipientMode}
+              onChange={handleRecipientModeChange}
+              ariaLabel="Recipient method"
+            />
 
-        {state.recipientMode === 'email' ? (
+            {state.recipientMode === 'email' ? (
           <RecipientPicker
             query={state.recipientEmailQuery}
             onQueryChange={handleEmailQueryChange}
@@ -659,6 +703,8 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId }) {
               </p>
             )}
           </div>
+        )}
+          </>
         )}
         {recipientError && (
           <p className="text-xs text-destructive">{recipientError}</p>
@@ -981,6 +1027,7 @@ export default function PaymentWizard({
   onClose,
   onSuccess,
   initialCardId = null,
+  initialRecipient = null,
 }) {
   const { user } = useAuth()
   const { notify } = useNotifications()
@@ -1010,14 +1057,19 @@ export default function PaymentWizard({
   useEffect(() => {
     if (!isOpen) return
     setStep(initialCardId ? 1 : 0)
-    setForm({ ...INITIAL_FORM, fromCardId: initialCardId ?? null })
+    setForm({
+      ...INITIAL_FORM,
+      fromCardId: initialCardId ?? null,
+      recipientInfo: initialRecipient ?? null,
+      recipientMode: 'email',
+    })
     setSubmitError('')
     setPinConfirmOpen(false)
     setSendConfirmOpen(false)
     setPin('')
     setPinError('')
     setShowCloseConfirm(false)
-  }, [isOpen, initialCardId])
+  }, [isOpen, initialCardId, initialRecipient])
 
   useEffect(() => {
     if (!isOpen || !user) return
@@ -1141,8 +1193,8 @@ export default function PaymentWizard({
 
     const isSelfTransfer = form.recipientInfo.user_id === user?.id
     const txLink = created?.transaction_id
-      ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
-      : { route: '/payments' }
+      ? { route: '/transactions', modal: { kind: 'transaction', id: created.transaction_id } }
+      : { route: '/transactions' }
 
     if (isSelfTransfer) {
       notify({
@@ -1244,8 +1296,8 @@ export default function PaymentWizard({
       category: CATEGORIES.PAYMENT_SENT,
       message: `${formatMoney(form.amount)} approved and will settle shortly.`,
       link: pendingApprovalTx?.transaction_id
-        ? { route: '/payments', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
-        : { route: '/payments' },
+        ? { route: '/transactions', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
+        : { route: '/transactions' },
     })
     emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
     onSuccess?.()
@@ -1348,6 +1400,7 @@ export default function PaymentWizard({
                   onNext={() => setStep(2)}
                   onBack={() => setStep(0)}
                   currentUserId={currentUserId}
+                  lockedRecipient={initialRecipient}
                 />
               ) : (
                 <StepReview
@@ -1466,8 +1519,8 @@ export default function PaymentWizard({
             category: CATEGORIES.PAYMENT_SENT,
             message: 'Payment is pending your approval. Open it from your history to confirm.',
             link: pendingApprovalTx?.transaction_id
-              ? { route: '/payments', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
-              : { route: '/payments' },
+              ? { route: '/transactions', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
+              : { route: '/transactions' },
           })
           emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
           onSuccess?.()

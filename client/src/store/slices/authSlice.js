@@ -84,9 +84,15 @@ export const registerUser = createAsyncThunk(
 
 export const updateProfileUser = createAsyncThunk(
   'auth/updateProfileUser',
-  async ({ firstName, lastName, email, avatarUrl }, { rejectWithValue }) => {
+  async ({ firstName, lastName, email, avatarUrl, isDiscoverable }, { rejectWithValue }) => {
     try {
-      const user = await authService.updateProfile({ firstName, lastName, email, avatarUrl })
+      const user = await authService.updateProfile({
+        firstName,
+        lastName,
+        email,
+        avatarUrl,
+        isDiscoverable,
+      })
       return user
     } catch (error) {
       return rejectWithValue(getApiErrorMessage(error, 'Profile update failed.'))
@@ -114,6 +120,7 @@ export const updateNotificationPreferences = createAsyncThunk(
       emailPaymentReceivedEnabled,
       emailTopupEnabled,
       emailRefundStatusEnabled,
+      emailOutflowEnabled,
       notifyOnUserRequests,
     },
     { rejectWithValue },
@@ -125,6 +132,7 @@ export const updateNotificationPreferences = createAsyncThunk(
         emailPaymentReceivedEnabled,
         emailTopupEnabled,
         emailRefundStatusEnabled,
+        emailOutflowEnabled,
         notifyOnUserRequests,
       })
     } catch (error) {

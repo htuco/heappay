@@ -133,12 +133,13 @@ export async function getMe() {
 	return user
 }
 
-export async function updateProfile({ firstName, lastName, email, avatarUrl } = {}) {
+export async function updateProfile({ firstName, lastName, email, avatarUrl, isDiscoverable } = {}) {
 	const payload = {}
 	if (firstName !== undefined) payload.first_name = firstName
 	if (lastName !== undefined) payload.last_name = lastName
 	if (email !== undefined) payload.email = email
 	if (avatarUrl !== undefined) payload.avatar_url = avatarUrl
+	if (isDiscoverable !== undefined) payload.is_discoverable = isDiscoverable
 	if (Object.keys(payload).length === 0) {
 		throw new Error('No profile fields to update.')
 	}
@@ -167,6 +168,7 @@ export async function updateNotificationPreferences({
 	emailPaymentReceivedEnabled,
 	emailTopupEnabled,
 	emailRefundStatusEnabled,
+	emailOutflowEnabled,
 	notifyOnUserRequests,
 }) {
 	const { data } = await api.patch('/auth/notification-preferences', {
@@ -175,6 +177,7 @@ export async function updateNotificationPreferences({
 		email_payment_received_enabled: emailPaymentReceivedEnabled,
 		email_topup_enabled: emailTopupEnabled,
 		email_refund_status_enabled: emailRefundStatusEnabled,
+		email_outflow_enabled: emailOutflowEnabled,
 		notify_on_user_requests: notifyOnUserRequests,
 	})
 	const td = data.data

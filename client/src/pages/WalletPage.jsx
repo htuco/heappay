@@ -95,8 +95,9 @@ export default function WalletPage() {
       {/*
         Desktop (lg+): two columns — transactions left (60%), rail right (40%).
         Mobile/tablet (< lg): single column, ordered Quick Actions → Carousel
-        (card + balance) → Recent Activity → Card status. `order-*` reorders the
-        stack on small screens; reset to source order on lg with `lg:order-none`.
+        (card + balance, with the card-status line folded in) → Recent Activity.
+        `order-*` reorders the stack on small screens; reset to source order on
+        lg with `lg:order-none`.
       */}
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-5 lg:items-start lg:gap-6">
         {/* Quick Actions — second on mobile (under the card), top of right rail on desktop */}
@@ -161,6 +162,13 @@ export default function WalletPage() {
                   }
                 />
               }
+              statusSlot={
+                <CardStatsRow
+                  compact
+                  isLoading={isLoading && cards.length === 0}
+                  {...buildCardStatusOverviewProps(cards)}
+                />
+              }
             />
           </div>
         ) : null}
@@ -200,14 +208,6 @@ export default function WalletPage() {
           )}
         </div>
 
-        {/* Card status — last on mobile, bottom of right rail on desktop */}
-        <div className="order-4 lg:order-0 lg:col-span-2 lg:col-start-4 lg:row-start-3">
-          <CardStatsRow
-            compact
-            isLoading={isLoading && cards.length === 0}
-            {...buildCardStatusOverviewProps(cards)}
-          />
-        </div>
       </div>
     </div>
   )

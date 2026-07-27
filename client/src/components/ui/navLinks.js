@@ -1,11 +1,14 @@
 import {
   ArrowLeftRight,
+  CalendarClock,
+  Contact,
   CreditCard,
   LayoutDashboard,
   Repeat,
   ScrollText,
   Settings,
   ShieldUser,
+  Table2,
   TicketCheck,
   Users,
 } from 'lucide-react'
@@ -13,14 +16,17 @@ import {
 export const MAIN_NAV_LINKS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
-  { name: 'Transactions', path: '/payments', icon: ArrowLeftRight },
+  { name: 'My Transactions', path: '/transactions', icon: ArrowLeftRight },
+  // CalendarClock, not Repeat — Converter already owns Repeat in this list.
+  { name: 'Recurring', path: '/recurring', icon: CalendarClock },
   { name: 'Converter', path: '/converter', icon: Repeat },
+  { name: 'Contacts', path: '/contacts', icon: Contact },
 ]
 
 export const ADMIN_NAV_LINKS = [
   { name: 'Overview', path: '/admin', icon: LayoutDashboard },
   { name: 'Users', path: '/admin/users', icon: ShieldUser },
-  { name: 'Transactions', path: '/admin/transactions', icon: ArrowLeftRight },
+  { name: 'All Transactions', path: '/admin/transactions', icon: Table2 },
   { name: 'Requests', path: '/admin/requests', icon: TicketCheck },
   { name: 'Audit log', path: '/admin/audit-log', icon: ScrollText },
 ]
