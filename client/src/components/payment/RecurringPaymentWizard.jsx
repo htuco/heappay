@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   CreditCard,
   Loader2,
-  Repeat2,
   XCircle,
 } from 'lucide-react'
 
@@ -339,21 +338,12 @@ function StepAmount({ form, set, onNext, onBack }) {
 
 // ─── Step 4: Schedule ─────────────────────────────────────────────────────────
 
+// No frequency control here: monthly is the only cadence the API models
+// (day_of_month + months), so a single-option field was dead UI. The summary
+// panel at the bottom states the cadence in words instead.
 function StepSchedule({ form, set, onNext, onBack }) {
   return (
     <div className="space-y-4">
-      {/* Monthly is the only cadence the API models (day_of_month + months), so
-          frequency is shown for orientation rather than offered as a choice. */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
-          Frequency
-        </label>
-        <div className="flex items-center gap-2 rounded-input border border-border bg-muted/40 px-3 py-2.5">
-          <Repeat2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <span className="text-sm font-semibold text-card-foreground">Monthly</span>
-        </div>
-      </div>
-
       <DayOfMonthPicker
         value={form.day_of_month}
         onChange={(v) => set('day_of_month', v)}
