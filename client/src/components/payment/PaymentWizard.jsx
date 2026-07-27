@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowRight,
   Check,
@@ -19,6 +19,14 @@ import FormBanner from '@/components/ui/FormBanner'
 import AppPinPad from '@/components/payment/AppPinPad'
 import UserAvatar from '@/components/ui/UserAvatar'
 import RecipientPicker from '@/components/payment/RecipientPicker'
+import {
+  CardOption,
+  FieldLabel,
+  ReceiptRow,
+  SegmentedControl,
+  StepProgress,
+  WizardFooter,
+} from '@/components/payment/wizardPrimitives'
 import { buildCategoryOptions } from '@/components/payment/transactionHistory.utils'
 import { useAppSelector } from '@/store/hooks'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
@@ -33,7 +41,7 @@ import { getAppPinStatus, getBiometricStatus } from '@/services/authService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
-import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
+import { formatMoney, normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 import { createIdempotencyKey } from '@/utils/idempotency'
 import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
 import PaymentSendConfirmModal from '@/components/payment/PaymentSendConfirmModal'
@@ -52,166 +60,9 @@ function formatAmount(value) {
   return sanitizeAmountInput(value)
 }
 
-function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
-
 // ─── Shared bits ──────────────────────────────────────────────────────────────
 
 const STEP_LABELS = ['From', 'To & Amount', 'Review']
-
-function StepProgress({ current }) {
-  return (
-    <ol
-      className="mx-auto flex w-full max-w-sm items-center"
-      aria-label="Progress"
-    >
-      {STEP_LABELS.map((label, i) => {
-        const done = i < current
-        const active = i === current
-        return (
-          <Fragment key={label}>
-            <li className="flex shrink-0 items-center gap-2">
-              <div
-                aria-current={active ? 'step' : undefined}
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors duration-200 ${
-                  done
-                    ? 'bg-primary text-primary-foreground'
-                    : active
-                    ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
-                    : 'bg-muted text-foreground/60 ring-1 ring-border'
-                }`}
-              >
-                {done ? <Check className="h-3 w-3" strokeWidth={3.5} /> : i + 1}
-              </div>
-              <span
-                className={`text-xs font-semibold transition-colors duration-200 ${
-                  active
-                    ? 'text-card-foreground'
-                    : done
-                    ? 'hidden text-card-foreground/80 sm:inline'
-                    : 'hidden text-muted-foreground sm:inline'
-                }`}
-              >
-                {label}
-              </span>
-            </li>
-            {i < STEP_LABELS.length - 1 && (
-              <div
-                aria-hidden="true"
-                className={`mx-3 h-0.5 min-w-6 flex-1 rounded-full transition-colors duration-300 ${
-                  i < current ? 'bg-primary/60' : 'bg-border'
-                }`}
-              />
-            )}
-          </Fragment>
-        )
-      })}
-    </ol>
-  )
-}
-
-function FieldLabel({ htmlFor, children, hint }) {
-  return (
-    <div className="flex items-baseline justify-between gap-2">
-      <label
-        htmlFor={htmlFor}
-        className="text-xs font-semibold uppercase tracking-wider text-foreground/80"
-      >
-        {children}
-      </label>
-      {hint && (
-        <span className="text-[11px] font-medium text-muted-foreground">
-          {hint}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function CardOption({ card, selected, onSelect, maskCard, resolveBrand }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={`group relative box-border block w-full rounded-surface border-2 p-3.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-        selected
-          ? 'border-primary/60 bg-primary/8 shadow-sm'
-          : 'border-border bg-card hover:border-border/90 hover:bg-muted/40'
-      }`}
-    >
-      <div className="flex items-center gap-3.5">
-        <span className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded-chip border border-border/70 bg-background">
-          <CardBrandIcon brand={resolveBrand(card.card_type_id)} width={52} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-sm font-semibold text-card-foreground">
-            {maskCard(card)}
-          </p>
-          <div className="mt-1 flex items-center gap-1.5 text-xs">
-            <span className="capitalize font-medium text-muted-foreground">
-              {formatBrandLabel(resolveBrand(card.card_type_id))}
-            </span>
-            <span aria-hidden="true" className="text-muted-foreground/50">
-              •
-            </span>
-            <span className="tabular-nums font-semibold text-card-foreground">
-              {formatMoney(card.balance)}
-            </span>
-          </div>
-        </div>
-        <span
-          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors ${
-            selected ? 'bg-primary' : 'border border-border bg-background'
-          }`}
-          aria-hidden="true"
-        >
-          {selected && (
-            <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3.5} />
-          )}
-        </span>
-      </div>
-    </button>
-  )
-}
-
-function SegmentedControl({ options, value, onChange, ariaLabel }) {
-  return (
-    <div
-      role="tablist"
-      aria-label={ariaLabel}
-      className="inline-flex w-full rounded-input bg-muted p-1 ring-1 ring-border/60"
-    >
-      {options.map((opt) => {
-        const active = value === opt.value
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(opt.value)}
-            className={`min-h-11 flex-1 rounded-chip px-3 py-2 text-sm font-semibold transition-all duration-200 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-0 ${
-              active
-                ? 'bg-card text-card-foreground shadow-sm ring-1 ring-border'
-                : 'text-muted-foreground hover:text-card-foreground'
-            }`}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 // ─── Left context panel ──────────────────────────────────────────────────────
 
@@ -938,23 +789,6 @@ function StepReview({
   )
 }
 
-function ReceiptRow({ label, value, capitalize, mono }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3 last:border-b-0">
-      <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </dt>
-      <dd
-        className={`text-right text-sm font-semibold text-card-foreground ${
-          capitalize ? 'capitalize' : ''
-        } ${mono ? 'font-mono' : ''}`}
-      >
-        {value ?? '—'}
-      </dd>
-    </div>
-  )
-}
-
 // ─── Step 4: Success ──────────────────────────────────────────────────────────
 
 function StepResult({ amount, recipientName, onClose }) {
@@ -987,16 +821,6 @@ function StepResult({ amount, recipientName, onClose }) {
       <Button variant="outline" onClick={onClose} className="w-full">
         Done
       </Button>
-    </div>
-  )
-}
-
-// ─── Footer ──────────────────────────────────────────────────────────────────
-
-function WizardFooter({ children }) {
-  return (
-    <div className="sticky bottom-0 z-10 -mx-6 mt-8 flex items-center justify-between gap-3 border-t border-border bg-background px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:-mx-7 sm:px-7 md:static md:z-auto md:mx-0 md:bg-transparent md:px-0 md:py-0 md:pb-0 md:pt-5">
-      {children}
     </div>
   )
 }
@@ -1364,7 +1188,7 @@ export default function PaymentWizard({
             </header>
 
             <div className="mb-6">
-              <StepProgress current={step} />
+              <StepProgress labels={STEP_LABELS} current={step} />
             </div>
 
             <div className="flex-1">

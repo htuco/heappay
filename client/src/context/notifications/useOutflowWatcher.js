@@ -44,9 +44,15 @@ async function collectSince(minId) {
  * matching the server's outflow-email total. Returns null on failure so the
  * caller can skip the balance line rather than show a wrong number.
  */
-async function currentTotalBalance() {
+async function currentTotalBalance(userId) {
 	try {
-		const [wallet, cardsRes] = await Promise.all([getWalletBalance(), listCards()])
+		// Scope the card read to the user: `GET /cards` returns *every* user's
+		// cards when a staff caller omits `user_id`, which would sum the whole
+		// platform's balances into an admin's own outflow alert.
+		const [wallet, cardsRes] = await Promise.all([
+			getWalletBalance(),
+			listCards({ user_id: userId }),
+		])
 		const cards = Array.isArray(cardsRes?.items)
 			? cardsRes.items
 			: Array.isArray(cardsRes)
@@ -149,7 +155,7 @@ export function useOutflowWatcher({ userId, notify }) {
 		if (settled.length > 0) {
 			// oldest first so toasts queue in chronological order
 			settled.sort((a, b) => a.transaction_id - b.transaction_id)
-			const balance = await currentTotalBalance()
+			const balance = await currentTotalBalance(userId)
 			const balanceLine =
 				balance == null
 					? 'You had an outflow.'

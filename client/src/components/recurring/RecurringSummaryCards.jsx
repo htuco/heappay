@@ -1,4 +1,4 @@
-import { CalendarClock, CalendarRange, Repeat2, TriangleAlert } from 'lucide-react'
+import { CalendarCheck2, CalendarClock, Repeat2, TriangleAlert } from 'lucide-react'
 
 import Skeleton from '@/components/ui/skeleton'
 import {
@@ -7,19 +7,19 @@ import {
   summarizeRecurringPayments,
 } from '@/utils/recurringPayments.utils'
 
-function SummaryTile({ icon, label, value, sub, accentClass, isLoading }) {
+function SummaryTile({ icon, label, value, sub, accentClass, labelClass, isLoading }) {
   const Icon = icon
 
   return (
     <div className="rounded-surface border border-border bg-card p-4 shadow-sm">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <span
-          className={`flex size-8 shrink-0 items-center justify-center rounded-input ${accentClass}`}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-input ${accentClass}`}
           aria-hidden
         >
-          <Icon className="size-4" />
+          <Icon className="size-5" />
         </span>
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className={`text-sm font-semibold ${labelClass}`}>{label}</p>
       </div>
       {isLoading ? (
         <>
@@ -54,31 +54,34 @@ export default function RecurringSummaryCards({ rules, isLoading = false }) {
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryTile
         icon={Repeat2}
-        label="Active"
+        label="Active Plans"
         value={stats.activeCount}
         sub={`${formatRecurringAmount(stats.activeTotal)} per full cycle`}
         accentClass="bg-primary/10 text-primary"
+        labelClass="text-primary"
         isLoading={isLoading}
       />
       <SummaryTile
         icon={CalendarClock}
-        label={`Due in ${DUE_SOON_DAYS} days`}
+        label={`Upcoming (${DUE_SOON_DAYS} days)`}
         value={stats.dueSoonCount}
         sub={`${formatRecurringAmount(stats.dueSoonTotal)} leaving soon`}
-        accentClass="bg-sky-500/10 text-sky-600 dark:text-sky-400"
+        accentClass="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+        labelClass="text-violet-600 dark:text-violet-400"
         isLoading={isLoading}
       />
       <SummaryTile
-        icon={CalendarRange}
-        label="Due this month"
+        icon={CalendarCheck2}
+        label="Scheduled This Month"
         value={formatRecurringAmount(stats.dueThisMonthTotal)}
         sub={`across ${plural(stats.dueThisMonthCount, 'payment')}`}
         accentClass="bg-success/10 text-success"
+        labelClass="text-success"
         isLoading={isLoading}
       />
       <SummaryTile
         icon={TriangleAlert}
-        label="Needs attention"
+        label="Action Required"
         value={stats.needsAttentionCount}
         sub={
           stats.needsAttentionCount === 0
@@ -86,6 +89,7 @@ export default function RecurringSummaryCards({ rules, isLoading = false }) {
             : `${plural(stats.needsAttentionCount, 'payment')} failed last run`
         }
         accentClass="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+        labelClass="text-amber-600 dark:text-amber-400"
         isLoading={isLoading}
       />
     </div>

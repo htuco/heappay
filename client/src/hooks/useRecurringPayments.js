@@ -24,10 +24,16 @@ export function useRecurringPayments() {
   const [mutationError, setMutationError] = useState(null)
 
   const load = useCallback(async () => {
+    // `GET /cards` only self-scopes for non-staff callers: an admin with no
+    // `user_id` param gets *every* user's cards, which would leak them into the
+    // "Pay from" picker. Always scope explicitly — and wait for the id, because
+    // axios drops an `undefined` param and we'd be back to the unscoped call.
+    if (!currentUserId) return
+
     try {
       const [rulesData, cardsData] = await Promise.all([
         recurringPaymentsService.list(),
-        listCards().catch(() => []),
+        listCards({ user_id: currentUserId }).catch(() => []),
       ])
       setRules(Array.isArray(rulesData) ? rulesData : [])
       const cardItems = cardsData?.items ?? cardsData
@@ -37,7 +43,7 @@ export function useRecurringPayments() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [currentUserId])
 
   useEffect(() => {
     load()
@@ -45,16 +51,19 @@ export function useRecurringPayments() {
 
   const clearMutationError = useCallback(() => setMutationError(null), [])
 
+  // Resolves to the created rule (truthy) so the create wizard's success screen
+  // can show the server-derived `next_due_at`; `null` on failure so callers can
+  // keep the dialog open.
   const createRule = useCallback(async (payload) => {
     setIsMutating(true)
     setMutationError(null)
     try {
       const created = await recurringPaymentsService.create(payload)
       setRules((prev) => [created, ...prev])
-      return true
+      return created
     } catch (err) {
       setMutationError(err?.message || 'Failed to create recurring payment.')
-      return false
+      return null
     } finally {
       setIsMutating(false)
     }
