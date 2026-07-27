@@ -241,7 +241,7 @@ function AccountProfileModal({ user, open, onOpenChange, onOpenAvatarModal, bloc
   )
 }
 
-export default function SidebarAccountProfile({ user }) {
+export default function SidebarAccountProfile({ user, collapsed = false, actions = null }) {
   const { notify } = useNotifications()
   const { uploadProfileAvatar } = useAuth()
   const [open, setOpen] = useState(false)
@@ -263,25 +263,41 @@ export default function SidebarAccountProfile({ user }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="nav-pill group flex w-full items-center gap-3 rounded-input bg-transparent px-3 py-2.5 text-left hover:bg-primary/5"
+      {/* A container, not one big button: `actions` holds real controls (theme,
+          log out) that can't be nested inside another button. */}
+      <div
+        className={`flex items-center gap-1 rounded-tile border border-sidebar-border bg-muted/40 p-2.5 ${
+          collapsed ? 'flex-col' : ''
+        }`}
       >
-        <UserAvatar
-          user={user}
-          useStockPlaceholder={false}
-          className="h-8 w-8 text-xs ring-1 ring-primary/15"
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-sidebar-foreground">
-            {userName}
-          </span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {formatRole(user.role_name)}
-          </span>
-        </span>
-      </button>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`${userName} — open profile overview`}
+          title={userName}
+          className="nav-pill group flex min-w-0 flex-1 items-center gap-2.5 rounded-input text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
+        >
+          <UserAvatar
+            user={user}
+            useStockPlaceholder={false}
+            className="size-8 shrink-0 text-xs ring-1 ring-primary/15"
+          />
+          {!collapsed && (
+            <span className="min-w-0 flex-1 leading-[1.3]">
+              {/* First name only: the card also carries two icon controls, so a
+                  full name truncates at this width. The full name is in the
+                  tooltip and in the profile dialog this opens. */}
+              <span className="block truncate text-[13px] font-semibold text-sidebar-foreground">
+                {user.first_name || userName}
+              </span>
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {formatRole(user.role_name)}
+              </span>
+            </span>
+          )}
+        </button>
+        {actions}
+      </div>
 
       <AccountProfileModal
         user={user}
