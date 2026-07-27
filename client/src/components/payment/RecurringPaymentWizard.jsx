@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormBanner from '@/components/ui/FormBanner'
 import UserAvatar from '@/components/ui/UserAvatar'
+import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import RecipientPicker from '@/components/payment/RecipientPicker'
 import {
   CardOption,
@@ -391,7 +392,7 @@ function StepSchedule({ form, set, onNext, onBack }) {
 
 // ─── Step 5: Review ───────────────────────────────────────────────────────────
 
-function StepReview({ form, fromCard, maskCard, onSubmit, onBack, isSubmitting, error }) {
+function StepReview({ form, fromCard, resolveBrand, onSubmit, onBack, isSubmitting, error }) {
   const recipientNameParts = form.recipientInfo?.owner_name?.split(' ') ?? []
   const schedule = form.day_of_month
     ? `Every ${form.day_of_month}${ordinal(Number(form.day_of_month))} of ${formatMonthsPhrase(form.months)}`
@@ -427,7 +428,19 @@ function StepReview({ form, fromCard, maskCard, onSubmit, onBack, isSubmitting, 
       )}
 
       <dl className="overflow-hidden rounded-surface bg-card text-sm ring-1 ring-border">
-        <ReceiptRow label="From" value={fromCard ? maskCard(fromCard) : null} mono />
+        <ReceiptRow
+          label="From"
+          value={
+            fromCard ? (
+              <span className="flex items-center justify-end gap-2">
+                <span className="flex h-6 w-9 shrink-0 items-center justify-center overflow-hidden rounded-chip border border-border/70 bg-background">
+                  <CardBrandIcon brand={resolveBrand(fromCard.card_type_id)} width={34} />
+                </span>
+                <span className="font-mono tabular-nums">•••• {fromCard.last_four}</span>
+              </span>
+            ) : null
+          }
+        />
         <ReceiptRow label="Schedule" value={schedule} />
         {form.note && <ReceiptRow label="Note" value={form.note} />}
         <div className="flex items-center justify-between gap-4 bg-muted/40 px-4 py-4">
@@ -635,7 +648,7 @@ export default function RecurringPaymentWizard({
           <StepReview
             form={form}
             fromCard={fromCard}
-            maskCard={maskCard}
+            resolveBrand={resolveBrand}
             onSubmit={handleSubmit}
             onBack={() => goTo(3)}
             isSubmitting={isSubmitting}
