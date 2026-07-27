@@ -3,19 +3,21 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // How far ahead "Due soon" looks.
 export const DUE_SOON_DAYS = 7
 
+// `label` is the compact chip/table form; `full` is for prose like
+// "Every 4th of April".
 export const MONTH_OPTIONS = [
-  { value: 1, label: 'Jan' },
-  { value: 2, label: 'Feb' },
-  { value: 3, label: 'Mar' },
-  { value: 4, label: 'Apr' },
-  { value: 5, label: 'May' },
-  { value: 6, label: 'Jun' },
-  { value: 7, label: 'Jul' },
-  { value: 8, label: 'Aug' },
-  { value: 9, label: 'Sep' },
-  { value: 10, label: 'Oct' },
-  { value: 11, label: 'Nov' },
-  { value: 12, label: 'Dec' },
+  { value: 1, label: 'Jan', full: 'January' },
+  { value: 2, label: 'Feb', full: 'February' },
+  { value: 3, label: 'Mar', full: 'March' },
+  { value: 4, label: 'Apr', full: 'April' },
+  { value: 5, label: 'May', full: 'May' },
+  { value: 6, label: 'Jun', full: 'June' },
+  { value: 7, label: 'Jul', full: 'July' },
+  { value: 8, label: 'Aug', full: 'August' },
+  { value: 9, label: 'Sep', full: 'September' },
+  { value: 10, label: 'Oct', full: 'October' },
+  { value: 11, label: 'Nov', full: 'November' },
+  { value: 12, label: 'Dec', full: 'December' },
 ]
 
 /**
@@ -60,7 +62,7 @@ export function formatMonthsPhrase(months) {
   const names = months
     .slice()
     .sort((a, b) => a - b)
-    .map((m) => MONTH_OPTIONS.find((o) => o.value === m)?.label ?? String(m))
+    .map((m) => MONTH_OPTIONS.find((o) => o.value === m)?.full ?? String(m))
   if (names.length === 1) return names[0]
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
