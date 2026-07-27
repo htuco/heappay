@@ -1,11 +1,21 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+RefundReasonCode = Literal[
+    "duplicate_payment",
+    "wrong_recipient",
+    "incorrect_amount",
+    "not_delivered",
+    "other",
+]
 
 
 class RefundRequestCreate(BaseModel):
     transaction_id: int = Field(gt=0)
+    reason_code: RefundReasonCode
     note: str | None = Field(default=None, max_length=255)
 
 
@@ -14,6 +24,7 @@ class RefundRequestDetailResponse(BaseModel):
 
     request_id: int
     transaction_id: int
+    reason_code: str | None = None
     transaction_amount: Decimal | None = None
     transaction_amount_hidden: bool = False
     transaction_note: str | None = None

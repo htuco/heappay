@@ -113,11 +113,10 @@ class Settings(BaseSettings):
             and self.nexus_project.strip()
         )
 
-    # Refund processor (phase 2 — disabled by default)
-    refund_processor_enabled: bool = False
+    # Refund processor pacing. The actual approval rules (enabled, amount
+    # threshold, age limit) are admin-configurable and live in the
+    # refund_approval_rules DB table, not here.
     refund_min_processing_delay_seconds: int = 3
-    refund_auto_allow_max_amount: Decimal = Decimal("25.00")
-    refund_max_age_days: int = 7
 
     @computed_field
     @property
