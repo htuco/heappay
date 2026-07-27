@@ -14,14 +14,31 @@ import { formatMoney } from '@/utils/amount'
  */
 
 export function StepProgress({ labels, current }) {
+  // Steps are shrink-0 so their label can't wrap, which means every label shown
+  // adds to an intrinsic minimum width. Past three steps that minimum exceeds
+  // the modal and the whole body picks up a horizontal scrollbar — so from four
+  // steps on, only the current step is labelled and the row runs full width.
+  const compact = labels.length > 3
+
   return (
-    <ol className="mx-auto flex w-full max-w-sm items-center" aria-label="Progress">
+    <ol
+      className={`mx-auto flex w-full items-center ${compact ? '' : 'max-w-sm'}`}
+      aria-label="Progress"
+    >
       {labels.map((label, i) => {
         const done = i < current
         const active = i === current
+        const labelVisibility = active
+          ? 'text-card-foreground'
+          : compact
+          ? 'sr-only'
+          : done
+          ? 'hidden text-card-foreground/80 sm:inline'
+          : 'hidden text-muted-foreground sm:inline'
+
         return (
           <Fragment key={label}>
-            <li className="flex shrink-0 items-center gap-2">
+            <li className="flex min-w-0 shrink-0 items-center gap-2">
               <div
                 aria-current={active ? 'step' : undefined}
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors duration-200 ${
@@ -34,14 +51,9 @@ export function StepProgress({ labels, current }) {
               >
                 {done ? <Check className="h-3 w-3" strokeWidth={3.5} /> : i + 1}
               </div>
+              {/* sr-only rather than removed, so the step name stays announced. */}
               <span
-                className={`text-xs font-semibold transition-colors duration-200 ${
-                  active
-                    ? 'text-card-foreground'
-                    : done
-                    ? 'hidden text-card-foreground/80 sm:inline'
-                    : 'hidden text-muted-foreground sm:inline'
-                }`}
+                className={`truncate text-xs font-semibold transition-colors duration-200 ${labelVisibility}`}
               >
                 {label}
               </span>
@@ -49,9 +61,9 @@ export function StepProgress({ labels, current }) {
             {i < labels.length - 1 && (
               <div
                 aria-hidden="true"
-                className={`mx-3 h-0.5 min-w-6 flex-1 rounded-full transition-colors duration-300 ${
-                  i < current ? 'bg-primary/60' : 'bg-border'
-                }`}
+                className={`h-0.5 min-w-3 flex-1 rounded-full transition-colors duration-300 ${
+                  compact ? 'mx-1.5' : 'mx-3'
+                } ${i < current ? 'bg-primary/60' : 'bg-border'}`}
               />
             )}
           </Fragment>
