@@ -171,11 +171,8 @@ export default function PaymentPage() {
 
   return (
     <div>
-      <div className="mx-auto mb-4 flex max-w-5xl items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-card-foreground sm:text-xl">Transactions</h1>
-          <p className="text-sm text-muted-foreground">Review your activity or start a new transaction.</p>
-        </div>
+      {/* Title/subtitle live in the Layout hero — this row only carries the page action. */}
+      <div className="mx-auto mb-4 flex max-w-5xl justify-end">
         <Button onClick={() => setPaymentWizardOpen(true)} className="shrink-0 gap-2">
           <Send className="size-4" />
           Send
