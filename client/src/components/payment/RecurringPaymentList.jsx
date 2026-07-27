@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertCircle, CalendarClock, Check, CheckCircle2, CreditCard, Loader2, Pencil, Plus, Repeat2, Trash2, TriangleAlert, XCircle } from 'lucide-react'
 
-import { recurringPaymentsService } from '@/services/recurringPaymentsService'
-import { listCards, lookupCardByNumber } from '@/services/cardsService'
-import { useAuth } from '@/hooks/useAuth'
+import { lookupCardByNumber } from '@/services/cardsService'
 import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
+import { formatRecurringAmount as formatAmount } from '@/utils/recurringPayments.utils'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import UserAvatar from '@/components/ui/UserAvatar'
@@ -46,12 +45,6 @@ function ordinal(n) {
   const s = ['th', 'st', 'nd', 'rd']
   const v = n % 100
   return s[(v - 20) % 10] || s[v] || s[0]
-}
-
-function formatAmount(amount) {
-  const n = Number.parseFloat(amount)
-  if (Number.isNaN(n)) return String(amount)
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 function recipientName(rule) {
@@ -281,7 +274,7 @@ function RuleForm({ initial, cards, currentUserId, onSubmit, onCancel, loading, 
           const info = await lookupCardByNumber(digits)
           if (info.user_id === currentUserId) {
             setLookupState({ status: 'idle' })
-            setRecipientError("You can't send a bill to yourself.")
+            setRecipientError("You can't set up a recurring payment to yourself.")
             return
           }
           setLookupState({ status: 'found', info })
@@ -307,7 +300,7 @@ function RuleForm({ initial, cards, currentUserId, onSubmit, onCancel, loading, 
 
   function handleEmailRecipientSelect(info) {
     if (info.user_id === currentUserId) {
-      setRecipientError("You can't send a bill to yourself.")
+      setRecipientError("You can't set up a recurring payment to yourself.")
       return
     }
     set('recipientInfo', info)
@@ -462,7 +455,7 @@ function RuleForm({ initial, cards, currentUserId, onSubmit, onCancel, loading, 
         </DialogClose>
         <Button type="submit" disabled={loading || !canSubmit}>
           {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
-          {isEdit ? 'Save changes' : 'Create bill'}
+          {isEdit ? 'Save changes' : 'Create payment'}
         </Button>
       </DialogFooter>
     </form>
@@ -520,81 +513,44 @@ function RuleCard({ rule, onEdit, onCancel }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RecurringPaymentList() {
-  const { user } = useAuth()
-  const currentUserId = user?.user_id ?? user?.id
-
-  const [rules, setRules] = useState([])
-  const [cards, setCards] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+export default function RecurringPaymentList({ recurring }) {
+  const {
+    rules,
+    cards,
+    currentUserId,
+    isLoading,
+    error,
+    isMutating,
+    mutationError,
+    clearMutationError,
+    createRule,
+    updateRule,
+    cancelRule,
+  } = recurring
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editRule, setEditRule] = useState(null)
-  const [cancelRule, setCancelRule] = useState(null)
-
-  const [formLoading, setFormLoading] = useState(false)
-  const [formError, setFormError] = useState(null)
-
-  const load = useCallback(async () => {
-    try {
-      const [rulesData, cardsData] = await Promise.all([
-        recurringPaymentsService.list(),
-        listCards().catch(() => []),
-      ])
-      setRules(Array.isArray(rulesData) ? rulesData : [])
-      setCards(Array.isArray(cardsData?.items ?? cardsData) ? (cardsData?.items ?? cardsData) : [])
-    } catch {
-      setError('Could not load recurring payments.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { load() }, [load])
+  const [ruleToCancel, setRuleToCancel] = useState(null)
 
   async function handleCreate(payload) {
-    setFormLoading(true)
-    setFormError(null)
-    try {
-      const newRule = await recurringPaymentsService.create(payload)
-      setRules((prev) => [newRule, ...prev])
-      setCreateOpen(false)
-    } catch (err) {
-      setFormError(err?.message || 'Failed to create recurring payment.')
-    } finally {
-      setFormLoading(false)
-    }
+    if (await createRule(payload)) setCreateOpen(false)
   }
 
   async function handleEdit(payload) {
-    setFormLoading(true)
-    setFormError(null)
-    try {
-      const updated = await recurringPaymentsService.update(editRule.recurring_payment_id, payload)
-      setRules((prev) => prev.map((r) => (r.recurring_payment_id === updated.recurring_payment_id ? updated : r)))
-      setEditRule(null)
-    } catch (err) {
-      setFormError(err?.message || 'Failed to update recurring payment.')
-    } finally {
-      setFormLoading(false)
-    }
+    if (await updateRule(editRule.recurring_payment_id, payload)) setEditRule(null)
   }
 
   async function handleCancel() {
-    setFormLoading(true)
-    try {
-      await recurringPaymentsService.cancel(cancelRule.recurring_payment_id)
-      setRules((prev) => prev.filter((r) => r.recurring_payment_id !== cancelRule.recurring_payment_id))
-      setCancelRule(null)
-    } catch {
-      // keep modal open — user can retry
-    } finally {
-      setFormLoading(false)
-    }
+    // Stays open on failure so the user can retry.
+    if (await cancelRule(ruleToCancel.recurring_payment_id)) setRuleToCancel(null)
   }
 
-  if (loading) {
+  function openCreate() {
+    clearMutationError()
+    setCreateOpen(true)
+  }
+
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
@@ -609,24 +565,37 @@ export default function RecurringPaymentList() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Recurring Payments</h3>
-        <Button size="sm" variant="outline" onClick={() => { setFormError(null); setCreateOpen(true) }}>
+      <div className="flex items-center justify-end">
+        <Button size="sm" onClick={openCreate}>
           <Plus className="mr-1.5 size-3.5" />
-          New bill
+          New recurring payment
         </Button>
       </div>
 
       {rules.length === 0 ? (
-        <p className="py-2 text-sm text-muted-foreground">No recurring payments set up yet.</p>
+        <div className="rounded-card border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
+          <div className="mx-auto flex size-10 items-center justify-center rounded-input bg-primary/10 text-primary">
+            <Repeat2 className="size-5" />
+          </div>
+          <p className="mt-3 text-sm font-semibold text-foreground">
+            No recurring payments set up yet.
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Schedule a payment once and it runs automatically each month.
+          </p>
+          <Button size="sm" className="mt-4" onClick={openCreate}>
+            <Plus className="mr-1.5 size-3.5" />
+            New recurring payment
+          </Button>
+        </div>
       ) : (
         <div className="space-y-2">
           {rules.map((rule) => (
             <RuleCard
               key={rule.recurring_payment_id}
               rule={rule}
-              onEdit={(r) => { setFormError(null); setEditRule(r) }}
-              onCancel={(r) => setCancelRule(r)}
+              onEdit={(r) => { clearMutationError(); setEditRule(r) }}
+              onCancel={(r) => { clearMutationError(); setRuleToCancel(r) }}
             />
           ))}
         </div>
@@ -646,8 +615,8 @@ export default function RecurringPaymentList() {
             currentUserId={currentUserId}
             onSubmit={handleCreate}
             onCancel={() => setCreateOpen(false)}
-            loading={formLoading}
-            error={formError}
+            loading={isMutating}
+            error={mutationError}
           />
         </DialogContent>
       </DialogRoot>
@@ -668,29 +637,35 @@ export default function RecurringPaymentList() {
               currentUserId={currentUserId}
               onSubmit={handleEdit}
               onCancel={() => setEditRule(null)}
-              loading={formLoading}
-              error={formError}
+              loading={isMutating}
+              error={mutationError}
             />
           )}
         </DialogContent>
       </DialogRoot>
 
       {/* Cancel confirm dialog */}
-      <DialogRoot open={Boolean(cancelRule)} onOpenChange={(o) => { if (!o) setCancelRule(null) }}>
+      <DialogRoot open={Boolean(ruleToCancel)} onOpenChange={(o) => { if (!o) setRuleToCancel(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancel recurring payment</DialogTitle>
             <DialogDescription>
-              Stop the automatic {cancelRule ? formatAmount(cancelRule.amount) : ''} payment to{' '}
-              {cancelRule ? recipientName(cancelRule) : ''}? No future payments will be sent.
+              Stop the automatic {ruleToCancel ? formatAmount(ruleToCancel.amount) : ''} payment to{' '}
+              {ruleToCancel ? recipientName(ruleToCancel) : ''}? No future payments will be sent.
             </DialogDescription>
           </DialogHeader>
+          {mutationError && (
+            <p className="flex items-center gap-1.5 text-sm text-destructive">
+              <AlertCircle className="size-4 shrink-0" />
+              {mutationError}
+            </p>
+          )}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={formLoading}>Keep it</Button>
+              <Button variant="outline" disabled={isMutating}>Keep it</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleCancel} disabled={formLoading}>
-              {formLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+            <Button variant="destructive" onClick={handleCancel} disabled={isMutating}>
+              {isMutating && <Loader2 className="mr-2 size-4 animate-spin" />}
               Cancel payment
             </Button>
           </DialogFooter>

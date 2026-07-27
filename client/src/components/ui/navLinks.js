@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  CalendarClock,
   Contact,
   CreditCard,
   LayoutDashboard,
@@ -16,6 +17,8 @@ export const MAIN_NAV_LINKS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
   { name: 'My Transactions', path: '/transactions', icon: ArrowLeftRight },
+  // CalendarClock, not Repeat — Converter already owns Repeat in this list.
+  { name: 'Recurring', path: '/recurring', icon: CalendarClock },
   { name: 'Converter', path: '/converter', icon: Repeat },
   { name: 'Contacts', path: '/contacts', icon: Contact },
 ]

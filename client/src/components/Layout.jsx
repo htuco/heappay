@@ -17,6 +17,7 @@ const PAGE_META = {
   '/admin/users': { title: 'Users', subtitle: 'Search accounts, review access, and manage roles or status.' },
   '/admin/transactions': { title: 'All Transactions', subtitle: 'Every transaction across the platform, with filters and sorting.' },
   '/transactions': { title: 'Transaction History', subtitle: 'All payments, transfers, and refunds on your account.' },
+  '/recurring': { title: 'Recurring Payments', subtitle: 'Manage all your recurring payments in one place.' },
   '/converter': { title: 'Currency Converter', subtitle: 'Get real-time exchange rates and convert currencies instantly.' },
   '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
   '/support/users': { title: 'Users', subtitle: 'Manage user accounts and card access.' },
