@@ -3,6 +3,52 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // How far ahead "Due soon" looks.
 export const DUE_SOON_DAYS = 7
 
+export const MONTH_OPTIONS = [
+  { value: 1, label: 'Jan' },
+  { value: 2, label: 'Feb' },
+  { value: 3, label: 'Mar' },
+  { value: 4, label: 'Apr' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'Jun' },
+  { value: 7, label: 'Jul' },
+  { value: 8, label: 'Aug' },
+  { value: 9, label: 'Sep' },
+  { value: 10, label: 'Oct' },
+  { value: 11, label: 'Nov' },
+  { value: 12, label: 'Dec' },
+]
+
+/**
+ * English ordinal suffix for a day-of-month (1 → "st", 11 → "th").
+ * @param {number} n
+ * @returns {string}
+ */
+export function ordinal(n) {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return s[(v - 20) % 10] || s[v] || s[0]
+}
+
+/** Groups a raw card number into 4-digit blocks as the user types. */
+export function formatRawCardNumber(value) {
+  return value.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim()
+}
+
+/**
+ * Selected months as a readable label. An empty/absent list means "no month
+ * restriction", which the API models as `months: null`.
+ * @param {number[] | null | undefined} months
+ * @returns {string}
+ */
+export function formatMonthsLabel(months) {
+  if (!months || months.length === 0) return 'Every month'
+  return months
+    .slice()
+    .sort((a, b) => a - b)
+    .map((m) => MONTH_OPTIONS.find((o) => o.value === m)?.label ?? m)
+    .join(', ')
+}
+
 /**
  * Currency display for a recurring rule amount (the API sends it as a string).
  * @param {string | number} amount

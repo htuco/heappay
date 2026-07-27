@@ -51,16 +51,19 @@ export function useRecurringPayments() {
 
   const clearMutationError = useCallback(() => setMutationError(null), [])
 
+  // Resolves to the created rule (truthy) so the create wizard's success screen
+  // can show the server-derived `next_due_at`; `null` on failure so callers can
+  // keep the dialog open.
   const createRule = useCallback(async (payload) => {
     setIsMutating(true)
     setMutationError(null)
     try {
       const created = await recurringPaymentsService.create(payload)
       setRules((prev) => [created, ...prev])
-      return true
+      return created
     } catch (err) {
       setMutationError(err?.message || 'Failed to create recurring payment.')
-      return false
+      return null
     } finally {
       setIsMutating(false)
     }
