@@ -13,6 +13,7 @@ import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PaymentPage from './pages/PaymentPage'
+import RecurringPaymentsPage from './pages/RecurringPaymentsPage'
 import ConverterPage from './pages/ConverterPage'
 import ContactsPage from './pages/ContactsPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -260,6 +261,7 @@ export default function App() {
         {/* Legacy slug — keeps old bookmarks and notifications stored before the
             rename working. Preserves ?tx=<id> so deep-links still open the panel. */}
         <Route path="/payments" element={<LegacyPaymentsRedirect />} />
+        <Route path="/recurring" element={<ProtectedRoute><RecurringPaymentsPage /></ProtectedRoute>} />
         <Route path="/converter" element={<ProtectedRoute><ConverterPage /></ProtectedRoute>} />
         <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
