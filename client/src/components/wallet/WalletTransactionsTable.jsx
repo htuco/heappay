@@ -131,7 +131,7 @@ export default function WalletTransactionsTable({ cardId, card, pageSize = 8 }) 
           </div>
         </div>
         <Link
-          to="/payments"
+          to="/transactions"
           className="inline-flex shrink-0 items-center gap-1 rounded-input px-2 py-1 text-sm font-medium text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           View all

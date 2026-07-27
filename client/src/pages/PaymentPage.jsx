@@ -135,7 +135,7 @@ export default function PaymentPage() {
         type: 'success',
         category: CATEGORIES.REFUND_REQUESTED,
         message: 'Refund request submitted. We’ll notify you when it’s reviewed.',
-        link: { route: '/payments', modal: { kind: 'transaction', id: refundTransactionId } },
+        link: { route: '/transactions', modal: { kind: 'transaction', id: refundTransactionId } },
       })
       closeRefundPreview()
     } catch (err) {
@@ -157,7 +157,7 @@ export default function PaymentPage() {
         type: 'success',
         category: CATEGORIES.PAYMENT_CANCELLED,
         message: 'Payment cancelled. The held amount was released back to your balance.',
-        link: { route: '/payments', modal: { kind: 'transaction', id: cancelTransactionId } },
+        link: { route: '/transactions', modal: { kind: 'transaction', id: cancelTransactionId } },
       })
       closeCancelPreview()
       closeSelectedTransaction()

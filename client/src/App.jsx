@@ -247,7 +247,7 @@ export default function App() {
         <Route path="/support/tickets" element={<StaffRoute><SupportTicketsPage /></StaffRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
-        <Route path="/payments" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
         <Route path="/converter" element={<ProtectedRoute><ConverterPage /></ProtectedRoute>} />
         <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

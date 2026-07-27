@@ -1193,8 +1193,8 @@ export default function PaymentWizard({
 
     const isSelfTransfer = form.recipientInfo.user_id === user?.id
     const txLink = created?.transaction_id
-      ? { route: '/payments', modal: { kind: 'transaction', id: created.transaction_id } }
-      : { route: '/payments' }
+      ? { route: '/transactions', modal: { kind: 'transaction', id: created.transaction_id } }
+      : { route: '/transactions' }
 
     if (isSelfTransfer) {
       notify({
@@ -1296,8 +1296,8 @@ export default function PaymentWizard({
       category: CATEGORIES.PAYMENT_SENT,
       message: `${formatMoney(form.amount)} approved and will settle shortly.`,
       link: pendingApprovalTx?.transaction_id
-        ? { route: '/payments', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
-        : { route: '/payments' },
+        ? { route: '/transactions', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
+        : { route: '/transactions' },
     })
     emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
     onSuccess?.()
@@ -1519,8 +1519,8 @@ export default function PaymentWizard({
             category: CATEGORIES.PAYMENT_SENT,
             message: 'Payment is pending your approval. Open it from your history to confirm.',
             link: pendingApprovalTx?.transaction_id
-              ? { route: '/payments', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
-              : { route: '/payments' },
+              ? { route: '/transactions', modal: { kind: 'transaction', id: pendingApprovalTx.transaction_id } }
+              : { route: '/transactions' },
           })
           emitDataChange(DATA_CHANGE_KINDS.TRANSACTION)
           onSuccess?.()

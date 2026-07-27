@@ -14,7 +14,7 @@ import {
 export const MAIN_NAV_LINKS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', path: '/wallet', icon: CreditCard },
-  { name: 'Transactions', path: '/payments', icon: ArrowLeftRight },
+  { name: 'Transactions', path: '/transactions', icon: ArrowLeftRight },
   { name: 'Converter', path: '/converter', icon: Repeat },
   { name: 'Contacts', path: '/contacts', icon: Contact },
 ]

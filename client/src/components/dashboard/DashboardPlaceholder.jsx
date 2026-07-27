@@ -56,7 +56,7 @@ export default function DashboardPlaceholder({
       <header className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-card-foreground sm:text-lg">{title}</h2>
         <Link
-          to="/payments"
+          to="/transactions"
           className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           View All
