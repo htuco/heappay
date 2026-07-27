@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  AlertCircle,
   ArrowRight,
   CalendarClock,
   CheckCircle2,
   ChevronLeft,
   CreditCard,
+  Info,
   Loader2,
   XCircle,
 } from 'lucide-react'
@@ -13,6 +13,7 @@ import {
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import FormBanner from '@/components/ui/FormBanner'
 import UserAvatar from '@/components/ui/UserAvatar'
 import RecipientPicker from '@/components/payment/RecipientPicker'
 import {
@@ -28,7 +29,6 @@ import {
   MonthPicker,
 } from '@/components/payment/recurringFormControls'
 import {
-  formatMonthsLabel,
   formatMonthsPhrase,
   formatRawCardNumber,
   ordinal,
@@ -392,40 +392,83 @@ function StepSchedule({ form, set, onNext, onBack }) {
 // ─── Step 5: Review ───────────────────────────────────────────────────────────
 
 function StepReview({ form, fromCard, maskCard, onSubmit, onBack, isSubmitting, error }) {
+  const recipientNameParts = form.recipientInfo?.owner_name?.split(' ') ?? []
+  const schedule = form.day_of_month
+    ? `Every ${form.day_of_month}${ordinal(Number(form.day_of_month))} of ${formatMonthsPhrase(form.months)}`
+    : null
+
   return (
     <div className="space-y-4">
-      <dl className="overflow-hidden rounded-surface border border-border bg-card">
-        <ReceiptRow label="Pay from" value={fromCard ? maskCard(fromCard) : null} mono />
-        <ReceiptRow label="Pay to" value={form.recipientInfo?.owner_name} />
-        <ReceiptRow label="Amount" value={formatMoney(form.amount)} />
-        <ReceiptRow label="Frequency" value="Monthly" />
-        <ReceiptRow
-          label="Day of month"
-          value={
-            form.day_of_month
-              ? `${form.day_of_month}${ordinal(Number(form.day_of_month))}`
-              : null
-          }
-        />
-        <ReceiptRow label="Months" value={formatMonthsLabel(form.months)} />
+      {/* Recipient confirmation, mirroring the send wizard's review step. */}
+      {form.recipientInfo && (
+        <div className="flex items-center gap-4 rounded-surface bg-primary/8 p-4 ring-1 ring-primary/25">
+          <UserAvatar
+            user={{
+              first_name: recipientNameParts[0],
+              last_name: recipientNameParts.slice(1).join(' '),
+              avatar_url: form.recipientInfo.avatar_url,
+            }}
+            className="h-12 w-12 text-sm"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+              Confirm recipient
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-card-foreground">
+              {form.recipientInfo.owner_name}
+            </p>
+            <p className="truncate text-xs font-medium text-muted-foreground">
+              {form.recipientInfo.owner_email}
+              <span aria-hidden="true"> · </span>
+              card ****{form.recipientInfo.last_four}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <dl className="overflow-hidden rounded-surface bg-card text-sm ring-1 ring-border">
+        <ReceiptRow label="From" value={fromCard ? maskCard(fromCard) : null} mono />
+        <ReceiptRow label="Schedule" value={schedule} />
         {form.note && <ReceiptRow label="Note" value={form.note} />}
+        <div className="flex items-center justify-between gap-4 bg-muted/40 px-4 py-4">
+          <dt className="text-sm font-bold text-card-foreground">
+            Each payment
+            <span className="mt-0.5 block text-xs font-medium text-muted-foreground">
+              Repeats until you cancel
+            </span>
+          </dt>
+          <dd className="tabular-nums text-xl font-bold tracking-tight text-card-foreground">
+            {formatMoney(form.amount)}
+          </dd>
+        </div>
       </dl>
 
-      {error && (
-        <p className="flex items-center gap-1.5 text-sm text-destructive">
-          <AlertCircle className="size-4 shrink-0" />
-          {error}
-        </p>
-      )}
+      <p className="flex items-start gap-2 px-1 text-xs text-muted-foreground">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <span>
+          Nothing is charged now — the first payment goes out on the next scheduled day.
+        </span>
+      </p>
+
+      {error && <FormBanner variant="error" message={error} />}
 
       <WizardFooter>
         <Button variant="ghost" onClick={onBack} disabled={isSubmitting}>
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back
         </Button>
-        <Button onClick={onSubmit} disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Create recurring payment
+        <Button onClick={onSubmit} disabled={isSubmitting} aria-busy={isSubmitting} size="lg">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating…
+            </>
+          ) : (
+            <>
+              <CalendarClock className="mr-2 h-4 w-4" />
+              Create recurring payment
+            </>
+          )}
         </Button>
       </WizardFooter>
     </div>
@@ -458,12 +501,11 @@ function StepResult({ created, form, onClose }) {
       <dl className="w-full overflow-hidden rounded-surface border border-border bg-card text-left">
         <ReceiptRow label="To" value={form.recipientInfo?.owner_name} />
         <ReceiptRow label="Amount" value={formatMoney(form.amount)} />
-        <ReceiptRow label="Frequency" value="Monthly" />
         <ReceiptRow
-          label="Day of month"
+          label="Schedule"
           value={
             form.day_of_month
-              ? `${form.day_of_month}${ordinal(Number(form.day_of_month))}`
+              ? `Every ${form.day_of_month}${ordinal(Number(form.day_of_month))} of ${formatMonthsPhrase(form.months)}`
               : null
           }
         />
