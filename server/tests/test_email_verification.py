@@ -17,7 +17,7 @@ from sqlalchemy.pool import StaticPool
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
 
-from database import Base  # noqa: E402
+from database import Base, SQLITE_SCHEMA_TRANSLATE_MAP  # noqa: E402
 from main import create_app  # noqa: E402
 from models.email_verification_token import EmailVerificationToken  # noqa: E402
 from models.user import User  # noqa: E402
@@ -46,7 +46,10 @@ def _session() -> Session:
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-    )
+        # Tables are namespaced (identity.users, money.cards, ...) but SQLite has
+        # no schema support, so every namespace is translated away here. This
+        # applies to DDL too, so create_all() below works unchanged.
+    ).execution_options(schema_translate_map=SQLITE_SCHEMA_TRANSLATE_MAP)
     Base.metadata.create_all(engine)
     db = sessionmaker(bind=engine)()
     db.add(UserStatus(status_name="active"))
