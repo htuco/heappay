@@ -16,6 +16,7 @@ import PaymentPage from './pages/PaymentPage'
 import RecurringPaymentsPage from './pages/RecurringPaymentsPage'
 import ConverterPage from './pages/ConverterPage'
 import ContactsPage from './pages/ContactsPage'
+import FamilyPage from './pages/FamilyPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyRecoveryEmailPage from './pages/VerifyRecoveryEmailPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
@@ -264,6 +265,7 @@ export default function App() {
         <Route path="/recurring" element={<ProtectedRoute><RecurringPaymentsPage /></ProtectedRoute>} />
         <Route path="/converter" element={<ProtectedRoute><ConverterPage /></ProtectedRoute>} />
         <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
+        <Route path="/family" element={<ProtectedRoute><FamilyPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       </Route>
 
