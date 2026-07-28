@@ -47,7 +47,7 @@
   --sidebar-accent-foreground: oklch(0.6723 0.1606 244.9955);
   --sidebar-border: oklch(0.9271 0.0101 238.5177);
   --sidebar-ring: oklch(0.6818 0.1584 243.3540);
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Poppins, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --radius: 2rem;
@@ -112,7 +112,7 @@
   --sidebar-accent-foreground: oklch(0.6692 0.1607 245.0110);
   --sidebar-border: oklch(0.3200 0.0050 240.0000);
   --sidebar-ring: oklch(0.6818 0.1584 243.3540);
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Poppins, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --radius: 2rem;
@@ -179,6 +179,16 @@
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
 
+  /* Poppins renders noticeably heavier than Inter at the same numeric weight,
+     so the weight utilities are remapped instead of re-tagging every heading:
+     font-bold lands on 600 and the extra-heavy utilities cap at 700. Only
+     400/500/600/700 are used anywhere in the UI. */
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 700;
+  --font-weight-black: 700;
+
   /* Canonical spring easing for modal open animations.
      Reference from both shared modal primitives (dialog.jsx, modal.jsx)
      via ease-modal-spring so the curve lives in one place. The third
@@ -196,6 +206,7 @@
      Surface tiers below are semantic; do not reach for raw rounded-* in components. */
   --radius-input: 10px;     /* inputs, selects, textareas, buttons, segmented controls, toggles */
   --radius-chip: 8px;       /* badges, status pills, tags */
+  --radius-tile: 12px;      /* small shell tiles — sidebar user card, logo tile */
   --radius-surface: 16px;   /* info cards, list tiles, info boxes, settings cards */
   --radius-panel: 24px;     /* page heroes, full-width panels, modals with prominence */
   --radius-pill: 9999px;    /* full pills, avatars, switch knobs */

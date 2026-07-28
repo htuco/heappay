@@ -405,11 +405,6 @@ export default function AdminRequestsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-card-foreground sm:text-xl">Requests</h1>
-        <p className="text-sm text-muted-foreground">Review and resolve refund and card-freeze requests.</p>
-      </div>
-
       <div className="flex items-center gap-1 border-b border-border">
         {TABS.map((tab) => {
           const active = activeTab === tab.key

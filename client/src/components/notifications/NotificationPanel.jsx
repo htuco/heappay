@@ -14,7 +14,7 @@ const PANEL_OPEN_CLASSES =
 const SHEET_OPEN_CLASSES =
 	'animate-in fade-in-0 slide-in-from-bottom-8 duration-400 ease-[cubic-bezier(0.34,1.45,0.64,1)]'
 
-export default function NotificationPanel() {
+export default function NotificationPanel({ variant = 'topbar', collapsed = false }) {
 	const { history, unreadCount, dotCount, markRead, markAllRead, markAllSeen, discard, clearHistory } =
 		useNotifications()
 	const navigateForNotification = useNotificationNavigation()
@@ -210,27 +210,61 @@ export default function NotificationPanel() {
 		</div>
 	)
 
+	const isSidebar = variant === 'sidebar'
+
 	return (
 		<div className="relative" ref={panelRef}>
 			<button
 				type="button"
 				onClick={handleToggle}
-				className="nav-pill relative flex h-11 w-11 items-center justify-center rounded-input text-muted-foreground hover:bg-muted/60 hover:text-foreground touch-manipulation md:h-auto md:w-auto md:p-2"
+				className={cn(
+					'nav-pill relative flex items-center text-muted-foreground touch-manipulation',
+					isSidebar
+						? // Matches the geometry of a sidebar nav row. `w-full` matters:
+							// a <button> is content-width by default, so without it the icon
+							// sits left of the NavLink rows instead of sharing their centre.
+							'w-full gap-2.75 rounded-input px-2.5 py-2.25 text-sm font-medium hover:bg-muted/50 hover:text-sidebar-foreground'
+						: 'h-11 w-11 justify-center rounded-input hover:bg-muted/60 hover:text-foreground md:h-auto md:w-auto md:p-2',
+					isSidebar && collapsed && 'justify-center',
+				)}
 				aria-label="Notifications"
 				aria-haspopup="dialog"
 				aria-expanded={open}
+				title={isSidebar && collapsed ? 'Notifications' : undefined}
 			>
-				<Bell className="h-4.5 w-4.5" strokeWidth={2} />
-				{dotCount > 0 && (
+				<span className="relative flex shrink-0">
+					<Bell
+						className={cn(isSidebar ? 'size-4.5 opacity-65' : 'h-4.5 w-4.5')}
+						strokeWidth={isSidebar ? 1.8 : 2}
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+					{/* Collapsed rail: the row is full-width, so the dot hangs off the
+					    icon rather than the row's right edge. */}
+					{dotCount > 0 && isSidebar && collapsed && (
+						<span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-destructive ring-2 ring-sidebar" />
+					)}
+				</span>
+				{isSidebar && !collapsed && (
+					<>
+						<span className="min-w-0 flex-1 truncate text-left">Notifications</span>
+						{unreadCount > 0 && (
+							<span className="shrink-0 text-xs font-semibold text-primary">{unreadCount}</span>
+						)}
+					</>
+				)}
+				{dotCount > 0 && !isSidebar && (
 					<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card" />
 				)}
 			</button>
 
-			{/* Desktop dropdown */}
+			{/* Desktop dropdown — opens upward out of the sidebar's bottom stack,
+			    downward from the page header. */}
 			{open && (
 				<div
 					className={cn(
-						'hidden sm:flex absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1.5rem)]',
+						'hidden sm:flex absolute w-96 max-w-[calc(100vw-1.5rem)]',
+						isSidebar ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2',
 						'flex-col rounded-surface border border-border bg-popover z-50 overflow-hidden',
 						'max-h-[min(40rem,calc(100vh-4rem))]',
 						PANEL_OPEN_CLASSES,
