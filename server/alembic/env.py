@@ -16,6 +16,17 @@ import models  # noqa: F401
 
 target_metadata = Base.metadata
 
+# Tables live in six namespaces (Phase 2 of the schema refactor). Autogenerate
+# must be told to look beyond `public`, and must be scoped to the schemas we own
+# so it never proposes changes for anything else in the database.
+OWNED_SCHEMAS = {"identity", "money", "requests", "comms", "security", "audit", None}
+
+
+def include_name(name, type_, parent_names) -> bool:
+    if type_ == "schema":
+        return name in OWNED_SCHEMAS
+    return True
+
 
 def get_url() -> str:
     return get_settings().database_url
@@ -28,6 +39,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_schemas=True,
+        include_name=include_name,
     )
 
     with context.begin_transaction():
@@ -38,7 +51,12 @@ def run_migrations_online() -> None:
     connectable = create_engine(get_url(), poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_schemas=True,
+            include_name=include_name,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

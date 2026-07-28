@@ -10,6 +10,23 @@ class Base(DeclarativeBase):
     pass
 
 
+# The namespaces every table lives in. Single source of truth: Alembic's
+# autogenerate scope and the test suite both derive from this list.
+SCHEMAS: tuple[str, ...] = (
+    "identity",
+    "money",
+    "requests",
+    "comms",
+    "security",
+    "audit",
+)
+
+# SQLite has no schema support, so tests that build their schema on it must
+# translate every namespace to None. Without this, `identity.users` is
+# unresolvable and table creation fails outright.
+SQLITE_SCHEMA_TRANSLATE_MAP: dict[str | None, str | None] = {s: None for s in SCHEMAS}
+
+
 _settings = get_settings()
 
 
