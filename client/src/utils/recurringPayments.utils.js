@@ -96,6 +96,113 @@ function startOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
+/**
+ * Display name for the party a rule pays.
+ * @param {object} rule
+ * @returns {string}
+ */
+export function recipientName(rule) {
+  const r = rule?.recipient
+  if (!r) return `Card #${rule?.recipient_card_id}`
+  if (r.first_name || r.last_name) return [r.first_name, r.last_name].filter(Boolean).join(' ')
+  return r.email || `Card #${rule.recipient_card_id}`
+}
+
+/**
+ * Absolute form of the next run date.
+ * @param {string | null | undefined} value
+ * @returns {string}
+ */
+export function nextDueLabel(value) {
+  const due = parseDueDate(value)
+  if (!due) return '—'
+  return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/**
+ * Whole days from today to a due date, negative when the date has passed.
+ * @param {string | null | undefined} value
+ * @param {Date} [now]
+ * @returns {number | null}
+ */
+export function daysUntilDue(value, now = new Date()) {
+  const due = parseDueDate(value)
+  if (!due) return null
+  return Math.round((due.getTime() - startOfDay(now).getTime()) / DAY_MS)
+}
+
+/**
+ * Relative hint next to the due date — "in 4 days", "today", "overdue by 2 days".
+ * @param {string | null | undefined} value
+ * @param {Date} [now]
+ * @returns {string | null}
+ */
+export function relativeDueLabel(value, now = new Date()) {
+  const days = daysUntilDue(value, now)
+  if (days === null) return null
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  if (days > 1) return `in ${days} days`
+  const overdue = Math.abs(days)
+  return `overdue by ${overdue} day${overdue === 1 ? '' : 's'}`
+}
+
+/**
+ * Whether a rule runs every month or only in the months it lists.
+ * @param {object} rule
+ * @returns {'every-month' | 'specific-months'}
+ */
+export function frequencyKind(rule) {
+  return rule?.months?.length > 0 ? 'specific-months' : 'every-month'
+}
+
+/**
+ * Compact schedule for the card badge — "Monthly · 1st" or "1st of Nov".
+ * @param {object} rule
+ * @returns {string}
+ */
+export function scheduleLabel(rule) {
+  const day = `${rule.day_of_month}${ordinal(rule.day_of_month)}`
+  if (frequencyKind(rule) === 'every-month') return `Monthly · ${day}`
+  return `${day} of ${formatMonthsLabel(rule.months)}`
+}
+
+/**
+ * Status options built from the statuses actually present in the payload.
+ * @param {Array<object>} rules
+ * @returns {Array<{ value: string, label: string }>}
+ */
+export function statusOptionsFromRules(rules) {
+  const present = new Set(
+    (Array.isArray(rules) ? rules : []).map((rule) => rule?.status).filter(Boolean),
+  )
+  return [...present]
+    .sort()
+    .map((status) => ({ value: status, label: status.charAt(0).toUpperCase() + status.slice(1) }))
+}
+
+/**
+ * Client-side filtering for the recurring list.
+ * @param {Array<object>} rules
+ * @param {{ q?: string, status?: string, freq?: string, attention?: boolean }} filters
+ * @param {(rule: object) => string} recipientLabel resolves the searchable name
+ * @returns {Array<object>}
+ */
+export function filterRecurringRules(rules, filters = {}, recipientLabel = () => '') {
+  const list = Array.isArray(rules) ? rules : []
+  const query = (filters.q ?? '').trim().toLowerCase()
+
+  return list.filter((rule) => {
+    if (filters.status && rule.status !== filters.status) return false
+    if (filters.freq && frequencyKind(rule) !== filters.freq) return false
+    if (filters.attention && !rule.last_run_failed) return false
+    if (!query) return true
+    return [recipientLabel(rule), rule.note].some(
+      (field) => typeof field === 'string' && field.toLowerCase().includes(query),
+    )
+  })
+}
+
 function sumAmounts(rules) {
   return rules.reduce((total, rule) => {
     const n = Number.parseFloat(rule?.amount)
@@ -107,9 +214,8 @@ function sumAmounts(rules) {
  * Derive the page's summary stats from the rules the list endpoint already
  * returns — no extra request, no summary endpoint.
  *
- * Note the API only ever hands back `active` rules (`list_for_user` filters
- * cancelled ones out server-side) and the model has no `paused`/`completed`
- * state, so those buckets are deliberately absent: they'd always read zero.
+ * The list includes cancelled rules, so every bucket here filters on `active`
+ * first — a cancelled rule must not inflate the totals.
  *
  * @param {Array<object>} rules
  * @param {Date} [now]

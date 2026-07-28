@@ -69,11 +69,11 @@ class RecurringPaymentRepository:
         stmt = (
             select(RecurringPayment)
             .options(*self._load_options())
-            .where(
-                RecurringPayment.user_id == user_id,
-                RecurringPayment.status != "cancelled",
+            .where(RecurringPayment.user_id == user_id)
+            .order_by(
+                (RecurringPayment.status != "active").asc(),
+                RecurringPayment.created_at.desc(),
             )
-            .order_by(RecurringPayment.created_at.desc())
         )
         return list(self._db.scalars(stmt).unique().all())
 
