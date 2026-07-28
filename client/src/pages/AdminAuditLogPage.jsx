@@ -103,13 +103,6 @@ export default function AdminAuditLogPage() {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
-				<p className="mt-1 text-sm text-muted-foreground">
-					Immutable record of admin actions, logins, and refund decisions.
-				</p>
-			</div>
-
 			<div className="rounded-surface border border-border bg-card p-4 shadow-xs">
 				<div className="flex flex-col gap-4">
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
