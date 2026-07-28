@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Layout from './components/Layout'
 import AdminPage from './pages/AdminPage'
@@ -13,6 +13,7 @@ import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/Dashboard'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PaymentPage from './pages/PaymentPage'
+import RecurringPaymentsPage from './pages/RecurringPaymentsPage'
 import ConverterPage from './pages/ConverterPage'
 import ContactsPage from './pages/ContactsPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -71,6 +72,15 @@ function StatusGatedRoute({ children }) {
 
 function ProtectedRoute({ children }) {
   return <StatusGatedRoute>{children}</StatusGatedRoute>
+}
+
+// The transactions page used to live at /payments. Redirect the old slug and
+// carry the query string over, so notification deep-links persisted in
+// localStorage before the rename (?tx=<id>) still open the detail panel.
+function LegacyPaymentsRedirect() {
+  const { search, hash } = useLocation()
+
+  return <Navigate to={`/transactions${search}${hash}`} replace />
 }
 
 function AdminRoute({ children }) {
@@ -247,7 +257,11 @@ export default function App() {
         <Route path="/support/tickets" element={<StaffRoute><SupportTicketsPage /></StaffRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
-        <Route path="/payments" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+        {/* Legacy slug — keeps old bookmarks and notifications stored before the
+            rename working. Preserves ?tx=<id> so deep-links still open the panel. */}
+        <Route path="/payments" element={<LegacyPaymentsRedirect />} />
+        <Route path="/recurring" element={<ProtectedRoute><RecurringPaymentsPage /></ProtectedRoute>} />
         <Route path="/converter" element={<ProtectedRoute><ConverterPage /></ProtectedRoute>} />
         <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

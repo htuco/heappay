@@ -20,6 +20,7 @@ import {
 } from './notifications/storage'
 import { CATEGORIES } from './notifications/categories'
 import { useIncomingTransferWatcher } from './notifications/useIncomingTransferWatcher'
+import { useOutflowWatcher } from './notifications/useOutflowWatcher'
 import { useAccountEventsWatcher } from './notifications/useAccountEventsWatcher'
 import { useCardExpiryWatcher } from './notifications/useCardExpiryWatcher'
 import { useCardExpirySweepWatcher } from './notifications/useCardExpirySweepWatcher'
@@ -55,7 +56,7 @@ function nextNotificationId() {
  *   message,     // string
  *   category,    // semantic kind — drives icon + link routing
  *                // see CATEGORIES below
- *   link,        // optional { route: '/payments', modal?: { kind, id } }
+ *   link,        // optional { route: '/transactions', modal?: { kind, id } }
  *   surface,     // 'toast' | 'panel' | 'both'  (default 'both')
  *   duration,    // toast auto-dismiss ms; 0 = sticky; ignored if surface === 'panel'
  *   dedupKey,    // optional — if a row with this key already exists, the new
@@ -169,6 +170,7 @@ export function NotificationProvider({ children }) {
 	}, [])
 
 	useIncomingTransferWatcher({ userId, notify })
+	useOutflowWatcher({ userId, notify })
 	useAccountEventsWatcher({ userId, notify, selfActionRef: selfCardActionRef })
 	useCardExpiryWatcher({ userId, notify })
 	useCardExpirySweepWatcher({ userId, notify, selfActionRef: selfCardActionRef })

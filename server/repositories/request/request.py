@@ -200,6 +200,7 @@ class RequestRepository:
         *,
         requester_user_id: int,
         transaction_id: int,
+        reason_code: str,
         note: str | None,
     ) -> Request:
         refund_type_id = self.get_type_id("refund")
@@ -217,6 +218,7 @@ class RequestRepository:
         detail = RefundRequestDetail(
             request_id=req.request_id,
             transaction_id=transaction_id,
+            reason_code=reason_code,
         )
         self._db.add(detail)
         self._db.commit()

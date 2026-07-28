@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, Plus } from 'lucide-react'
+import { Compass, CreditCard, Plus } from 'lucide-react'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import DashboardPlaceholder from '@/components/dashboard/DashboardPlaceholder'
@@ -12,6 +12,7 @@ import PaymentCard from '@/components/payment-card/PaymentCard'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
 import AddCardModal from '@/components/AddCardModal'
+import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
 import { useWalletCards } from '@/hooks/useWalletCards'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
@@ -181,6 +182,22 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/*
+        Placeholder for the guided product tour — it will walk a new user
+        through the wallet, payments and recurring surfaces. Disabled rather
+        than hidden so the slot is reserved and the affordance is discoverable;
+        follows the same "coming soon" pattern as the other unbuilt controls.
+      */}
+      <PageActionSlot>
+        <PageActionButton
+          icon={Compass}
+          label="Take a tour"
+          variant="outline"
+          disabled
+          title="A guided tour of Heap is coming soon."
+        />
+      </PageActionSlot>
+
       {showLoader && <DashboardLoadingOverlay />}
       {/* Row 1: Balance (flexible) + Payment Card (fixed 384px at lg, 464px at xl) */}
       <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">

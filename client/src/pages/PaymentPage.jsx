@@ -6,8 +6,8 @@ import { AlertTriangle, Loader2, MessageSquareText, Send } from 'lucide-react'
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
 import PaymentWizard from '@/components/payment/PaymentWizard'
-import RecurringPaymentList from '@/components/payment/RecurringPaymentList'
 import { Button } from '@/components/ui/button'
+import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
 import {
   DialogClose,
   DialogContent,
@@ -35,6 +35,16 @@ const REFUND_REASON_OPTIONS = REFUND_REASONS.map((reason) => ({
   value: reason,
   label: reason,
 }))
+// Stable codes the backend branches on (e.g. auto-approval only fires for
+// "duplicate_payment") — decoupled from the display label above so wording
+// changes here can't silently change backend behavior.
+const REFUND_REASON_CODES = {
+  'Duplicate payment': 'duplicate_payment',
+  'Wrong recipient': 'wrong_recipient',
+  'Incorrect amount': 'incorrect_amount',
+  'Service or item was not delivered': 'not_delivered',
+  Other: 'other',
+}
 
 // Status-aware copy when a refund already exists for the transaction being
 // viewed in the refund modal. `null` status (optimistic, this-session) falls
@@ -129,13 +139,14 @@ export default function PaymentPage() {
     setIsSubmittingRefund(true)
     setRefundError(null)
     try {
-      await transactionsService.requestRefund(refundTransactionId, resolvedRefundReason)
+      const reasonCode = REFUND_REASON_CODES[refundReason] ?? 'other'
+      await transactionsService.requestRefund(refundTransactionId, reasonCode, resolvedRefundReason)
       setRefundedTransactionIds((prev) => new Set(prev).add(refundTransactionId))
       notify({
         type: 'success',
         category: CATEGORIES.REFUND_REQUESTED,
         message: 'Refund request submitted. We’ll notify you when it’s reviewed.',
-        link: { route: '/payments', modal: { kind: 'transaction', id: refundTransactionId } },
+        link: { route: '/transactions', modal: { kind: 'transaction', id: refundTransactionId } },
       })
       closeRefundPreview()
     } catch (err) {
@@ -157,7 +168,7 @@ export default function PaymentPage() {
         type: 'success',
         category: CATEGORIES.PAYMENT_CANCELLED,
         message: 'Payment cancelled. The held amount was released back to your balance.',
-        link: { route: '/payments', modal: { kind: 'transaction', id: cancelTransactionId } },
+        link: { route: '/transactions', modal: { kind: 'transaction', id: cancelTransactionId } },
       })
       closeCancelPreview()
       closeSelectedTransaction()
@@ -171,16 +182,14 @@ export default function PaymentPage() {
 
   return (
     <div>
-      <div className="mx-auto mb-4 flex max-w-5xl items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-card-foreground sm:text-xl">Transactions</h1>
-          <p className="text-sm text-muted-foreground">Review your activity or start a new transaction.</p>
-        </div>
-        <Button onClick={() => setPaymentWizardOpen(true)} className="shrink-0 gap-2">
-          <Send className="size-4" />
-          New Transaction
-        </Button>
-      </div>
+      {/* Title, subtitle and now the page action all live in the Layout top bar. */}
+      <PageActionSlot>
+        <PageActionButton
+          icon={Send}
+          label="New Transaction"
+          onClick={() => setPaymentWizardOpen(true)}
+        />
+      </PageActionSlot>
 
       {/* No initialCardId — opens on the "Choose a card" step. */}
       <PaymentWizard
@@ -188,10 +197,6 @@ export default function PaymentPage() {
         onClose={() => setPaymentWizardOpen(false)}
         onSuccess={() => refreshHistoryRef.current?.()}
       />
-
-      <div className="mx-auto mb-6 max-w-5xl">
-        <RecurringPaymentList />
-      </div>
 
       <TransactionHistory
         onTransactionSelect={setSelectedTransaction}

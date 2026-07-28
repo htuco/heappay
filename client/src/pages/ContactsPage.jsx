@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
 import UserAvatar from '@/components/ui/UserAvatar'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import useContacts from '@/hooks/useContacts'
@@ -147,6 +148,12 @@ export default function ContactsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
+      {/* Scrolls to and focuses the always-visible "Add a contact" field below,
+          the same thing the in-body Quick actions shortcut does. */}
+      <PageActionSlot>
+        <PageActionButton icon={UserPlus} label="Add contact" onClick={focusAddContact} />
+      </PageActionSlot>
+
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Contacts</h1>

@@ -263,6 +263,7 @@ class UserAuthService:
             email_payment_received_enabled=user.email_payment_received_enabled,
             email_topup_enabled=user.email_topup_enabled,
             email_refund_status_enabled=user.email_refund_status_enabled,
+            email_outflow_enabled=getattr(user, "email_outflow_enabled", True),
             notify_on_user_requests=getattr(user, "notify_on_user_requests", False),
             avatar_url=resolve_avatar_url_for_client(raw_avatar, self.settings),
             totp_enabled=user.totp_enabled,
@@ -894,6 +895,7 @@ class UserAuthService:
             email_payment_received_enabled=preferences.email_payment_received_enabled,
             email_topup_enabled=preferences.email_topup_enabled,
             email_refund_status_enabled=preferences.email_refund_status_enabled,
+            email_outflow_enabled=preferences.email_outflow_enabled,
             notify_on_user_requests=preferences.notify_on_user_requests,
         )
         user = self.repo.get_user_by_id(user_id)

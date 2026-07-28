@@ -83,6 +83,7 @@ class _RefundDetail:
     def __init__(self, request_id: int) -> None:
         self.request_id = request_id
         self.transaction_id = 100 + request_id
+        self.reason_code = "duplicate_payment"
         self.transaction = type(
             "Tx",
             (),
