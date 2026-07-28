@@ -17,6 +17,7 @@ EVENT_FAMILY_LINK_ACCEPTED = "family_link_accepted"
 EVENT_ALLOWANCE_RECEIVED = "allowance_received"
 EVENT_SPENDING_LIMIT_CHANGED = "spending_limit_changed"
 EVENT_APPROVAL_REQUESTED = "approval_requested"
+EVENT_SHARED_CARD_SPEND = "shared_card_spend"
 
 
 class FamilyNotificationService:
@@ -135,6 +136,33 @@ class FamilyNotificationService:
             )
         except Exception:
             logger.exception("Approval-requested notification failed (tx %s)", transaction_id)
+
+    def notify_shared_card_spend(
+        self,
+        *,
+        guardian_user_id: int,
+        dependent_user_id: int,
+        amount: Decimal,
+        transaction_id: int,
+        card_id: int,
+    ) -> None:
+        try:
+            guardian = self._users.get_by_id(guardian_user_id)
+            dependent = self._users.get_by_id(dependent_user_id)
+            if guardian is None or dependent is None:
+                return
+            subject, body = family_templates.shared_card_spend(
+                dependent_name=_full_name(dependent), amount=amount
+            )
+            self._send(
+                recipient=guardian,
+                event_type=EVENT_SHARED_CARD_SPEND,
+                reference_id=str(transaction_id),
+                subject=subject,
+                body=body,
+            )
+        except Exception:
+            logger.exception("Shared-card-spend notification failed (tx %s)", transaction_id)
 
     def _send(self, *, recipient, event_type: str, reference_id: str, subject: str, body: str) -> None:
         if not getattr(recipient, "email_family_activity_enabled", True):

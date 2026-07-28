@@ -36,11 +36,23 @@ class FakeSpendingLimitRuleRepo:
     def __init__(self, rules, *, prior_spend=Decimal("0")):
         self._rules = rules
         self._prior_spend = prior_spend
+        self.list_applicable_calls = []
+        self.sum_period_spend_calls = []
 
-    def list_applicable(self, *, dependent_user_id, category_id):
+    def list_applicable(self, *, dependent_user_id, category_id, card_id=None):
+        self.list_applicable_calls.append(
+            {"dependent_user_id": dependent_user_id, "category_id": category_id, "card_id": card_id}
+        )
         return self._rules
 
-    def sum_period_spend(self, *, dependent_user_id, category_id, period, now):
+    def sum_period_spend(self, *, dependent_user_id, category_id, period, now, card_id=None):
+        self.sum_period_spend_calls.append(
+            {
+                "dependent_user_id": dependent_user_id,
+                "category_id": category_id,
+                "card_id": card_id,
+            }
+        )
         return self._prior_spend
 
 
@@ -54,6 +66,16 @@ def _service(rules, *, prior_spend=Decimal("0")):
     )
 
 
+def _service_with_repo(rules, *, prior_spend=Decimal("0")):
+    repo = SimpleNamespace(_db=None)
+    fake_repo = FakeSpendingLimitRuleRepo(rules, prior_spend=prior_spend)
+    svc = TransactionService(
+        repo,
+        approval_repo=object(),
+        auth_repo=None,
+        spending_limit_rule_repo=fake_repo,
+    )
+    return svc, fake_repo
 
 
 def test_no_applicable_rules_allows() -> None:
@@ -131,3 +153,84 @@ def test_block_wins_over_approval_from_another_rule() -> None:
         dependent_user_id=1, category_id=5, amount=Decimal("50")
     )
     assert blocked is True
+
+
+# --------------------------------------------------------------------------- #
+# Shared-card scoping: card_id threaded through to both repo calls, and the
+# three scopes (dependent's own card / card overall / card member) stay
+# distinct exact-match lookups, not the category_id "OR NULL" pattern.
+# --------------------------------------------------------------------------- #
+def test_default_card_id_is_none_for_dependents_own_card_scope() -> None:
+    svc, repo = _service_with_repo([_rule(max_amount="100.00")])
+    svc._evaluate_spending_limits(dependent_user_id=1, category_id=None, amount=Decimal("10"))
+    assert repo.list_applicable_calls[0] == {
+        "dependent_user_id": 1,
+        "category_id": None,
+        "card_id": None,
+    }
+    assert repo.sum_period_spend_calls[0]["card_id"] is None
+    assert repo.sum_period_spend_calls[0]["dependent_user_id"] == 1
+
+
+def test_overall_card_cap_scope_passes_card_id_and_none_dependent() -> None:
+    svc, repo = _service_with_repo([_rule(max_amount="500.00")])
+    svc._evaluate_spending_limits(
+        dependent_user_id=None, card_id=42, category_id=None, amount=Decimal("10")
+    )
+    assert repo.list_applicable_calls[0] == {
+        "dependent_user_id": None,
+        "category_id": None,
+        "card_id": 42,
+    }
+    assert repo.sum_period_spend_calls[0]["card_id"] == 42
+    assert repo.sum_period_spend_calls[0]["dependent_user_id"] is None
+
+
+def test_per_member_card_scope_passes_both_card_id_and_dependent_id() -> None:
+    svc, repo = _service_with_repo([_rule(max_amount="50.00")])
+    svc._evaluate_spending_limits(
+        dependent_user_id=7, card_id=42, category_id=None, amount=Decimal("10")
+    )
+    assert repo.list_applicable_calls[0] == {
+        "dependent_user_id": 7,
+        "category_id": None,
+        "card_id": 42,
+    }
+    assert repo.sum_period_spend_calls[0] == {
+        "dependent_user_id": 7,
+        "category_id": None,
+        "card_id": 42,
+    }
+
+
+def test_overall_cap_breach_blocks_with_no_escape() -> None:
+    svc = _service([_rule(max_amount="100.00")], prior_spend=Decimal("90"))
+    blocked, requires_approval = svc._evaluate_spending_limits(
+        dependent_user_id=None, card_id=1, category_id=None, amount=Decimal("50")
+    )
+    assert (blocked, requires_approval) == (True, False)
+
+
+def test_member_cap_independent_from_overall_cap() -> None:
+    # A member's own cap on a shared card is a distinct rule set from the
+    # card's overall cap -- evaluating one must not see the other's rules.
+    overall_repo = FakeSpendingLimitRuleRepo([_rule(max_amount="1000.00")], prior_spend=Decimal("0"))
+    member_repo = FakeSpendingLimitRuleRepo([_rule(max_amount="20.00")], prior_spend=Decimal("15"))
+
+    svc = TransactionService(
+        SimpleNamespace(_db=None), approval_repo=object(), auth_repo=None,
+        spending_limit_rule_repo=overall_repo,
+    )
+    overall_blocked, _ = svc._evaluate_spending_limits(
+        dependent_user_id=None, card_id=1, category_id=None, amount=Decimal("10")
+    )
+    assert overall_blocked is False
+
+    svc2 = TransactionService(
+        SimpleNamespace(_db=None), approval_repo=object(), auth_repo=None,
+        spending_limit_rule_repo=member_repo,
+    )
+    member_blocked, _ = svc2._evaluate_spending_limits(
+        dependent_user_id=7, card_id=1, category_id=None, amount=Decimal("10")
+    )
+    assert member_blocked is True

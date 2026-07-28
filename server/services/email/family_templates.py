@@ -61,3 +61,12 @@ def approval_requested(*, dependent_name: str, amount: Decimal) -> tuple[str, st
     )
     return subject, body
 
+
+def shared_card_spend(*, dependent_name: str, amount: Decimal) -> tuple[str, str]:
+    subject = "[Heap] Spend on your shared family card"
+    body = (
+        f"{dependent_name} spent {_amount(amount)} from your shared family card.\n\n"
+        "Check Family in Heap to review the transaction or adjust their limits.\n\n"
+        "— Heap"
+    )
+    return subject, body

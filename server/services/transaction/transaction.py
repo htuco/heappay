@@ -14,6 +14,7 @@ from webauthn.helpers.exceptions import WebAuthnException
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor, UserVerificationRequirement
 
 from models.transaction import Transaction
+from repositories.family.family_card_member import FamilyCardMemberRepository
 from repositories.family.family_link import FamilyLinkRepository
 from repositories.family.spending_limit_rule import SpendingLimitRuleRepository
 from repositories.payment_approval.payment_approval import PaymentApprovalRepository
@@ -117,6 +118,7 @@ class TransactionService:
         category_rule_repo: "CategoryRuleRepository | None" = None,
         family_link_repo: "FamilyLinkRepository | None" = None,
         spending_limit_rule_repo: "SpendingLimitRuleRepository | None" = None,
+        family_card_member_repo: "FamilyCardMemberRepository | None" = None,
     ) -> None:
         self._repo = repo
         self._approval_repo = approval_repo or PaymentApprovalRepository(repo._db)
@@ -125,6 +127,9 @@ class TransactionService:
         self._family_link_repo = family_link_repo or FamilyLinkRepository(repo._db)
         self._spending_limit_rule_repo = (
             spending_limit_rule_repo or SpendingLimitRuleRepository(repo._db)
+        )
+        self._family_card_member_repo = (
+            family_card_member_repo or FamilyCardMemberRepository(repo._db)
         )
 
     def list_for_user(
@@ -266,11 +271,14 @@ class TransactionService:
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[Transaction], int]:
-        """Return transactions for a specific card, after verifying the user owns it."""
+        """Return transactions for a specific card, after verifying the user
+        owns it -- or, for a shared card, is an authorized member of it."""
         owner_id = self._repo.card_owner_id(card_id)
         if owner_id is None:
             raise CardNotFoundError()
-        if owner_id != user_id:
+        if owner_id != user_id and not self._family_card_member_repo.is_member(
+            card_id=card_id, dependent_user_id=user_id
+        ):
             raise ForbiddenError()
         items = self._repo.list_for_card(card_id=card_id, limit=limit, offset=offset)
         total = self._repo.count_for_card(card_id=card_id)
@@ -328,7 +336,14 @@ class TransactionService:
             if sender_card is None:
                 raise CardNotFoundError()
             if sender_card.user_id != user_id:
-                raise ForbiddenError()
+                # Not the owner -- still allowed if authorized on a shared
+                # family card (a guardian-owned card an accepted dependent has
+                # been added to as a member).
+                is_shared_card_member = self._family_card_member_repo.is_member(
+                    card_id=sender_card.card_id, dependent_user_id=user_id
+                )
+                if not is_shared_card_member:
+                    raise ForbiddenError()
 
         recipient_card = self._repo.get_card_for_update(payload.recipient_card_id)
         if recipient_card is None:
@@ -379,7 +394,8 @@ class TransactionService:
         # a rule requires it.
         approver_user_id = user_id
         family_link = None
-        if sender_card is not None:
+        is_shared_card_spend = sender_card is not None and sender_card.user_id != user_id
+        if sender_card is not None and not is_shared_card_spend:
             family_link = self._family_link_repo.get_accepted_for_dependent(sender_card.user_id)
         if family_link is not None:
             blocked, limit_requires_approval = self._evaluate_spending_limits(
@@ -392,6 +408,27 @@ class TransactionService:
             if limit_requires_approval:
                 requires_approval = True
                 approver_user_id = family_link.guardian_user_id
+        elif is_shared_card_spend:
+            # The acting user is an authorized member spending from a card
+            # they don't own -- check both the card's overall cap (across
+            # every member's combined spend) and this member's own cap on it.
+            overall_blocked, overall_requires_approval = self._evaluate_spending_limits(
+                dependent_user_id=None,
+                card_id=sender_card.card_id,
+                category_id=category_id,
+                amount=payload.amount,
+            )
+            member_blocked, member_requires_approval = self._evaluate_spending_limits(
+                dependent_user_id=user_id,
+                card_id=sender_card.card_id,
+                category_id=category_id,
+                amount=payload.amount,
+            )
+            if overall_blocked or member_blocked:
+                raise SpendingLimitExceededError()
+            if overall_requires_approval or member_requires_approval:
+                requires_approval = True
+                approver_user_id = sender_card.user_id
 
         approval_expires_at = None
         if requires_approval:
@@ -414,6 +451,7 @@ class TransactionService:
                 requires_user_approval=requires_approval,
                 user_approval_expires_at=approval_expires_at,
                 approver_user_id=approver_user_id,
+                initiated_by_user_id=user_id,
             )
             if requires_approval:
                 self._approval_repo.record_event(
@@ -430,6 +468,17 @@ class TransactionService:
                         amount=payload.amount,
                         transaction_id=row.transaction_id,
                     )
+            if is_shared_card_spend:
+                # Notify the guardian on every member spend, not just ones
+                # that also required approval -- a separate trigger from the
+                # approval-requested notification above.
+                self._notify_shared_card_spend(
+                    guardian_user_id=sender_card.user_id,
+                    dependent_user_id=user_id,
+                    amount=payload.amount,
+                    transaction_id=row.transaction_id,
+                    card_id=sender_card.card_id,
+                )
             return row, True
         except IntegrityError as exc:
             self._repo.rollback()
@@ -570,9 +619,10 @@ class TransactionService:
         )
 
     def list_pending_approvals_for_approver(self, approver_user_id: int) -> list[Transaction]:
-        """An approver's view of transactions awaiting their sign-off --
-        their own large/flagged payments plus any dependent's transactions
-        redirected to them by a spending-limit rule."""
+        """A guardian's (or any approver's) view of transactions awaiting
+        their approval -- includes their own large/flagged payments and any
+        dependent's transactions redirected to them by a spending-limit
+        rule."""
         return self._repo.list_pending_approvals_for_approver(approver_user_id)
 
     def list_approval_events(self, transaction_id: int, *, user_id: int) -> list:
@@ -684,10 +734,22 @@ class TransactionService:
         return None
 
     def _evaluate_spending_limits(
-        self, *, dependent_user_id: int, category_id: int | None, amount: Decimal
+        self,
+        *,
+        dependent_user_id: int | None,
+        category_id: int | None,
+        amount: Decimal,
+        card_id: int | None = None,
     ) -> tuple[bool, bool]:
-        """Evaluate every applicable SpendingLimitRule for this dependent's
-        transaction. Returns (blocked, requires_approval).
+        """Evaluate every applicable SpendingLimitRule for this scope. Returns
+        (blocked, requires_approval).
+
+        `card_id` defaults to `None`, preserving the original "dependent's own
+        card(s)" scope unchanged. Passing `card_id` scopes to a shared card:
+        `dependent_user_id=None` evaluates the guardian's overall cap on it;
+        `dependent_user_id=<member>` evaluates that member's own cap on it.
+        See `SpendingLimitRuleRepository.list_applicable` for the exact-match
+        scoping rules.
 
         Each rule is an independent constraint: `requires_approval_always` or
         `requires_approval_above` always redirects into the approval
@@ -701,7 +763,7 @@ class TransactionService:
         now = datetime.now(timezone.utc)
         requires_approval = False
         for rule in self._spending_limit_rule_repo.list_applicable(
-            dependent_user_id=dependent_user_id, category_id=category_id
+            dependent_user_id=dependent_user_id, card_id=card_id, category_id=category_id
         ):
             has_escape = rule.requires_approval_always or rule.requires_approval_above is not None
             if rule.requires_approval_always:
@@ -711,6 +773,7 @@ class TransactionService:
 
             prior_spend = self._spending_limit_rule_repo.sum_period_spend(
                 dependent_user_id=dependent_user_id,
+                card_id=card_id,
                 category_id=rule.category_id,
                 period=rule.period,
                 now=now,
@@ -876,6 +939,25 @@ class TransactionService:
             dependent_user_id=dependent_user_id,
             amount=amount,
             transaction_id=transaction_id,
+        )
+
+    def _notify_shared_card_spend(
+        self,
+        *,
+        guardian_user_id: int,
+        dependent_user_id: int,
+        amount: Decimal,
+        transaction_id: int,
+        card_id: int,
+    ) -> None:
+        from services.family.family_notification import FamilyNotificationService
+
+        FamilyNotificationService(self._repo._db).notify_shared_card_spend(
+            guardian_user_id=guardian_user_id,
+            dependent_user_id=dependent_user_id,
+            amount=amount,
+            transaction_id=transaction_id,
+            card_id=card_id,
         )
 
     def _user_is_sender(self, row: Transaction, user_id: int) -> bool:
@@ -1046,7 +1128,10 @@ class TransactionService:
         return datetime.now(timezone.utc) >= eligible_at
 
     def _user_participates(self, row: Transaction, user_id: int) -> bool:
-        """True if the user owns either side of the transaction."""
+        """True if the user owns either side of the transaction, or -- for a
+        shared card they don't own -- actually initiated it."""
+        if row.initiated_by_user_id == user_id:
+            return True
         for card_id in (row.sender_card_id, row.recipient_card_id):
             if card_id is None:
                 continue

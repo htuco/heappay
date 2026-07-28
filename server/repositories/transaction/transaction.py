@@ -205,6 +205,11 @@ class TransactionRepository:
             or_(
                 Transaction.sender_card_id.in_(user_card_ids),
                 Transaction.recipient_card_id.in_(user_card_ids),
+                # A dependent who spent from a shared card they don't own
+                # (sender_card.user_id is the guardian) still participates in
+                # that transaction -- initiated_by_user_id is the only way to
+                # know that from the transaction row alone.
+                Transaction.initiated_by_user_id == user_id,
             )
         )
 
@@ -588,6 +593,7 @@ class TransactionRepository:
         requires_user_approval: bool = False,
         user_approval_expires_at: datetime | None = None,
         approver_user_id: int | None = None,
+        initiated_by_user_id: int | None = None,
     ) -> Transaction:
         """
         Escrow create: hold funds on sender (if any); recipient is credited on complete().
@@ -609,6 +615,7 @@ class TransactionRepository:
             requires_user_approval=requires_user_approval,
             user_approval_expires_at=user_approval_expires_at,
             approver_user_id=approver_user_id,
+            initiated_by_user_id=initiated_by_user_id,
         )
         self._db.add(row)
         self._commit()

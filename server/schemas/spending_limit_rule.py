@@ -29,7 +29,8 @@ class SpendingLimitRuleUpdate(BaseModel):
 
 class SpendingLimitRuleResponse(BaseModel):
     spending_limit_rule_id: int
-    dependent_user_id: int
+    dependent_user_id: int | None = None
+    card_id: int | None = None
     category_id: int | None = None
     period: SpendingLimitPeriod
     max_amount: Decimal

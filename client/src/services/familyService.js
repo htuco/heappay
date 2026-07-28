@@ -158,3 +158,118 @@ export async function issueDependentCard(dependentUserId, payload) {
 		throw new Error(getApiErrorMessage(error, 'Could not issue this card.'))
 	}
 }
+
+// ── Shared card membership ──────────────────────────────────────────────────
+
+export async function listCardMembers(cardId) {
+	try {
+		const { data } = await api.get(`/family/cards/${cardId}/members`)
+		return data ?? []
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not load this card’s members.'))
+	}
+}
+
+export async function addCardMember(cardId, dependentUserId) {
+	try {
+		const { data } = await api.post(`/family/cards/${cardId}/members`, {
+			dependent_user_id: dependentUserId,
+		})
+		return data
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not add this member.'))
+	}
+}
+
+export async function removeCardMember(cardId, dependentUserId) {
+	try {
+		await api.delete(`/family/cards/${cardId}/members/${dependentUserId}`)
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not remove this member.'))
+	}
+}
+
+// ── Shared card spending limits (overall cap + per-member cap) ─────────────
+
+export async function listCardSpendingLimits(cardId) {
+	try {
+		const { data } = await api.get(`/family/cards/${cardId}/spending-limits`)
+		return unwrap({ data }) ?? []
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not load spending limits.'))
+	}
+}
+
+export async function createCardSpendingLimit(cardId, payload) {
+	try {
+		const { data } = await api.post(`/family/cards/${cardId}/spending-limits`, payload)
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not create this spending limit.'))
+	}
+}
+
+export async function updateCardSpendingLimit(cardId, spendingLimitRuleId, payload) {
+	try {
+		const { data } = await api.patch(
+			`/family/cards/${cardId}/spending-limits/${spendingLimitRuleId}`,
+			payload,
+		)
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not update this spending limit.'))
+	}
+}
+
+export async function deleteCardSpendingLimit(cardId, spendingLimitRuleId) {
+	try {
+		await api.delete(`/family/cards/${cardId}/spending-limits/${spendingLimitRuleId}`)
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not remove this spending limit.'))
+	}
+}
+
+export async function listCardMemberSpendingLimits(cardId, dependentUserId) {
+	try {
+		const { data } = await api.get(
+			`/family/cards/${cardId}/members/${dependentUserId}/spending-limits`,
+		)
+		return unwrap({ data }) ?? []
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not load spending limits.'))
+	}
+}
+
+export async function createCardMemberSpendingLimit(cardId, dependentUserId, payload) {
+	try {
+		const { data } = await api.post(
+			`/family/cards/${cardId}/members/${dependentUserId}/spending-limits`,
+			payload,
+		)
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not create this spending limit.'))
+	}
+}
+
+export async function updateCardMemberSpendingLimit(cardId, dependentUserId, spendingLimitRuleId, payload) {
+	try {
+		const { data } = await api.patch(
+			`/family/cards/${cardId}/members/${dependentUserId}/spending-limits/${spendingLimitRuleId}`,
+			payload,
+		)
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not update this spending limit.'))
+	}
+}
+
+export async function deleteCardMemberSpendingLimit(cardId, dependentUserId, spendingLimitRuleId) {
+	try {
+		await api.delete(
+			`/family/cards/${cardId}/members/${dependentUserId}/spending-limits/${spendingLimitRuleId}`,
+		)
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not remove this spending limit.'))
+	}
+}
