@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -22,13 +22,14 @@ class AdminNotificationLog(Base):
             "reference_id",
             name="uq_admin_notification_recipient_event_ref",
         ),
+        {"schema": "comms"},
     )
 
     admin_notification_log_id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True
     )
     recipient_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+        ForeignKey("identity.users.user_id", ondelete="CASCADE"), nullable=False
     )
     recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)

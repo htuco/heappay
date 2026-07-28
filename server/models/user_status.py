@@ -8,9 +8,10 @@ from database import Base
 
 class UserStatus(Base):
     __tablename__ = "user_statuses"
+    __table_args__ = {"schema": "identity"}
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    status_name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    id: Mapped[int] = mapped_column("user_status_id", primary_key=True, autoincrement=True)
+    status_name: Mapped[str] = mapped_column("name", String(100), unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

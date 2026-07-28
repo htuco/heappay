@@ -8,6 +8,7 @@ from database import Base
 
 class TransactionType(Base):
     __tablename__ = "transaction_types"
+    __table_args__ = {"schema": "money"}
 
     transaction_type_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)

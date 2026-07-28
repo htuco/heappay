@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -8,19 +8,24 @@ from database import Base
 
 class Request(Base):
     __tablename__ = "requests"
+    __table_args__ = (
+        Index("idx_requests_requester", "requester_user_id"),
+        Index("idx_requests_status_type", "request_status_id", "request_type_id"),
+        {"schema": "requests"},
+    )
 
     request_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     request_type_id: Mapped[int] = mapped_column(
-        ForeignKey("request_types.request_type_id"), nullable=False
+        ForeignKey("requests.request_types.request_type_id"), nullable=False
     )
     request_status_id: Mapped[int] = mapped_column(
-        ForeignKey("request_statuses.request_status_id"), nullable=False
+        ForeignKey("requests.request_statuses.request_status_id"), nullable=False
     )
     requester_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id"), nullable=False
+        ForeignKey("identity.users.user_id"), nullable=False
     )
     target_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.user_id"), nullable=True
+        ForeignKey("identity.users.user_id"), nullable=True
     )
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

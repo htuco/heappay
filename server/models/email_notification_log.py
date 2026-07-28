@@ -17,12 +17,13 @@ class EmailNotificationLog(Base):
             "reference_id",
             name="uq_email_notification_user_event_ref",
         ),
+        {"schema": "comms"},
     )
 
     email_notification_log_id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("identity.users.user_id"), nullable=False)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     reference_id: Mapped[str] = mapped_column(String(128), nullable=False)
     sent_at: Mapped[datetime] = mapped_column(

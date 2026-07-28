@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -17,16 +17,20 @@ class CategoryRule(Base):
     ones). Lower ``priority`` wins.
     """
 
-    __tablename__ = "category_rules"
+    __tablename__ = "category_keyword_rules"
+    __table_args__ = (Index("ix_category_rules_lookup", "user_id", "priority"),
+        Index("ix_category_keyword_rules_transaction_category_id", "transaction_category_id"),
+        {"schema": "money"},
+    )
 
-    rule_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    rule_id: Mapped[int] = mapped_column("category_rule_id", primary_key=True, autoincrement=True)
     user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=True
+        ForeignKey("identity.users.user_id", ondelete="CASCADE"), nullable=True
     )
     match_field: Mapped[str] = mapped_column(String(20), nullable=False)
     keyword: Mapped[str] = mapped_column(String(100), nullable=False)
-    category_id: Mapped[int] = mapped_column(
-        ForeignKey("transaction_categories.transaction_category_id"), nullable=False
+    category_id: Mapped[int] = mapped_column("transaction_category_id", 
+        ForeignKey("money.transaction_categories.transaction_category_id"), nullable=False
     )
     priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="100")
     created_at: Mapped[datetime] = mapped_column(
