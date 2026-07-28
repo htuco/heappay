@@ -71,6 +71,7 @@ class FamilyLinkService:
 
         guardian = self._user_repo.get_by_id(guardian_user_id)
         assert guardian is not None
+        self._notify_invited(row)
         return self._to_response(row, guardian, dependent)
 
     def accept(self, *, family_link_id: int, dependent_user_id: int) -> FamilyLinkResponse:
@@ -83,6 +84,7 @@ class FamilyLinkService:
             raise FamilyLinkAlreadyGuardedError(
                 "This person already has an active guardian."
             ) from exc
+        self._notify_accepted(row)
         return self._to_response_for_row(row)
 
     def decline(self, *, family_link_id: int, dependent_user_id: int) -> FamilyLinkResponse:
@@ -116,6 +118,24 @@ class FamilyLinkService:
         dependent = self._user_repo.get_by_id(dependent_user_id)
         assert dependent is not None
         return [self._to_response(link, guardian, dependent) for link, guardian in rows]
+
+    def _notify_invited(self, row: FamilyLink) -> None:
+        from services.family.family_notification import FamilyNotificationService
+
+        FamilyNotificationService(self._repo._db).notify_family_link_invited(
+            family_link_id=row.family_link_id,
+            dependent_user_id=row.dependent_user_id,
+            guardian_user_id=row.guardian_user_id,
+        )
+
+    def _notify_accepted(self, row: FamilyLink) -> None:
+        from services.family.family_notification import FamilyNotificationService
+
+        FamilyNotificationService(self._repo._db).notify_family_link_accepted(
+            family_link_id=row.family_link_id,
+            dependent_user_id=row.dependent_user_id,
+            guardian_user_id=row.guardian_user_id,
+        )
 
     def _require_pending_for_dependent(self, family_link_id: int, dependent_user_id: int) -> FamilyLink:
         row = self._repo.get_by_id(family_link_id)
