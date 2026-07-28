@@ -61,6 +61,17 @@ export async function listDependents() {
 	}
 }
 
+// ── Allowance ────────────────────────────────────────────────────────────────
+
+export async function sendAllowance(dependentUserId, amount) {
+	try {
+		const { data } = await api.post(`/family/dependents/${dependentUserId}/allowance`, { amount })
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not send this allowance.'))
+	}
+}
+
 // ── Spending limits ──────────────────────────────────────────────────────────
 
 export async function listSpendingLimits(dependentUserId) {
