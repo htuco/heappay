@@ -24,6 +24,7 @@ from routes.card.card_type import router as card_type_router
 from routes.chat.chat import router as chat_router
 from routes.contact.contact import router as contact_router
 from routes.export.export import router as export_router
+from routes.family.allowance import router as family_allowance_router
 from routes.family.family_link import router as family_link_router
 from routes.fx.fx import router as fx_router
 from routes.storage.images import router as storage_router
@@ -146,6 +147,7 @@ def create_app() -> FastAPI:
     app.include_router(fx_router)
     app.include_router(contact_router)
     app.include_router(family_link_router)
+    app.include_router(family_allowance_router)
 
     # coalesce + single-instance so a burst of reloads (uvicorn --reload) can't
     # stack overlapping syncs on top of each other.

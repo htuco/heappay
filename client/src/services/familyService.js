@@ -60,3 +60,14 @@ export async function listDependents() {
 		throw new Error(getApiErrorMessage(error, 'Could not load your dependents.'))
 	}
 }
+
+// ── Allowance ────────────────────────────────────────────────────────────────
+
+export async function sendAllowance(dependentUserId, amount) {
+	try {
+		const { data } = await api.post(`/family/dependents/${dependentUserId}/allowance`, { amount })
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not send this allowance.'))
+	}
+}
