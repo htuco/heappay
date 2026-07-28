@@ -3,11 +3,19 @@ import { Check, Loader2, UserPlus, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { useAuth } from '@/hooks/useAuth'
 import useFamilyDependents from '@/hooks/useFamilyDependents'
 import { useNotifications } from '@/context/NotificationContext'
 import DependentCard from '@/components/family/DependentCard'
+import DependentCardsPanel from '@/components/family/DependentCardsPanel'
 import InviteDependentModal from '@/components/family/InviteDependentModal'
 import { acceptInvite, declineInvite, revokeFamilyLink } from '@/services/familyService'
 
@@ -19,6 +27,7 @@ export default function FamilyPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false)
   const [busyLinkId, setBusyLinkId] = useState(null)
+  const [cardsLink, setCardsLink] = useState(null)
 
   async function handleAccept(link) {
     setBusyLinkId(link.family_link_id)
@@ -159,6 +168,7 @@ export default function FamilyPage() {
                   <DependentCard
                     key={link.family_link_id}
                     link={link}
+                    onOpenCards={setCardsLink}
                     onRevoke={handleRevoke}
                     busy={busyLinkId === link.family_link_id}
                   />
@@ -175,6 +185,16 @@ export default function FamilyPage() {
         currentUserId={currentUserId}
         onInvited={refresh}
       />
+
+      <DialogRoot open={Boolean(cardsLink)} onOpenChange={(o) => !o && setCardsLink(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Cards {cardsLink ? `· ${cardsLink.dependent.first_name}` : ''}</DialogTitle>
+            <DialogDescription>Freeze or unfreeze this dependent's cards.</DialogDescription>
+          </DialogHeader>
+          {cardsLink && <DependentCardsPanel dependentUserId={cardsLink.dependent.user_id} />}
+        </DialogContent>
+      </DialogRoot>
     </div>
   )
 }
