@@ -6,6 +6,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Numeric,
     String,
     func,
@@ -34,14 +35,23 @@ class SpendingLimitRule(Base):
             "period IN ('daily', 'weekly', 'monthly')", name="ck_spending_limit_rules_period_valid"
         ),
         CheckConstraint("max_amount > 0", name="ck_spending_limit_rules_max_amount_positive"),
+        # Declared explicitly so the name matches the migration; under a schema
+        # SQLAlchemy would auto-name this ix_identity_spending_limit_rules_lookup.
+        Index(
+            "ix_spending_limit_rules_lookup",
+            "dependent_user_id",
+            "category_id",
+            "enabled",
+        ),
+        {"schema": "identity"},
     )
 
     spending_limit_rule_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     dependent_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+        ForeignKey("identity.users.user_id", ondelete="CASCADE"), nullable=False
     )
     category_id: Mapped[int | None] = mapped_column(
-        ForeignKey("transaction_categories.transaction_category_id"), nullable=True
+        ForeignKey("money.transaction_categories.transaction_category_id"), nullable=True
     )
     period: Mapped[str] = mapped_column(String(10), nullable=False)
     max_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
@@ -50,7 +60,7 @@ class SpendingLimitRule(Base):
         Boolean(), nullable=False, server_default="false"
     )
     enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=true())
-    updated_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    updated_by_user_id: Mapped[int] = mapped_column(ForeignKey("identity.users.user_id"), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

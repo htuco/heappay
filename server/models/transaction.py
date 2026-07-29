@@ -87,7 +87,7 @@ class Transaction(Base):
     # set to the payer's own user_id, redirected to a guardian's user_id when
     # the payer is a dependent under a spending-limit rule that requires it.
     approver_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.user_id"), nullable=True
+        ForeignKey("identity.users.user_id"), nullable=True
     )
 
     recurring_payment_id: Mapped[int | None] = mapped_column(

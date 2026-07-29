@@ -8,10 +8,11 @@ ALTER TABLE ... SET SCHEMA and RENAME are catalog-only operations -- no table
 rewrite -- but each takes a brief ACCESS EXCLUSIVE lock. Run when the target
 environment is idle.
 
-Chained after z7a8b9c0d1e2 (family links) rather than sharing its parent.
-That migration creates family_links with FKs written as `users.user_id`, so
-it must run BEFORE users moves to the identity schema -- otherwise the
-unqualified reference no longer resolves and it fails outright.
+Chained after b9c0d1e2f3a4, the last of the family-accounts migrations,
+rather than sharing their parent. Those migrations create family_links and
+spending_limit_rules and add transactions.approver_user_id, all with FKs
+written as `users.user_id` -- so they must run BEFORE users moves to the
+identity schema, or the unqualified reference stops resolving.
 
 Revision ID: p2schemagroup
 Revises: z7a8b9c0d1e2
@@ -21,7 +22,7 @@ from typing import Sequence, Union
 from alembic import op
 
 revision: str = "p2schemagroup"
-down_revision: Union[str, Sequence[str], None] = "z7a8b9c0d1e2"
+down_revision: Union[str, Sequence[str], None] = "b9c0d1e2f3a4"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -35,6 +36,7 @@ def upgrade() -> None:
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
     op.execute("ALTER TABLE public.users SET SCHEMA identity")
     op.execute("ALTER TABLE public.family_links SET SCHEMA identity")
+    op.execute("ALTER TABLE public.spending_limit_rules SET SCHEMA identity")
     op.execute("ALTER TABLE public.user_roles SET SCHEMA identity")
     op.execute("ALTER TABLE public.user_statuses SET SCHEMA identity")
     op.execute("ALTER TABLE public.contacts SET SCHEMA identity")
@@ -154,6 +156,7 @@ def downgrade() -> None:
     op.execute("ALTER TABLE identity.contacts SET SCHEMA public")
     op.execute("ALTER TABLE identity.user_statuses SET SCHEMA public")
     op.execute("ALTER TABLE identity.user_roles SET SCHEMA public")
+    op.execute("ALTER TABLE identity.spending_limit_rules SET SCHEMA public")
     op.execute("ALTER TABLE identity.family_links SET SCHEMA public")
     op.execute("ALTER TABLE identity.users SET SCHEMA public")
     op.execute("DROP SCHEMA IF EXISTS identity")
