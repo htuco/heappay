@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from models.card import Card
 from models.card_status import CardStatus
 from models.card_type import CardType
+from models.family_card_member import FamilyCardMember
 from models.transaction import Transaction
 from models.transaction_status import TransactionStatus
 from models.transaction_type import TransactionType
@@ -35,6 +36,30 @@ class CardRepository:
             stmt = stmt.where(Card.deleted_at.is_(None))
         if user_id is not None:
             stmt = stmt.where(Card.user_id == user_id)
+        if status_id is not None:
+            stmt = stmt.where(Card.status_id == status_id)
+        if card_type_id is not None:
+            stmt = stmt.where(Card.card_type_id == card_type_id)
+        stmt = stmt.order_by(Card.card_id).limit(limit).offset(offset)
+        return list(self._db.scalars(stmt).all())
+
+    def list_all_for_self(
+        self,
+        user_id: int,
+        *,
+        status_id: int | None = None,
+        card_type_id: int | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Card]:
+        """A user's own cards, plus any shared card they're a member of."""
+        member_card_ids = select(FamilyCardMember.card_id).where(
+            FamilyCardMember.dependent_user_id == user_id
+        )
+        stmt = select(Card).where(
+            Card.deleted_at.is_(None),
+            or_(Card.user_id == user_id, Card.card_id.in_(member_card_ids)),
+        )
         if status_id is not None:
             stmt = stmt.where(Card.status_id == status_id)
         if card_type_id is not None:

@@ -16,7 +16,6 @@ import { Select } from '@/components/ui/select'
 import Toggle from '@/components/settings/Toggle'
 import { useAppSelector } from '@/store/hooks'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
-import { useSpendingLimits } from '@/hooks/useSpendingLimits'
 
 const PERIOD_OPTIONS = [
   { value: 'daily', label: 'Daily' },
@@ -200,12 +199,26 @@ function RuleCard({ rule, categoriesById, onEdit, onDelete }) {
   )
 }
 
-export default function SpendingLimitRuleList({ dependentUserId }) {
+/**
+ * Controlled: the caller owns data-fetching (via useSpendingLimits /
+ * useCardSpendingLimits / useCardMemberSpendingLimits, whichever scope
+ * applies) and passes the result down as props -- this same list/CRUD UI
+ * serves a dependent's own-card limits, a shared card's overall cap, and a
+ * member's own cap on a shared card.
+ */
+export default function SpendingLimitRuleList({
+  title = 'Spending limits',
+  rules,
+  isLoading,
+  error,
+  create,
+  update,
+  remove,
+}) {
   const categories = useAppSelector(selectTransactionCategories) ?? []
   const categoriesById = Object.fromEntries(
     categories.map((c) => [c.transaction_category_id, c]),
   )
-  const { rules, isLoading, error, create, update, remove } = useSpendingLimits(dependentUserId)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editRule, setEditRule] = useState(null)
@@ -267,7 +280,7 @@ export default function SpendingLimitRuleList({ dependentUserId }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Spending limits</h3>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <Button
           size="sm"
           variant="outline"

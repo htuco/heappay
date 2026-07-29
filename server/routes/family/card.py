@@ -3,8 +3,11 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories.card.card import CardRepository
-from routes.dependencies import require_guardian_of
+from repositories.family.family_card_member import FamilyCardMemberRepository
+from repositories.family.family_link import FamilyLinkRepository
+from routes.dependencies import require_guardian_of, require_owns_card
 from schemas.card import CardCreate, CardResponse
+from schemas.family_card_member import FamilyCardMemberCreate, FamilyCardMemberResponse
 from services.card.card import (
     CardBelongsToAnotherAccountError,
     CardNotFoundError,
@@ -13,6 +16,12 @@ from services.card.card import (
     CardTypeNotFoundError,
     DuplicateCardNumberError,
     UserNotFoundError,
+)
+from services.family.family_card_member import (
+    FamilyCardMemberAlreadyExistsError,
+    FamilyCardMemberNotFoundError,
+    FamilyCardMemberService,
+    NotGuardianOfDependentError,
 )
 from tasks.sync import run_sync_for_user
 
@@ -24,11 +33,17 @@ _STATUS_NOT_FOUND = "Card status not found."
 _CARD_TYPE_NOT_FOUND = "Card type not found."
 _DUPLICATE_CARD_NUMBER = "A card with this number is already registered."
 _CARD_BELONGS_TO_ANOTHER_ACCOUNT = "This card belongs to another account."
+_MEMBER_NOT_FOUND = "This person is not a member of this card."
+_NOT_GUARDIAN_OF_DEPENDENT = "You are not this person's accepted guardian."
+_MEMBER_ALREADY_EXISTS = "This person is already a member of this card."
 
 
 def get_card_service(db: Session = Depends(get_db)) -> CardService:
     return CardService(CardRepository(db))
 
+
+def get_family_card_member_service(db: Session = Depends(get_db)) -> FamilyCardMemberService:
+    return FamilyCardMemberService(FamilyCardMemberRepository(db), FamilyLinkRepository(db))
 
 
 def _to_response(row) -> CardResponse:
@@ -128,3 +143,61 @@ def unfreeze_dependent_card(
     except (CardNotFoundError, CardStatusNotFoundError):
         raise HTTPException(status.HTTP_404_NOT_FOUND, _CARD_NOT_FOUND) from None
     return _to_response(row)
+
+
+# ─── Shared card membership ───────────────────────────────────────────────
+# A "shared" card is any card the guardian owns that one or more accepted
+# dependents have been added to as members -- the card keeps its single
+# owner, membership is what authorizes a dependent to spend from it.
+
+
+@router.get(
+    "/cards/{card_id}/members",
+    response_model=list[FamilyCardMemberResponse],
+    summary="(Guardian) List a shared card's members.",
+)
+def list_card_members(
+    card_id: int,
+    _owner_user_id: int = Depends(require_owns_card),
+    service: FamilyCardMemberService = Depends(get_family_card_member_service),
+) -> list[FamilyCardMemberResponse]:
+    return service.list_for_card(card_id)
+
+
+@router.post(
+    "/cards/{card_id}/members",
+    response_model=FamilyCardMemberResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="(Guardian) Add a dependent as a member of a shared card.",
+)
+def add_card_member(
+    card_id: int,
+    payload: FamilyCardMemberCreate,
+    owner_user_id: int = Depends(require_owns_card),
+    service: FamilyCardMemberService = Depends(get_family_card_member_service),
+) -> FamilyCardMemberResponse:
+    try:
+        return service.add(
+            card_id=card_id, guardian_user_id=owner_user_id, dependent_user_id=payload.dependent_user_id
+        )
+    except NotGuardianOfDependentError:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, _NOT_GUARDIAN_OF_DEPENDENT) from None
+    except FamilyCardMemberAlreadyExistsError:
+        raise HTTPException(status.HTTP_409_CONFLICT, _MEMBER_ALREADY_EXISTS) from None
+
+
+@router.delete(
+    "/cards/{card_id}/members/{dependent_user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="(Guardian) Remove a dependent's membership on a shared card.",
+)
+def remove_card_member(
+    card_id: int,
+    dependent_user_id: int,
+    _owner_user_id: int = Depends(require_owns_card),
+    service: FamilyCardMemberService = Depends(get_family_card_member_service),
+) -> None:
+    try:
+        service.remove(card_id=card_id, dependent_user_id=dependent_user_id)
+    except FamilyCardMemberNotFoundError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _MEMBER_NOT_FOUND) from None

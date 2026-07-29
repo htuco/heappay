@@ -17,15 +17,23 @@ from database import Base
 
 
 class SpendingLimitRule(Base):
-    """A guardian-configured spending cap on a dependent's own transactions.
+    """A guardian-configured spending cap, scoped one of three ways:
 
-    `category_id` NULL means the cap applies across all categories; a set
-    `category_id` scopes it to that category only. Multiple rules can apply
-    to the same transaction at once (an overall cap and a category cap are
-    independent constraints, not a first-match resolver like `CategoryRule`).
+    - `card_id` NULL, `dependent_user_id` set: a cap on that dependent's own
+      transactions, on any card they own (the original per-dependent model).
+    - `card_id` set, `dependent_user_id` NULL: the guardian's overall cap on a
+      *shared* card, summed across every member's combined spend on it.
+    - `card_id` set, `dependent_user_id` set: that member's own cap
+      specifically on that shared card.
+
+    These are three distinct limit types, matched by exact equality (including
+    `IS NULL`) -- not the "NULL broadens" pattern `category_id` uses below,
+    where a NULL category means "applies to all categories" for the *same*
+    rule. Multiple rules can apply to the same transaction at once (independent
+    constraints, not a first-match resolver like `CategoryRule`).
     `requires_approval_above` / `requires_approval_always` redirect the
-    dependent's transaction into the existing approval workflow instead of
-    (or in addition to) capping it outright.
+    transaction into the existing approval workflow instead of (or in addition
+    to) capping it outright.
     """
 
     __tablename__ = "spending_limit_rules"
@@ -34,11 +42,18 @@ class SpendingLimitRule(Base):
             "period IN ('daily', 'weekly', 'monthly')", name="ck_spending_limit_rules_period_valid"
         ),
         CheckConstraint("max_amount > 0", name="ck_spending_limit_rules_max_amount_positive"),
+        CheckConstraint(
+            "dependent_user_id IS NOT NULL OR card_id IS NOT NULL",
+            name="ck_spending_limit_rules_scope_required",
+        ),
     )
 
     spending_limit_rule_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    dependent_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+    dependent_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=True
+    )
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.card_id", ondelete="CASCADE"), nullable=True
     )
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("transaction_categories.transaction_category_id"), nullable=True
@@ -56,4 +71,5 @@ class SpendingLimitRule(Base):
     )
 
     dependent = relationship("User", foreign_keys=[dependent_user_id])
+    card = relationship("Card")
     category = relationship("TransactionCategory")

@@ -34,3 +34,4 @@ from models.contact import Contact  # noqa: F401
 from models.family_link import FamilyLink  # noqa: F401
 from models.spending_limit_rule import SpendingLimitRule  # noqa: F401
 from models.family_notification_log import FamilyNotificationLog  # noqa: F401
+from models.family_card_member import FamilyCardMember  # noqa: F401
