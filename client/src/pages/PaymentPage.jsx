@@ -186,7 +186,7 @@ export default function PaymentPage() {
       <PageActionSlot>
         <PageActionButton
           icon={Send}
-          label="Send"
+          label="New Transaction"
           onClick={() => setPaymentWizardOpen(true)}
         />
       </PageActionSlot>

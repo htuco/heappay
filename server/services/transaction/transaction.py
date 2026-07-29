@@ -14,6 +14,8 @@ from webauthn.helpers.exceptions import WebAuthnException
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor, UserVerificationRequirement
 
 from models.transaction import Transaction
+from repositories.family.family_link import FamilyLinkRepository
+from repositories.family.spending_limit_rule import SpendingLimitRuleRepository
 from repositories.payment_approval.payment_approval import PaymentApprovalRepository
 from repositories.transaction.category_rule import CategoryRuleRepository
 from repositories.transaction.transaction import TransactionRepository, TransactionStateError
@@ -89,6 +91,11 @@ class CardFrozenError(Exception):
         super().__init__(f"The {side} card is frozen.")
 
 
+class SpendingLimitExceededError(Exception):
+    """A dependent's transaction would breach a guardian-set spending cap
+    that has no approval escape hatch configured."""
+
+
 def _base64url_encode(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
 
@@ -108,11 +115,17 @@ class TransactionService:
         approval_repo: PaymentApprovalRepository | None = None,
         auth_repo: UserAuthRepository | None = None,
         category_rule_repo: "CategoryRuleRepository | None" = None,
+        family_link_repo: "FamilyLinkRepository | None" = None,
+        spending_limit_rule_repo: "SpendingLimitRuleRepository | None" = None,
     ) -> None:
         self._repo = repo
         self._approval_repo = approval_repo or PaymentApprovalRepository(repo._db)
         self._auth_repo = auth_repo
         self._category_rule_repo = category_rule_repo or CategoryRuleRepository(repo._db)
+        self._family_link_repo = family_link_repo or FamilyLinkRepository(repo._db)
+        self._spending_limit_rule_repo = (
+            spending_limit_rule_repo or SpendingLimitRuleRepository(repo._db)
+        )
 
     def list_for_user(
         self,
@@ -358,6 +371,28 @@ class TransactionService:
 
         type_name = self._repo.get_transaction_type_name(payload.transaction_type_id) or ""
         requires_approval = self._requires_user_approval(payload, type_name)
+
+        # A dependent's own transaction is additionally checked against any
+        # spending-limit rules their guardian has set. approver_user_id
+        # defaults to the payer so approve()'s ownership check has one
+        # uniform column to read; it's only redirected to the guardian when
+        # a rule requires it.
+        approver_user_id = user_id
+        family_link = None
+        if sender_card is not None:
+            family_link = self._family_link_repo.get_accepted_for_dependent(sender_card.user_id)
+        if family_link is not None:
+            blocked, limit_requires_approval = self._evaluate_spending_limits(
+                dependent_user_id=sender_card.user_id,
+                category_id=category_id,
+                amount=payload.amount,
+            )
+            if blocked:
+                raise SpendingLimitExceededError()
+            if limit_requires_approval:
+                requires_approval = True
+                approver_user_id = family_link.guardian_user_id
+
         approval_expires_at = None
         if requires_approval:
             timeout_minutes = get_settings().tx_user_approval_timeout_minutes
@@ -378,6 +413,7 @@ class TransactionService:
                 idempotency_key=payload.idempotency_key,
                 requires_user_approval=requires_approval,
                 user_approval_expires_at=approval_expires_at,
+                approver_user_id=approver_user_id,
             )
             if requires_approval:
                 self._approval_repo.record_event(
@@ -443,7 +479,7 @@ class TransactionService:
         row = self._repo.get_by_id(transaction_id)
         if row is None:
             raise TransactionNotFoundError()
-        if not self._user_is_sender(row, user_id):
+        if not self._user_is_approver(row, user_id):
             raise ForbiddenError()
         self._ensure_approval_pending(row)
 
@@ -495,7 +531,7 @@ class TransactionService:
         row = self._repo.get_by_id(transaction_id)
         if row is None:
             raise TransactionNotFoundError()
-        if not self._user_is_sender(row, user_id):
+        if not self._user_is_approver(row, user_id):
             raise ForbiddenError()
         self._ensure_approval_pending(row)
 
@@ -525,6 +561,12 @@ class TransactionService:
             challenge_id=challenge.challenge_id,
             publicKey=json.loads(options_to_json(options)),
         )
+
+    def list_pending_approvals_for_approver(self, approver_user_id: int) -> list[Transaction]:
+        """An approver's view of transactions awaiting their sign-off --
+        their own large/flagged payments plus any dependent's transactions
+        redirected to them by a spending-limit rule."""
+        return self._repo.list_pending_approvals_for_approver(approver_user_id)
 
     def list_approval_events(self, transaction_id: int, *, user_id: int) -> list:
         row = self._repo.get_by_id(transaction_id)
@@ -633,6 +675,45 @@ class TransactionService:
             if rule.keyword and rule.keyword.lower() in haystack:
                 return rule.category_id
         return None
+
+    def _evaluate_spending_limits(
+        self, *, dependent_user_id: int, category_id: int | None, amount: Decimal
+    ) -> tuple[bool, bool]:
+        """Evaluate every applicable SpendingLimitRule for this dependent's
+        transaction. Returns (blocked, requires_approval).
+
+        Each rule is an independent constraint: `requires_approval_always` or
+        `requires_approval_above` always redirects into the approval
+        workflow when triggered. A breached period `max_amount` cap on a
+        rule that has *no* approval escape configured (neither of the above
+        set) is an outright block -- same posture as
+        `InsufficientBalanceError`. A breach on a rule that does have an
+        escape configured routes to approval instead of blocking. A block
+        from any rule wins over an approval requirement from another.
+        """
+        now = datetime.now(timezone.utc)
+        requires_approval = False
+        for rule in self._spending_limit_rule_repo.list_applicable(
+            dependent_user_id=dependent_user_id, category_id=category_id
+        ):
+            has_escape = rule.requires_approval_always or rule.requires_approval_above is not None
+            if rule.requires_approval_always:
+                requires_approval = True
+            if rule.requires_approval_above is not None and amount >= rule.requires_approval_above:
+                requires_approval = True
+
+            prior_spend = self._spending_limit_rule_repo.sum_period_spend(
+                dependent_user_id=dependent_user_id,
+                category_id=rule.category_id,
+                period=rule.period,
+                now=now,
+            )
+            if prior_spend + amount > rule.max_amount:
+                if has_escape:
+                    requires_approval = True
+                else:
+                    return True, requires_approval
+        return False, requires_approval
 
     def _verify_step_up(
         self,
@@ -782,6 +863,19 @@ class TransactionService:
         if row.sender_card_id is None:
             return False
         return self._repo.card_owner_id(row.sender_card_id) == user_id
+
+    def _user_is_approver(self, row: Transaction, user_id: int) -> bool:
+        """Who may approve/decline this transaction's pending approval.
+
+        `approver_user_id` is set on every transaction created going
+        forward (defaulting to the payer, redirected to a guardian for a
+        dependent under a spending-limit rule) -- see `create()`. Rows that
+        predate that column stay `NULL` and fall back to the original
+        sender-owner check.
+        """
+        if row.approver_user_id is not None:
+            return row.approver_user_id == user_id
+        return self._user_is_sender(row, user_id)
 
     @staticmethod
     def _is_idempotency_violation(exc: IntegrityError) -> bool:

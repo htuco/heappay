@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, Send, XCircle } from 'lucide-react'
+import { Loader2, Send, Sliders, XCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { sendAllowance } from '@/services/familyService'
 
-export default function DependentCard({ link, onRevoke, busy = false }) {
+export default function DependentCard({ link, onOpenLimits, onRevoke, busy = false }) {
   const dependent = link.dependent
   const [allowanceOpen, setAllowanceOpen] = useState(false)
   const [amount, setAmount] = useState('')
@@ -73,6 +73,10 @@ export default function DependentCard({ link, onRevoke, busy = false }) {
         <Button size="sm" variant="outline" onClick={() => setAllowanceOpen(true)}>
           <Send className="mr-1.5 size-3.5" />
           Send allowance
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => onOpenLimits(link)}>
+          <Sliders className="mr-1.5 size-3.5" />
+          Spending limits
         </Button>
       </div>
 

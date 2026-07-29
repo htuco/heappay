@@ -54,6 +54,9 @@ def _tx(**kwargs):
         requires_user_approval=True,
         user_approved_at=None,
         user_approval_expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+        # None means "pre-approver-column row" -- falls back to the sender-owner
+        # check, same as every real row created before this column existed.
+        approver_user_id=None,
     )
     defaults.update(kwargs)
     tx = MagicMock()
