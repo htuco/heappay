@@ -19,7 +19,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
 
 import models  # noqa: E402,F401  (register all ORM mappers)
-from database import Base  # noqa: E402
+from database import Base, SQLITE_SCHEMA_TRANSLATE_MAP  # noqa: E402
 from models.email_verification_token import EmailVerificationToken  # noqa: E402,F401
 from models.family_notification_log import FamilyNotificationLog  # noqa: E402
 from models.user import User  # noqa: E402
@@ -53,7 +53,9 @@ def _session() -> Session:
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-    )
+        # Tables are namespaced but SQLite has no schema support, so translate
+        # every namespace away. Applies to DDL, so create_all() works unchanged.
+    ).execution_options(schema_translate_map=SQLITE_SCHEMA_TRANSLATE_MAP)
     Base.metadata.create_all(engine)
     db = sessionmaker(bind=engine)()
     db.add(UserStatus(status_name="active"))

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -22,11 +22,17 @@ class FamilyNotificationLog(Base):
             "reference_id",
             name="uq_family_notification_recipient_event_ref",
         ),
+        # Declared explicitly so the name matches the migration; under a schema
+        # SQLAlchemy would auto-name it ix_comms_family_notification_log_*.
+        # Note this duplicates the leading column of the unique constraint above,
+        # so it is a candidate for the same F-10 cleanup as its siblings.
+        Index("ix_family_notification_log_recipient_user_id", "recipient_user_id"),
+        {"schema": "comms"},
     )
 
     family_notification_log_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     recipient_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+        ForeignKey("identity.users.user_id", ondelete="CASCADE"), nullable=False
     )
     recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)

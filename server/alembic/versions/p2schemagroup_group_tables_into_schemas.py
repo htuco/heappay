@@ -8,7 +8,7 @@ ALTER TABLE ... SET SCHEMA and RENAME are catalog-only operations -- no table
 rewrite -- but each takes a brief ACCESS EXCLUSIVE lock. Run when the target
 environment is idle.
 
-Chained after b9c0d1e2f3a4, the last of the family-accounts migrations,
+Chained after c1d2e3f4a5b6, the last of the family-accounts migrations,
 rather than sharing their parent. Those migrations create family_links and
 spending_limit_rules and add transactions.approver_user_id, all with FKs
 written as `users.user_id` -- so they must run BEFORE users moves to the
@@ -22,7 +22,7 @@ from typing import Sequence, Union
 from alembic import op
 
 revision: str = "p2schemagroup"
-down_revision: Union[str, Sequence[str], None] = "b9c0d1e2f3a4"
+down_revision: Union[str, Sequence[str], None] = "c1d2e3f4a5b6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -37,6 +37,7 @@ def upgrade() -> None:
     op.execute("ALTER TABLE public.users SET SCHEMA identity")
     op.execute("ALTER TABLE public.family_links SET SCHEMA identity")
     op.execute("ALTER TABLE public.spending_limit_rules SET SCHEMA identity")
+    op.execute("ALTER TABLE public.family_notification_log SET SCHEMA comms")
     op.execute("ALTER TABLE public.user_roles SET SCHEMA identity")
     op.execute("ALTER TABLE public.user_statuses SET SCHEMA identity")
     op.execute("ALTER TABLE public.contacts SET SCHEMA identity")
@@ -156,6 +157,7 @@ def downgrade() -> None:
     op.execute("ALTER TABLE identity.contacts SET SCHEMA public")
     op.execute("ALTER TABLE identity.user_statuses SET SCHEMA public")
     op.execute("ALTER TABLE identity.user_roles SET SCHEMA public")
+    op.execute("ALTER TABLE comms.family_notification_log SET SCHEMA public")
     op.execute("ALTER TABLE identity.spending_limit_rules SET SCHEMA public")
     op.execute("ALTER TABLE identity.family_links SET SCHEMA public")
     op.execute("ALTER TABLE identity.users SET SCHEMA public")
