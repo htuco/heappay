@@ -8,15 +8,20 @@ ALTER TABLE ... SET SCHEMA and RENAME are catalog-only operations -- no table
 rewrite -- but each takes a brief ACCESS EXCLUSIVE lock. Run when the target
 environment is idle.
 
+Chained after z7a8b9c0d1e2 (family links) rather than sharing its parent.
+That migration creates family_links with FKs written as `users.user_id`, so
+it must run BEFORE users moves to the identity schema -- otherwise the
+unqualified reference no longer resolves and it fails outright.
+
 Revision ID: p2schemagroup
-Revises: 8fdad242dfca
+Revises: z7a8b9c0d1e2
 """
 from typing import Sequence, Union
 
 from alembic import op
 
 revision: str = "p2schemagroup"
-down_revision: Union[str, Sequence[str], None] = "8fdad242dfca"
+down_revision: Union[str, Sequence[str], None] = "z7a8b9c0d1e2"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -29,6 +34,7 @@ def upgrade() -> None:
     op.execute("CREATE SCHEMA IF NOT EXISTS security")
     op.execute("CREATE SCHEMA IF NOT EXISTS audit")
     op.execute("ALTER TABLE public.users SET SCHEMA identity")
+    op.execute("ALTER TABLE public.family_links SET SCHEMA identity")
     op.execute("ALTER TABLE public.user_roles SET SCHEMA identity")
     op.execute("ALTER TABLE public.user_statuses SET SCHEMA identity")
     op.execute("ALTER TABLE public.contacts SET SCHEMA identity")
@@ -148,6 +154,7 @@ def downgrade() -> None:
     op.execute("ALTER TABLE identity.contacts SET SCHEMA public")
     op.execute("ALTER TABLE identity.user_statuses SET SCHEMA public")
     op.execute("ALTER TABLE identity.user_roles SET SCHEMA public")
+    op.execute("ALTER TABLE identity.family_links SET SCHEMA public")
     op.execute("ALTER TABLE identity.users SET SCHEMA public")
     op.execute("DROP SCHEMA IF EXISTS identity")
     op.execute("DROP SCHEMA IF EXISTS money")
