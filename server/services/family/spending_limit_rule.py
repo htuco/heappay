@@ -1,3 +1,5 @@
+import uuid
+
 from models.spending_limit_rule import SpendingLimitRule
 from repositories.family.spending_limit_rule import SpendingLimitRuleRepository
 from schemas.spending_limit_rule import SpendingLimitRuleCreate, SpendingLimitRuleUpdate
@@ -31,7 +33,9 @@ class SpendingLimitRuleService:
             enabled=payload.enabled,
             updated_by_user_id=guardian_user_id,
         )
-        return self._repo.create(row)
+        created = self._repo.create(row)
+        self._notify(dependent_user_id=dependent_user_id, guardian_user_id=guardian_user_id)
+        return created
 
     def update(
         self,
@@ -49,10 +53,21 @@ class SpendingLimitRuleService:
         for field, value in changes.items():
             setattr(row, field, value)
         row.updated_by_user_id = guardian_user_id
-        return self._repo.save(row)
+        saved = self._repo.save(row)
+        self._notify(dependent_user_id=dependent_user_id, guardian_user_id=guardian_user_id)
+        return saved
 
     def delete(self, *, dependent_user_id: int, spending_limit_rule_id: int) -> None:
         row = self._repo.get_for_dependent(dependent_user_id, spending_limit_rule_id)
         if row is None:
             raise SpendingLimitRuleNotFoundError("Spending limit rule not found.")
         self._repo.delete(row)
+
+    def _notify(self, *, dependent_user_id: int, guardian_user_id: int) -> None:
+        from services.family.family_notification import FamilyNotificationService
+
+        FamilyNotificationService(self._repo._db).notify_spending_limit_changed(
+            dependent_user_id=dependent_user_id,
+            guardian_user_id=guardian_user_id,
+            reference_id=str(uuid.uuid4()),
+        )

@@ -19,6 +19,10 @@ class FakeUserRepo:
     def __init__(self, balances):
         self._balances = dict(balances)
         self.calls = []
+        # AllowanceService._notify builds a FamilyNotificationService from this.
+        # None is fine: the notifier is fail-open, so with no real session it
+        # logs and returns rather than raising into the transfer.
+        self._db = None
 
     def transfer_wallet_balance(self, *, from_user_id, to_user_id, amount):
         self.calls.append((from_user_id, to_user_id, amount))

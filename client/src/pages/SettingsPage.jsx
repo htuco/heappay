@@ -69,6 +69,7 @@ function savedNotificationPrefs(user) {
     emailTopup: prefEnabled(user, 'email_topup_enabled'),
     emailRefundStatus: prefEnabled(user, 'email_refund_status_enabled'),
     emailOutflow: prefEnabled(user, 'email_outflow_enabled'),
+    emailFamilyActivity: prefEnabled(user, 'email_family_activity_enabled'),
     // Opt-out by default (staff only) — treat missing as false.
     notifyOnUserRequests: user?.notify_on_user_requests === true,
   }
@@ -141,6 +142,7 @@ export default function SettingsPage() {
           emailTopupEnabled: next.emailTopup,
           emailRefundStatusEnabled: next.emailRefundStatus,
           emailOutflowEnabled: next.emailOutflow,
+          emailFamilyActivityEnabled: next.emailFamilyActivity,
           notifyOnUserRequests: next.notifyOnUserRequests,
         }),
       ).unwrap()
@@ -279,6 +281,7 @@ export default function SettingsPage() {
     { key: 'emailTopup', label: 'Top-up', hint: 'Email when a card top-up completes.' },
     { key: 'emailRefundStatus', label: 'Refund status', hint: 'Email when a refund request is approved or declined.' },
     { key: 'billingReminders', label: 'Billing reminders', hint: 'Renewal reminders and recurring payment confirmations.' },
+    { key: 'emailFamilyActivity', label: 'Family activity', hint: 'Invites, allowance, and spending-limit changes for your family account.' },
   ]
 
   const notificationsCard = (

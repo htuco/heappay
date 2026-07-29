@@ -423,6 +423,13 @@ class TransactionService:
                     detail="Awaiting in-app approval",
                 )
                 self._repo._db.commit()
+                if family_link is not None and approver_user_id == family_link.guardian_user_id:
+                    self._notify_approval_requested(
+                        guardian_user_id=family_link.guardian_user_id,
+                        dependent_user_id=family_link.dependent_user_id,
+                        amount=payload.amount,
+                        transaction_id=row.transaction_id,
+                    )
             return row, True
         except IntegrityError as exc:
             self._repo.rollback()
@@ -858,6 +865,18 @@ class TransactionService:
         if locked_until.tzinfo is None:
             locked_until = locked_until.replace(tzinfo=timezone.utc)
         return locked_until > datetime.now(timezone.utc)
+
+    def _notify_approval_requested(
+        self, *, guardian_user_id: int, dependent_user_id: int, amount: Decimal, transaction_id: int
+    ) -> None:
+        from services.family.family_notification import FamilyNotificationService
+
+        FamilyNotificationService(self._repo._db).notify_approval_requested(
+            guardian_user_id=guardian_user_id,
+            dependent_user_id=dependent_user_id,
+            amount=amount,
+            transaction_id=transaction_id,
+        )
 
     def _user_is_sender(self, row: Transaction, user_id: int) -> bool:
         if row.sender_card_id is None:
