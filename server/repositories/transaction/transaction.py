@@ -541,6 +541,23 @@ class TransactionRepository:
             .joinedload(Request.request_status),
         )
 
+    def list_pending_approvals_for_approver(self, approver_user_id: int) -> list[Transaction]:
+        """Transactions awaiting approval where `approver_user_id` is the
+        authorized approver -- e.g. a guardian's view of dependents' pending
+        approvals, redirected there by a spending-limit rule.
+        """
+        stmt = (
+            select(Transaction)
+            .options(*self._party_load_options())
+            .where(
+                Transaction.approver_user_id == approver_user_id,
+                Transaction.requires_user_approval.is_(True),
+                Transaction.user_approved_at.is_(None),
+            )
+            .order_by(Transaction.created_at.desc())
+        )
+        return list(self._db.scalars(stmt).all())
+
     def card_owner_id(self, card_id: int) -> int | None:
         stmt = select(Card.user_id).where(
             Card.card_id == card_id, Card.deleted_at.is_(None)
@@ -570,6 +587,7 @@ class TransactionRepository:
         idempotency_key: str | None = None,
         requires_user_approval: bool = False,
         user_approval_expires_at: datetime | None = None,
+        approver_user_id: int | None = None,
     ) -> Transaction:
         """
         Escrow create: hold funds on sender (if any); recipient is credited on complete().
@@ -590,6 +608,7 @@ class TransactionRepository:
             idempotency_key=idempotency_key,
             requires_user_approval=requires_user_approval,
             user_approval_expires_at=user_approval_expires_at,
+            approver_user_id=approver_user_id,
         )
         self._db.add(row)
         self._commit()

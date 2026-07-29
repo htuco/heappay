@@ -1,9 +1,9 @@
-import { XCircle } from 'lucide-react'
+import { Sliders, XCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import UserAvatar from '@/components/ui/UserAvatar'
 
-export default function DependentCard({ link, onRevoke, busy = false }) {
+export default function DependentCard({ link, onOpenLimits, onRevoke, busy = false }) {
   const dependent = link.dependent
 
   return (
@@ -27,6 +27,13 @@ export default function DependentCard({ link, onRevoke, busy = false }) {
           onClick={() => onRevoke(link)}
         >
           <XCircle className="size-4" />
+        </Button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={() => onOpenLimits(link)}>
+          <Sliders className="mr-1.5 size-3.5" />
+          Spending limits
         </Button>
       </div>
     </div>
