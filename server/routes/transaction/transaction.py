@@ -42,6 +42,7 @@ from services.transaction.transaction import (
     InsufficientBalanceError,
     InvalidTransactionTransitionError,
     ProcessingDelayNotElapsedError,
+    SpendingLimitExceededError,
     TransactionCategoryNotFoundError,
     TransactionNotFoundError,
     TransactionService,
@@ -70,6 +71,7 @@ _PROCESSING_DELAY = "The transaction is still being processed. Try again shortly
 _DUPLICATE_PAYMENT = "A similar payment to this recipient was already submitted. Please wait before trying again."
 _APPROVAL_REQUIRED = "Step-up verification failed or approval is not allowed."
 _APPROVAL_EXPIRED = "The approval window has expired. Cancel and try again."
+_SPENDING_LIMIT_EXCEEDED = "This would exceed a spending limit set by your guardian."
 
 
 def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService:
@@ -491,6 +493,26 @@ def get_transaction(
     )
 
 
+@router.get(
+    "/pending-approvals",
+    response_model=ApiResponse[list[TransactionResponse]],
+    summary="Transactions awaiting my approval, including dependents' redirected by a spending-limit rule.",
+)
+def list_pending_approvals(
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[list[TransactionResponse]]:
+    rows = service.list_pending_approvals_for_approver(user_id)
+    items = [_to_detail_response(r) for r in rows]
+    return ApiResponse[list[TransactionResponse]](
+        success=True,
+        message=(
+            "No pending approvals." if not items else f"{len(items)} transaction(s) awaiting approval."
+        ),
+        data=items,
+    )
+
+
 @router.post(
     "/biometric/options",
     response_model=ApiResponse[BiometricApprovalOptionsResponse],
@@ -557,6 +579,10 @@ def create_transaction(
     except DuplicatePaymentError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_DUPLICATE_PAYMENT
+        ) from None
+    except SpendingLimitExceededError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_SPENDING_LIMIT_EXCEEDED
         ) from None
     except ApprovalRequiredError as exc:
         raise HTTPException(

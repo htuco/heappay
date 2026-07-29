@@ -61,6 +61,60 @@ export async function listDependents() {
 	}
 }
 
+// ── Allowance ────────────────────────────────────────────────────────────────
+
+export async function sendAllowance(dependentUserId, amount) {
+	try {
+		const { data } = await api.post(`/family/dependents/${dependentUserId}/allowance`, { amount })
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not send this allowance.'))
+	}
+}
+
+// ── Spending limits ──────────────────────────────────────────────────────────
+
+export async function listSpendingLimits(dependentUserId) {
+	try {
+		const { data } = await api.get(`/family/dependents/${dependentUserId}/spending-limits`)
+		return unwrap({ data }) ?? []
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not load spending limits.'))
+	}
+}
+
+export async function createSpendingLimit(dependentUserId, payload) {
+	try {
+		const { data } = await api.post(
+			`/family/dependents/${dependentUserId}/spending-limits`,
+			payload,
+		)
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not create this spending limit.'))
+	}
+}
+
+export async function updateSpendingLimit(dependentUserId, spendingLimitRuleId, payload) {
+	try {
+		const { data } = await api.patch(
+			`/family/dependents/${dependentUserId}/spending-limits/${spendingLimitRuleId}`,
+			payload,
+		)
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not update this spending limit.'))
+	}
+}
+
+export async function deleteSpendingLimit(dependentUserId, spendingLimitRuleId) {
+	try {
+		await api.delete(`/family/dependents/${dependentUserId}/spending-limits/${spendingLimitRuleId}`)
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not remove this spending limit.'))
+	}
+}
+
 // ── Dependent cards (issue / freeze / unfreeze) ─────────────────────────────
 // Listing reuses the existing GET /cards?user_id= endpoint, which already
 // accepts an accepted guardian as well as the card's own owner.

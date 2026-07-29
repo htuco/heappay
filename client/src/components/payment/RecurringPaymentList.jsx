@@ -1,13 +1,16 @@
-import { useState } from 'react'
-import { AlertCircle, CalendarClock, Loader2, Pencil, Repeat2, Trash2, TriangleAlert } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { AlertCircle, Loader2, SearchX } from 'lucide-react'
 
 import {
-  formatMonthsLabel,
+  filterRecurringRules,
   formatRecurringAmount as formatAmount,
-  ordinal,
+  recipientName,
+  statusOptionsFromRules,
 } from '@/utils/recurringPayments.utils'
-import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import RecurringEmptyState from '@/components/recurring/RecurringEmptyState'
+import RecurringFilterBar from '@/components/recurring/RecurringFilterBar'
+import RecurringRuleCard from '@/components/recurring/RecurringRuleCard'
 import {
   AmountInput,
   DayOfMonthPicker,
@@ -24,26 +27,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-
-function recipientName(rule) {
-  const r = rule?.recipient
-  if (!r) return `Card #${rule.recipient_card_id}`
-  if (r.first_name || r.last_name) return [r.first_name, r.last_name].filter(Boolean).join(' ')
-  return r.email || `Card #${rule.recipient_card_id}`
-}
-
-function senderCard(rule) {
-  const s = rule?.sender
-  if (!s) return `Card #${rule.sender_card_id}`
-  const brand = s.brand ? s.brand.charAt(0).toUpperCase() + s.brand.slice(1) : 'Card'
-  return s.last_four ? `${brand} ···· ${s.last_four}` : brand
-}
-
-function nextDueLabel(dateStr) {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
 
 // ── Edit form ─────────────────────────────────────────────────────────────────
 
@@ -122,52 +105,42 @@ function RuleForm({ initial, onSubmit, onCancel, loading, error }) {
   )
 }
 
-// ── Rule card ─────────────────────────────────────────────────────────────────
+// ── Filters ───────────────────────────────────────────────────────────────────
 
-function RuleCard({ rule, onEdit, onCancel }) {
-  return (
-    <div className="rounded-card border border-border bg-card px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-input bg-primary/10 text-primary">
-            <Repeat2 className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground">{formatAmount(rule.amount)}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              to {recipientName(rule)} · {rule.day_of_month}
-              {ordinal(rule.day_of_month)} of{' '}
-              {rule.months?.length > 0 ? formatMonthsLabel(rule.months) : 'every month'}
-            </p>
-            <p className="truncate text-xs text-muted-foreground/70">from {senderCard(rule)}</p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="icon" className="size-7" onClick={() => onEdit(rule)}>
-            <Pencil className="size-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-7 text-destructive hover:text-destructive" onClick={() => onCancel(rule)}>
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
-      </div>
-      <div className="mt-2.5 flex items-center gap-3 border-t border-border/60 pt-2.5">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <CalendarClock className="size-3.5" />
-          Next: {nextDueLabel(rule.next_due_at)}
-        </div>
-        {rule.last_run_failed && (
-          <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-            <TriangleAlert className="size-3.5" />
-            Last run failed
-          </div>
-        )}
-        {rule.note && (
-          <p className="truncate text-xs text-muted-foreground/70 ml-auto">{rule.note}</p>
-        )}
-      </div>
-    </div>
+const FILTER_KEYS = ['q', 'status', 'freq', 'attention']
+
+function useRecurringFilters() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const filters = useMemo(
+    () => ({
+      q: searchParams.get('q') ?? '',
+      status: searchParams.get('status') ?? '',
+      freq: searchParams.get('freq') ?? '',
+      attention: searchParams.get('attention') === '1',
+    }),
+    [searchParams],
   )
+
+  const setFilters = useCallback(
+    (patch) => {
+      const params = new URLSearchParams(searchParams)
+      Object.entries(patch).forEach(([key, value]) => {
+        if (!value) params.delete(key)
+        else params.set(key, value === true ? '1' : value)
+      })
+      setSearchParams(params, { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
+
+  const clearFilters = useCallback(() => {
+    const params = new URLSearchParams(searchParams)
+    FILTER_KEYS.forEach((key) => params.delete(key))
+    setSearchParams(params, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  return { filters, setFilters, clearFilters }
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -186,6 +159,17 @@ export default function RecurringPaymentList({ recurring, onCreate }) {
 
   const [editRule, setEditRule] = useState(null)
   const [ruleToCancel, setRuleToCancel] = useState(null)
+  const { filters, setFilters, clearFilters } = useRecurringFilters()
+
+  const statusOptions = useMemo(() => statusOptionsFromRules(rules), [rules])
+  const hasAttentionRules = useMemo(
+    () => rules.some((rule) => rule.last_run_failed),
+    [rules],
+  )
+  const visibleRules = useMemo(
+    () => filterRecurringRules(rules, filters, recipientName),
+    [rules, filters],
+  )
 
   async function handleEdit(payload) {
     if (await updateRule(editRule.recurring_payment_id, payload)) setEditRule(null)
@@ -214,16 +198,43 @@ export default function RecurringPaymentList({ recurring, onCreate }) {
       {rules.length === 0 ? (
         <RecurringEmptyState onCreate={onCreate} />
       ) : (
-        <div className="space-y-2">
-          {rules.map((rule) => (
-            <RuleCard
-              key={rule.recurring_payment_id}
-              rule={rule}
-              onEdit={(r) => { clearMutationError(); setEditRule(r) }}
-              onCancel={(r) => { clearMutationError(); setRuleToCancel(r) }}
-            />
-          ))}
-        </div>
+        <>
+          <RecurringFilterBar
+            filters={filters}
+            onChange={setFilters}
+            onClear={clearFilters}
+            statusOptions={statusOptions}
+            matchCount={visibleRules.length}
+            totalCount={rules.length}
+            hasAttentionRules={hasAttentionRules}
+          />
+
+          {visibleRules.length === 0 ? (
+            <div className="rounded-card border border-dashed border-border bg-card/50 px-6 py-10 text-center">
+              <SearchX className="mx-auto size-8 text-muted-foreground/60" aria-hidden />
+              <p className="mt-3 font-semibold text-card-foreground">
+                No recurring payments match your filters.
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Try a different search or clear the filters to see all {rules.length}.
+              </p>
+              <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {visibleRules.map((rule) => (
+                <RecurringRuleCard
+                  key={rule.recurring_payment_id}
+                  rule={rule}
+                  onEdit={(r) => { clearMutationError(); setEditRule(r) }}
+                  onCancel={(r) => { clearMutationError(); setRuleToCancel(r) }}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Edit dialog */}

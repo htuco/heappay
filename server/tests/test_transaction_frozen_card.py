@@ -75,6 +75,16 @@ def _service(cards):
         (),
         {"list_applicable": lambda self, user_id: []},
     )()
+    svc._family_link_repo = type(
+        "_FamilyLinkRepo",
+        (),
+        {"get_accepted_for_dependent": lambda self, dependent_user_id: None},
+    )()
+    svc._spending_limit_rule_repo = type(
+        "_SpendingLimitRuleRepo",
+        (),
+        {"list_applicable": lambda self, dependent_user_id, category_id: []},
+    )()
     return svc
 
 
