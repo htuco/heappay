@@ -32,3 +32,4 @@ from models.recurring_payment import RecurringPayment  # noqa: F401
 from models.audit_log_event import AuditLogEvent  # noqa: F401
 from models.refund_approval_rule import RefundApprovalRule  # noqa: F401
 from models.contact import Contact  # noqa: F401
+from models.family_link import FamilyLink  # noqa: F401

@@ -33,6 +33,8 @@ export const MAIN_NAV_LINKS = [
   { name: 'Recurring', path: '/recurring', icon: CalendarClock },
   // Reference utility, not part of any core task.
   { name: 'Converter', path: '/converter', icon: Repeat },
+  // Guardian/dependent setup — configured occasionally, not a core task.
+  { name: 'Family', path: '/family', icon: Users },
 ]
 
 // Work queues before browse-only lists: the admin loop starts at a pending

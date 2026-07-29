@@ -22,6 +22,7 @@ const PAGE_META = {
   '/recurring': { title: 'Recurring Payments', subtitle: 'Manage all your recurring payments in one place.' },
   '/contacts': { title: 'Contacts', subtitle: 'People you pay often — send in two clicks, no card re-entry.' },
   '/converter': { title: 'Currency Converter', subtitle: 'Get real-time exchange rates and convert currencies instantly.' },
+  '/family': { title: 'Family', subtitle: 'Link and manage dependent accounts.' },
   '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
   '/support/users': { title: 'Users', subtitle: 'Manage user accounts and card access.' },
   '/support/tickets': { title: 'Refund Tickets', subtitle: 'Review and resolve pending refund requests.' },
