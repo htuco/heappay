@@ -1,8 +1,10 @@
 """group tables into postgres schemas and apply tier 1 renames
 
-Phase 2 of the schema refactor. Moves all 31 tables from `public` into six
-namespaces and applies the Tier 1 renames, including the six FK columns whose
-names disagreed with the primary key they reference.
+Phase 2 of the schema refactor. Moves all 35 tables from `public` into six
+namespaces -- identity (7), money (9), requests (6), comms (5), security (4),
+audit (4) -- and applies the Tier 1 renames, including the six FK columns whose
+names disagreed with the primary key they reference. Afterwards `public` holds
+nothing but alembic_version.
 
 ALTER TABLE ... SET SCHEMA and RENAME are catalog-only operations -- no table
 rewrite -- but each takes a brief ACCESS EXCLUSIVE lock. Run when the target
@@ -14,8 +16,13 @@ spending_limit_rules and add transactions.approver_user_id, all with FKs
 written as `users.user_id` -- so they must run BEFORE users moves to the
 identity schema, or the unqualified reference stops resolving.
 
+Downgrading past this revision is not meaningful: every migration below it
+refers to unqualified table names that no longer exist once the move has run.
+downgrade() here is a true inverse of upgrade() -- it returns all 35 tables to
+`public` with their original names -- but treat this revision as the floor.
+
 Revision ID: p2schemagroup
-Revises: z7a8b9c0d1e2
+Revises: f3a4b5c6d7e8
 """
 from typing import Sequence, Union
 
