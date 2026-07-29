@@ -75,6 +75,9 @@ class FakeCardService:
     def list_all(self, **_kwargs) -> list[_CardRow]:
         return list(self._rows.values())
 
+    def list_all_for_self(self, user_id: int, **_kwargs) -> list[_CardRow]:
+        return [r for r in self._rows.values() if r.user_id == user_id]
+
     def pending_card_ids_for_user(self, user_id: int) -> set[int]:
         return set()
 

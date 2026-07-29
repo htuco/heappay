@@ -90,6 +90,15 @@ class Transaction(Base):
         ForeignKey("identity.users.user_id"), nullable=True
     )
 
+    # Who actually initiated this transaction. NULL only for rows that predate
+    # this column. For most transactions this equals sender_card.user_id, but
+    # for a shared family card (owned by a guardian, spent from by an
+    # authorized dependent member) the owner and the initiator differ, so this
+    # is the only reliable answer to "whose spend was this."
+    initiated_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("identity.users.user_id"), nullable=True
+    )
+
     recurring_payment_id: Mapped[int | None] = mapped_column(
         ForeignKey("money.recurring_payments.recurring_payment_id", ondelete="SET NULL"),
         nullable=True,

@@ -289,7 +289,10 @@ export default function TopUpModal({
       getNexusFundingEnabled(),
     ])
       .then(([raw, types, nexusActive]) => {
-        const active = raw.filter((c) => !c.deleted_at)
+        // Exclude shared cards you don't own -- topping up someone else's
+        // card raises a "whose money pays for this" question this flow
+        // doesn't answer, so top-up stays owner-only.
+        const active = raw.filter((c) => !c.deleted_at && c.user_id === user.id)
         setCards(active)
         setNexusEnabled(nexusActive)
         if (initialCardId && active.some((c) => c.card_id === initialCardId)) {
