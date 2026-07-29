@@ -93,10 +93,7 @@ export function useRecurringPayments() {
     setMutationError(null)
     try {
       await recurringPaymentsService.cancel(recurringPaymentId)
-      // Cancelled rules drop out of the list endpoint, so drop them here too.
-      setRules((prev) =>
-        prev.filter((rule) => rule.recurring_payment_id !== recurringPaymentId),
-      )
+      await load()
       return true
     } catch (err) {
       setMutationError(err?.message || 'Failed to cancel recurring payment.')
@@ -104,7 +101,7 @@ export function useRecurringPayments() {
     } finally {
       setIsMutating(false)
     }
-  }, [])
+  }, [load])
 
   return {
     rules,
