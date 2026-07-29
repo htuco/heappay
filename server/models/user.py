@@ -127,6 +127,9 @@ class User(Base):
     is_discoverable: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
+    email_family_activity_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
 
     status = relationship("UserStatus", back_populates="users")
     role = relationship("UserRole", back_populates="users")

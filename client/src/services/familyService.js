@@ -61,6 +61,17 @@ export async function listDependents() {
 	}
 }
 
+// ── Allowance ────────────────────────────────────────────────────────────────
+
+export async function sendAllowance(dependentUserId, amount) {
+	try {
+		const { data } = await api.post(`/family/dependents/${dependentUserId}/allowance`, { amount })
+		return unwrap({ data })
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not send this allowance.'))
+	}
+}
+
 // ── Spending limits ──────────────────────────────────────────────────────────
 
 export async function listSpendingLimits(dependentUserId) {
@@ -101,5 +112,49 @@ export async function deleteSpendingLimit(dependentUserId, spendingLimitRuleId) 
 		await api.delete(`/family/dependents/${dependentUserId}/spending-limits/${spendingLimitRuleId}`)
 	} catch (error) {
 		throw new Error(getApiErrorMessage(error, 'Could not remove this spending limit.'))
+	}
+}
+
+// ── Dependent cards (issue / freeze / unfreeze) ─────────────────────────────
+// Listing reuses the existing GET /cards?user_id= endpoint, which already
+// accepts an accepted guardian as well as the card's own owner.
+
+export async function listDependentCards(dependentUserId) {
+	try {
+		const { data } = await api.get('/cards', { params: { user_id: dependentUserId } })
+		return data
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not load this dependent’s cards.'))
+	}
+}
+
+export async function freezeDependentCard(dependentUserId, cardId) {
+	try {
+		const { data } = await api.post(
+			`/family/dependents/${dependentUserId}/cards/${cardId}/freeze`,
+		)
+		return data
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not freeze this card.'))
+	}
+}
+
+export async function unfreezeDependentCard(dependentUserId, cardId) {
+	try {
+		const { data } = await api.post(
+			`/family/dependents/${dependentUserId}/cards/${cardId}/unfreeze`,
+		)
+		return data
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not unfreeze this card.'))
+	}
+}
+
+export async function issueDependentCard(dependentUserId, payload) {
+	try {
+		const { data } = await api.post(`/family/dependents/${dependentUserId}/cards`, payload)
+		return data
+	} catch (error) {
+		throw new Error(getApiErrorMessage(error, 'Could not issue this card.'))
 	}
 }

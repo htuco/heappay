@@ -87,6 +87,37 @@ class UserRepository:
         self._db.refresh(user)
         return user
 
+    def transfer_wallet_balance(
+        self, *, from_user_id: int, to_user_id: int, amount: Decimal
+    ) -> tuple[User, User]:
+        """Atomically move *amount* from one user's wallet balance to another's.
+
+        Locks both rows in a fixed order (ascending user_id) rather than
+        guardian-then-dependent, so two concurrent transfers between the same
+        pair in opposite directions can't deadlock against each other.
+        """
+        if amount <= 0:
+            raise ValueError("Transfer amount must be positive.")
+        if from_user_id == to_user_id:
+            raise ValueError("Cannot transfer to the same user.")
+
+        first_id, second_id = sorted((from_user_id, to_user_id))
+        first = self.get_by_id_for_update(first_id)
+        second = self.get_by_id_for_update(second_id)
+        from_user = first if first_id == from_user_id else second
+        to_user = first if first_id == to_user_id else second
+        if from_user is None or to_user is None:
+            raise ValueError("User not found for wallet transfer.")
+        if from_user.wallet_balance < amount:
+            raise ValueError("Insufficient wallet balance.")
+
+        from_user.wallet_balance = from_user.wallet_balance - amount
+        to_user.wallet_balance = to_user.wallet_balance + amount
+        self._db.commit()
+        self._db.refresh(from_user)
+        self._db.refresh(to_user)
+        return from_user, to_user
+
     def get_by_email(self, email: str) -> User | None:
         stmt = select(User).where(User.email == email)
         return self._db.scalars(stmt).first()

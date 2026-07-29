@@ -897,6 +897,7 @@ class UserAuthService:
             email_refund_status_enabled=preferences.email_refund_status_enabled,
             email_outflow_enabled=preferences.email_outflow_enabled,
             notify_on_user_requests=preferences.notify_on_user_requests,
+            email_family_activity_enabled=preferences.email_family_activity_enabled,
         )
         user = self.repo.get_user_by_id(user_id)
         if user is None:
