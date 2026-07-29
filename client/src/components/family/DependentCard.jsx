@@ -15,7 +15,13 @@ import { Input } from '@/components/ui/input'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { sendAllowance } from '@/services/familyService'
 
-export default function DependentCard({ link, onOpenLimits, onRevoke, busy = false }) {
+export default function DependentCard({
+  link,
+  onOpenLimits,
+  onOpenCards,
+  onRevoke,
+  busy = false,
+}) {
   const dependent = link.dependent
   const [allowanceOpen, setAllowanceOpen] = useState(false)
   const [amount, setAmount] = useState('')
@@ -77,6 +83,9 @@ export default function DependentCard({ link, onOpenLimits, onRevoke, busy = fal
         <Button size="sm" variant="outline" onClick={() => onOpenLimits(link)}>
           <Sliders className="mr-1.5 size-3.5" />
           Spending limits
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => onOpenCards(link)}>
+          Cards
         </Button>
       </div>
 

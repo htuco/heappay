@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from tasks.sync import run_sync_for_user
 from repositories.card.card import CardRepository
+from repositories.family.family_link import FamilyLinkRepository
 from routes.dependencies import (
     UserContext,
     get_user_context,
@@ -135,13 +136,19 @@ def list_cards(
     offset: int = Query(default=0, ge=0),
     ctx: UserContext = Depends(get_user_context),
     service: CardService = Depends(get_card_service),
+    db: Session = Depends(get_db),
 ) -> list[CardResponse]:
     if not ctx.is_staff:
         if user_id is not None and user_id != ctx.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_OTHER_USER
-            )
-        user_id = ctx.user_id
+            # A guardian may list a linked dependent's cards.
+            family_link = FamilyLinkRepository(db).get_accepted_for_dependent(user_id)
+            is_guardian = family_link is not None and family_link.guardian_user_id == ctx.user_id
+            if not is_guardian:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_OTHER_USER
+                )
+        else:
+            user_id = ctx.user_id
     rows = service.list_all(
         user_id=user_id,
         status_id=status_id,

@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth'
 import useFamilyDependents from '@/hooks/useFamilyDependents'
 import { useNotifications } from '@/context/NotificationContext'
 import DependentCard from '@/components/family/DependentCard'
+import DependentCardsPanel from '@/components/family/DependentCardsPanel'
 import InviteDependentModal from '@/components/family/InviteDependentModal'
 import SpendingLimitRuleList from '@/components/family/SpendingLimitRuleList'
 import { acceptInvite, declineInvite, revokeFamilyLink } from '@/services/familyService'
@@ -28,6 +29,7 @@ export default function FamilyPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [busyLinkId, setBusyLinkId] = useState(null)
   const [limitsLink, setLimitsLink] = useState(null)
+  const [cardsLink, setCardsLink] = useState(null)
 
   async function handleAccept(link) {
     setBusyLinkId(link.family_link_id)
@@ -169,6 +171,7 @@ export default function FamilyPage() {
                     key={link.family_link_id}
                     link={link}
                     onOpenLimits={setLimitsLink}
+                    onOpenCards={setCardsLink}
                     onRevoke={handleRevoke}
                     busy={busyLinkId === link.family_link_id}
                   />
@@ -197,6 +200,16 @@ export default function FamilyPage() {
             </DialogDescription>
           </DialogHeader>
           {limitsLink && <SpendingLimitRuleList dependentUserId={limitsLink.dependent.user_id} />}
+        </DialogContent>
+      </DialogRoot>
+
+      <DialogRoot open={Boolean(cardsLink)} onOpenChange={(o) => !o && setCardsLink(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Cards {cardsLink ? `· ${cardsLink.dependent.first_name}` : ''}</DialogTitle>
+            <DialogDescription>Freeze or unfreeze this dependent's cards.</DialogDescription>
+          </DialogHeader>
+          {cardsLink && <DependentCardsPanel dependentUserId={cardsLink.dependent.user_id} />}
         </DialogContent>
       </DialogRoot>
     </div>
