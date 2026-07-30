@@ -1,9 +1,16 @@
+import { Link } from 'react-router-dom'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { AlertCircle, PieChart as PieChartIcon, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowRight, PieChart as PieChartIcon, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { getApiErrorMessage } from '@/utils/api'
 import { useSpendingByCategory } from '@/hooks/useSpendingByCategory'
+
+// The legend used to render every category it was given, so the widget — and
+// with it the whole dashboard row — grew a row taller for each one (13 are
+// seeded). Cap what the dashboard shows and send the rest to Analytics; the
+// donut and the centre total still account for 100% of spend either way.
+const MAX_VISIBLE_CATEGORIES = 6
 
 function formatMoney(n) {
   return `$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -63,6 +70,8 @@ function ChartErrorState({ error, onRetry }) {
 export default function SpendingByCategory({ months = 6, bare = false }) {
   const { segments, total, isLoading, error, refresh } = useSpendingByCategory({ months })
   const isEmpty = segments.length === 0
+  const visibleSegments = segments.slice(0, MAX_VISIBLE_CATEGORIES)
+  const hiddenCount = segments.length - visibleSegments.length
 
   return (
     <section
@@ -134,30 +143,45 @@ export default function SpendingByCategory({ months = 6, bare = false }) {
             </div>
           </div>
 
-          {/* Legend */}
-          <ul className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden">
-            {segments.map((segment) => {
-              const pct = total > 0 ? Math.round((segment.value / total) * 100) : 0
-              return (
-                <li
-                  key={segment.key}
-                  className="grid grid-cols-[0.625rem_minmax(0,1fr)_2.25rem_4.75rem] items-center gap-x-2 text-sm"
-                >
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: segment.color }}
-                  />
-                  <span className="min-w-0 truncate text-card-foreground">{segment.name}</span>
-                  <span className="shrink-0 text-right tabular-nums text-muted-foreground">
-                    {pct}%
-                  </span>
-                  <span className="shrink-0 text-right tabular-nums font-medium text-card-foreground">
-                    {formatMoney(segment.value)}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+          {/* Legend — capped at MAX_VISIBLE_CATEGORIES, see the note above. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <ul className="flex min-w-0 flex-col gap-1.5 overflow-hidden">
+              {visibleSegments.map((segment) => {
+                const pct = total > 0 ? Math.round((segment.value / total) * 100) : 0
+                return (
+                  <li
+                    key={segment.key}
+                    className="grid grid-cols-[0.625rem_minmax(0,1fr)_2.25rem_4.75rem] items-center gap-x-2 text-sm"
+                  >
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: segment.color }}
+                    />
+                    <span className="min-w-0 truncate text-card-foreground">{segment.name}</span>
+                    <span className="shrink-0 text-right tabular-nums text-muted-foreground">
+                      {pct}%
+                    </span>
+                    <span className="shrink-0 text-right tabular-nums font-medium text-card-foreground">
+                      {formatMoney(segment.value)}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+
+            {hiddenCount > 0 ? (
+              <Link
+                to="/analytics"
+                className="mt-0.5 inline-flex items-center gap-1 self-start rounded-input text-xs font-medium text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              >
+                More stats
+                <span className="text-muted-foreground">
+                  ({hiddenCount} more {hiddenCount === 1 ? 'category' : 'categories'})
+                </span>
+                <ArrowRight className="h-3 w-3" strokeWidth={2} />
+              </Link>
+            ) : null}
+          </div>
         </div>
       )}
     </section>
