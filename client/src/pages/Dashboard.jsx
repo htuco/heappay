@@ -107,6 +107,10 @@ export default function DashboardPage() {
     formattedCards,
     formattedReserved,
     hasReserved,
+    // Raw numbers as well as the formatted strings: the balance widget needs
+    // them to work out each side's share of the total.
+    walletBalance: walletAmount,
+    cardsBalance: cardsAmount,
     isLoading: balanceLoading,
   } = useTotalBalance()
   const {
@@ -209,6 +213,8 @@ export default function DashboardPage() {
             totalBalance={formattedBalance}
             walletBalance={formattedWallet}
             cardsBalance={formattedCards}
+            walletAmount={walletAmount}
+            cardsAmount={cardsAmount}
             reservedBalance={formattedReserved}
             hasReserved={hasReserved}
             monthlyGrowth={monthlyGrowth}
