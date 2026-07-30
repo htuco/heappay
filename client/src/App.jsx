@@ -14,6 +14,7 @@ import DashboardPage from './pages/Dashboard'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PaymentPage from './pages/PaymentPage'
 import RecurringPaymentsPage from './pages/RecurringPaymentsPage'
+import AnalyticsPage from './pages/AnalyticsPage'
 import ConverterPage from './pages/ConverterPage'
 import ContactsPage from './pages/ContactsPage'
 import FamilyPage from './pages/FamilyPage'
@@ -263,6 +264,7 @@ export default function App() {
             rename working. Preserves ?tx=<id> so deep-links still open the panel. */}
         <Route path="/payments" element={<LegacyPaymentsRedirect />} />
         <Route path="/recurring" element={<ProtectedRoute><RecurringPaymentsPage /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/converter" element={<ProtectedRoute><ConverterPage /></ProtectedRoute>} />
         <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
         <Route path="/family" element={<ProtectedRoute><FamilyPage /></ProtectedRoute>} />

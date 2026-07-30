@@ -1,6 +1,7 @@
 import {
   ArrowLeftRight,
   CalendarClock,
+  ChartPie,
   Contact,
   CreditCard,
   LayoutDashboard,
@@ -31,6 +32,10 @@ export const MAIN_NAV_LINKS = [
   // Set up once, then only checked for what is coming due.
   // CalendarClock, not Repeat — Converter already owns Repeat in this list.
   { name: 'Recurring', path: '/recurring', icon: CalendarClock },
+  // Insight surface — checked occasionally, so it sits with the other
+  // non-core pages. Still under construction: the route renders a
+  // coming-soon page and the row carries a "Soon" badge.
+  { name: 'Analytics', path: '/analytics', icon: ChartPie, comingSoon: true },
   // Reference utility, not part of any core task.
   { name: 'Converter', path: '/converter', icon: Repeat },
   // Guardian/dependent setup — configured occasionally, not a core task.

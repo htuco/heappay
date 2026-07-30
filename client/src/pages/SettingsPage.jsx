@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bell, CreditCard, Download, Eye, FileDown, KeyRound, Paintbrush, SlidersHorizontal, TriangleAlert, UserRound, WalletCards } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useBalanceScopePreference } from '@/hooks/useBalanceScopePreference'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
 import { refreshSession, updateNotificationPreferences, updatePaymentSecurityPreferences, updateProfileUser } from '@/store/slices/authSlice'
@@ -21,6 +22,7 @@ import SettingsNav from '@/components/settings/SettingsNav'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 import { Button } from '@/components/ui/button'
 import { exportService } from '@/services/exportService'
+import { BALANCE_SCOPE_LABELS, BALANCE_SCOPES } from '@/utils/balanceScope'
 import { maskEmail } from '@/utils/maskEmail'
 import { useNotifications } from '@/context/NotificationContext'
 
@@ -30,7 +32,7 @@ const NAV_ITEMS = [
   { id: 'notifications', label: 'Notifications', description: 'Email and in-app', icon: Bell },
   { id: 'payment', label: 'Payment methods', description: 'Cards and defaults', icon: CreditCard },
   { id: 'data', label: 'Data & reports', description: 'Export PDFs', icon: FileDown },
-  { id: 'preferences', label: 'Preferences', description: 'Appearance and theme', icon: SlidersHorizontal },
+  { id: 'preferences', label: 'Preferences', description: 'Appearance and defaults', icon: SlidersHorizontal },
 ]
 
 const EXPORT_REPORTS = [
@@ -90,6 +92,7 @@ export default function SettingsPage() {
   const { user, isStaff } = useAuth()
   const { cards, setMainCard, removeCard } = useWalletCards()
   const { preference: themePreference, isDark, setTheme } = useTheme()
+  const { preference: balanceScope, setBalanceScope } = useBalanceScopePreference()
   const { notify } = useNotifications()
   const [exportingReport, setExportingReport] = useState(null)
 
@@ -371,19 +374,60 @@ export default function SettingsPage() {
       icon={Paintbrush}
       description="How the app looks on this device."
     >
-      <ControlRow
-        label="Theme"
-        hint={`Currently using ${formatPreference(themePreference)} mode. ${
-          themePreference === 'system' ? `Resolved to ${isDark ? 'Dark' : 'Light'}.` : ''
-        } Applies instantly, stored on this device only.`}
-        emphasize
-      >
-        <OptionGroup
-          options={['Light', 'Dark', 'System']}
-          active={formatPreference(themePreference)}
-          onSelect={(label) => handleThemeSelect(label.toLowerCase())}
-        />
-      </ControlRow>
+      {/* SettingsCard doesn't space its children — cards with more than one row
+          own that themselves, as Data & Reports does. */}
+      <div className="space-y-3">
+        <ControlRow
+          label="Theme"
+          hint={`Currently using ${formatPreference(themePreference)} mode. ${
+            themePreference === 'system' ? `Resolved to ${isDark ? 'Dark' : 'Light'}.` : ''
+          } Applies instantly, stored on this device only.`}
+          emphasize
+        >
+          <OptionGroup
+            options={['Light', 'Dark', 'System']}
+            active={formatPreference(themePreference)}
+            onSelect={(label) => handleThemeSelect(label.toLowerCase())}
+          />
+        </ControlRow>
+
+        <ControlRow
+          label="Default balance view"
+          hint="Which figure the dashboard balance opens on. You can still switch from the widget itself. Stored on this device only."
+          emphasize
+          alignToggle
+        >
+          <OptionGroup
+            options={BALANCE_SCOPES.map((scope) => BALANCE_SCOPE_LABELS[scope])}
+            active={BALANCE_SCOPE_LABELS[balanceScope]}
+            onSelect={(label) =>
+              setBalanceScope(
+                BALANCE_SCOPES.find((scope) => BALANCE_SCOPE_LABELS[scope] === label) ?? 'combined',
+              )
+            }
+          />
+        </ControlRow>
+
+        {/*
+          Placeholder until the display-currency work lands: switching it has to
+          convert every amount the app renders, so the control ships disabled
+          rather than silently doing nothing. Real rates come from /fx/convert.
+        */}
+        <ControlRow
+          label="Display currency"
+          hint="Show balances and amounts in your preferred currency, converted at reference rates. Coming soon — amounts are shown in USD for now."
+          emphasize
+          alignToggle
+        >
+          <OptionGroup
+            options={['USD', 'EUR', 'BAM']}
+            active="USD"
+            onSelect={() => {}}
+            disabled
+            title="Display currency is coming soon."
+          />
+        </ControlRow>
+      </div>
     </SettingsCard>
   )
 
