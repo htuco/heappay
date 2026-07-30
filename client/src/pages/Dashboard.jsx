@@ -199,8 +199,11 @@ export default function DashboardPage() {
       </PageActionSlot>
 
       {showLoader && <DashboardLoadingOverlay />}
-      {/* Row 1: Balance (flexible) + Payment Card (fixed 384px at lg, 464px at xl) */}
-      <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
+      {/* Row 1: Balance (flexible) + Payment Card (fixed 400px at lg, 464px at xl).
+          dashboard-hero-row pins the row to the card's own height so the two panels
+          line up top and bottom — see .dashboard-hero-row in index.css, and keep the
+          widths below in sync with --dashboard-hero-card-width. */}
+      <section className="dashboard-hero-row grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
         <div className="min-w-0">
           <TotalBalanceWidget
             totalBalance={formattedBalance}

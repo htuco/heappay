@@ -589,6 +589,40 @@
     transform: scale(var(--rccs-scale, 1)) !important;
   }
 
+  /* Dashboard hero row: the Total Balance widget and the payment card have to read
+     as one level row, and the card is the height reference. rccs renders a fixed
+     290x183 box, so the card's height is always its column width * 183/290 — a
+     ratio we can state in CSS instead of waiting for PaymentCard's ResizeObserver
+     to publish --rccs-scale. That matters because the observer only runs after the
+     first paint: pinning the row to the measured height would make the row jump as
+     the card settles, while this is correct from the first frame.
+
+     minmax(..., auto) rather than a fixed track on purpose — the row can never be
+     shorter than the card (so the card always fills its cell exactly instead of
+     sitting centred with slack above and below), but a balance widget that needs
+     more room than that still grows the row rather than clipping its own content.
+
+     --dashboard-hero-card-width must match the right-hand track of the row's
+     lg:/xl: grid-cols in Dashboard.jsx. */
+  .dashboard-hero-row {
+    --dashboard-hero-card-width: 25rem;
+  }
+
+  @media (min-width: 1024px) {
+    .dashboard-hero-row {
+      grid-template-rows: minmax(
+        calc(var(--dashboard-hero-card-width) * 183 / 290),
+        auto
+      );
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .dashboard-hero-row {
+      --dashboard-hero-card-width: 29rem;
+    }
+  }
+
   .card-carousel-payment-card--active .payment-card-rccs-shell:hover {
     transform: translateY(-2px);
   }
