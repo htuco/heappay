@@ -12,6 +12,22 @@ import { RefreshCw, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getApiErrorMessage } from '@/utils/api'
 
+// ─── Axis formatting ──────────────────────────────────────────────────────────
+
+/**
+ * Compact currency for the y-axis: 4000 -> $4k, -2500 -> -$2.5k. Raw thousands
+ * cost more width than the axis has on a phone, and read as counts rather than
+ * money.
+ */
+function formatAxisTick(value) {
+  const n = Number(value) || 0
+  const sign = n < 0 ? '-' : ''
+  const abs = Math.abs(n)
+  if (abs >= 1_000_000) return `${sign}$${+(abs / 1_000_000).toFixed(1)}m`
+  if (abs >= 1_000) return `${sign}$${+(abs / 1_000).toFixed(1)}k`
+  return `${sign}$${abs}`
+}
+
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 
 function NetTooltip({ active, payload, label }) {
@@ -52,7 +68,7 @@ function SingleTooltip({ active, payload, label }) {
 
 function ChartShimmer() {
   return (
-    <div className="h-64 w-full animate-pulse rounded-surface bg-muted/60" />
+    <div className="min-h-52 w-full flex-1 animate-pulse rounded-surface bg-muted/60 sm:min-h-64" />
   )
 }
 
@@ -62,7 +78,7 @@ function ChartErrorState({ error, onRetry }) {
   return (
     <div
       role="alert"
-      className="flex h-64 items-center justify-center rounded-input border border-destructive/25 bg-destructive/10 p-5"
+      className="flex min-h-52 flex-1 items-center justify-center rounded-input border border-destructive/25 bg-destructive/10 p-5 sm:min-h-64"
     >
       <div className="flex max-w-md flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
         <AlertCircle className="h-8 w-8 shrink-0 text-destructive" aria-hidden="true" />
@@ -145,15 +161,15 @@ export default function MoneyFlowPlaceholder({
 
       {/* Empty state */}
       {!isLoading && !error && isEmpty && (
-        <div className="flex h-64 items-center justify-center">
+        <div className="flex min-h-52 flex-1 items-center justify-center sm:min-h-64">
           <p className="text-sm text-muted-foreground">No transactions yet.</p>
         </div>
       )}
 
       {/* Chart */}
       {!isLoading && !error && !isEmpty && (
-        <div className="h-64 w-full min-w-0">
-          <ResponsiveContainer width="100%" height={256} minWidth={0}>
+        <div className="min-h-52 w-full min-w-0 flex-1 sm:min-h-64">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             {useDual ? (
               <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <defs>
@@ -174,12 +190,15 @@ export default function MoneyFlowPlaceholder({
                   tickLine={false}
                   tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                   dy={6}
+                  minTickGap={12}
+                  interval="preserveStartEnd"
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                  width={42}
+                  tickFormatter={formatAxisTick}
+                  width={38}
                 />
                 <Tooltip
                   cursor={{ stroke: 'var(--primary)', strokeOpacity: 0.4, strokeWidth: 1 }}
@@ -216,12 +235,15 @@ export default function MoneyFlowPlaceholder({
                   tickLine={false}
                   tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                   dy={6}
+                  minTickGap={12}
+                  interval="preserveStartEnd"
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                  width={42}
+                  tickFormatter={formatAxisTick}
+                  width={38}
                 />
                 <Tooltip
                   cursor={{ stroke: 'var(--primary)', strokeOpacity: 0.4, strokeWidth: 1 }}
