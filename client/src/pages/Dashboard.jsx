@@ -248,8 +248,16 @@ export default function DashboardPage() {
       {/* Row 2: Money Flow + Spending by Category (50/50 within the graph column) +
           Quick Actions (fixed 384px at lg, 464px at xl) on the right */}
       <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
-        <div className="grid min-w-0 grid-cols-1 gap-5 rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border">
-          <div className="min-w-0 md:pr-6">
+        {/*
+          The two charts only sit side by side from 2xl. Splitting at md (as
+          this did) gave each of them half of whatever the left grid column had
+          — and from lg that column is the flexible one next to the fixed
+          25rem/29rem card track, so at 1024 it is ~292px wide and each chart
+          got ~146px. Stacking until there is genuinely room keeps both
+          readable at every width, mobile included.
+        */}
+        <div className="grid min-w-0 grid-cols-1 gap-5 rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 2xl:grid-cols-2 2xl:gap-0 2xl:divide-x 2xl:divide-border">
+          <div className="min-w-0 2xl:pr-6">
             <MoneyFlowPlaceholder
               chartData={chartData}
               isLoading={summaryLoading}
@@ -258,7 +266,7 @@ export default function DashboardPage() {
               bare
             />
           </div>
-          <div className="min-w-0 md:pl-6">
+          <div className="min-w-0 2xl:pl-6">
             <SpendingByCategory months={6} bare />
           </div>
         </div>

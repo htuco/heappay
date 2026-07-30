@@ -101,15 +101,26 @@ export default function SpendingByCategory({ months = 6, bare = false }) {
         </div>
       )}
 
+      {/*
+        Bare mode sits in the dashboard's shared chart panel, which runs full
+        width until 2xl and only then splits in two. So donut-beside-legend is
+        right for most widths, and the stack comes back at 2xl when the column
+        narrows again — the inverse of the usual direction. (Container queries
+        would express this against the panel instead of the viewport.)
+      */}
       {!isLoading && !error && !isEmpty && (
         <div
           className={
             bare
-              ? 'flex flex-col gap-4'
+              ? 'flex flex-col gap-4 sm:flex-row sm:items-center 2xl:flex-col 2xl:items-stretch'
               : 'flex flex-col gap-4 sm:flex-row sm:items-center'
           }
         >
-          <div className={`relative mx-auto h-56 w-full min-w-0 ${bare ? 'max-w-56' : 'sm:w-56 sm:shrink-0'}`}>
+          <div
+            className={`relative mx-auto h-56 w-full min-w-0 max-w-56 ${
+              bare ? 'sm:mx-0 sm:shrink-0 2xl:mx-auto' : 'sm:mx-0 sm:w-56 sm:shrink-0'
+            }`}
+          >
             <ResponsiveContainer width="100%" height={224} minWidth={0}>
               <PieChart>
                 <Pie
