@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 
 import models  # noqa: F401  # register the full ORM graph before mapper configure
 from models.email_verification_token import EmailVerificationToken  # noqa: F401
-from database import Base
+from database import Base, SQLITE_SCHEMA_TRANSLATE_MAP
 from models.card import Card
 from models.email_notification_log import EmailNotificationLog
 from models.user import User
@@ -33,7 +33,10 @@ def _session():
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-    )
+        # Tables are namespaced (identity.users, money.cards, ...) but SQLite has
+        # no schema support, so every namespace is translated away here. This
+        # applies to DDL too, so create_all() below works unchanged.
+    ).execution_options(schema_translate_map=SQLITE_SCHEMA_TRANSLATE_MAP)
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)()
 

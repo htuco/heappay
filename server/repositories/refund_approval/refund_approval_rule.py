@@ -12,7 +12,12 @@ class RefundApprovalRuleRepository:
         """Return the singleton rule row, seeded by migration d5c5b9e2b4b1."""
         row = self._db.scalars(select(RefundApprovalRule).limit(1)).first()
         if row is None:
-            row = RefundApprovalRule(enabled=False, max_age_days=7)
+            # id is pinned to 1 rather than left to the sequence. The table
+            # carries ck_refund_approval_policy_singleton (id = 1), so once the
+            # seeded row has been inserted the sequence sits at 1 and the next
+            # nextval() would yield 2 -- making this recovery path fail the
+            # constraint instead of healing the missing row.
+            row = RefundApprovalRule(id=1, enabled=False, max_age_days=7)
             self._db.add(row)
             self._db.commit()
             self._db.refresh(row)

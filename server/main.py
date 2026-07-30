@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO)
@@ -70,10 +72,53 @@ def _run_knowledge_sync() -> None:
         db.close()
 
 
+def _lifespan(settings):
+    """App lifespan: the transaction processor plus the knowledge-sync scheduler.
+
+    The scheduler is started here rather than in create_app() so that background
+    work begins when the app is actually *served*, not when this module is
+    imported. Importing main.py used to start it, which meant anything importing
+    `app` -- most of the test suite -- silently began embedding local rows and
+    writing them to the vector store behind SUPABASE_DATABASE_URL. Lifespan is
+    not triggered by a bare TestClient(app), so tests no longer reach it.
+    """
+    run_transaction_processor = transaction_processor_lifespan(settings)
+
+    @asynccontextmanager
+    async def _run(app: FastAPI) -> AsyncIterator[None]:
+        # coalesce + single-instance so a burst of reloads (uvicorn --reload)
+        # can't stack overlapping syncs on top of each other.
+        scheduler = BackgroundScheduler(
+            job_defaults={"coalesce": True, "max_instances": 1}
+        )
+        scheduler.add_job(_run_knowledge_sync, "interval", hours=1, id="knowledge_sync")
+        # Run an initial sync shortly after boot on the scheduler's own thread
+        # rather than inline — calling it inline blocks app startup (and, under
+        # uvicorn --reload, re-runs the full embed loop on every code change),
+        # which prevents the server from binding and makes the app look "stuck
+        # syncing".
+        scheduler.add_job(
+            _run_knowledge_sync,
+            "date",
+            run_date=datetime.now() + timedelta(seconds=5),
+            id="knowledge_sync_startup",
+        )
+        scheduler.start()
+        try:
+            async with run_transaction_processor(app):
+                yield
+        finally:
+            # Shut down without waiting on an in-flight embed loop, so a stuck
+            # sync can't hold the process open.
+            scheduler.shutdown(wait=False)
+
+    return _run
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     sync_nexus_env()
-    app = FastAPI(lifespan=transaction_processor_lifespan(settings))
+    app = FastAPI(lifespan=_lifespan(settings))
     cors_kwargs: dict = {
         "allow_origins": settings.cors_origin_list,
         "allow_credentials": True,
@@ -154,24 +199,6 @@ def create_app() -> FastAPI:
     app.include_router(family_spending_limit_router)
     app.include_router(family_card_router)
     app.include_router(family_card_spending_limit_router)
-
-    # coalesce + single-instance so a burst of reloads (uvicorn --reload) can't
-    # stack overlapping syncs on top of each other.
-    scheduler = BackgroundScheduler(
-        job_defaults={"coalesce": True, "max_instances": 1}
-    )
-    scheduler.add_job(_run_knowledge_sync, "interval", hours=1, id="knowledge_sync")
-    # Run an initial sync shortly after boot on the scheduler's own thread rather
-    # than inline here — calling it inline blocks app startup (and, under uvicorn
-    # --reload, re-runs the full embed loop on every code change), which prevents
-    # the server from binding and makes the app look "stuck syncing".
-    scheduler.add_job(
-        _run_knowledge_sync,
-        "date",
-        run_date=datetime.now() + timedelta(seconds=5),
-        id="knowledge_sync_startup",
-    )
-    scheduler.start()
 
     return app
 

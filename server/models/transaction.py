@@ -1,7 +1,17 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -12,26 +22,42 @@ class Transaction(Base):
     __table_args__ = (
         CheckConstraint("amount > 0", name="ck_transactions_amount_positive"),
         UniqueConstraint("idempotency_key", name="uq_transactions_idempotency_key"),
+        # created_at DESC matches the database definition exactly; a plain
+        # column reference would make autogenerate churn these every run.
+        Index("idx_transactions_sender_created", "sender_card_id", text("created_at DESC")),
+        Index("idx_transactions_recipient_created", "recipient_card_id", text("created_at DESC")),
+        Index(
+            "ix_transactions_duplicate_lookup",
+            "sender_card_id",
+            "recipient_card_id",
+            "amount",
+            "created_at",
+        ),
+        Index("ix_transactions_transaction_status_id", "transaction_status_id"),
+        Index("ix_transactions_transaction_type_id", "transaction_type_id"),
+        Index("ix_transactions_transaction_category_id", "transaction_category_id"),
+        Index("ix_transactions_recurring_payment_id", "recurring_payment_id"),
+        {"schema": "money"},
     )
 
     transaction_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     # Nullable: deposits originate externally and have no sender card
     sender_card_id: Mapped[int | None] = mapped_column(
-        ForeignKey("cards.card_id", ondelete="RESTRICT"), nullable=True
+        ForeignKey("money.cards.card_id", ondelete="RESTRICT"), nullable=True
     )
     recipient_card_id: Mapped[int] = mapped_column(
-        ForeignKey("cards.card_id", ondelete="RESTRICT"), nullable=False
+        ForeignKey("money.cards.card_id", ondelete="RESTRICT"), nullable=False
     )
     transaction_type_id: Mapped[int] = mapped_column(
-        ForeignKey("transaction_types.transaction_type_id"), nullable=False
+        ForeignKey("money.transaction_types.transaction_type_id"), nullable=False
     )
-    status_id: Mapped[int] = mapped_column(
-        ForeignKey("transaction_statuses.transaction_status_id"), nullable=False
+    status_id: Mapped[int] = mapped_column("transaction_status_id", 
+        ForeignKey("money.transaction_statuses.transaction_status_id"), nullable=False
     )
     # Nullable on purpose: a transaction with no category is "Uncategorised".
     # Categorisation is optional both at create time and after the fact.
-    category_id: Mapped[int | None] = mapped_column(
-        ForeignKey("transaction_categories.transaction_category_id"), nullable=True
+    category_id: Mapped[int | None] = mapped_column("transaction_category_id", 
+        ForeignKey("money.transaction_categories.transaction_category_id"), nullable=True
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -45,7 +71,7 @@ class Transaction(Base):
     processed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    processed_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    processed_by: Mapped[str | None] = mapped_column("processed_by_actor", String(20), nullable=True)
     deny_reason_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     requires_user_approval: Mapped[bool] = mapped_column(nullable=False, server_default="false")
     user_approval_expires_at: Mapped[datetime | None] = mapped_column(
@@ -61,7 +87,7 @@ class Transaction(Base):
     # set to the payer's own user_id, redirected to a guardian's user_id when
     # the payer is a dependent under a spending-limit rule that requires it.
     approver_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.user_id"), nullable=True
+        ForeignKey("identity.users.user_id"), nullable=True
     )
 
     # Who actually initiated this transaction. NULL only for rows that predate
@@ -70,11 +96,11 @@ class Transaction(Base):
     # authorized dependent member) the owner and the initiator differ, so this
     # is the only reliable answer to "whose spend was this."
     initiated_by_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.user_id"), nullable=True
+        ForeignKey("identity.users.user_id"), nullable=True
     )
 
     recurring_payment_id: Mapped[int | None] = mapped_column(
-        ForeignKey("recurring_payments.recurring_payment_id", ondelete="SET NULL"),
+        ForeignKey("money.recurring_payments.recurring_payment_id", ondelete="SET NULL"),
         nullable=True,
     )
 

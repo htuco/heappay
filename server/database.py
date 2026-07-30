@@ -10,6 +10,27 @@ class Base(DeclarativeBase):
     pass
 
 
+# The namespaces every table lives in, and the single source of truth for them:
+# Alembic's autogenerate scope (alembic/env.py OWNED_SCHEMAS) and the SQLite
+# translate map below both derive from this tuple, so adding a namespace is a
+# one-line change here. Note `public` is deliberately absent -- no mapped table
+# lives there any more, and including it would make every unmanaged table in
+# `public` look like something autogenerate should drop.
+SCHEMAS: tuple[str, ...] = (
+    "identity",
+    "money",
+    "requests",
+    "comms",
+    "security",
+    "audit",
+)
+
+# SQLite has no schema support, so tests that build their schema on it must
+# translate every namespace to None. Without this, `identity.users` is
+# unresolvable and table creation fails outright.
+SQLITE_SCHEMA_TRANSLATE_MAP: dict[str | None, str | None] = {s: None for s in SCHEMAS}
+
+
 _settings = get_settings()
 
 

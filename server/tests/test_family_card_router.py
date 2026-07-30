@@ -20,7 +20,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
 
 import models  # noqa: E402,F401
-from database import Base, get_db  # noqa: E402
+from database import Base, SQLITE_SCHEMA_TRANSLATE_MAP, get_db  # noqa: E402
 from main import create_app  # noqa: E402
 from models.card import Card  # noqa: E402
 from models.card_status import CardStatus  # noqa: E402
@@ -38,7 +38,7 @@ def _session() -> Session:
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-    )
+    ).execution_options(schema_translate_map=SQLITE_SCHEMA_TRANSLATE_MAP)
     Base.metadata.create_all(engine)
     db = sessionmaker(bind=engine)()
     db.add(UserStatus(status_name="active"))

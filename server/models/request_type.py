@@ -8,6 +8,7 @@ from database import Base
 
 class RequestType(Base):
     __tablename__ = "request_types"
+    __table_args__ = {"schema": "requests"}
 
     request_type_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
