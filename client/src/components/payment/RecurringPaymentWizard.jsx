@@ -13,6 +13,7 @@ import {
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import FormBanner from '@/components/ui/FormBanner'
 import UserAvatar from '@/components/ui/UserAvatar'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
@@ -30,6 +31,11 @@ import {
   MonthPicker,
 } from '@/components/payment/recurringFormControls'
 import {
+  buildCategoryOptions,
+  findCategoryById,
+  getCategoryMeta,
+} from '@/components/payment/transactionHistory.utils'
+import {
   formatMonthsPhrase,
   formatRawCardNumber,
   ordinal,
@@ -37,6 +43,8 @@ import {
 } from '@/utils/recurringPayments.utils'
 import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
 import { lookupCardByNumber } from '@/services/cardsService'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
+import { useAppSelector } from '@/store/hooks'
 import { formatMoney } from '@/utils/amount'
 
 const STEP_LABELS = ['Pay from', 'Recipient', 'Amount', 'Schedule', 'Review']
@@ -61,6 +69,13 @@ const INITIAL_FORM = {
   day_of_month: '',
   months: [],
   note: '',
+  category_id: null,
+}
+
+/** Label for a category id, resolved through the shared transaction meta. */
+function categoryLabel(categoryId, categories) {
+  const category = findCategoryById(categoryId, categories)
+  return category ? getCategoryMeta(category).label : null
 }
 
 function formatDueDate(dateStr) {
@@ -279,7 +294,9 @@ function StepRecipient({
 
 // ─── Step 3: Amount ───────────────────────────────────────────────────────────
 
-function StepAmount({ form, set, onNext, onBack }) {
+function StepAmount({ form, set, categories, onNext, onBack }) {
+  const categoryOptions = buildCategoryOptions(categories)
+
   return (
     <div className="space-y-4">
       <div className="rounded-panel bg-muted/50 px-4 py-6 ring-1 ring-border/60">
@@ -322,6 +339,29 @@ function StepAmount({ form, set, onNext, onBack }) {
           maxLength={255}
         />
       </div>
+
+      {/* Optional metadata, so it sits beside the note rather than on its own
+          step. Left empty, the payments this rule generates fall back to the
+          same keyword rules a manual payment uses. */}
+      {categoryOptions.length > 0 && (
+        <div className="space-y-1.5">
+          <label
+            htmlFor="recurring-category"
+            className="text-xs font-semibold uppercase tracking-wider text-foreground/80"
+          >
+            Category{' '}
+            <span className="font-normal normal-case text-muted-foreground">(optional)</span>
+          </label>
+          <Select
+            id="recurring-category"
+            value={form.category_id != null ? String(form.category_id) : ''}
+            onChange={(e) =>
+              set('category_id', e.target.value === '' ? null : Number(e.target.value))
+            }
+            options={[{ value: '', label: 'No category' }, ...categoryOptions]}
+          />
+        </div>
+      )}
 
       <WizardFooter>
         <Button variant="ghost" onClick={onBack}>
@@ -392,7 +432,16 @@ function StepSchedule({ form, set, onNext, onBack }) {
 
 // ─── Step 5: Review ───────────────────────────────────────────────────────────
 
-function StepReview({ form, fromCard, resolveBrand, onSubmit, onBack, isSubmitting, error }) {
+function StepReview({
+  form,
+  fromCard,
+  categories,
+  resolveBrand,
+  onSubmit,
+  onBack,
+  isSubmitting,
+  error,
+}) {
   const recipientNameParts = form.recipientInfo?.owner_name?.split(' ') ?? []
   const schedule = form.day_of_month
     ? `Every ${form.day_of_month}${ordinal(Number(form.day_of_month))} of ${formatMonthsPhrase(form.months)}`
@@ -443,6 +492,9 @@ function StepReview({ form, fromCard, resolveBrand, onSubmit, onBack, isSubmitti
         />
         <ReceiptRow label="Schedule" value={schedule} />
         {form.note && <ReceiptRow label="Note" value={form.note} />}
+        {form.category_id != null && (
+          <ReceiptRow label="Category" value={categoryLabel(form.category_id, categories)} />
+        )}
         <div className="flex items-center justify-between gap-4 bg-muted/40 px-4 py-4">
           <dt className="text-sm font-bold text-card-foreground">
             Each payment
@@ -490,7 +542,7 @@ function StepReview({ form, fromCard, resolveBrand, onSubmit, onBack, isSubmitti
 
 // ─── Success ──────────────────────────────────────────────────────────────────
 
-function StepResult({ created, form, onClose }) {
+function StepResult({ created, form, categories, onClose }) {
   const firstPayment = formatDueDate(created?.next_due_at)
 
   return (
@@ -522,6 +574,9 @@ function StepResult({ created, form, onClose }) {
               : null
           }
         />
+        {created?.category_id != null && (
+          <ReceiptRow label="Category" value={categoryLabel(created.category_id, categories)} />
+        )}
         {firstPayment && <ReceiptRow label="First payment" value={firstPayment} />}
       </dl>
 
@@ -557,6 +612,8 @@ export default function RecurringPaymentWizard({
   clearError,
 }) {
   const { maskCard, resolveBrand } = useCardBrandResolver()
+  // Already fetched app-wide for the transaction surfaces — no extra request.
+  const categories = useAppSelector(selectTransactionCategories)
 
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(INITIAL_FORM)
@@ -590,6 +647,7 @@ export default function RecurringPaymentWizard({
       day_of_month: Number(form.day_of_month),
       months: form.months.length > 0 ? form.months : null,
       note: form.note || null,
+      category_id: form.category_id,
     })
     // Falsy means the write failed — stay on Review so the banner shows and the
     // user can retry without re-entering anything.
@@ -618,7 +676,7 @@ export default function RecurringPaymentWizard({
         )}
 
         {isDone ? (
-          <StepResult created={created} form={form} onClose={onClose} />
+          <StepResult created={created} form={form} categories={categories} onClose={onClose} />
         ) : step === 0 ? (
           <StepFrom
             selectedCardId={selectedCardId}
@@ -641,13 +699,20 @@ export default function RecurringPaymentWizard({
             onBack={() => goTo(0)}
           />
         ) : step === 2 ? (
-          <StepAmount form={form} set={set} onNext={() => goTo(3)} onBack={() => goTo(1)} />
+          <StepAmount
+            form={form}
+            set={set}
+            categories={categories}
+            onNext={() => goTo(3)}
+            onBack={() => goTo(1)}
+          />
         ) : step === 3 ? (
           <StepSchedule form={form} set={set} onNext={() => goTo(4)} onBack={() => goTo(2)} />
         ) : (
           <StepReview
             form={form}
             fromCard={fromCard}
+            categories={categories}
             resolveBrand={resolveBrand}
             onSubmit={handleSubmit}
             onBack={() => goTo(3)}

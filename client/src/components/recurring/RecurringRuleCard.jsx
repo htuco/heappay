@@ -4,6 +4,12 @@ import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  findCategoryById,
+  getCategoryMeta,
+} from '@/components/payment/transactionHistory.utils'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
+import { useAppSelector } from '@/store/hooks'
 import { cn } from '@/lib/utils'
 import {
   DUE_SOON_DAYS,
@@ -35,6 +41,23 @@ function railClass(rule) {
   return 'bg-primary'
 }
 
+// Same icon + colour a categorised transaction row shows, so one category reads
+// identically wherever it appears. Nothing renders for an uncategorised rule —
+// "Uncategorised" is the absence of a pill, exactly as in the history list.
+function CategoryPill({ category }) {
+  if (!category) return null
+  // `const Icon = meta.icon` rather than destructuring to `{ icon: Icon }`:
+  // ESLint here has no react plugin, so JSX-only usage reads as unused.
+  const meta = getCategoryMeta(category)
+  const Icon = meta.icon
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-chip border-2 border-border bg-muted px-2 py-0 text-xs font-bold text-muted-foreground">
+      <Icon className="size-3" style={{ color: meta.color }} aria-hidden />
+      {meta.label}
+    </span>
+  )
+}
+
 function cancelledOn(value) {
   if (!value) return 'Cancelled'
   const d = new Date(value)
@@ -43,6 +66,8 @@ function cancelledOn(value) {
 }
 
 export default function RecurringRuleCard({ rule, onEdit, onCancel }) {
+  const categories = useAppSelector(selectTransactionCategories)
+  const category = findCategoryById(rule.category_id, categories)
   const status = statusMeta(rule.status)
   const isActive = rule.status === 'active'
   const days = daysUntilDue(rule.next_due_at)
@@ -99,6 +124,7 @@ export default function RecurringRuleCard({ rule, onEdit, onCancel }) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={status.variant} size="sm">{status.label}</Badge>
           <Badge variant="secondary" size="sm">{schedule}</Badge>
+          <CategoryPill category={category} />
         </div>
       </div>
 
