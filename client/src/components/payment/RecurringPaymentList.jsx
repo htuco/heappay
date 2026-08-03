@@ -3,11 +3,16 @@ import { useSearchParams } from 'react-router-dom'
 import { AlertCircle, Loader2, SearchX } from 'lucide-react'
 
 import {
+  categoryOptionsFromRules,
   filterRecurringRules,
   formatRecurringAmount as formatAmount,
   recipientName,
   statusOptionsFromRules,
 } from '@/utils/recurringPayments.utils'
+import {
+  buildCategoryOptions,
+  getCategoryMeta,
+} from '@/components/payment/transactionHistory.utils'
 import RecurringEmptyState from '@/components/recurring/RecurringEmptyState'
 import RecurringFilterBar from '@/components/recurring/RecurringFilterBar'
 import RecurringRuleCard from '@/components/recurring/RecurringRuleCard'
@@ -27,6 +32,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
+import { useAppSelector } from '@/store/hooks'
 
 // ── Edit form ─────────────────────────────────────────────────────────────────
 
@@ -37,11 +45,14 @@ import { Input } from '@/components/ui/input'
  * `RecurringPaymentWizard`.
  */
 function RuleForm({ initial, onSubmit, onCancel, loading, error }) {
+  const categories = useAppSelector(selectTransactionCategories)
+  const categoryOptions = buildCategoryOptions(categories)
   const [form, setForm] = useState({
     amount: initial?.amount ? String(initial.amount) : '',
     day_of_month: initial?.day_of_month ? String(initial.day_of_month) : '',
     months: initial?.months ?? [],
     note: initial?.note ?? '',
+    category_id: initial?.category_id ?? null,
   })
 
   function set(key, value) {
@@ -57,6 +68,9 @@ function RuleForm({ initial, onSubmit, onCancel, loading, error }) {
       day_of_month: Number(form.day_of_month),
       months: form.months.length > 0 ? form.months : null,
       note: form.note || null,
+      // Always sent, never omitted: the API reads an explicit `null` here as
+      // "clear the category", which is how the form gets back to Uncategorised.
+      category_id: form.category_id,
     })
   }
 
@@ -84,6 +98,25 @@ function RuleForm({ initial, onSubmit, onCancel, loading, error }) {
           maxLength={255}
         />
       </div>
+      {categoryOptions.length > 0 && (
+        <div className="space-y-1.5">
+          <label
+            htmlFor="edit-recurring-category"
+            className="text-xs font-semibold uppercase tracking-wider text-foreground/80"
+          >
+            Category{' '}
+            <span className="font-normal normal-case text-muted-foreground">(optional)</span>
+          </label>
+          <Select
+            id="edit-recurring-category"
+            value={form.category_id != null ? String(form.category_id) : ''}
+            onChange={(e) =>
+              set('category_id', e.target.value === '' ? null : Number(e.target.value))
+            }
+            options={[{ value: '', label: 'No category' }, ...categoryOptions]}
+          />
+        </div>
+      )}
       {error && (
         <p className="flex items-center gap-1.5 text-sm text-destructive">
           <AlertCircle className="size-4 shrink-0" />
@@ -107,7 +140,7 @@ function RuleForm({ initial, onSubmit, onCancel, loading, error }) {
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 
-const FILTER_KEYS = ['q', 'status', 'freq', 'attention']
+const FILTER_KEYS = ['q', 'status', 'freq', 'cat', 'attention']
 
 function useRecurringFilters() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -117,6 +150,7 @@ function useRecurringFilters() {
       q: searchParams.get('q') ?? '',
       status: searchParams.get('status') ?? '',
       freq: searchParams.get('freq') ?? '',
+      cat: searchParams.get('cat') ?? '',
       attention: searchParams.get('attention') === '1',
     }),
     [searchParams],
@@ -161,7 +195,13 @@ export default function RecurringPaymentList({ recurring, onCreate }) {
   const [ruleToCancel, setRuleToCancel] = useState(null)
   const { filters, setFilters, clearFilters } = useRecurringFilters()
 
+  const categories = useAppSelector(selectTransactionCategories)
+
   const statusOptions = useMemo(() => statusOptionsFromRules(rules), [rules])
+  const categoryOptions = useMemo(
+    () => categoryOptionsFromRules(rules, categories, (c) => getCategoryMeta(c).label),
+    [rules, categories],
+  )
   const hasAttentionRules = useMemo(
     () => rules.some((rule) => rule.last_run_failed),
     [rules],
@@ -204,6 +244,7 @@ export default function RecurringPaymentList({ recurring, onCreate }) {
             onChange={setFilters}
             onClear={clearFilters}
             statusOptions={statusOptions}
+            categoryOptions={categoryOptions}
             matchCount={visibleRules.length}
             totalCount={rules.length}
             hasAttentionRules={hasAttentionRules}

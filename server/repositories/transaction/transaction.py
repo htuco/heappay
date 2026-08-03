@@ -871,6 +871,7 @@ class TransactionRepository:
         note: str | None,
         processing_eligible_at: datetime,
         recurring_payment_id: int,
+        category_id: int | None = None,
     ) -> Transaction:
         sender_card.balance = sender_card.balance - amount
         row = Transaction(
@@ -878,6 +879,7 @@ class TransactionRepository:
             recipient_card_id=recipient_card.card_id,
             transaction_type_id=transaction_type_id,
             status_id=status_id,
+            category_id=category_id,
             amount=amount,
             note=note,
             processing_eligible_at=processing_eligible_at,

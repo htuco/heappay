@@ -4,8 +4,10 @@ from decimal import Decimal
 
 from models.recurring_payment import RecurringPayment
 from repositories.recurring_payment.recurring_payment import RecurringPaymentRepository
+from repositories.transaction.category_rule import CategoryRuleRepository
 from repositories.transaction.transaction import TransactionRepository
 from schemas.recurring_payment import RecurringPaymentCreate, RecurringPaymentUpdate
+from services.transaction.categorisation import recipient_display_name, resolve_auto_category
 from settings import get_settings
 
 
@@ -19,6 +21,10 @@ class RecurringPaymentForbiddenError(Exception):
 
 class RecurringPaymentCardError(Exception):
     """Sender or recipient card is invalid for this user."""
+
+
+class RecurringPaymentCategoryError(Exception):
+    """Transaction category does not exist."""
 
 
 def _next_occurrence(
@@ -64,9 +70,17 @@ class RecurringPaymentService:
         self,
         repo: RecurringPaymentRepository,
         tx_repo: TransactionRepository,
+        category_rule_repo: "CategoryRuleRepository | None" = None,
     ) -> None:
         self._repo = repo
         self._tx_repo = tx_repo
+        # Defaulted from the repo's session rather than required, so existing
+        # call sites (route, scheduler, tests) construct the service unchanged.
+        self._category_rule_repo = category_rule_repo or CategoryRuleRepository(repo._db)
+
+    def _validate_category(self, category_id: int | None) -> None:
+        if category_id is not None and not self._tx_repo.transaction_category_exists(category_id):
+            raise RecurringPaymentCategoryError()
 
     def create(self, payload: RecurringPaymentCreate, *, user_id: int) -> RecurringPayment:
         sender_card = self._tx_repo.get_card_for_update(payload.sender_card_id)
@@ -77,6 +91,8 @@ class RecurringPaymentService:
         if recipient_card is None:
             raise RecurringPaymentCardError()
 
+        self._validate_category(payload.category_id)
+
         next_due_at = _next_occurrence(payload.day_of_month, date.today(), payload.months)
         return self._repo.create(
             user_id=user_id,
@@ -86,6 +102,7 @@ class RecurringPaymentService:
             day_of_month=payload.day_of_month,
             months=payload.months,
             note=payload.note,
+            category_id=payload.category_id,
             next_due_at=next_due_at,
         )
 
@@ -108,6 +125,7 @@ class RecurringPaymentService:
         user_id: int,
     ) -> RecurringPayment:
         row = self.get_by_id_for_user(recurring_payment_id, user_id=user_id)
+        self._validate_category(payload.category_id)
         changes: dict = {}
         if payload.amount is not None:
             changes["amount"] = payload.amount
@@ -121,6 +139,11 @@ class RecurringPaymentService:
             changes["next_due_at"] = _next_occurrence(new_day, date.today(), new_months)
         if payload.note is not None:
             changes["note"] = payload.note
+        # The only field where an explicit `null` is meaningful: it clears the
+        # category. Every other field treats `None` as "not provided", so this
+        # one has to read the raw request instead of the parsed value.
+        if "category_id" in payload.model_fields_set:
+            changes["category_id"] = payload.category_id
         if changes:
             row = self._repo.update(row, **changes)
         return row
@@ -128,6 +151,22 @@ class RecurringPaymentService:
     def cancel(self, recurring_payment_id: int, *, user_id: int) -> None:
         row = self.get_by_id_for_user(recurring_payment_id, user_id=user_id)
         self._repo.cancel(row)
+
+    def _category_for(self, rule: RecurringPayment, recipient_card) -> int | None:
+        """Category to stamp on the transaction this rule generates.
+
+        The rule's own category always wins — keyword rules never override an
+        explicit choice, exactly as in `TransactionService.create`. Only when the
+        rule carries none do the keyword rules run, so a scheduled "Spotify"
+        payment categorises itself the same way the identical manual one does.
+        """
+        if rule.category_id is not None:
+            return rule.category_id
+        return resolve_auto_category(
+            lambda: self._category_rule_repo.list_applicable(user_id=rule.user_id),
+            note=rule.note,
+            recipient_name=recipient_display_name(recipient_card),
+        )
 
     def run_due_payments(self) -> dict[str, int]:
         """Called by the scheduler. Creates transactions for all due active rules."""
@@ -170,6 +209,7 @@ class RecurringPaymentService:
                     status_id=pending_status_id,
                     amount=rule.amount,
                     note=rule.note,
+                    category_id=self._category_for(rule, recipient_card),
                     processing_eligible_at=processing_eligible_at,
                     recurring_payment_id=rule.recurring_payment_id,
                 )

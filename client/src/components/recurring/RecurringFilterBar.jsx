@@ -16,12 +16,18 @@ export default function RecurringFilterBar({
   onChange,
   onClear,
   statusOptions,
+  categoryOptions = [],
   matchCount,
   totalCount,
   hasAttentionRules,
 }) {
-  const isFiltering = Boolean(filters.q || filters.status || filters.freq || filters.attention)
+  const isFiltering = Boolean(
+    filters.q || filters.status || filters.freq || filters.cat || filters.attention,
+  )
   const showStatus = statusOptions.length > 1
+  // Same rule as the status select: one option means there is nothing to choose
+  // between, so the control would only add noise.
+  const showCategory = categoryOptions.length > 1
 
   return (
     <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
@@ -54,6 +60,16 @@ export default function RecurringFilterBar({
           aria-label="Filter by frequency"
           className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
         />
+
+        {showCategory && (
+          <Select
+            value={filters.cat || 'all'}
+            onChange={(e) => onChange({ cat: e.target.value === 'all' ? '' : e.target.value })}
+            options={[{ value: 'all', label: 'All categories' }, ...categoryOptions]}
+            aria-label="Filter by category"
+            className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
+          />
+        )}
       </div>
 
       {hasAttentionRules && (

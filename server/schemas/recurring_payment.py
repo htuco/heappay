@@ -11,6 +11,7 @@ class RecurringPaymentCreate(BaseModel):
     day_of_month: int = Field(ge=1, le=31)
     months: list[int] | None = Field(default=None)
     note: str | None = Field(default=None, max_length=255)
+    category_id: int | None = Field(default=None, gt=0)
 
     @field_validator("months")
     @classmethod
@@ -32,6 +33,10 @@ class RecurringPaymentUpdate(BaseModel):
     day_of_month: int | None = Field(default=None, ge=1, le=31)
     months: list[int] | None = Field(default=None)
     note: str | None = Field(default=None, max_length=255)
+    # The one field where `None` is a real value rather than "not provided":
+    # sending `category_id: null` clears the category. The service tells the two
+    # apart with `model_fields_set`, so omitting the key leaves it alone.
+    category_id: int | None = Field(default=None, gt=0)
 
     @field_validator("months")
     @classmethod
@@ -66,6 +71,7 @@ class RecurringPaymentResponse(BaseModel):
     day_of_month: int
     months: list[int] | None = None
     note: str | None
+    category_id: int | None = None
     status: str
     next_due_at: date
     last_run_failed: bool
