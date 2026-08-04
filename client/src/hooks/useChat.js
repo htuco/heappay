@@ -3,7 +3,15 @@ import { useAuth } from '@/hooks/useAuth'
 import { chatService } from '@/services/chatService'
 import { getApiErrorMessage } from '@/utils/api'
 
-export function useChat(agentMode = false) {
+/**
+ * Chat state for one mode.
+ *
+ * `isOpen` drives a refetch every time the assistant is opened: the server only
+ * returns the current session (older messages are trimmed away after a long
+ * pause), so a tab left open for hours would otherwise keep rendering a
+ * conversation the server has already moved on from.
+ */
+export function useChat(agentMode = false, isOpen = true) {
   const { user, isLoading: authLoading } = useAuth()
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -16,6 +24,7 @@ export function useChat(agentMode = false) {
       setIsLoading(false)
       return
     }
+    if (!isOpen) return
 
     let cancelled = false
     setIsLoading(true)
@@ -35,7 +44,7 @@ export function useChat(agentMode = false) {
     return () => {
       cancelled = true
     }
-  }, [authLoading, user, agentMode])
+  }, [authLoading, user, agentMode, isOpen])
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = text.trim()
