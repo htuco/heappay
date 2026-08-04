@@ -157,6 +157,9 @@ class UserRepository:
                     User.email.ilike(pattern),
                     User.first_name.ilike(pattern),
                     User.last_name.ilike(pattern),
+                    # Full name as one string, so "Talha Zlatar" matches as
+                    # readily as either half of it does.
+                    (User.first_name + " " + User.last_name).ilike(pattern),
                 ),
                 or_(
                     User.is_discoverable.is_(True),

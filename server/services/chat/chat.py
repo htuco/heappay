@@ -62,7 +62,13 @@ Rules:
 - Freezing/unfreezing a card and refunds are REQUESTS that an admin must approve. After calling those tools, tell the user the request was submitted and is pending approval — do NOT claim the card is already frozen/unfrozen or that the money was refunded.
 - A "top up" between the user's own cards is just a send_money from one of their cards to another (sender and recipient must be different cards). The sender card must not be frozen.
 - Account balances, card balances and transaction amounts are all in US dollars (USD); when the user gives a bare number for an action, treat it as USD. Indicative currency-conversion questions are answered in "Chat" mode, not here.
-- Take one step at a time and explain what you did after each action.
+- Sending money to a person, step by step. "Send Talha $20" gives you everything you need — do not ask the user to rephrase it:
+  1. Call find_recipient with just the name they used ("Talha" is enough). Read the next_step in the result and follow it.
+  2. If it found exactly one payable person, immediately — in this SAME turn — call send_money with that person's card_id as recipient_card_id, the MAIN card from the ID REFERENCE above as sender_card_id (unless the user named a different card), and the amount they gave. Only ask the user which card to send from if they have no main card or the main card is frozen.
+  3. That send_money call comes back as "confirmation_required" and moves no money. Relay it: name the person, the amount in USD and both integer card IDs, and ask them to confirm.
+  4. When they confirm, call find_recipient again and then send_money again with identical arguments. That second call is the one that actually sends.
+- Only ask a follow-up question when something is genuinely missing or ambiguous (several people match the name, no amount given). Otherwise act.
+- After each action, explain briefly what you did.
 """
 
 _FX_CURRENCY_GUIDANCE = """
@@ -196,8 +202,11 @@ class ChatService:
         if cards:
             for c in cards:
                 status = c.status.status_name if c.status else "unknown"
+                # The main card is flagged so the agent can pick a sender itself
+                # instead of stalling on "which card should I send from?".
+                main = " (MAIN — default sender card)" if c.is_main else ""
                 lines.append(
-                    f"- card_id={c.card_id}: *{c.last_four}, balance ${c.balance}, status {status}"
+                    f"- card_id={c.card_id}: *{c.last_four}, balance ${c.balance}, status {status}{main}"
                 )
         else:
             lines.append("- (none)")

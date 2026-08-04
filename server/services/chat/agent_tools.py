@@ -143,7 +143,7 @@ TOOL_DEFS = [
         "type": "function",
         "function": {
             "name": "find_recipient",
-            "description": "Find another user to send money to, by name or email. Returns matching users with their active card IDs.",
+            "description": "Find another user to send money to, by name or email. A first name alone is enough. Returns the matching users with their active card IDs plus a next_step telling you what to do; follow it.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -381,6 +381,8 @@ class AgentTools:
                 "balance": str(card.balance),
                 "status": card.status.status_name if card.status else "unknown",
                 "expires_at": str(card.expires_at),
+                # Lets the agent pick a sender card on its own instead of asking.
+                "is_main": bool(card.is_main),
             })
         return json.dumps(result)
 
@@ -414,9 +416,16 @@ class AgentTools:
         return json.dumps(serializable)
 
     def _tool_find_recipient(self, args: dict, user_id: int) -> str:
+        """Resolve a person by name or email.
+
+        Returns an object rather than a bare list: the model needs to be told what
+        to do next, and an empty list left it to improvise -- which is where a
+        plain "send Talha $20" used to die.
+        """
         query = str(args.get("query", "")).strip()
         if not query:
             return json.dumps({"error": "query is required."})
+
         matches = self._user_repo.search(query, exclude_user_id=user_id, limit=5)
         if not matches and " " in query:
             seen: set[int] = set()
@@ -428,15 +437,49 @@ class AgentTools:
                         seen.add(uid)
                         merged.append(row)
             matches = merged[:5]
-        result = []
-        for user, card, _ in matches:
-            result.append({
+
+        candidates = [
+            {
                 "user_id": user.user_id,
                 "name": f"{user.first_name} {user.last_name}",
                 "email": user.email,
                 "card_id": card.card_id if card else None,
-            })
-        return json.dumps(result)
+                "payable": card is not None,
+            }
+            for user, card, _ in matches
+        ]
+
+        payable = [c for c in candidates if c["payable"]]
+
+        if not candidates:
+            next_step = (
+                f"No user matches '{query}'. Ask the user for the recipient's email "
+                "address or the exact spelling of their name. Do NOT invent a card_id."
+            )
+        elif len(payable) == 1 and len(candidates) == 1:
+            only = payable[0]
+            next_step = (
+                f"Exactly one match: {only['name']}. Use recipient_card_id="
+                f"{only['card_id']} and call send_money now, in this same turn, with "
+                "the user's sender card. Do not ask which person they meant."
+            )
+        elif payable:
+            names = ", ".join(f"{c['name']} (card_id={c['card_id']})" for c in payable)
+            next_step = (
+                f"Several people match '{query}': {names}. Ask the user which one they "
+                "mean and wait for their answer before calling send_money."
+            )
+        else:
+            next_step = (
+                f"'{query}' matches a user with no active card, so they cannot be paid. "
+                "Tell the user that and ask for someone else."
+            )
+
+        return json.dumps({
+            "matches": candidates,
+            "count": len(candidates),
+            "next_step": next_step,
+        })
 
     def _tool_get_refund_status(self, args: dict, user_id: int) -> str:
         transaction_id = int(args["transaction_id"])
