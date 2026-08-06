@@ -812,6 +812,20 @@ class TransactionRepository:
         )
         return self._db.execute(stmt).first() is not None
 
+    def get_status_name_by_id(self, status_id: int) -> str | None:
+        stmt = select(TransactionStatus.name).where(
+            TransactionStatus.transaction_status_id == status_id
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def get_category_name_by_id(self, category_id: int) -> str | None:
+        from models.transaction_category import TransactionCategory
+
+        stmt = select(TransactionCategory.name).where(
+            TransactionCategory.transaction_category_id == category_id
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
     def get_status_id_by_name(self, name: str) -> int | None:
         stmt = select(TransactionStatus.transaction_status_id).where(
             TransactionStatus.name == name

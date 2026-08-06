@@ -27,6 +27,45 @@ _EXPORT_RATE_LIMIT = "5/minute"
 _EXPORT_RATE_LIMIT_MESSAGE = "Too many export requests. Please wait a moment and try again."
 _TRANSACTIONS_EXPORT_LIMIT = 500
 
+_SORT_LABELS = {
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "amount_desc": "Amount: high to low",
+    "amount_asc": "Amount: low to high",
+}
+
+
+def _format_date_range(transactions: list) -> str | None:
+    """Human-readable range spanning the exported set, e.g. 'Jun 01 - Aug 06, 2026'."""
+    dates = [t.created_at for t in transactions if getattr(t, "created_at", None) is not None]
+    if not dates:
+        return None
+    lo, hi = min(dates), max(dates)
+    if lo.date() == hi.date():
+        return lo.strftime("%b %d, %Y")
+    if lo.year == hi.year:
+        return f"{lo.strftime('%b %d')} \u2013 {hi.strftime('%b %d, %Y')}"
+    return f"{lo.strftime('%b %d, %Y')} \u2013 {hi.strftime('%b %d, %Y')}"
+
+
+def _build_transactions_context_line(
+    labels: dict, sort: str, transactions: list | None = None
+) -> str:
+    parts: list[str] = []
+    if labels.get("status"):
+        parts.append(f"Status: {labels['status'].title()}")
+    if labels.get("type"):
+        parts.append(f"Type: {labels['type'].title()}")
+    if labels.get("category"):
+        parts.append(f"Category: {labels['category']}")
+    if not parts:
+        parts.append("All transactions")
+    date_range = _format_date_range(transactions or [])
+    if date_range:
+        parts.append(date_range)
+    parts.append(_SORT_LABELS.get(sort, "Newest first"))
+    return "Filters: " + " \u00b7 ".join(parts)
+
 
 def get_card_service(db: Session = Depends(get_db)) -> CardService:
     return CardService(CardRepository(db))
@@ -98,8 +137,18 @@ def export_transactions(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction type not found.") from None
     except TransactionCategoryNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction category not found.") from None
+    filter_labels = service.get_applied_filter_labels(
+        status_id=status_id,
+        transaction_type_id=transaction_type_id,
+        category_id=category_id,
+    )
+    context_line = _build_transactions_context_line(filter_labels, sort, transactions)
     pdf_bytes = build_transactions_pdf(
-        user, transactions, total_count=total, shown_count=len(transactions)
+        user,
+        transactions,
+        total_count=total,
+        shown_count=len(transactions),
+        context_line=context_line,
     )
     return _pdf_response(pdf_bytes, "transactions.pdf")
 

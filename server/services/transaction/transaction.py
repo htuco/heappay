@@ -158,6 +158,26 @@ class TransactionService:
         )
         return items, total
 
+    def get_applied_filter_labels(
+        self,
+        *,
+        status_id: int | None = None,
+        transaction_type_id: int | None = None,
+        category_id: int | None = None,
+    ) -> dict[str, str | None]:
+        """Resolve filter ids to human-readable names for a self-describing export."""
+        return {
+            "status": self._repo.get_status_name_by_id(status_id) if status_id else None,
+            "type": (
+                self._repo.get_transaction_type_name(transaction_type_id)
+                if transaction_type_id
+                else None
+            ),
+            "category": (
+                self._repo.get_category_name_by_id(category_id) if category_id else None
+            ),
+        }
+
     def list_all(
         self,
         *,
