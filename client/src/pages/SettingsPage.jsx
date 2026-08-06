@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, CreditCard, Download, Eye, FileDown, KeyRound, Paintbrush, SlidersHorizontal, TriangleAlert, UserRound, WalletCards } from 'lucide-react'
+import { Download, WalletCards } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useBalanceScopePreference } from '@/hooks/useBalanceScopePreference'
 import { useTheme } from '@/hooks/useTheme'
@@ -12,9 +12,11 @@ import ChangePasswordModal from '@/components/settings/ChangePasswordModal'
 import DeactivateAccountModal from '@/components/settings/DeactivateAccountModal'
 import ActionRow from '@/components/settings/ActionRow'
 import ControlRow from '@/components/settings/ControlRow'
+import IconRow from '@/components/settings/IconRow'
 import OptionGroup from '@/components/settings/OptionGroup'
 import RecoveryMethodPanel from '@/components/settings/RecoveryMethodPanel'
-import SettingsCard from '@/components/settings/SettingsCard'
+import SettingsSection from '@/components/settings/SettingsSection'
+import StatusPill from '@/components/settings/StatusPill'
 import ProfileSection from '@/components/settings/ProfileSection'
 import Toggle from '@/components/settings/Toggle'
 import DefaultCardPicker from '@/components/settings/DefaultCardPicker'
@@ -26,13 +28,28 @@ import { BALANCE_SCOPE_LABELS, BALANCE_SCOPES } from '@/utils/balanceScope'
 import { maskEmail } from '@/utils/maskEmail'
 import { useNotifications } from '@/context/NotificationContext'
 
-const NAV_ITEMS = [
-  { id: 'profile', label: 'Profile', description: 'Personal information', icon: UserRound },
-  { id: 'security', label: 'Security', description: 'Password and 2FA', icon: KeyRound },
-  { id: 'notifications', label: 'Notifications', description: 'Email and in-app', icon: Bell },
-  { id: 'payment', label: 'Payment methods', description: 'Cards and defaults', icon: CreditCard },
-  { id: 'data', label: 'Data & reports', description: 'Export PDFs', icon: FileDown },
-  { id: 'preferences', label: 'Preferences', description: 'Appearance and defaults', icon: SlidersHorizontal },
+// The rail carries labels only, grouped: the section title and its description
+// live in the content column (see SettingsSection).
+const NAV_GROUPS = [
+  {
+    label: 'Account',
+    items: [
+      { id: 'profile', label: 'Profile' },
+      { id: 'security', label: 'Security' },
+      { id: 'notifications', label: 'Notifications' },
+    ],
+  },
+  {
+    label: 'Billing',
+    items: [{ id: 'payment', label: 'Payment methods' }],
+  },
+  {
+    label: 'Workspace',
+    items: [
+      { id: 'data', label: 'Data & reports' },
+      { id: 'preferences', label: 'Preferences' },
+    ],
+  },
 ]
 
 const EXPORT_REPORTS = [
@@ -218,45 +235,37 @@ export default function SettingsPage() {
   const handleThemeSelect = (value) => setTheme(value)
 
   const defaultCardCard = (
-    <SettingsCard
+    <SettingsSection
       title="Default Card"
-      icon={CreditCard}
       description="The card pre-selected for Top Up, Pay, and Transfer actions."
     >
       <DefaultCardPicker cards={cards} onSelect={setMainCard} />
       {cards.length > 0 && (
-        <div className="mt-4 flex flex-col gap-4 rounded-surface border border-border bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-border bg-muted/40 text-muted-foreground">
-              <WalletCards className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-card-foreground">Manage your cards</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Set your main card, remove a card, or request a freeze if one is lost or stolen.
-              </p>
-            </div>
-          </div>
-          <div className="w-full shrink-0 sm:w-auto">
-            <AllCardsModal
-              items={cards}
-              triggerLabel="Manage cards"
-              triggerVariant="outline"
-              triggerClassName="w-full border-border/80 bg-background/90 shadow-sm hover:bg-muted dark:border-white/20 dark:bg-card/70 dark:hover:border-white/30 dark:hover:bg-card sm:w-auto"
-              onSetMain={setMainCard}
-              onRemove={removeCard}
-            />
-          </div>
+        <div className="mt-4">
+          <IconRow
+            icon={WalletCards}
+            label="Manage your cards"
+            hint="Set your main card, remove a card, or request a freeze if one is lost or stolen."
+            action={
+              <AllCardsModal
+                items={cards}
+                triggerLabel="Manage cards"
+                triggerVariant="outline"
+                triggerClassName="w-full sm:w-auto"
+                onSetMain={setMainCard}
+                onRemove={removeCard}
+              />
+            }
+          />
         </div>
       )}
-    </SettingsCard>
+    </SettingsSection>
   )
 
   const recoveryCard = (
-    <SettingsCard
-      title="Security & Recovery"
-      icon={KeyRound}
-      description="Passwords, two-factor authentication, and the methods used to recover your account."
+    <SettingsSection
+      title="Security"
+      description="Protect your account and approvals."
     >
       <RecoveryMethodPanel
         email={user?.email}
@@ -274,7 +283,7 @@ export default function SettingsPage() {
         onPaymentConfirmAboveAmountChange={changePaymentAmount}
         paymentPrefsDisabled={!user}
       />
-    </SettingsCard>
+    </SettingsSection>
   )
 
   const notificationRows = [
@@ -288,9 +297,8 @@ export default function SettingsPage() {
   ]
 
   const notificationsCard = (
-    <SettingsCard
+    <SettingsSection
       title="Notification Preferences"
-      icon={Bell}
       description="Email notices for payments and refunds, plus in-app billing reminders. Changes save automatically."
     >
       <div className="space-y-3">
@@ -342,13 +350,12 @@ export default function SettingsPage() {
           <p className="text-xs text-muted-foreground">Sign in to manage notification preferences.</p>
         ) : null}
       </div>
-    </SettingsCard>
+    </SettingsSection>
   )
 
   const privacyCard = (
-    <SettingsCard
+    <SettingsSection
       title="Privacy"
-      icon={Eye}
       description="Control how others can find you when sending money. Changes save automatically."
     >
       <ControlRow
@@ -365,17 +372,16 @@ export default function SettingsPage() {
           disabled={!user}
         />
       </ControlRow>
-    </SettingsCard>
+    </SettingsSection>
   )
 
   const appearanceCard = (
-    <SettingsCard
+    <SettingsSection
       title="Appearance"
-      icon={Paintbrush}
       description="How the app looks on this device."
     >
-      {/* SettingsCard doesn't space its children — cards with more than one row
-          own that themselves, as Data & Reports does. */}
+      {/* SettingsSection doesn't space its children — sections with more than one
+          row own that themselves, as Data & Reports does. */}
       <div className="space-y-3">
         <ControlRow
           label="Theme"
@@ -428,13 +434,12 @@ export default function SettingsPage() {
           />
         </ControlRow>
       </div>
-    </SettingsCard>
+    </SettingsSection>
   )
 
   const dataReportsCard = (
-    <SettingsCard
+    <SettingsSection
       title="Data & Reports"
-      icon={FileDown}
       description="Download a branded PDF of your wallet, transactions, or monthly activity."
     >
       <div className="space-y-3">
@@ -446,7 +451,7 @@ export default function SettingsPage() {
             action={
               <Button
                 variant="outline"
-                className="w-full gap-1.5 sm:w-auto"
+                className="w-full sm:w-auto"
                 disabled={exportingReport !== null}
                 onClick={() => handleExportReport(report)}
               >
@@ -457,52 +462,45 @@ export default function SettingsPage() {
           />
         ))}
       </div>
-    </SettingsCard>
+    </SettingsSection>
   )
 
-  // Sensitive account actions live apart at the bottom of the pane, but the card
-  // blends with the rest of settings, only the status pill and button carry the
-  // accent color, not the whole surface. Deactivation is reversible.
+  // Sensitive account actions live apart at the bottom of the pane. The section
+  // itself stays plain — only the row is tinted, so the warning is scoped to the
+  // action rather than colouring the whole surface. Deactivation is reversible.
   const dangerZoneCard = (
-    <SettingsCard
+    <SettingsSection
       title="Account status"
-      icon={TriangleAlert}
       description="Sensitive account actions. Read carefully before continuing."
     >
-      <div className="flex flex-col gap-4 rounded-surface border border-border bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-card-foreground">Deactivate account</p>
-            <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-              Reversible
-            </span>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Signs you out and hides your account and cards. Nothing is deleted, and you can
-            restore it later by contacting support.
-          </p>
-        </div>
-        <Button
-          variant="destructive"
-          className="w-full shrink-0 sm:w-auto"
-          onClick={() => setIsDeactivateOpen(true)}
-        >
-          Deactivate
-        </Button>
-      </div>
-    </SettingsCard>
+      <IconRow
+        tone="danger"
+        label="Deactivate account"
+        pill={<StatusPill tone="warning">Reversible</StatusPill>}
+        hint="Signs you out and hides your account and cards. Nothing is deleted, and you can restore it later by contacting support."
+        action={
+          <Button
+            variant="destructive"
+            className="w-full sm:w-auto"
+            onClick={() => setIsDeactivateOpen(true)}
+          >
+            Deactivate
+          </Button>
+        }
+      />
+    </SettingsSection>
   )
 
   const panes = {
     profile: <ProfileSection />,
     security: (
-      <div className="space-y-4">
+      <div className="space-y-8">
         {recoveryCard}
         {dangerZoneCard}
       </div>
     ),
     notifications: (
-      <div className="space-y-4">
+      <div className="space-y-8">
         {notificationsCard}
         {privacyCard}
       </div>
@@ -513,13 +511,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-5">
-      {/* Section switcher (left rail on desktop, horizontal scroll on mobile) + detail pane. */}
-      <div className="grid items-start gap-4 xl:grid-cols-[280px_minmax(0,1fr)] xl:gap-6">
-        <div className="xl:rounded-surface xl:border xl:border-border xl:bg-card xl:p-3 xl:shadow-xs">
-          <SettingsNav items={NAV_ITEMS} active={section} onSelect={setSection} />
+    <div className="w-full max-w-400 space-y-4 sm:space-y-5">
+      {/* Section switcher (left rail on desktop, horizontal scroll on mobile) + detail pane.
+          The rail sits flat on the page background while the pane is the one elevated
+          surface, so the two read as clearly separate areas without nesting a card
+          inside a card. The rail is left-aligned under the page hero and the pane takes
+          the remaining width, so the row actions stay at the eye's right edge. */}
+      <div className="grid items-start gap-4 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-8">
+        <SettingsNav groups={NAV_GROUPS} active={section} onSelect={setSection} />
+        <div className="rounded-surface border border-border bg-card p-4 shadow-xs sm:p-6">
+          {panes[section]}
         </div>
-        <div>{panes[section]}</div>
       </div>
 
       <ChangePasswordModal
