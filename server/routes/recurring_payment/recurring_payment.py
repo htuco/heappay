@@ -13,6 +13,7 @@ from schemas.recurring_payment import (
 from schemas.response import ApiResponse
 from services.recurring_payment.recurring_payment import (
     RecurringPaymentCardError,
+    RecurringPaymentCategoryError,
     RecurringPaymentForbiddenError,
     RecurringPaymentNotFoundError,
     RecurringPaymentService,
@@ -23,6 +24,9 @@ router = APIRouter(prefix="/recurring-payments", tags=["recurring-payments"])
 _NOT_FOUND = "Recurring payment rule not found."
 _FORBIDDEN = "You do not have access to this resource."
 _CARD_ERROR = "One of the referenced cards was not found or does not belong to you."
+# Same wording the transaction routes use, so a bad category reads identically
+# whichever surface rejected it.
+_CATEGORY_NOT_FOUND = "Transaction category not found."
 
 
 def get_recurring_payment_service(db: Session = Depends(get_db)) -> RecurringPaymentService:
@@ -46,6 +50,10 @@ def create_recurring_payment(
         row = service.create(payload, user_id=user_id)
     except RecurringPaymentCardError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_ERROR) from None
+    except RecurringPaymentCategoryError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
+        ) from None
     return ApiResponse[RecurringPaymentResponse](
         success=True,
         message="Recurring payment created successfully.",
@@ -98,6 +106,10 @@ def update_recurring_payment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
     except RecurringPaymentForbiddenError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN) from None
+    except RecurringPaymentCategoryError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
+        ) from None
     return ApiResponse[RecurringPaymentResponse](
         success=True,
         message="Recurring payment updated successfully.",

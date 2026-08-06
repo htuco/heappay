@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ArrowRight,
+  BookmarkPlus,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -40,6 +41,7 @@ import { listCards, lookupCardByNumber } from '@/services/cardsService'
 import { getAppPinStatus, getBiometricStatus } from '@/services/authService'
 import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
+import transactionDraftsService from '@/services/transactionDraftsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { formatMoney, normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 import { createIdempotencyKey } from '@/utils/idempotency'
@@ -65,6 +67,27 @@ function formatAmount(value) {
 const STEP_LABELS = ['From', 'To & Amount', 'Review']
 
 // ─── Left context panel ──────────────────────────────────────────────────────
+
+/** Saves the half-finished payment and closes the wizard. Sends nothing. */
+function SaveDraftButton({ onClick, isSaving, disabled = false }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onClick}
+      disabled={isSaving || disabled}
+      aria-busy={isSaving}
+      className="text-card-foreground"
+    >
+      {isSaving ? (
+        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+      ) : (
+        <BookmarkPlus className="mr-1.5 h-4 w-4" />
+      )}
+      Save as draft
+    </Button>
+  )
+}
 
 function ContextLabel({ children }) {
   return (
@@ -323,7 +346,18 @@ function StepFrom({ state, onChange, cards, txTypes, onNext }) {
 
 // ─── Step 2: Recipient + amount + note ────────────────────────────────────────
 
-function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId, lockedRecipient = null }) {
+function StepTo({
+  state,
+  onChange,
+  fromCard,
+  onNext,
+  onBack,
+  currentUserId,
+  lockedRecipient = null,
+  onSaveDraft,
+  isSavingDraft,
+  draftError,
+}) {
   const [lookupState, setLookupState] = useState(
     state.recipientInfo
       ? { status: 'found', info: state.recipientInfo }
@@ -673,15 +707,20 @@ function StepTo({ state, onChange, fromCard, onNext, onBack, currentUserId, lock
         </section>
       ) : null}
 
+      {draftError && <FormBanner variant="error" message={draftError} />}
+
       <WizardFooter>
         <Button variant="ghost" onClick={onBack}>
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back
         </Button>
-        <Button onClick={onNext} disabled={!canProceed} size="lg">
-          Review
-          <ArrowRight className="ml-1.5 h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <SaveDraftButton onClick={onSaveDraft} isSaving={isSavingDraft} />
+          <Button onClick={onNext} disabled={!canProceed} size="lg">
+            Review
+            <ArrowRight className="ml-1.5 h-4 w-4" />
+          </Button>
+        </div>
       </WizardFooter>
     </div>
   )
@@ -698,6 +737,9 @@ function StepReview({
   isSubmitting,
   error,
   confirmationHint,
+  onSaveDraft,
+  isSavingDraft,
+  draftError,
 }) {
   const { maskCard } = useCardBrandResolver()
   const txType = txTypes.find((t) => t.transaction_type_id === state.txTypeId)
@@ -760,30 +802,38 @@ function StepReview({
       </p>
 
       {error && <FormBanner variant="error" message={error} />}
+      {draftError && <FormBanner variant="error" message={draftError} />}
 
       <WizardFooter>
         <Button variant="ghost" onClick={onBack} disabled={isSubmitting}>
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back
         </Button>
-        <Button
-          onClick={onSubmit}
-          disabled={isSubmitting}
-          aria-busy={isSubmitting}
-          size="lg"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending…
-            </>
-          ) : (
-            <>
-              <Send className="mr-2 h-4 w-4" />
-              Confirm & Send
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <SaveDraftButton
+            onClick={onSaveDraft}
+            isSaving={isSavingDraft}
+            disabled={isSubmitting}
+          />
+          <Button
+            onClick={onSubmit}
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
+            size="lg"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending…
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Confirm & Send
+              </>
+            )}
+          </Button>
+        </div>
       </WizardFooter>
     </div>
   )
@@ -846,12 +896,47 @@ const STEP_HEADINGS = [
   'Payment sent',
 ]
 
+/** The recipient shape the wizard uses, rebuilt from a draft's stored card. */
+function draftRecipientInfo(draft) {
+  const recipient = draft?.recipient
+  if (!recipient) return null
+  const fullName = [recipient.first_name, recipient.last_name].filter(Boolean).join(' ')
+  return {
+    card_id: recipient.card_id,
+    user_id: recipient.user_id,
+    owner_name: fullName || recipient.cardholder_name || recipient.email || 'Unknown',
+    owner_email: recipient.email ?? '',
+    last_four: recipient.last_four,
+    avatar_url: recipient.avatar_url,
+    masked_card_number: recipient.last_four ? `•••• ${recipient.last_four}` : '',
+  }
+}
+
+/** A saved draft, back in the shape the wizard edits. */
+function draftToForm(draft) {
+  const recipientInfo = draftRecipientInfo(draft)
+  return {
+    ...INITIAL_FORM,
+    fromCardId: draft.sender_card_id ?? null,
+    txTypeId: draft.transaction_type_id ?? null,
+    recipientInfo,
+    recipientCardNumber: recipientInfo?.masked_card_number ?? '',
+    amount: draft.amount != null ? String(draft.amount) : '',
+    note: draft.note ?? '',
+    categoryId: draft.category_id ?? null,
+  }
+}
+
 export default function PaymentWizard({
   isOpen,
   onClose,
   onSuccess,
   initialCardId = null,
   initialRecipient = null,
+  // A draft being resumed: prefills the form and makes this wizard edit that
+  // draft rather than start a new payment. Sending consumes it server-side.
+  initialDraft = null,
+  initialStep = null,
 }) {
   const { user } = useAuth()
   const { notify } = useNotifications()
@@ -877,23 +962,37 @@ export default function PaymentWizard({
   const [isPinSubmitting, setIsPinSubmitting] = useState(false)
   const idempotencyKeyRef = useRef(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  // Set while this wizard is editing a saved draft. It decides two things:
+  // whether "Save as draft" updates or creates, and whether sending goes
+  // through the draft (which consumes it) or straight to create.
+  const [draftId, setDraftId] = useState(null)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [draftError, setDraftError] = useState('')
+
+  const resumedRecipient = initialDraft ? draftRecipientInfo(initialDraft) : null
+  const lockedRecipient = initialRecipient ?? resumedRecipient
 
   useEffect(() => {
     if (!isOpen) return
-    setStep(initialCardId ? 1 : 0)
-    setForm({
-      ...INITIAL_FORM,
-      fromCardId: initialCardId ?? null,
-      recipientInfo: initialRecipient ?? null,
-      recipientMode: 'email',
-    })
+    const draftForm = initialDraft ? draftToForm(initialDraft) : null
+    setDraftId(initialDraft?.draft_id ?? null)
+    setStep(initialStep ?? (draftForm?.fromCardId || initialCardId ? 1 : 0))
+    setForm(
+      draftForm ?? {
+        ...INITIAL_FORM,
+        fromCardId: initialCardId ?? null,
+        recipientInfo: initialRecipient ?? null,
+        recipientMode: 'email',
+      }
+    )
     setSubmitError('')
+    setDraftError('')
     setPinConfirmOpen(false)
     setSendConfirmOpen(false)
     setPin('')
     setPinError('')
     setShowCloseConfirm(false)
-  }, [isOpen, initialCardId, initialRecipient])
+  }, [isOpen, initialCardId, initialRecipient, initialDraft, initialStep])
 
   useEffect(() => {
     if (!isOpen || !user) return
@@ -927,6 +1026,9 @@ export default function PaymentWizard({
   function resetAndClose() {
     setStep(0)
     setForm(INITIAL_FORM)
+    setDraftId(null)
+    setDraftError('')
+    setIsSavingDraft(false)
     setSubmitError('')
     setPendingApprovalTx(null)
     setApprovalModalOpen(false)
@@ -990,13 +1092,59 @@ export default function PaymentWizard({
     setPinConfirmOpen(true)
   }
 
+  /** Persist the half-finished payment and close. Nothing is charged or held. */
+  async function handleSaveDraft() {
+    if (isSavingDraft) return
+    setDraftError('')
+
+    // A draft is allowed to be incomplete, but not to be wrong: an amount the
+    // user typed either survives the round trip or they get told why not.
+    let amount = null
+    if (form.amount !== '') {
+      amount = normalizeAmountForSubmit(form.amount)
+      if (!amount) {
+        setDraftError('Enter a valid amount with up to 2 decimal places, or clear it.')
+        return
+      }
+    }
+
+    setIsSavingDraft(true)
+    try {
+      const payload = {
+        sender_card_id: form.fromCardId ?? null,
+        recipient_card_id: form.recipientInfo?.card_id ?? null,
+        transaction_type_id: form.txTypeId ?? null,
+        category_id: form.categoryId ?? null,
+        amount,
+        note: form.note || null,
+      }
+      if (draftId) {
+        await transactionDraftsService.update(draftId, payload)
+      } else {
+        await transactionDraftsService.create(payload)
+      }
+      notify({
+        type: 'success',
+        category: CATEGORIES.PAYMENT_SENT,
+        message: 'Payment saved as a draft. Finish it any time from Transactions.',
+        link: { route: '/transactions' },
+      })
+      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION_DRAFT)
+      resetAndClose()
+    } catch (err) {
+      setDraftError(err?.message || "Couldn't save this draft. Please try again.")
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
+
   async function submitPayment(confirmation = {}) {
     const normalizedAmount = normalizeAmountForSubmit(form.amount)
     if (!normalizedAmount) {
       throw new Error('Enter a valid amount with up to 2 decimal places.')
     }
 
-    const created = await transactionsService.create({
+    const body = {
       sender_card_id: form.fromCardId,
       recipient_card_id: form.recipientInfo.card_id,
       transaction_type_id: form.txTypeId,
@@ -1005,7 +1153,19 @@ export default function PaymentWizard({
       category_id: form.categoryId ?? null,
       idempotency_key: idempotencyKeyRef.current,
       ...confirmation,
-    })
+    }
+
+    // Sending a resumed draft goes through the draft's own send endpoint: same
+    // create path on the server, but the draft is consumed in the same request
+    // rather than left behind for the user to discard by hand. A failed send
+    // raises before the draft is touched, so it is still there to retry.
+    const created = draftId
+      ? await transactionDraftsService.send(draftId, body)
+      : await transactionsService.create(body)
+
+    if (draftId) {
+      emitDataChange(DATA_CHANGE_KINDS.TRANSACTION_DRAFT)
+    }
 
     if (created?.awaiting_user_approval || created?.requires_user_approval) {
       setPendingApprovalTx(created)
@@ -1224,7 +1384,10 @@ export default function PaymentWizard({
                   onNext={() => setStep(2)}
                   onBack={() => setStep(0)}
                   currentUserId={currentUserId}
-                  lockedRecipient={initialRecipient}
+                  lockedRecipient={lockedRecipient}
+                  onSaveDraft={handleSaveDraft}
+                  isSavingDraft={isSavingDraft}
+                  draftError={draftError}
                 />
               ) : (
                 <StepReview
@@ -1236,6 +1399,9 @@ export default function PaymentWizard({
                   isSubmitting={isSubmitting}
                   error={submitError}
                   confirmationHint={confirmationHint}
+                  onSaveDraft={handleSaveDraft}
+                  isSavingDraft={isSavingDraft}
+                  draftError={draftError}
                 />
               )}
             </div>
@@ -1263,7 +1429,8 @@ export default function PaymentWizard({
                   Discard this payment?
                 </h2>
                 <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                  Your recipient and amount will be cleared. You can start again any time.
+                  Your recipient and amount will be cleared — or save them as a draft
+                  and finish this payment later.
                 </p>
               </div>
               <button
@@ -1276,15 +1443,17 @@ export default function PaymentWizard({
               </button>
             </div>
             <div className="px-6 pb-6 sm:px-7 sm:pb-7">
-              <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+              {draftError && <FormBanner variant="error" message={draftError} />}
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setShowCloseConfirm(false)}
                   className="text-card-foreground"
                 >
                   Keep editing
                 </Button>
+                <SaveDraftButton onClick={handleSaveDraft} isSaving={isSavingDraft} />
                 <Button type="button" variant="destructive" onClick={resetAndClose}>
                   Discard
                 </Button>

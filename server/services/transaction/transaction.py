@@ -28,6 +28,7 @@ from schemas.transaction import (
     TransactionCreate,
     TransactionPatch,
 )
+from services.transaction.categorisation import recipient_display_name, resolve_auto_category
 from settings import get_settings
 from utils.totp import decrypt_secret, verify_totp_code
 
@@ -699,15 +700,7 @@ class TransactionService:
     @staticmethod
     def _recipient_name(recipient_card) -> str | None:
         """Best-effort display name for the recipient, used for keyword matching."""
-        if recipient_card is None:
-            return None
-        user = getattr(recipient_card, "user", None)
-        if user is not None:
-            parts = [getattr(user, "first_name", None), getattr(user, "last_name", None)]
-            name = " ".join(p for p in parts if p).strip()
-            if name:
-                return name
-        return getattr(recipient_card, "cardholder_name", None)
+        return recipient_display_name(recipient_card)
 
     def _resolve_auto_category(
         self,
@@ -718,20 +711,14 @@ class TransactionService:
     ) -> int | None:
         """Return the category_id of the first matching keyword rule, or None.
 
-        Deterministic substring match (lowercased) on the note / recipient name.
-        Rules are pre-ordered by precedence (user rules before global, then
-        priority asc), so the first match wins. No ML, no MCC.
+        The matching itself lives in `services.transaction.categorisation` so the
+        recurring scheduler resolves categories identically.
         """
-        note_text = (note or "").lower()
-        recipient_text = (recipient_name or "").lower()
-        if not note_text and not recipient_text:
-            return None
-
-        for rule in self._category_rule_repo.list_applicable(user_id=user_id):
-            haystack = recipient_text if rule.match_field == "recipient_name" else note_text
-            if rule.keyword and rule.keyword.lower() in haystack:
-                return rule.category_id
-        return None
+        return resolve_auto_category(
+            lambda: self._category_rule_repo.list_applicable(user_id=user_id),
+            note=note,
+            recipient_name=recipient_name,
+        )
 
     def _evaluate_spending_limits(
         self,

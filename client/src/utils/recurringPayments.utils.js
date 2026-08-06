@@ -182,9 +182,45 @@ export function statusOptionsFromRules(rules) {
 }
 
 /**
+ * The value the category filter uses for rules that carry no category. A plain
+ * empty string would be indistinguishable from "no filter" in the URL.
+ */
+export const UNCATEGORISED_FILTER_VALUE = 'none'
+
+/**
+ * Category options built from the categories the rules actually use, mirroring
+ * `statusOptionsFromRules` — a filter should never offer a choice that matches
+ * nothing. `labelFor` resolves an id to a display label (the shared
+ * `getCategoryMeta` via the reference-data list).
+ *
+ * @param {Array<object>} rules
+ * @param {Array<{ transaction_category_id: number, name: string }>} categories
+ * @param {(category: object) => string} labelFor
+ * @returns {Array<{ value: string, label: string }>}
+ */
+export function categoryOptionsFromRules(rules, categories = [], labelFor) {
+  const list = Array.isArray(rules) ? rules : []
+  const present = new Set(list.map((rule) => rule?.category_id))
+  const toLabel = labelFor ?? ((category) => category.name)
+
+  const options = (Array.isArray(categories) ? categories : [])
+    .filter((category) => present.has(category.transaction_category_id))
+    .map((category) => ({
+      value: String(category.transaction_category_id),
+      label: toLabel(category),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+  if (list.some((rule) => rule?.category_id == null)) {
+    options.push({ value: UNCATEGORISED_FILTER_VALUE, label: 'Uncategorised' })
+  }
+  return options
+}
+
+/**
  * Client-side filtering for the recurring list.
  * @param {Array<object>} rules
- * @param {{ q?: string, status?: string, freq?: string, attention?: boolean }} filters
+ * @param {{ q?: string, status?: string, freq?: string, cat?: string, attention?: boolean }} filters
  * @param {(rule: object) => string} recipientLabel resolves the searchable name
  * @returns {Array<object>}
  */
@@ -195,6 +231,14 @@ export function filterRecurringRules(rules, filters = {}, recipientLabel = () =>
   return list.filter((rule) => {
     if (filters.status && rule.status !== filters.status) return false
     if (filters.freq && frequencyKind(rule) !== filters.freq) return false
+    if (filters.cat) {
+      const isUncategorised = rule.category_id == null
+      if (filters.cat === UNCATEGORISED_FILTER_VALUE) {
+        if (!isUncategorised) return false
+      } else if (isUncategorised || String(rule.category_id) !== filters.cat) {
+        return false
+      }
+    }
     if (filters.attention && !rule.last_run_failed) return false
     if (!query) return true
     return [recipientLabel(rule), rule.note].some(

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { AlertTriangle, Loader2, MessageSquareText, Send } from 'lucide-react'
 
+import DraftPaymentList from '@/components/payment/DraftPaymentList'
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
 import PaymentWizard from '@/components/payment/PaymentWizard'
@@ -78,6 +79,11 @@ export default function PaymentPage() {
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState(null)
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
+  // The draft the wizard is currently editing, if any, and which step it opened
+  // on: "Resume" drops the user back into recipient + amount, "Send" opens on
+  // the confirm step, where the wizard's existing step-up verification lives.
+  const [activeDraft, setActiveDraft] = useState(null)
+  const [wizardStep, setWizardStep] = useState(null)
   const refreshHistoryRef = useRef(null)
   const handleRefreshReady = useCallback((refresh) => {
     refreshHistoryRef.current = refresh
@@ -111,6 +117,18 @@ export default function PaymentPage() {
       return { transaction_id: id }
     })
   }, [searchParams])
+
+  function openWizard({ draft = null, step = null } = {}) {
+    setActiveDraft(draft)
+    setWizardStep(step)
+    setPaymentWizardOpen(true)
+  }
+
+  function closeWizard() {
+    setPaymentWizardOpen(false)
+    setActiveDraft(null)
+    setWizardStep(null)
+  }
 
   function closeSelectedTransaction() {
     setSelectedTransaction(null)
@@ -187,15 +205,24 @@ export default function PaymentPage() {
         <PageActionButton
           icon={Send}
           label="New Transaction"
-          onClick={() => setPaymentWizardOpen(true)}
+          onClick={() => openWizard()}
         />
       </PageActionSlot>
 
-      {/* No initialCardId — opens on the "Choose a card" step. */}
+      {/* No initialCardId and no draft — opens on the "Choose a card" step. */}
       <PaymentWizard
         isOpen={paymentWizardOpen}
-        onClose={() => setPaymentWizardOpen(false)}
+        onClose={closeWizard}
         onSuccess={() => refreshHistoryRef.current?.()}
+        initialDraft={activeDraft}
+        initialStep={wizardStep}
+      />
+
+      <DraftPaymentList
+        onResume={(draft) => openWizard({ draft, step: draft.sender_card_id ? 1 : 0 })}
+        // A sendable draft always has a card, so the confirm step has
+        // everything it needs to show.
+        onSend={(draft) => openWizard({ draft, step: draft.sender_card_id ? 2 : 1 })}
       />
 
       <TransactionHistory
