@@ -1,9 +1,11 @@
 import { useId, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
+import RowIcon from '@/components/settings/RowIcon'
+
 /**
  * SettingsSubsection, a collapsible, labeled group of rows inside a
- * SettingsCard.
+ * SettingsSection.
  *
  * Breaks a long, undifferentiated stack of control rows into separate
  * disclosure panels so each concern (recovery vs. verification vs. payment
@@ -24,7 +26,6 @@ export default function SettingsSubsection({
   defaultOpen = false,
   children,
 }) {
-  const IconComponent = icon
   const isControlled = controlledOpen !== undefined
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
   const open = isControlled ? controlledOpen : uncontrolledOpen
@@ -45,13 +46,11 @@ export default function SettingsSubsection({
         aria-expanded={open}
         aria-controls={regionId}
         onClick={handleToggle}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+          open ? 'bg-muted/30' : ''
+        }`}
       >
-        {IconComponent ? (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-border bg-muted/40 text-muted-foreground">
-            <IconComponent className="h-4 w-4" aria-hidden="true" />
-          </span>
-        ) : null}
+        {icon ? <RowIcon icon={icon} tone="neutral" /> : null}
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-card-foreground">{title}</span>
           {description ? (
