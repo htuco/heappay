@@ -8,6 +8,7 @@ from database import Base
 
 class RequestStatus(Base):
     __tablename__ = "request_statuses"
+    __table_args__ = {"schema": "requests"}
 
     request_status_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)

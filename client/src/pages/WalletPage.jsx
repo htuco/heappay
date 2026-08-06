@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CreditCard, Snowflake } from 'lucide-react'
+import { CreditCard, Plus, Snowflake } from 'lucide-react'
 
 import AddCardModal from '@/components/AddCardModal'
+import { Button } from '@/components/ui/button'
+import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
 import AllCardsModal from '@/components/wallet/AllCardsModal'
 import CardStatsRow from '@/components/wallet/CardStatsRow'
 import CardWidget from '@/components/wallet/CardWidget'
@@ -19,6 +21,10 @@ export default function WalletPage() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const [highlight, setHighlight] = useState(false)
+  // One AddCardModal for the whole page. Every entry point — the top-bar
+  // action, the card widget, Manage Cards and the empty state — flips this flag
+  // instead of mounting its own copy of the modal.
+  const [addCardOpen, setAddCardOpen] = useState(false)
   const consumedCardParamRef = useRef(null)
   const walletSectionRef = useRef(null)
 
@@ -61,6 +67,19 @@ export default function WalletPage() {
 
   return (
     <div className="space-y-6">
+      <PageActionSlot>
+        <PageActionButton icon={Plus} label="Add card" onClick={() => setAddCardOpen(true)} />
+      </PageActionSlot>
+
+      <AddCardModal
+        open={addCardOpen}
+        onOpenChange={setAddCardOpen}
+        onSubmit={addCard}
+        isSubmitting={isSaving}
+        submitError={saveError}
+        onClearSubmitError={clearSaveError}
+      />
+
       {error ? (
         <div
           role="alert"
@@ -95,8 +114,9 @@ export default function WalletPage() {
       {/*
         Desktop (lg+): two columns — transactions left (60%), rail right (40%).
         Mobile/tablet (< lg): single column, ordered Quick Actions → Carousel
-        (card + balance) → Recent Activity → Card status. `order-*` reorders the
-        stack on small screens; reset to source order on lg with `lg:order-none`.
+        (card + balance, with the card-status line folded in) → Recent Activity.
+        `order-*` reorders the stack on small screens; reset to source order on
+        lg with `lg:order-none`.
       */}
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-5 lg:items-start lg:gap-6">
         {/* Quick Actions — second on mobile (under the card), top of right rail on desktop */}
@@ -112,10 +132,7 @@ export default function WalletPage() {
               isLoading={isLoading && cards.length === 0}
             />
             <WalletQuickActions
-              onAddCard={addCard}
-              isAddingCard={isSaving}
-              addCardError={saveError}
-              onClearAddCardError={clearSaveError}
+              onAddCard={() => setAddCardOpen(true)}
               isLoading={isLoading && cards.length === 0}
             />
           </div>
@@ -131,15 +148,13 @@ export default function WalletPage() {
               activeCard={activeCard}
               isLoading={isLoading}
               addCardSlot={
-                <AddCardModal
-                  onSubmit={addCard}
-                  isSubmitting={isSaving}
-                  submitError={saveError}
-                  onClearSubmitError={clearSaveError}
-                  triggerLabel="Add Card"
-                  triggerVariant="default"
-                  triggerClassName="h-11 w-full justify-center gap-2"
-                />
+                <Button
+                  onClick={() => setAddCardOpen(true)}
+                  className="h-11 w-full justify-center gap-2"
+                >
+                  <Plus />
+                  Add Card
+                </Button>
               }
               manageCardsSlot={
                 <AllCardsModal
@@ -150,15 +165,18 @@ export default function WalletPage() {
                   onSetMain={setMainCard}
                   onRemove={removeCard}
                   addCardSlot={
-                    <AddCardModal
-                      onSubmit={addCard}
-                      isSubmitting={isSaving}
-                      submitError={saveError}
-                      onClearSubmitError={clearSaveError}
-                      triggerLabel="Add new card"
-                      triggerVariant="default"
-                    />
+                    <Button onClick={() => setAddCardOpen(true)}>
+                      <Plus />
+                      Add new card
+                    </Button>
                   }
+                />
+              }
+              statusSlot={
+                <CardStatsRow
+                  compact
+                  isLoading={isLoading && cards.length === 0}
+                  {...buildCardStatusOverviewProps(cards)}
                 />
               }
             />
@@ -188,26 +206,14 @@ export default function WalletPage() {
               <p className="text-sm text-muted-foreground">
                 Add your first card to start tracking activity.
               </p>
-              <AddCardModal
-                onSubmit={addCard}
-                isSubmitting={isSaving}
-                submitError={saveError}
-                onClearSubmitError={clearSaveError}
-                triggerLabel="Add Card"
-                triggerVariant="default"
-              />
+              <Button onClick={() => setAddCardOpen(true)}>
+                <Plus />
+                Add Card
+              </Button>
             </section>
           )}
         </div>
 
-        {/* Card status — last on mobile, bottom of right rail on desktop */}
-        <div className="order-4 lg:order-0 lg:col-span-2 lg:col-start-4 lg:row-start-3">
-          <CardStatsRow
-            compact
-            isLoading={isLoading && cards.length === 0}
-            {...buildCardStatusOverviewProps(cards)}
-          />
-        </div>
       </div>
     </div>
   )

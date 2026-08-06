@@ -1,0 +1,178 @@
+"""group tables into postgres schemas and apply tier 1 renames
+
+Phase 2 of the schema refactor. Moves all 35 tables from `public` into six
+namespaces -- identity (7), money (9), requests (6), comms (5), security (4),
+audit (4) -- and applies the Tier 1 renames, including the six FK columns whose
+names disagreed with the primary key they reference. Afterwards `public` holds
+nothing but alembic_version.
+
+ALTER TABLE ... SET SCHEMA and RENAME are catalog-only operations -- no table
+rewrite -- but each takes a brief ACCESS EXCLUSIVE lock. Run when the target
+environment is idle.
+
+Chained after f3a4b5c6d7e8, the last of the family-accounts migrations,
+rather than sharing their parent. Those migrations create family_links and
+spending_limit_rules and add transactions.approver_user_id, all with FKs
+written as `users.user_id` -- so they must run BEFORE users moves to the
+identity schema, or the unqualified reference stops resolving.
+
+Downgrading past this revision is not meaningful: every migration below it
+refers to unqualified table names that no longer exist once the move has run.
+downgrade() here is a true inverse of upgrade() -- it returns all 35 tables to
+`public` with their original names -- but treat this revision as the floor.
+
+Revision ID: p2schemagroup
+Revises: f3a4b5c6d7e8
+"""
+from typing import Sequence, Union
+
+from alembic import op
+
+revision: str = "p2schemagroup"
+down_revision: Union[str, Sequence[str], None] = "f3a4b5c6d7e8"
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    op.execute("CREATE SCHEMA IF NOT EXISTS identity")
+    op.execute("CREATE SCHEMA IF NOT EXISTS money")
+    op.execute("CREATE SCHEMA IF NOT EXISTS requests")
+    op.execute("CREATE SCHEMA IF NOT EXISTS comms")
+    op.execute("CREATE SCHEMA IF NOT EXISTS security")
+    op.execute("CREATE SCHEMA IF NOT EXISTS audit")
+    op.execute("ALTER TABLE public.users SET SCHEMA identity")
+    op.execute("ALTER TABLE public.family_links SET SCHEMA identity")
+    op.execute("ALTER TABLE public.spending_limit_rules SET SCHEMA identity")
+    op.execute("ALTER TABLE public.family_card_members SET SCHEMA identity")
+    op.execute("ALTER TABLE public.family_notification_log SET SCHEMA comms")
+    op.execute("ALTER TABLE public.user_roles SET SCHEMA identity")
+    op.execute("ALTER TABLE public.user_statuses SET SCHEMA identity")
+    op.execute("ALTER TABLE public.contacts SET SCHEMA identity")
+    op.execute("ALTER TABLE public.cards SET SCHEMA money")
+    op.execute("ALTER TABLE public.card_types SET SCHEMA money")
+    op.execute("ALTER TABLE public.card_statuses SET SCHEMA money")
+    op.execute("ALTER TABLE public.transactions SET SCHEMA money")
+    op.execute("ALTER TABLE public.transaction_types SET SCHEMA money")
+    op.execute("ALTER TABLE public.transaction_statuses SET SCHEMA money")
+    op.execute("ALTER TABLE public.transaction_categories SET SCHEMA money")
+    op.execute("ALTER TABLE public.category_rules SET SCHEMA money")
+    op.execute("ALTER TABLE money.category_rules RENAME TO category_keyword_rules")
+    op.execute("ALTER TABLE public.recurring_payments SET SCHEMA money")
+    op.execute("ALTER TABLE public.requests SET SCHEMA requests")
+    op.execute("ALTER TABLE public.request_types SET SCHEMA requests")
+    op.execute("ALTER TABLE public.request_statuses SET SCHEMA requests")
+    op.execute("ALTER TABLE public.refund_request_details SET SCHEMA requests")
+    op.execute("ALTER TABLE requests.refund_request_details RENAME TO refund_details")
+    op.execute("ALTER TABLE public.card_freeze_request_details SET SCHEMA requests")
+    op.execute("ALTER TABLE requests.card_freeze_request_details RENAME TO card_freeze_details")
+    op.execute("ALTER TABLE public.refund_approval_rules SET SCHEMA requests")
+    op.execute("ALTER TABLE requests.refund_approval_rules RENAME TO refund_approval_policy")
+    op.execute("ALTER TABLE public.email_notification_log SET SCHEMA comms")
+    op.execute("ALTER TABLE public.admin_notification_log SET SCHEMA comms")
+    op.execute("ALTER TABLE public.email_verification_tokens SET SCHEMA comms")
+    op.execute("ALTER TABLE public.password_reset_tokens SET SCHEMA comms")
+    op.execute("ALTER TABLE public.biometric_credentials SET SCHEMA security")
+    op.execute("ALTER TABLE public.biometric_registration_challenges SET SCHEMA security")
+    op.execute("ALTER TABLE public.biometric_authentication_challenges SET SCHEMA security")
+    op.execute("ALTER TABLE public.password_history SET SCHEMA security")
+    op.execute("ALTER TABLE public.audit_log_events SET SCHEMA audit")
+    op.execute("ALTER TABLE audit.audit_log_events RENAME TO log_events")
+    op.execute("ALTER TABLE public.user_security_audit_events SET SCHEMA audit")
+    op.execute("ALTER TABLE audit.user_security_audit_events RENAME TO user_security_events")
+    op.execute("ALTER TABLE public.chat_messages SET SCHEMA audit")
+    op.execute("ALTER TABLE public.payment_approval_events SET SCHEMA audit")
+    op.execute("ALTER TABLE money.cards RENAME COLUMN card_numb TO card_number")
+    op.execute("ALTER TABLE money.cards RENAME COLUMN expires_at TO expires_on")
+    op.execute("ALTER TABLE money.cards RENAME COLUMN status_id TO card_status_id")
+    op.execute("ALTER TABLE identity.users RENAME COLUMN modified_at TO updated_at")
+    op.execute("ALTER TABLE identity.users RENAME COLUMN status_id TO user_status_id")
+    op.execute("ALTER TABLE identity.user_statuses RENAME COLUMN id TO user_status_id")
+    op.execute("ALTER TABLE identity.user_statuses RENAME COLUMN status_name TO name")
+    op.execute("ALTER TABLE identity.user_roles RENAME COLUMN role_id TO user_role_id")
+    op.execute("ALTER TABLE identity.user_roles RENAME COLUMN role_name TO name")
+    op.execute("ALTER TABLE money.card_statuses RENAME COLUMN status_name TO name")
+    op.execute("ALTER TABLE money.card_types RENAME COLUMN type_name TO name")
+    op.execute("ALTER TABLE money.transactions RENAME COLUMN status_id TO transaction_status_id")
+    op.execute("ALTER TABLE money.transactions RENAME COLUMN category_id TO transaction_category_id")
+    op.execute("ALTER TABLE money.category_keyword_rules RENAME COLUMN rule_id TO category_rule_id")
+    op.execute("ALTER TABLE money.category_keyword_rules RENAME COLUMN category_id TO transaction_category_id")
+    op.execute("ALTER TABLE money.recurring_payments RENAME COLUMN next_due_at TO next_due_on")
+    op.execute("ALTER TABLE audit.chat_messages RENAME COLUMN id TO chat_message_id")
+    op.execute("ALTER TABLE security.password_history RENAME COLUMN history_id TO password_history_id")
+    op.execute("ALTER TABLE security.biometric_credentials RENAME COLUMN credential_row_id TO biometric_credential_id")
+    op.execute("ALTER TABLE security.biometric_credentials RENAME COLUMN credential_id TO webauthn_credential_id")
+    op.execute("ALTER TABLE requests.refund_approval_policy RENAME COLUMN id TO refund_approval_policy_id")
+    op.execute("ALTER TABLE requests.refund_approval_policy RENAME COLUMN enabled TO is_enabled")
+
+
+def downgrade() -> None:
+    op.execute("ALTER TABLE requests.refund_approval_policy RENAME COLUMN is_enabled TO enabled")
+    op.execute("ALTER TABLE requests.refund_approval_policy RENAME COLUMN refund_approval_policy_id TO id")
+    op.execute("ALTER TABLE security.biometric_credentials RENAME COLUMN webauthn_credential_id TO credential_id")
+    op.execute("ALTER TABLE security.biometric_credentials RENAME COLUMN biometric_credential_id TO credential_row_id")
+    op.execute("ALTER TABLE security.password_history RENAME COLUMN password_history_id TO history_id")
+    op.execute("ALTER TABLE audit.chat_messages RENAME COLUMN chat_message_id TO id")
+    op.execute("ALTER TABLE money.recurring_payments RENAME COLUMN next_due_on TO next_due_at")
+    op.execute("ALTER TABLE money.category_keyword_rules RENAME COLUMN transaction_category_id TO category_id")
+    op.execute("ALTER TABLE money.category_keyword_rules RENAME COLUMN category_rule_id TO rule_id")
+    op.execute("ALTER TABLE money.transactions RENAME COLUMN transaction_category_id TO category_id")
+    op.execute("ALTER TABLE money.transactions RENAME COLUMN transaction_status_id TO status_id")
+    op.execute("ALTER TABLE money.card_types RENAME COLUMN name TO type_name")
+    op.execute("ALTER TABLE money.card_statuses RENAME COLUMN name TO status_name")
+    op.execute("ALTER TABLE identity.user_roles RENAME COLUMN name TO role_name")
+    op.execute("ALTER TABLE identity.user_roles RENAME COLUMN user_role_id TO role_id")
+    op.execute("ALTER TABLE identity.user_statuses RENAME COLUMN name TO status_name")
+    op.execute("ALTER TABLE identity.user_statuses RENAME COLUMN user_status_id TO id")
+    op.execute("ALTER TABLE identity.users RENAME COLUMN user_status_id TO status_id")
+    op.execute("ALTER TABLE identity.users RENAME COLUMN updated_at TO modified_at")
+    op.execute("ALTER TABLE money.cards RENAME COLUMN card_status_id TO status_id")
+    op.execute("ALTER TABLE money.cards RENAME COLUMN expires_on TO expires_at")
+    op.execute("ALTER TABLE money.cards RENAME COLUMN card_number TO card_numb")
+    op.execute("ALTER TABLE audit.payment_approval_events SET SCHEMA public")
+    op.execute("ALTER TABLE audit.chat_messages SET SCHEMA public")
+    op.execute("ALTER TABLE audit.user_security_events RENAME TO user_security_audit_events")
+    op.execute("ALTER TABLE audit.user_security_audit_events SET SCHEMA public")
+    op.execute("ALTER TABLE audit.log_events RENAME TO audit_log_events")
+    op.execute("ALTER TABLE audit.audit_log_events SET SCHEMA public")
+    op.execute("ALTER TABLE security.password_history SET SCHEMA public")
+    op.execute("ALTER TABLE security.biometric_authentication_challenges SET SCHEMA public")
+    op.execute("ALTER TABLE security.biometric_registration_challenges SET SCHEMA public")
+    op.execute("ALTER TABLE security.biometric_credentials SET SCHEMA public")
+    op.execute("ALTER TABLE comms.password_reset_tokens SET SCHEMA public")
+    op.execute("ALTER TABLE comms.email_verification_tokens SET SCHEMA public")
+    op.execute("ALTER TABLE comms.admin_notification_log SET SCHEMA public")
+    op.execute("ALTER TABLE comms.email_notification_log SET SCHEMA public")
+    op.execute("ALTER TABLE requests.refund_approval_policy RENAME TO refund_approval_rules")
+    op.execute("ALTER TABLE requests.refund_approval_rules SET SCHEMA public")
+    op.execute("ALTER TABLE requests.card_freeze_details RENAME TO card_freeze_request_details")
+    op.execute("ALTER TABLE requests.card_freeze_request_details SET SCHEMA public")
+    op.execute("ALTER TABLE requests.refund_details RENAME TO refund_request_details")
+    op.execute("ALTER TABLE requests.refund_request_details SET SCHEMA public")
+    op.execute("ALTER TABLE requests.request_statuses SET SCHEMA public")
+    op.execute("ALTER TABLE requests.request_types SET SCHEMA public")
+    op.execute("ALTER TABLE requests.requests SET SCHEMA public")
+    op.execute("ALTER TABLE money.recurring_payments SET SCHEMA public")
+    op.execute("ALTER TABLE money.category_keyword_rules RENAME TO category_rules")
+    op.execute("ALTER TABLE money.category_rules SET SCHEMA public")
+    op.execute("ALTER TABLE money.transaction_categories SET SCHEMA public")
+    op.execute("ALTER TABLE money.transaction_statuses SET SCHEMA public")
+    op.execute("ALTER TABLE money.transaction_types SET SCHEMA public")
+    op.execute("ALTER TABLE money.transactions SET SCHEMA public")
+    op.execute("ALTER TABLE money.card_statuses SET SCHEMA public")
+    op.execute("ALTER TABLE money.card_types SET SCHEMA public")
+    op.execute("ALTER TABLE money.cards SET SCHEMA public")
+    op.execute("ALTER TABLE identity.contacts SET SCHEMA public")
+    op.execute("ALTER TABLE identity.user_statuses SET SCHEMA public")
+    op.execute("ALTER TABLE identity.user_roles SET SCHEMA public")
+    op.execute("ALTER TABLE comms.family_notification_log SET SCHEMA public")
+    op.execute("ALTER TABLE identity.family_card_members SET SCHEMA public")
+    op.execute("ALTER TABLE identity.spending_limit_rules SET SCHEMA public")
+    op.execute("ALTER TABLE identity.family_links SET SCHEMA public")
+    op.execute("ALTER TABLE identity.users SET SCHEMA public")
+    op.execute("DROP SCHEMA IF EXISTS identity")
+    op.execute("DROP SCHEMA IF EXISTS money")
+    op.execute("DROP SCHEMA IF EXISTS requests")
+    op.execute("DROP SCHEMA IF EXISTS comms")
+    op.execute("DROP SCHEMA IF EXISTS security")
+    op.execute("DROP SCHEMA IF EXISTS audit")

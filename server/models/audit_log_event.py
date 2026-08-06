@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -9,15 +9,21 @@ from database import Base
 class AuditLogEvent(Base):
     """Append-only platform audit log. No update/delete paths in the application."""
 
-    __tablename__ = "audit_log_events"
+    __tablename__ = "log_events"
+    __table_args__ = (
+        Index("ix_audit_log_events_actor_user_id", "actor_user_id"),
+        Index("ix_audit_log_events_created_at", "created_at"),
+        Index("ix_audit_log_events_event_type", "event_type"),
+        {"schema": "audit"},
+    )
 
     event_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     actor_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True
+        ForeignKey("identity.users.user_id", ondelete="SET NULL"), nullable=True
     )
     target_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True
+        ForeignKey("identity.users.user_id", ondelete="SET NULL"), nullable=True
     )
     resource_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
     resource_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

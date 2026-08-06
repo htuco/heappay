@@ -1,7 +1,19 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, func, true
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    func,
+    text,
+    true,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -9,6 +21,19 @@ from database import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        Index(
+            "uq_users_recovery_email",
+            "recovery_email",
+            unique=True,
+            postgresql_where=text("recovery_email IS NOT NULL"),
+            sqlite_where=text("recovery_email IS NOT NULL"),
+        ),
+        Index("ix_users_user_status_id", "user_status_id"),
+        Index("ix_users_user_role_id", "user_role_id"),
+        CheckConstraint("wallet_balance >= 0", name="ck_users_wallet_balance_non_negative"),
+        {"schema": "identity"},
+    )
 
     user_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -16,13 +41,21 @@ class User(Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    status_id: Mapped[int] = mapped_column(ForeignKey("user_statuses.id"), nullable=False)
-    user_role_id: Mapped[int] = mapped_column(ForeignKey("user_roles.role_id"), nullable=False)
+    status_id: Mapped[int] = mapped_column("user_status_id", ForeignKey("identity.user_statuses.user_status_id"), nullable=False)
+    user_role_id: Mapped[int] = mapped_column(ForeignKey("identity.user_roles.user_role_id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    # onupdate is client-side (emitted in UPDATE statements), so it needs no
+    # migration. Previously every update path had to remember to set this by
+    # hand -- ~10 sites in repositories/user/auth.py did; anything that forgot
+    # left a stale timestamp with no failure. Audit F-16.
     modified_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        "updated_at",
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
     refresh_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -43,6 +76,9 @@ class User(Base):
         Boolean(), nullable=False, server_default=true()
     )
     email_refund_status_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
+    email_outflow_enabled: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
     # Staff opt-in: email me when a user submits a refund/freeze request or a
@@ -89,6 +125,9 @@ class User(Base):
         nullable=True,
     )
     is_discoverable: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=true()
+    )
+    email_family_activity_enabled: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=true()
     )
 

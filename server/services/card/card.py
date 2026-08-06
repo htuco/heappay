@@ -71,6 +71,24 @@ class CardService:
             include_deleted=include_deleted,
         )
 
+    def list_all_for_self(
+        self,
+        user_id: int,
+        *,
+        status_id: int | None = None,
+        card_type_id: int | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Card]:
+        """A user's own cards, plus any shared card they're a member of."""
+        return self._repo.list_all_for_self(
+            user_id,
+            status_id=status_id,
+            card_type_id=card_type_id,
+            limit=limit,
+            offset=offset,
+        )
+
     def get_by_id(self, card_id: int) -> Card | None:
         return self._repo.get_by_id(card_id, include_deleted=False)
 

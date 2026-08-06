@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, Plus } from 'lucide-react'
+import { Compass, CreditCard, Plus } from 'lucide-react'
 import CardStatusOverview from '@/components/dashboard/CardStatusOverview'
 import TotalBalanceWidget from '@/components/dashboard/TotalBalanceWidget'
 import DashboardPlaceholder from '@/components/dashboard/DashboardPlaceholder'
@@ -12,6 +12,7 @@ import PaymentCard from '@/components/payment-card/PaymentCard'
 import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
 import AddCardModal from '@/components/AddCardModal'
+import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
 import { useWalletCards } from '@/hooks/useWalletCards'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
@@ -106,6 +107,10 @@ export default function DashboardPage() {
     formattedCards,
     formattedReserved,
     hasReserved,
+    // Raw numbers as well as the formatted strings: the balance widget needs
+    // them to work out each side's share of the total.
+    walletBalance: walletAmount,
+    cardsBalance: cardsAmount,
     isLoading: balanceLoading,
   } = useTotalBalance()
   const {
@@ -181,14 +186,35 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/*
+        Placeholder for the guided product tour — it will walk a new user
+        through the wallet, payments and recurring surfaces. Disabled rather
+        than hidden so the slot is reserved and the affordance is discoverable;
+        follows the same "coming soon" pattern as the other unbuilt controls.
+      */}
+      <PageActionSlot>
+        <PageActionButton
+          icon={Compass}
+          label="Take a tour"
+          variant="outline"
+          disabled
+          title="A guided tour of Heap is coming soon."
+        />
+      </PageActionSlot>
+
       {showLoader && <DashboardLoadingOverlay />}
-      {/* Row 1: Balance (flexible) + Payment Card (fixed 384px at lg, 464px at xl) */}
-      <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
+      {/* Row 1: Balance (flexible) + Payment Card (fixed 400px at lg, 464px at xl).
+          dashboard-hero-row pins the row to the card's own height so the two panels
+          line up top and bottom — see .dashboard-hero-row in index.css, and keep the
+          widths below in sync with --dashboard-hero-card-width. */}
+      <section className="dashboard-hero-row grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
         <div className="min-w-0">
           <TotalBalanceWidget
             totalBalance={formattedBalance}
             walletBalance={formattedWallet}
             cardsBalance={formattedCards}
+            walletAmount={walletAmount}
+            cardsAmount={cardsAmount}
             reservedBalance={formattedReserved}
             hasReserved={hasReserved}
             monthlyGrowth={monthlyGrowth}
@@ -222,8 +248,16 @@ export default function DashboardPage() {
       {/* Row 2: Money Flow + Spending by Category (50/50 within the graph column) +
           Quick Actions (fixed 384px at lg, 464px at xl) on the right */}
       <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
-        <div className="grid min-w-0 grid-cols-1 gap-5 rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border">
-          <div className="min-w-0 md:pr-6">
+        {/*
+          The two charts only sit side by side from 2xl. Splitting at md (as
+          this did) gave each of them half of whatever the left grid column had
+          — and from lg that column is the flexible one next to the fixed
+          25rem/29rem card track, so at 1024 it is ~292px wide and each chart
+          got ~146px. Stacking until there is genuinely room keeps both
+          readable at every width, mobile included.
+        */}
+        <div className="grid min-w-0 grid-cols-1 gap-5 rounded-panel border border-border bg-card p-5 shadow-sm sm:p-6 2xl:grid-cols-2 2xl:gap-0 2xl:divide-x 2xl:divide-border">
+          <div className="min-w-0 2xl:pr-6">
             <MoneyFlowPlaceholder
               chartData={chartData}
               isLoading={summaryLoading}
@@ -232,7 +266,7 @@ export default function DashboardPage() {
               bare
             />
           </div>
-          <div className="min-w-0 md:pl-6">
+          <div className="min-w-0 2xl:pl-6">
             <SpendingByCategory months={6} bare />
           </div>
         </div>

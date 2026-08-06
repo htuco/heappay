@@ -35,14 +35,14 @@ export async function getRateOverview() {
 }
 
 /**
- * Recent real history for a pair — sparkline points, 24h move, and range.
- * @param {{ from: string, to: string }} params
+ * Recent real history for a pair — line-chart points, movement, and range.
+ * @param {{ from: string, to: string, range?: '7d'|'30d'|'90d'|'1y' }} params
  * @returns {Promise<{ from_currency: string, to_currency: string, available: boolean, points: Array<{ date: string, rate: string }>, latest: string|null, change_pct: string|null, range_pct: string|null, summary: string }>}
  */
-export async function getPairInsight({ from, to }) {
+export async function getPairInsight({ from, to, range = '7d' }) {
   try {
     const { data } = await api.get('/fx/insight', {
-      params: { from_currency: from, to_currency: to },
+      params: { from_currency: from, to_currency: to, range },
     })
     return unwrap({ data })
   } catch (error) {

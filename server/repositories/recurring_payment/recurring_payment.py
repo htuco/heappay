@@ -39,6 +39,7 @@ class RecurringPaymentRepository:
         months: list[int] | None,
         note: str | None,
         next_due_at: date,
+        category_id: int | None = None,
     ) -> RecurringPayment:
         row = RecurringPayment(
             user_id=user_id,
@@ -48,6 +49,7 @@ class RecurringPaymentRepository:
             day_of_month=day_of_month,
             months=",".join(str(m) for m in months) if months else None,
             note=note,
+            category_id=category_id,
             next_due_at=next_due_at,
             status="active",
             last_run_failed=False,
@@ -69,11 +71,11 @@ class RecurringPaymentRepository:
         stmt = (
             select(RecurringPayment)
             .options(*self._load_options())
-            .where(
-                RecurringPayment.user_id == user_id,
-                RecurringPayment.status != "cancelled",
+            .where(RecurringPayment.user_id == user_id)
+            .order_by(
+                (RecurringPayment.status != "active").asc(),
+                RecurringPayment.created_at.desc(),
             )
-            .order_by(RecurringPayment.created_at.desc())
         )
         return list(self._db.scalars(stmt).unique().all())
 

@@ -168,6 +168,8 @@ export async function updateNotificationPreferences({
 	emailPaymentReceivedEnabled,
 	emailTopupEnabled,
 	emailRefundStatusEnabled,
+	emailOutflowEnabled,
+	emailFamilyActivityEnabled,
 	notifyOnUserRequests,
 }) {
 	const { data } = await api.patch('/auth/notification-preferences', {
@@ -176,6 +178,8 @@ export async function updateNotificationPreferences({
 		email_payment_received_enabled: emailPaymentReceivedEnabled,
 		email_topup_enabled: emailTopupEnabled,
 		email_refund_status_enabled: emailRefundStatusEnabled,
+		email_outflow_enabled: emailOutflowEnabled,
+		email_family_activity_enabled: emailFamilyActivityEnabled,
 		notify_on_user_requests: notifyOnUserRequests,
 	})
 	const td = data.data

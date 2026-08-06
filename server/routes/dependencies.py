@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from exceptions import Unauthorized
+from models.card import Card
+from models.family_link import FamilyLink
 from models.user import User
 from models.user_role import UserRole
 from repositories.user.auth import UserAuthRepository
@@ -126,3 +128,51 @@ def require_verified_context(
             detail="Please verify your email address before completing this action.",
         )
     return ctx
+
+
+def require_guardian_of(
+    dependent_user_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> int:
+    """Authorize current user as the accepted guardian of `dependent_user_id`.
+
+    FastAPI injects the `dependent_user_id` path parameter into this
+    dependency by name, so every family-scoped route must name its path
+    segment exactly `{dependent_user_id}`. Returns the guardian's user_id;
+    raises 403 otherwise.
+    """
+    stmt = select(FamilyLink.family_link_id).where(
+        FamilyLink.guardian_user_id == user_id,
+        FamilyLink.dependent_user_id == dependent_user_id,
+        FamilyLink.status == "accepted",
+    )
+    if db.execute(stmt).scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not this user's guardian.",
+        )
+    return user_id
+
+
+def require_owns_card(
+    card_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> int:
+    """Authorize current user as the owner of `card_id`.
+
+    Mirrors `require_guardian_of`'s path-param-by-name shape -- every
+    card-scoped family route must name its path segment exactly `{card_id}`.
+    404s if the card doesn't exist, 403s if the current user isn't its owner.
+    """
+    stmt = select(Card.user_id).where(Card.card_id == card_id, Card.deleted_at.is_(None))
+    owner_id = db.execute(stmt).scalar_one_or_none()
+    if owner_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.")
+    if owner_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not own this card.",
+        )
+    return user_id

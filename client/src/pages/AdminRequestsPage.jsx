@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import Toggle from '@/components/settings/Toggle'
 import RefundRequestDialog from '@/components/admin/RefundRequestDialog'
 import FreezeRequestDialog from '@/components/admin/FreezeRequestDialog'
 import transactionsService from '@/services/transactionsService'
+import { useNotifications } from '@/context/NotificationContext'
+import { CATEGORIES } from '@/context/notifications/categories'
 import { formatMonetaryValue } from '@/utils/transactionMeta'
 import { REQUEST_STATUS_IDS, REQUEST_STATUS_META } from '@/utils/requestStatus'
 
@@ -21,6 +25,7 @@ const FILTER_OPTIONS = [
 const TABS = [
   { key: 'refund', label: 'Refund Requests' },
   { key: 'freeze', label: 'Freeze / Unfreeze' },
+  { key: 'rules', label: 'Approval Rules' },
 ]
 
 function formatDate(iso) {
@@ -283,16 +288,123 @@ function FreezeTab() {
   )
 }
 
+function RulesTab() {
+  const { notify } = useNotifications()
+  const [enabled, setEnabled] = useState(false)
+  const [maxAgeDays, setMaxAgeDays] = useState('')
+  const [meta, setMeta] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  function applyRules(rules) {
+    setEnabled(Boolean(rules.enabled))
+    setMaxAgeDays(String(rules.max_age_days))
+    setMeta({ updatedAt: rules.updated_at, updatedByName: rules.updated_by_name })
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    setIsLoading(true)
+    setError(null)
+    transactionsService
+      .getRefundApprovalRules()
+      .then((rules) => { if (!cancelled) applyRules(rules) })
+      .catch(() => { if (!cancelled) setError('Failed to load refund approval rules.') })
+      .finally(() => { if (!cancelled) setIsLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  async function handleSave() {
+    setIsSaving(true)
+    setError(null)
+    try {
+      const rules = await transactionsService.updateRefundApprovalRules({
+        enabled,
+        maxAgeDays: Number(maxAgeDays),
+      })
+      applyRules(rules)
+      notify({
+        type: 'success',
+        category: CATEGORIES.ADMIN_ACTION,
+        message: 'Refund approval rules updated.',
+      })
+    } catch (err) {
+      setError(err?.message ?? 'Failed to save refund approval rules.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-32 items-center justify-center rounded-surface border border-border bg-card shadow-xs">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-xl space-y-4 rounded-surface border border-border bg-card p-5 shadow-xs">
+      <div>
+        <h2 className="text-sm font-semibold text-card-foreground">Automatic stale refund decline</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          When enabled, pending refunds are evaluated on a schedule and auto-declined once they've
+          sat pending longer than the age limit below, so nothing lingers unresolved forever.
+          Every refund still requires a staff decision to approve — reversing money out of another
+          user's wallet is never automated.
+        </p>
+      </div>
+
+      <Toggle
+        enabled={enabled}
+        label="Enable automatic decline"
+        onToggle={() => setEnabled((v) => !v)}
+        disabled={isSaving}
+      />
+
+      <div className="space-y-1.5">
+        <label htmlFor="max-age-days" className="text-sm font-medium text-card-foreground">
+          Auto-decline if pending longer than (days)
+        </label>
+        <Input
+          id="max-age-days"
+          type="number"
+          min="1"
+          max="365"
+          step="1"
+          value={maxAgeDays}
+          onChange={(e) => setMaxAgeDays(e.target.value)}
+          disabled={isSaving}
+        />
+      </div>
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <p className="text-xs text-muted-foreground">
+          {meta?.updatedAt
+            ? `Last updated ${meta.updatedByName ? `by ${meta.updatedByName} · ` : ''}${formatDate(meta.updatedAt)}`
+            : null}
+        </p>
+        <Button
+          className="h-9 rounded-input px-4 text-sm shadow-none"
+          disabled={isSaving}
+          onClick={handleSave}
+        >
+          {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+          {isSaving ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminRequestsPage() {
   const [activeTab, setActiveTab] = useState('refund')
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-card-foreground sm:text-xl">Requests</h1>
-        <p className="text-sm text-muted-foreground">Review and resolve refund and card-freeze requests.</p>
-      </div>
-
       <div className="flex items-center gap-1 border-b border-border">
         {TABS.map((tab) => {
           const active = activeTab === tab.key
@@ -312,7 +424,7 @@ export default function AdminRequestsPage() {
         })}
       </div>
 
-      {activeTab === 'refund' ? <RefundTab /> : <FreezeTab />}
+      {activeTab === 'refund' ? <RefundTab /> : activeTab === 'freeze' ? <FreezeTab /> : <RulesTab />}
     </div>
   )
 }

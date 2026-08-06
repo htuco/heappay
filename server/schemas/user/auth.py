@@ -217,7 +217,9 @@ class NotificationPreferencesUpdate(BaseModel):
     email_payment_received_enabled: bool | None = None
     email_topup_enabled: bool | None = None
     email_refund_status_enabled: bool | None = None
+    email_outflow_enabled: bool | None = None
     notify_on_user_requests: bool | None = None
+    email_family_activity_enabled: bool | None = None
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> "NotificationPreferencesUpdate":
@@ -229,7 +231,9 @@ class NotificationPreferencesUpdate(BaseModel):
                 self.email_payment_received_enabled,
                 self.email_topup_enabled,
                 self.email_refund_status_enabled,
+                self.email_outflow_enabled,
                 self.notify_on_user_requests,
+                self.email_family_activity_enabled,
             )
         ):
             raise ValueError("At least one preference must be provided.")
@@ -252,7 +256,9 @@ class UserResponse(BaseModel):
     email_payment_received_enabled: bool = True
     email_topup_enabled: bool = True
     email_refund_status_enabled: bool = True
+    email_outflow_enabled: bool = True
     notify_on_user_requests: bool = False
+    email_family_activity_enabled: bool = True
     avatar_url: str | None = None
     totp_enabled: bool = False
     payment_confirm_enabled: bool = True

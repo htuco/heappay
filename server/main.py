@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +26,11 @@ from routes.card.card_type import router as card_type_router
 from routes.chat.chat import router as chat_router
 from routes.contact.contact import router as contact_router
 from routes.export.export import router as export_router
+from routes.family.allowance import router as family_allowance_router
+from routes.family.card import router as family_card_router
+from routes.family.card_spending_limit_rule import router as family_card_spending_limit_router
+from routes.family.family_link import router as family_link_router
+from routes.family.spending_limit_rule import router as family_spending_limit_router
 from routes.fx.fx import router as fx_router
 from routes.storage.images import router as storage_router
 from routes.transaction.transaction import router as transaction_router
@@ -32,6 +39,7 @@ from routes.transaction.transaction_category import router as transaction_catego
 from routes.transaction.transaction_type import router as transaction_type_router
 from routes.nexus.funding import router as nexus_funding_router
 from routes.recurring_payment.recurring_payment import router as recurring_payment_router
+from routes.refund_approval_rule.refund_approval_rule import router as refund_approval_rule_router
 from routes.request.request import router as request_router
 from routes.audit_log.audit_log import router as audit_log_router
 from routes.user.auth import router as auth_router
@@ -64,10 +72,53 @@ def _run_knowledge_sync() -> None:
         db.close()
 
 
+def _lifespan(settings):
+    """App lifespan: the transaction processor plus the knowledge-sync scheduler.
+
+    The scheduler is started here rather than in create_app() so that background
+    work begins when the app is actually *served*, not when this module is
+    imported. Importing main.py used to start it, which meant anything importing
+    `app` -- most of the test suite -- silently began embedding local rows and
+    writing them to the vector store behind SUPABASE_DATABASE_URL. Lifespan is
+    not triggered by a bare TestClient(app), so tests no longer reach it.
+    """
+    run_transaction_processor = transaction_processor_lifespan(settings)
+
+    @asynccontextmanager
+    async def _run(app: FastAPI) -> AsyncIterator[None]:
+        # coalesce + single-instance so a burst of reloads (uvicorn --reload)
+        # can't stack overlapping syncs on top of each other.
+        scheduler = BackgroundScheduler(
+            job_defaults={"coalesce": True, "max_instances": 1}
+        )
+        scheduler.add_job(_run_knowledge_sync, "interval", hours=1, id="knowledge_sync")
+        # Run an initial sync shortly after boot on the scheduler's own thread
+        # rather than inline — calling it inline blocks app startup (and, under
+        # uvicorn --reload, re-runs the full embed loop on every code change),
+        # which prevents the server from binding and makes the app look "stuck
+        # syncing".
+        scheduler.add_job(
+            _run_knowledge_sync,
+            "date",
+            run_date=datetime.now() + timedelta(seconds=5),
+            id="knowledge_sync_startup",
+        )
+        scheduler.start()
+        try:
+            async with run_transaction_processor(app):
+                yield
+        finally:
+            # Shut down without waiting on an in-flight embed loop, so a stuck
+            # sync can't hold the process open.
+            scheduler.shutdown(wait=False)
+
+    return _run
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     sync_nexus_env()
-    app = FastAPI(lifespan=transaction_processor_lifespan(settings))
+    app = FastAPI(lifespan=_lifespan(settings))
     cors_kwargs: dict = {
         "allow_origins": settings.cors_origin_list,
         "allow_credentials": True,
@@ -137,29 +188,17 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(request_router)
     app.include_router(audit_log_router)
+    app.include_router(refund_approval_rule_router)
     app.include_router(nexus_funding_router)
     app.include_router(recurring_payment_router)
     app.include_router(wallet_router)
     app.include_router(fx_router)
     app.include_router(contact_router)
-
-    # coalesce + single-instance so a burst of reloads (uvicorn --reload) can't
-    # stack overlapping syncs on top of each other.
-    scheduler = BackgroundScheduler(
-        job_defaults={"coalesce": True, "max_instances": 1}
-    )
-    scheduler.add_job(_run_knowledge_sync, "interval", hours=1, id="knowledge_sync")
-    # Run an initial sync shortly after boot on the scheduler's own thread rather
-    # than inline here — calling it inline blocks app startup (and, under uvicorn
-    # --reload, re-runs the full embed loop on every code change), which prevents
-    # the server from binding and makes the app look "stuck syncing".
-    scheduler.add_job(
-        _run_knowledge_sync,
-        "date",
-        run_date=datetime.now() + timedelta(seconds=5),
-        id="knowledge_sync_startup",
-    )
-    scheduler.start()
+    app.include_router(family_link_router)
+    app.include_router(family_allowance_router)
+    app.include_router(family_spending_limit_router)
+    app.include_router(family_card_router)
+    app.include_router(family_card_spending_limit_router)
 
     return app
 

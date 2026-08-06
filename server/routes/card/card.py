@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from tasks.sync import run_sync_for_user
 from repositories.card.card import CardRepository
+from repositories.family.family_link import FamilyLinkRepository
 from routes.dependencies import (
     UserContext,
     get_user_context,
@@ -135,20 +136,40 @@ def list_cards(
     offset: int = Query(default=0, ge=0),
     ctx: UserContext = Depends(get_user_context),
     service: CardService = Depends(get_card_service),
+    db: Session = Depends(get_db),
 ) -> list[CardResponse]:
+    # Staff with no user_id means "list every card" (unrelated to their own
+    # account), so the "my cards" union only applies for non-staff, or when
+    # a user_id is explicitly given and it's their own.
+    is_self = (not ctx.is_staff and user_id is None) or (user_id is not None and user_id == ctx.user_id)
     if not ctx.is_staff:
-        if user_id is not None and user_id != ctx.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_OTHER_USER
-            )
-        user_id = ctx.user_id
-    rows = service.list_all(
-        user_id=user_id,
-        status_id=status_id,
-        card_type_id=card_type_id,
-        limit=limit,
-        offset=offset,
-    )
+        if not is_self:
+            family_link = FamilyLinkRepository(db).get_accepted_for_dependent(user_id)
+            is_guardian = family_link is not None and family_link.guardian_user_id == ctx.user_id
+            if not is_guardian:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_OTHER_USER
+                )
+        else:
+            user_id = ctx.user_id
+    if is_self:
+        # "My cards" also includes any shared card this user is a member of,
+        # not just cards they own outright.
+        rows = service.list_all_for_self(
+            user_id,
+            status_id=status_id,
+            card_type_id=card_type_id,
+            limit=limit,
+            offset=offset,
+        )
+    else:
+        rows = service.list_all(
+            user_id=user_id,
+            status_id=status_id,
+            card_type_id=card_type_id,
+            limit=limit,
+            offset=offset,
+        )
     pending_ids: set[int] = set()
     reserved_by_card: dict[int, Decimal] = {}
     freeze_ids: set[int] = set()

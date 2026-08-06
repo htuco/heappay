@@ -205,6 +205,11 @@ class TransactionRepository:
             or_(
                 Transaction.sender_card_id.in_(user_card_ids),
                 Transaction.recipient_card_id.in_(user_card_ids),
+                # A dependent who spent from a shared card they don't own
+                # (sender_card.user_id is the guardian) still participates in
+                # that transaction -- initiated_by_user_id is the only way to
+                # know that from the transaction row alone.
+                Transaction.initiated_by_user_id == user_id,
             )
         )
 
@@ -541,6 +546,23 @@ class TransactionRepository:
             .joinedload(Request.request_status),
         )
 
+    def list_pending_approvals_for_approver(self, approver_user_id: int) -> list[Transaction]:
+        """Transactions awaiting approval where `approver_user_id` is the
+        authorized approver -- e.g. a guardian's view of dependents' pending
+        approvals, redirected there by a spending-limit rule.
+        """
+        stmt = (
+            select(Transaction)
+            .options(*self._party_load_options())
+            .where(
+                Transaction.approver_user_id == approver_user_id,
+                Transaction.requires_user_approval.is_(True),
+                Transaction.user_approved_at.is_(None),
+            )
+            .order_by(Transaction.created_at.desc())
+        )
+        return list(self._db.scalars(stmt).all())
+
     def card_owner_id(self, card_id: int) -> int | None:
         stmt = select(Card.user_id).where(
             Card.card_id == card_id, Card.deleted_at.is_(None)
@@ -570,6 +592,8 @@ class TransactionRepository:
         idempotency_key: str | None = None,
         requires_user_approval: bool = False,
         user_approval_expires_at: datetime | None = None,
+        approver_user_id: int | None = None,
+        initiated_by_user_id: int | None = None,
     ) -> Transaction:
         """
         Escrow create: hold funds on sender (if any); recipient is credited on complete().
@@ -590,6 +614,8 @@ class TransactionRepository:
             idempotency_key=idempotency_key,
             requires_user_approval=requires_user_approval,
             user_approval_expires_at=user_approval_expires_at,
+            approver_user_id=approver_user_id,
+            initiated_by_user_id=initiated_by_user_id,
         )
         self._db.add(row)
         self._commit()
@@ -859,6 +885,7 @@ class TransactionRepository:
         note: str | None,
         processing_eligible_at: datetime,
         recurring_payment_id: int,
+        category_id: int | None = None,
     ) -> Transaction:
         sender_card.balance = sender_card.balance - amount
         row = Transaction(
@@ -866,6 +893,7 @@ class TransactionRepository:
             recipient_card_id=recipient_card.card_id,
             transaction_type_id=transaction_type_id,
             status_id=status_id,
+            category_id=category_id,
             amount=amount,
             note=note,
             processing_eligible_at=processing_eligible_at,
