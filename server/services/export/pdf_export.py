@@ -7,11 +7,34 @@ from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas as _canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-_LOGO_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "branding" / "logo.png"
+_ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+_LOGO_PATH = _ASSETS / "branding" / "logo.png"
 _LOGO_ASPECT = 366 / 1431  # native logo.png height / width
+
+
+def _register_fonts() -> tuple[str, str]:
+    """Register a Unicode TTF so names with diacritics (ć/č/đ/š/ž) render as
+    glyphs instead of tofu boxes. Falls back to the built-in Helvetica (WinAnsi)
+    if the bundled fonts are somehow unavailable."""
+    font_dir = _ASSETS / "fonts"
+    try:
+        pdfmetrics.registerFont(TTFont("HeapSans", str(font_dir / "DejaVuSans.ttf")))
+        pdfmetrics.registerFont(TTFont("HeapSans-Bold", str(font_dir / "DejaVuSans-Bold.ttf")))
+        pdfmetrics.registerFontFamily(
+            "HeapSans", normal="HeapSans", bold="HeapSans-Bold",
+            italic="HeapSans", boldItalic="HeapSans-Bold",
+        )
+        return "HeapSans", "HeapSans-Bold"
+    except Exception:
+        return "Helvetica", "Helvetica-Bold"
+
+
+BASE_FONT, BASE_FONT_BOLD = _register_fonts()
 
 PRIMARY = colors.HexColor("#1E9DF1")
 PRIMARY_DARK = colors.HexColor("#254BB2")
@@ -28,21 +51,17 @@ OUTGOING = colors.HexColor("#C0392B")
 SURFACE = colors.HexColor("#F5F9FC")
 SURFACE_ALT = colors.HexColor("#EAF4FB")
 
-# Status pill palette: status keyword -> (background, text)
+# Status pill palette keyed on the statuses that actually exist in the DB
+# (cancelled / completed / failed / pending / reversed).
+_GREEN = (colors.HexColor("#E3F6EC"), colors.HexColor("#1F7A4D"))
+_AMBER = (colors.HexColor("#FEF3D9"), colors.HexColor("#9A6A00"))
+_RED = (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E"))
 _STATUS_PALETTE = {
-    "completed": (colors.HexColor("#E3F6EC"), colors.HexColor("#1F7A4D")),
-    "success": (colors.HexColor("#E3F6EC"), colors.HexColor("#1F7A4D")),
-    "approved": (colors.HexColor("#E3F6EC"), colors.HexColor("#1F7A4D")),
-    "pending": (colors.HexColor("#FEF3D9"), colors.HexColor("#9A6A00")),
-    "processing": (colors.HexColor("#FEF3D9"), colors.HexColor("#9A6A00")),
-    "scheduled": (colors.HexColor("#FEF3D9"), colors.HexColor("#9A6A00")),
-    "failed": (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E")),
-    "denied": (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E")),
-    "declined": (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E")),
-    "rejected": (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E")),
-    "cancelled": (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E")),
-    "canceled": (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E")),
-    "reversed": (colors.HexColor("#FBE4E1"), colors.HexColor("#B23A2E")),
+    "completed": _GREEN,
+    "pending": _AMBER,
+    "failed": _RED,
+    "cancelled": _RED,
+    "reversed": _RED,
 }
 _STATUS_DEFAULT = (SURFACE_ALT, colors.HexColor("#2C6E9B"))
 
@@ -55,29 +74,35 @@ _USABLE_WIDTH = letter[0] - 2 * _SIDE_MARGIN
 _styles = getSampleStyleSheet()
 TITLE_STYLE = ParagraphStyle(
     "ExportTitle", parent=_styles["Heading1"], textColor=PRIMARY_DARK, fontSize=20, spaceAfter=2,
+    fontName=BASE_FONT_BOLD,
 )
 SUBTITLE_STYLE = ParagraphStyle(
     "ExportSubtitle", parent=_styles["Normal"], textColor=MUTED, fontSize=10, spaceAfter=10,
+    fontName=BASE_FONT,
 )
 SECTION_STYLE = ParagraphStyle(
     "ExportSection", parent=_styles["Heading2"], textColor=FOREGROUND, fontSize=13, spaceBefore=14, spaceAfter=6,
+    fontName=BASE_FONT_BOLD,
 )
 NOTE_STYLE = ParagraphStyle(
     "ExportNote", parent=_styles["Normal"], textColor=MUTED, fontSize=9, spaceBefore=6,
+    fontName=BASE_FONT,
 )
 CONTEXT_STYLE = ParagraphStyle(
     "ExportContext", parent=_styles["Normal"], textColor=MUTED, fontSize=8.5, leading=12, spaceAfter=8,
+    fontName=BASE_FONT,
 )
 CELL_STYLE = ParagraphStyle(
     "ExportCell", parent=_styles["Normal"], textColor=FOREGROUND, fontSize=9, leading=11,
+    fontName=BASE_FONT,
 )
 AMOUNT_STYLE = ParagraphStyle(
     "ExportAmount", parent=_styles["Normal"], fontSize=9, leading=11, alignment=TA_RIGHT,
-    fontName="Helvetica-Bold",
+    fontName=BASE_FONT_BOLD,
 )
 PILL_STYLE = ParagraphStyle(
     "ExportPill", parent=_styles["Normal"], fontSize=8, leading=10, alignment=TA_LEFT,
-    fontName="Helvetica-Bold",
+    fontName=BASE_FONT_BOLD,
 )
 
 
@@ -100,7 +125,7 @@ def _draw_header_footer(canvas, doc) -> None:
             mask="auto",
         )
 
-    canvas.setFont("Helvetica", 8)
+    canvas.setFont(BASE_FONT, 8)
     canvas.setFillColor(MUTED)
     canvas.drawString(doc.leftMargin, 12 * mm, f"Generated by heap on {date.today().isoformat()}")
     # The "Page X of Y" string is drawn by _NumberedCanvas once the total is known.
@@ -128,7 +153,7 @@ class _NumberedCanvas(_canvas.Canvas):
 
     def _draw_page_number(self, total: int) -> None:
         self.saveState()
-        self.setFont("Helvetica", 8)
+        self.setFont(BASE_FONT, 8)
         self.setFillColor(MUTED)
         self.drawRightString(
             self._pagesize[0] - _SIDE_MARGIN,
@@ -173,14 +198,14 @@ def _table(
     style = [
         ("BACKGROUND", (0, 0), (-1, 0), PRIMARY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, 0), BASE_FONT_BOLD),
+        ("FONTNAME", (0, 1), (-1, -1), BASE_FONT),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("LEFTPADDING", (0, 0), (-1, -1), 7),
         ("RIGHTPADDING", (0, 0), (-1, -1), 7),
         ("LINEBELOW", (0, 0), (-1, -1), 0.5, BORDER),
-        ("LINEBELOW", (0, 0), (-1, 0), 0, PRIMARY),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, SURFACE]),
         ("TEXTCOLOR", (0, 1), (-1, -1), FOREGROUND),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -196,7 +221,37 @@ def _user_name(user) -> str:
 
 
 def _money(amount) -> str:
-    return f"${amount:,.2f}"
+    sign = "-" if amount < 0 else ""
+    return f"{sign}${abs(amount):,.2f}"
+
+
+def humanize(name) -> str:
+    """Turn a raw snake_case code into a readable label (food_dining -> Food Dining)."""
+    if name is None:
+        return ""
+    return str(name).replace("_", " ").title()
+
+
+def _completed(status_name) -> bool:
+    return (status_name or "").strip().lower() == "completed"
+
+
+def compute_transaction_totals(transactions: list, user_id: int) -> tuple[float, float, float]:
+    """Sum money that actually moved: completed transactions only. Returns
+    (total_in, total_out, net). Cancelled/failed/pending rows are excluded so
+    the summary band never counts money that never settled."""
+    total_in = 0
+    total_out = 0
+    for txn in transactions:
+        status = txn.status.name if txn.status else ""
+        if not _completed(status):
+            continue
+        direction, _ = _counterparty(txn, user_id)
+        if direction == "+":
+            total_in += txn.amount
+        else:
+            total_out += txn.amount
+    return total_in, total_out, total_in - total_out
 
 
 def _hex(color) -> str:
@@ -326,19 +381,12 @@ def build_transactions_pdf(
         ),
     ]
 
-    total_in = 0
-    total_out = 0
     table_rows = []
     status_styles: list = []
     for index, txn in enumerate(transactions):
         direction, counterparty = _counterparty(txn, user.user_id)
         amount = txn.amount
-        if direction == "+":
-            total_in += amount
-            amount_color = INCOMING
-        else:
-            total_out += amount
-            amount_color = OUTGOING
+        amount_color = INCOMING if direction == "+" else OUTGOING
 
         txn_type = txn.transaction_type.name if txn.transaction_type else "transfer"
         category = txn.category.name if txn.category else "Uncategorised"
@@ -350,12 +398,12 @@ def build_transactions_pdf(
             AMOUNT_STYLE,
         )
         status_para = Paragraph(
-            f'<font color="{_hex(fg)}">{status.title()}</font>', PILL_STYLE
+            f'<font color="{_hex(fg)}">{humanize(status)}</font>', PILL_STYLE
         )
         table_rows.append([
             Paragraph(txn.created_at.strftime("%b %d, %Y"), CELL_STYLE),
-            Paragraph(_truncate(txn_type.title(), 18), CELL_STYLE),
-            Paragraph(_truncate(category, 20), CELL_STYLE),
+            Paragraph(_truncate(humanize(txn_type), 18), CELL_STYLE),
+            Paragraph(_truncate(humanize(category), 20), CELL_STYLE),
             Paragraph(_truncate(counterparty, 30), CELL_STYLE),
             amount_para,
             status_para,
@@ -363,18 +411,20 @@ def build_transactions_pdf(
         row = index + 1  # +1 for header row
         status_styles.append(("BACKGROUND", (5, row), (5, row), bg))
 
-    net = total_in - total_out
+    total_in, total_out, net = compute_transaction_totals(transactions, user.user_id)
     flowables.append(_summary_band(shown_count, total_in, total_out, net))
-    flowables.append(Spacer(1, 8))
+    flowables.append(Spacer(1, 6))
+
+    caption = "Totals cover completed transactions only."
+    if shown_count < total_count:
+        caption += (
+            f" This export is capped at the most recent {shown_count} of "
+            f"{total_count} matching transactions."
+        )
+    flowables.append(Paragraph(caption, NOTE_STYLE))
 
     if context_line:
         flowables.append(Paragraph(context_line, CONTEXT_STYLE))
-    if shown_count < total_count:
-        flowables.append(
-            Paragraph(
-                f"Showing the most recent {shown_count} of {total_count} transactions.", NOTE_STYLE
-            )
-        )
     flowables.append(Spacer(1, 6))
 
     if table_rows:
@@ -418,9 +468,9 @@ def build_monthly_report_pdf(
             net = income - expense
             rows.append([
                 point["period"],
-                f"${income:,.2f}",
-                f"${expense:,.2f}",
-                f"${net:,.2f}",
+                _money(income),
+                _money(expense),
+                _money(net),
             ])
         flowables.append(
             _table(
@@ -436,8 +486,8 @@ def build_monthly_report_pdf(
     if category_breakdown:
         rows = [
             [
-                item["name"] if item["name"] is not None else "Uncategorised",
-                f"${item['total']:,.2f}",
+                humanize(item["name"]) if item["name"] is not None else "Uncategorised",
+                _money(item["total"]),
                 str(item["count"]),
             ]
             for item in category_breakdown

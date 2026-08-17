@@ -11,6 +11,8 @@ from services.export.pdf_export import (
     build_monthly_report_pdf,
     build_transactions_pdf,
     build_wallet_summary_pdf,
+    compute_transaction_totals,
+    humanize,
 )
 
 
@@ -52,10 +54,35 @@ def _is_pdf(data: bytes) -> bool:
 
 def test_money_and_truncate_helpers():
     assert _money(1234.5) == "$1,234.50"
+    assert _money(0) == "$0.00"
+    # Negative amounts read as -$X.XX, not $-X.XX.
+    assert _money(-2889.8) == "-$2,889.80"
     assert _truncate("short", 10) == "short"
     long = _truncate("a very long counterparty name that overflows", 20)
     assert len(long) <= 20
     assert long.endswith("\u2026")
+
+
+def test_humanize_snake_case():
+    assert humanize("food_dining") == "Food Dining"
+    assert humanize("shopping") == "Shopping"
+    assert humanize(None) == ""
+
+
+def test_totals_count_completed_only():
+    user = _make_user(1)
+    txns = [
+        _txn(user_id=1, outgoing=True, amount=40, status="completed"),
+        _txn(user_id=1, outgoing=False, amount=100, status="pending"),
+        _txn(user_id=1, outgoing=True, amount=10, status="failed"),
+        _txn(user_id=1, outgoing=False, amount=25, status="completed"),
+        _txn(user_id=1, outgoing=True, amount=5, status="cancelled"),
+    ]
+    total_in, total_out, net = compute_transaction_totals(txns, user.user_id)
+    # Only the two completed rows count: +25 in, -40 out.
+    assert total_in == 25
+    assert total_out == 40
+    assert net == -15
 
 
 def test_status_palette_known_and_default():
@@ -81,6 +108,9 @@ def test_transactions_pdf_renders_with_totals():
         _txn(user_id=1, outgoing=False, amount=100, status="pending"),
         _txn(user_id=1, outgoing=True, amount=10, status="failed"),
     ]
+    # The pending +100 and failed -10 must be excluded from the money totals.
+    total_in, total_out, net = compute_transaction_totals(txns, user.user_id)
+    assert (total_in, total_out, net) == (0, 40, -40)
     pdf = build_transactions_pdf(
         user, txns, total_count=3, shown_count=3, context_line="Filters: All transactions \u00b7 Newest first"
     )

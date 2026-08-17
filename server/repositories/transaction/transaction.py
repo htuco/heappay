@@ -9,6 +9,7 @@ from models.card import Card
 from models.refund_request_detail import RefundRequestDetail
 from models.request import Request
 from models.transaction import Transaction
+from models.transaction_category import TransactionCategory
 from models.user import User
 from models.user_role import UserRole
 from models.transaction_status import TransactionStatus
@@ -845,8 +846,6 @@ class TransactionRepository:
         return self._db.execute(stmt).scalar_one_or_none()
 
     def get_category_name_by_id(self, category_id: int) -> str | None:
-        from models.transaction_category import TransactionCategory
-
         stmt = select(TransactionCategory.name).where(
             TransactionCategory.transaction_category_id == category_id
         )

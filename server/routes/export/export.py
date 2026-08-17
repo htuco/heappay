@@ -13,6 +13,7 @@ from services.export.pdf_export import (
     build_monthly_report_pdf,
     build_transactions_pdf,
     build_wallet_summary_pdf,
+    humanize,
 )
 from services.transaction.transaction import (
     TransactionCategoryNotFoundError,
@@ -53,11 +54,11 @@ def _build_transactions_context_line(
 ) -> str:
     parts: list[str] = []
     if labels.get("status"):
-        parts.append(f"Status: {labels['status'].title()}")
+        parts.append(f"Status: {humanize(labels['status'])}")
     if labels.get("type"):
-        parts.append(f"Type: {labels['type'].title()}")
+        parts.append(f"Type: {humanize(labels['type'])}")
     if labels.get("category"):
-        parts.append(f"Category: {labels['category']}")
+        parts.append(f"Category: {humanize(labels['category'])}")
     if not parts:
         parts.append("All transactions")
     date_range = _format_date_range(transactions or [])
