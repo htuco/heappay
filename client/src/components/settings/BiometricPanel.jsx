@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Fingerprint } from 'lucide-react'
 
 import VerificationMethodRow from '@/components/settings/VerificationMethodRow'
 import { Button } from '@/components/ui/button'
@@ -126,7 +125,6 @@ export default function BiometricPanel() {
 			<FormBanner variant="error" message={error} />
 
 			<VerificationMethodRow
-				icon={Fingerprint}
 				label="Face ID / fingerprint"
 				active={enabled}
 				hint={
@@ -141,7 +139,6 @@ export default function BiometricPanel() {
 						onClick={enabled ? handleDisable : handleEnable}
 						disabled={isBusy}
 					>
-						<Fingerprint className="h-4 w-4" />
 						{isEnrolling
 							? 'Scanning...'
 							: isDisabling

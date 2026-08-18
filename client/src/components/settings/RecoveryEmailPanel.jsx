@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Clock3, Mail, RefreshCw, Trash2, X } from 'lucide-react'
+import { CheckCircle2, Clock3, X } from 'lucide-react'
 
+import IconRow from '@/components/settings/IconRow'
+import StatusPill from '@/components/settings/StatusPill'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import { Input } from '@/components/ui/input'
@@ -49,7 +51,7 @@ function EmailModal({ title, subtitle, initialEmail = '', submitLabel, onClose, 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-xs"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
@@ -139,7 +141,7 @@ function RemoveModal({ totpEnabled, onClose, onRemoved }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-xs"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
@@ -282,47 +284,40 @@ export default function RecoveryEmailPanel({
       <FormBanner variant="success" message={success} />
       <FormBanner variant="error" message={error} />
 
-      <div className="rounded-surface border border-border bg-emphasis px-4 py-4">
-        <div className="flex min-w-0 gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-primary/20 bg-primary/10 text-primary">
-            <Mail className="h-4 w-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-card-foreground">Recovery email</p>
-              {hasRecovery ? (
-                recoveryEmailVerified ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Verified
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                    <Clock3 className="h-3 w-3" />
-                    Pending verification
-                  </span>
-                )
-              ) : null}
-            </div>
-            <p className="mt-1 text-sm font-medium text-card-foreground">
-              {displayEmail || 'None set'}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Used for password reset and account alerts. Your login email stays the same.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap">
-          {!hasRecovery ? (
+      <IconRow
+        label="Recovery email"
+        pill={
+          hasRecovery ? (
+            recoveryEmailVerified ? (
+              <StatusPill tone="success" icon={CheckCircle2}>
+                Verified
+              </StatusPill>
+            ) : (
+              <StatusPill tone="warning" icon={Clock3}>
+                Pending verification
+              </StatusPill>
+            )
+          ) : (
+            <StatusPill>None set</StatusPill>
+          )
+        }
+        detail={hasRecovery ? displayEmail : undefined}
+        hint={
+          !hasRecovery
+            ? 'A separate inbox you can reach if your login email is unavailable.'
+            : isPending
+              ? 'Until verified, this address is not used for password reset or alerts.'
+              : 'Used for password reset and account alerts. Your login email stays the same.'
+        }
+        action={
+          !hasRecovery ? (
             <Button className="w-full sm:w-auto" onClick={() => setModal('email')}>
-              <Mail className="h-4 w-4" />
               Add recovery email
             </Button>
           ) : (
-            <>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
               <Button variant="outline" className="w-full sm:w-auto" onClick={() => setModal('email')}>
-                Change recovery email
+                Change
               </Button>
               {isPending ? (
                 <Button
@@ -331,8 +326,7 @@ export default function RecoveryEmailPanel({
                   onClick={handleResend}
                   disabled={isResending}
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  {isResending ? 'Sending...' : 'Resend verification link'}
+                  {isResending ? 'Sending...' : 'Resend link'}
                 </Button>
               ) : null}
               <Button
@@ -340,23 +334,12 @@ export default function RecoveryEmailPanel({
                 className="w-full sm:w-auto"
                 onClick={() => setModal('remove')}
               >
-                <Trash2 className="h-4 w-4" />
                 Remove
               </Button>
-            </>
-          )}
-        </div>
-
-        {!hasRecovery ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Add a separate inbox you can reach if your login email is unavailable.
-          </p>
-        ) : isPending ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Until verified, this address is not used for password reset or alerts.
-          </p>
-        ) : null}
-      </div>
+            </div>
+          )
+        }
+      />
     </>
   )
 }

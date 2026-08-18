@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Camera, UserRound } from 'lucide-react'
+import { Camera, Mail } from 'lucide-react'
 
 import AvatarUploadModal from '@/components/settings/AvatarUploadModal'
 import LoginEmailPanel from '@/components/settings/LoginEmailPanel'
-import SettingsCard from '@/components/settings/SettingsCard'
+import SettingsSection from '@/components/settings/SettingsSection'
 import UserAvatar from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,6 +48,13 @@ export default function ProfileSection() {
     })
   }
 
+  function handleReset() {
+    if (saving) return
+    setFirstName(savedFirstName)
+    setLastName(savedLastName)
+    setError('')
+  }
+
   async function handleSave() {
     if (!isDirty || saving) return
     setSaving(true)
@@ -68,9 +75,8 @@ export default function ProfileSection() {
   }
 
   return (
-    <SettingsCard
+    <SettingsSection
       title="Profile"
-      icon={UserRound}
       description="Manage your personal information."
     >
       <AvatarUploadModal
@@ -100,9 +106,6 @@ export default function ProfileSection() {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-card-foreground">{displayName || 'Your profile'}</p>
             <p className="truncate text-xs text-muted-foreground">{email || 'No email loaded'}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Tap your photo to upload a new one.
-            </p>
           </div>
         </div>
 
@@ -133,21 +136,29 @@ export default function ProfileSection() {
           </div>
         </div>
 
-        <LoginEmailPanel />
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Account email
+          </p>
+          <LoginEmailPanel icon={Mail} />
+        </div>
 
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
-        <div className="flex justify-end border-t border-border/60 pt-4">
+        <div className="flex flex-col justify-end gap-2 border-t border-border pt-4 sm:flex-row">
           <Button
             type="button"
-            className="w-full px-5 sm:w-auto"
-            onClick={handleSave}
+            variant="ghost"
+            onClick={handleReset}
             disabled={!isDirty || saving}
           >
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={!isDirty || saving}>
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
         </div>
       </div>
-    </SettingsCard>
+    </SettingsSection>
   )
 }

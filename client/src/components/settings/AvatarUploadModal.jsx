@@ -178,7 +178,7 @@ export default function AvatarUploadModal({ isOpen, onClose, onUpload }) {
               <p className="truncate text-xs font-medium text-card-foreground" title={selectedFile.name}>
                 {selectedFile.name}
               </p>
-              <Button type="button" variant="outline" size="sm" onClick={openPicker} disabled={loading}>
+              <Button type="button" variant="outline" onClick={openPicker} disabled={loading}>
                 Choose a different file
               </Button>
             </div>
@@ -189,13 +189,7 @@ export default function AvatarUploadModal({ isOpen, onClose, onUpload }) {
               </span>
               <p className="text-sm font-semibold text-card-foreground">Drop your image here</p>
               <p className="text-xs text-muted-foreground">or</p>
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-2"
-                onClick={openPicker}
-                disabled={loading}
-              >
+              <Button type="button" variant="outline" onClick={openPicker} disabled={loading}>
                 <FolderOpen className="h-4 w-4" aria-hidden />
                 Open folder
               </Button>
