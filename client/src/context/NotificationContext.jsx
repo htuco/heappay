@@ -25,6 +25,7 @@ import { useAccountEventsWatcher } from './notifications/useAccountEventsWatcher
 import { useCardExpiryWatcher } from './notifications/useCardExpiryWatcher'
 import { useCardExpirySweepWatcher } from './notifications/useCardExpirySweepWatcher'
 import { usePendingRefundWatcher } from './notifications/usePendingRefundWatcher'
+import { useIncomingMoneyRequestWatcher } from './notifications/useIncomingMoneyRequestWatcher'
 import { useRecurringPaymentWatcher } from './notifications/useRecurringPaymentWatcher'
 import { subscribeDataChange, DATA_CHANGE_KINDS } from '@/utils/dataEvents'
 
@@ -175,6 +176,7 @@ export function NotificationProvider({ children }) {
 	useCardExpiryWatcher({ userId, notify })
 	useCardExpirySweepWatcher({ userId, notify, selfActionRef: selfCardActionRef })
 	usePendingRefundWatcher({ userId, notify })
+	useIncomingMoneyRequestWatcher({ userId, notify })
 	useRecurringPaymentWatcher({ userId, notify })
 
 	const markRead = useCallback((id) => {

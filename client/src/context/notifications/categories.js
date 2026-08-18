@@ -7,6 +7,8 @@ export const CATEGORIES = Object.freeze({
 	REFUND_REQUESTED: 'refund_requested',
 	REFUND_APPROVED: 'refund_approved',
 	REFUND_DECLINED: 'refund_declined',
+	MONEY_REQUEST_SENT: 'money_request_sent',
+	MONEY_REQUEST_RECEIVED: 'money_request_received',
 	CARD_BLOCKED: 'card_blocked',
 	CARD_UNBLOCKED: 'card_unblocked',
 	CARD_EXPIRING: 'card_expiring',
