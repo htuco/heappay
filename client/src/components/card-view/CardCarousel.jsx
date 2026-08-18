@@ -8,6 +8,7 @@ import {
   stackStyle,
   SWIPE_THRESHOLD,
 } from '@/utils/cardCarousel.utils'
+import { getPrefersReducedMotion } from '@/utils/prefersReducedMotion'
 
 const CAROUSEL_STAGE_CLASS =
   // overflow-visible so the active card's scale + shadow render fully at every
@@ -26,11 +27,6 @@ const CAROUSEL_STAGE_CLASS =
 // the stage's padding instead of bleeding past its edges.
 const CAROUSEL_CARD_WRAPPER =
   'absolute left-1/2 top-1/2 w-[calc(100%-8px)]'
-
-function getPrefersReducedMotion() {
-  if (typeof window === 'undefined') return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
 
 export default function CardCarousel({ items, activeIndex: controlledIndex, onChangeIndex }) {
   const [reduceMotion] = useState(getPrefersReducedMotion)
