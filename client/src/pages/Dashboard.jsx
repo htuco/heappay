@@ -10,6 +10,7 @@ import QuickActions from '@/components/dashboard/QuickActions'
 import DashboardLoadingOverlay from '@/components/dashboard/DashboardLoadingOverlay'
 import PaymentCard from '@/components/payment-card/PaymentCard'
 import PaymentWizard from '@/components/payment/PaymentWizard'
+import RequestMoneyModal from '@/components/payment/RequestMoneyModal'
 import TopUpModal from '@/components/payment/TopUpModal'
 import AddCardModal from '@/components/AddCardModal'
 import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
@@ -126,6 +127,7 @@ export default function DashboardPage() {
   } = useTransactions({ pageSize: 5 })
   const [typeNameById, setTypeNameById] = useState({})
   const [paymentWizardOpen, setPaymentWizardOpen] = useState(false)
+  const [requestMoneyOpen, setRequestMoneyOpen] = useState(false)
   const [topUpOpen, setTopUpOpen] = useState(false)
   const [addCardOpen, setAddCardOpen] = useState(false)
   const { addCard, isSaving, saveError, clearSaveError } = useWalletCards()
@@ -273,6 +275,7 @@ export default function DashboardPage() {
         <div className="min-w-0">
           <QuickActions
             onSend={() => setPaymentWizardOpen(true)}
+            onRequest={() => setRequestMoneyOpen(true)}
             onTopUp={() => setTopUpOpen(true)}
             onAddNew={() => setAddCardOpen(true)}
           />
@@ -307,6 +310,10 @@ export default function DashboardPage() {
         isOpen={paymentWizardOpen}
         onClose={() => setPaymentWizardOpen(false)}
         initialCardId={mainCardId}
+      />
+      <RequestMoneyModal
+        isOpen={requestMoneyOpen}
+        onClose={() => setRequestMoneyOpen(false)}
       />
       <TopUpModal
         isOpen={topUpOpen}
