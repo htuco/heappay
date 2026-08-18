@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { KeyRound, Lock, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
 import VerificationMethodRow from '@/components/settings/VerificationMethodRow'
 import { Button } from '@/components/ui/button'
@@ -89,7 +89,7 @@ function PinModal({ mode, onClose, onSaved }) {
 
 	return (
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+			className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-xs"
 			onClick={(event) => {
 				if (event.target === event.currentTarget) onClose()
 			}}
@@ -282,7 +282,6 @@ export default function AppPinPanel() {
 			<FormBanner variant="error" message={error} />
 
 			<VerificationMethodRow
-				icon={Lock}
 				label="App PIN"
 				active={enabled}
 				hint={
@@ -304,12 +303,11 @@ export default function AppPinPanel() {
 							}}
 							disabled={isLoadingStatus || status.locked}
 						>
-							<KeyRound className="h-4 w-4" />
 							{enabled ? 'Change PIN' : 'Set PIN'}
 						</Button>
 						{enabled && (
 							<Button
-								variant="destructive"
+								variant="outline"
 								className="w-full sm:w-auto"
 								onClick={() => {
 									setSuccess('')

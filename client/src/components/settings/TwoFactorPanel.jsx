@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ShieldOff, Smartphone, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import VerificationMethodRow from '@/components/settings/VerificationMethodRow'
@@ -63,7 +63,7 @@ function SetupModal({ onClose, onEnabled }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay backdrop-blur-xs p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -201,7 +201,7 @@ function DisableModal({ onClose, onDisabled }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay backdrop-blur-xs p-4">
       <div className="w-full max-w-sm rounded-panel border border-border bg-popover p-6 shadow-xl">
         <h3 className="text-base font-semibold text-card-foreground mb-1">Disable two-factor authentication</h3>
         <p className="text-sm text-muted-foreground mb-5">
@@ -261,7 +261,6 @@ export default function TwoFactorPanel({ enabled, onStatusChange }) {
       )}
 
       <VerificationMethodRow
-        icon={Smartphone}
         label="Authenticator app"
         active={enabled}
         hint={enabled
@@ -271,15 +270,13 @@ export default function TwoFactorPanel({ enabled, onStatusChange }) {
           enabled ? (
             <Button
               variant="outline"
-              className="w-full border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50 sm:w-auto"
+              className="w-full sm:w-auto"
               onClick={() => setShowDisable(true)}
             >
-              <ShieldOff className="h-4 w-4" />
               Disable
             </Button>
           ) : (
             <Button className="w-full sm:w-auto" onClick={() => setShowSetup(true)}>
-              <Smartphone className="h-4 w-4" />
               Enable
             </Button>
           )

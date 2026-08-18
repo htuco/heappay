@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Clock3, Mail, X } from 'lucide-react'
+import { CheckCircle2, Clock3, X } from 'lucide-react'
 
+import IconRow from '@/components/settings/IconRow'
+import StatusPill from '@/components/settings/StatusPill'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import { Input } from '@/components/ui/input'
@@ -38,7 +40,7 @@ function ChangeEmailModal({ currentEmail, onClose, onSubmit }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-xs"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
@@ -93,7 +95,13 @@ function ChangeEmailModal({ currentEmail, onClose, onSubmit }) {
   )
 }
 
-export default function LoginEmailPanel() {
+/**
+ * The login-email row. Rendered in two places, as the design calls for: under
+ * Profile's "Account email" group (with the mail icon) and inside Security's
+ * "Password & recovery" (icon-less, with the sign-in hint). Both instances own
+ * their own change-email modal, so neither depends on the other.
+ */
+export default function LoginEmailPanel({ icon, hint }) {
   const { user, updateProfile } = useAuth()
   const [modalOpen, setModalOpen] = useState(false)
   const [success, setSuccess] = useState('')
@@ -111,7 +119,7 @@ export default function LoginEmailPanel() {
   }
 
   return (
-    <div className="bg-emphasis rounded-surface border border-border p-4">
+    <>
       {modalOpen && (
         <ChangeEmailModal
           currentEmail={email}
@@ -120,55 +128,43 @@ export default function LoginEmailPanel() {
         />
       )}
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Mail className="h-4 w-4" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-card-foreground">Login email</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">{email ? maskEmail(email) : 'No email loaded'}</p>
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded-pill border border-border px-2 py-0.5 text-xs font-medium">
-              {isVerified ? (
-                <>
-                  <CheckCircle2 className="h-3 w-3 text-success" />
-                  <span className="text-success">Verified</span>
-                </>
-              ) : (
-                <>
-                  <Clock3 className="h-3 w-3 text-warning" />
-                  <span className="text-warning">Verification required</span>
-                </>
-              )}
-            </div>
-            {!isVerified && (
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Verify this address to unlock payments, cards, and other money actions.
-              </p>
-            )}
-          </div>
-        </div>
+      <IconRow
+        icon={icon}
+        label="Login email"
+        pill={
+          isVerified ? (
+            <StatusPill tone="success" icon={CheckCircle2}>
+              Verified
+            </StatusPill>
+          ) : (
+            <StatusPill tone="warning" icon={Clock3}>
+              Verification required
+            </StatusPill>
+          )
+        }
+        detail={email ? maskEmail(email) : 'No email loaded'}
+        hint={
+          isVerified
+            ? hint
+            : 'Verify this address to unlock payments, cards, and other money actions.'
+        }
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            disabled={!user}
+            onClick={() => {
+              setSuccess('')
+              setModalOpen(true)
+            }}
+          >
+            Change email
+          </Button>
+        }
+      />
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full sm:w-auto"
-          disabled={!user}
-          onClick={() => {
-            setSuccess('')
-            setModalOpen(true)
-          }}
-        >
-          Change email
-        </Button>
-      </div>
-
-      {success ? (
-        <div className="mt-4">
-          <FormBanner variant="success" message={success} />
-        </div>
-      ) : null}
-    </div>
+      {success ? <FormBanner variant="success" message={success} /> : null}
+    </>
   )
 }
