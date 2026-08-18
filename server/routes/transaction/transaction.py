@@ -22,6 +22,8 @@ from schemas.transaction import (
     TransactionCreate,
     CategoryBreakdownItem,
     CategoryBreakdownResponse,
+    CategoryTimeseriesResponse,
+    CategoryTimeseriesSeries,
     TransactionPartyResponse,
     TransactionPatch,
     TransactionResponse,
@@ -433,6 +435,42 @@ def get_transaction_category_breakdown(
         success=True,
         message=f"Spending by category for the last {months} month(s).",
         data=CategoryBreakdownResponse(items=items, months=months),
+    )
+
+
+@router.get(
+    "/summary/by-category/timeseries",
+    response_model=ApiResponse[CategoryTimeseriesResponse],
+    summary="Month-on-month outgoing spend per category for the current user.",
+)
+def get_transaction_category_timeseries(
+    range_: str = Query(
+        default="90d",
+        alias="range",
+        pattern="^(7d|30d|90d|1y)$",
+        description="Trailing window: 7d | 30d | 90d | 1y.",
+    ),
+    user_id: int = Depends(get_current_user_id),
+    service: TransactionService = Depends(get_transaction_service),
+) -> ApiResponse[CategoryTimeseriesResponse]:
+    data = service.get_category_timeseries_for_user(user_id=user_id, range_=range_)
+    series = [
+        CategoryTimeseriesSeries(
+            category_id=s["category_id"],
+            name=s["name"],
+            total=s["total"],
+            points=s["points"],
+        )
+        for s in data["series"]
+    ]
+    return ApiResponse[CategoryTimeseriesResponse](
+        success=True,
+        message=f"Spending by category over the last {range_}.",
+        data=CategoryTimeseriesResponse(
+            range=data["range"],
+            periods=data["periods"],
+            series=series,
+        ),
     )
 
 

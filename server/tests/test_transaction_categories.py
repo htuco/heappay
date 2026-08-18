@@ -114,6 +114,25 @@ class FakeTransactionService:
             {"category_id": 1, "name": "groceries", "total": Decimal("80.00"), "count": 4},
             {"category_id": None, "name": None, "total": Decimal("20.00"), "count": 1},
         ]
+        self.timeseries_range = None
+        self.timeseries = {
+            "range": "90d",
+            "periods": ["2026-05", "2026-06", "2026-07"],
+            "series": [
+                {
+                    "category_id": 1,
+                    "name": "groceries",
+                    "total": Decimal("80.00"),
+                    "points": [Decimal("30.00"), Decimal("20.00"), Decimal("30.00")],
+                },
+                {
+                    "category_id": None,
+                    "name": "Uncategorised",
+                    "total": Decimal("20.00"),
+                    "points": [Decimal("0.00"), Decimal("20.00"), Decimal("0.00")],
+                },
+            ],
+        }
 
     def list_for_user(self, **kwargs):
         self.list_for_user_kwargs = kwargs
@@ -135,6 +154,10 @@ class FakeTransactionService:
 
     def get_category_breakdown_for_user(self, *, user_id, months):
         return self.breakdown
+
+    def get_category_timeseries_for_user(self, *, user_id, range_):
+        self.timeseries_range = range_
+        return self.timeseries
 
 
 def _client(service: FakeTransactionService | None = None) -> TestClient:
@@ -295,3 +318,81 @@ def test_breakdown_returns_items_with_uncategorised_bucket() -> None:
     assert "groceries" in names
     total = sum(Decimal(i["total"]) for i in data["items"])
     assert total == Decimal("100.00")
+
+
+# --------------------------------------------------------------------------- #
+# Spending-by-category time series (analytics trends)
+# --------------------------------------------------------------------------- #
+def test_timeseries_returns_periods_and_series() -> None:
+    service = FakeTransactionService()
+    client = _client(service)
+    response = client.get("/transactions/summary/by-category/timeseries?range=90d")
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["range"] == "90d"
+    assert data["periods"] == ["2026-05", "2026-06", "2026-07"]
+    # Each series' points line up with the periods axis.
+    for series in data["series"]:
+        assert len(series["points"]) == len(data["periods"])
+    names = [s["name"] for s in data["series"]]
+    assert "groceries" in names
+    assert "Uncategorised" in names
+
+
+def test_timeseries_defaults_range_and_validates() -> None:
+    service = FakeTransactionService()
+    client = _client(service)
+
+    # Default when the param is omitted.
+    assert client.get("/transactions/summary/by-category/timeseries").status_code == 200
+    assert service.timeseries_range == "90d"
+
+    # The '7d'|'30d'|'90d'|'1y' vocabulary is threaded through untouched.
+    client.get("/transactions/summary/by-category/timeseries?range=1y")
+    assert service.timeseries_range == "1y"
+
+    # Anything outside the vocabulary is rejected by the route pattern.
+    assert (
+        client.get("/transactions/summary/by-category/timeseries?range=5d").status_code
+        == 422
+    )
+
+
+def test_build_category_series_zero_fills_and_sorts() -> None:
+    from services.transaction.transaction import build_category_series
+
+    periods = ["2026-05", "2026-06", "2026-07"]
+    rows = [
+        # groceries spends only in May and July — June must zero-fill.
+        {"period": "2026-05", "category_id": 1, "name": "groceries", "total": Decimal("30.00")},
+        {"period": "2026-07", "category_id": 1, "name": "groceries", "total": Decimal("30.00")},
+        # A bigger category to prove descending sort by total.
+        {"period": "2026-06", "category_id": 2, "name": "housing", "total": Decimal("100.00")},
+        # Null category surfaces as "Uncategorised".
+        {"period": "2026-06", "category_id": None, "name": None, "total": Decimal("5.00")},
+    ]
+    series = build_category_series(rows, periods)
+
+    # Sorted by total spend descending.
+    assert [s["name"] for s in series] == ["housing", "groceries", "Uncategorised"]
+
+    groceries = next(s for s in series if s["name"] == "groceries")
+    assert groceries["points"] == [Decimal("30.00"), Decimal("0"), Decimal("30.00")]
+    assert groceries["total"] == Decimal("60.00")
+
+    uncategorised = next(s for s in series if s["category_id"] is None)
+    assert uncategorised["name"] == "Uncategorised"
+    assert uncategorised["points"] == [Decimal("0"), Decimal("5.00"), Decimal("0")]
+
+
+def test_month_axis_spans_window_inclusive() -> None:
+    from services.transaction.transaction import _month_axis
+
+    # A ~90 day window spans at most 4 calendar months and is chronological.
+    axis = _month_axis(90)
+    assert axis == sorted(axis)
+    assert 3 <= len(axis) <= 4
+    # Each label is a well-formed "YYYY-MM".
+    for label in axis:
+        year, month = label.split("-")
+        assert len(year) == 4 and 1 <= int(month) <= 12

@@ -33,6 +33,58 @@ from settings import get_settings
 from utils.totp import decrypt_secret, verify_totp_code
 
 
+# Trailing-window vocabulary shared with /fx/insight, mapped to a day count for
+# the category time-series. 1y is treated as 365 days (calendar-month buckets
+# absorb the leap-day difference).
+_TIMESERIES_RANGE_DAYS = {"7d": 7, "30d": 30, "90d": 90, "1y": 365}
+
+
+def _month_axis(days: int) -> list[str]:
+    """Chronological "YYYY-MM" labels from the window start to the current month
+    (inclusive), so months with no spend still appear on the chart axis."""
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=days)
+    months: list[str] = []
+    year, month = start.year, start.month
+    while (year, month) <= (now.year, now.month):
+        months.append(f"{year:04d}-{month:02d}")
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+    return months
+
+
+def build_category_series(rows: list[dict], periods: list[str]) -> list[dict]:
+    """Pivot flat (month, category) spend rows into per-category series aligned
+    to ``periods``.
+
+    Each returned series carries a ``points`` list the same length as
+    ``periods`` (0 for a month with no spend in that category), a running
+    ``total``, and surfaces the null-category bucket as "Uncategorised". Series
+    are sorted by total spend descending so the biggest categories read first.
+    """
+    period_index = {period: i for i, period in enumerate(periods)}
+    groups: dict = {}
+    for row in rows:
+        key = row["category_id"]
+        group = groups.get(key)
+        if group is None:
+            group = {
+                "category_id": row["category_id"],
+                "name": row["name"] if row["name"] is not None else "Uncategorised",
+                "total": Decimal("0"),
+                "points": [Decimal("0") for _ in periods],
+            }
+            groups[key] = group
+        amount = row["total"] or Decimal("0")
+        group["total"] += amount
+        idx = period_index.get(row["period"])
+        if idx is not None:
+            group["points"][idx] += amount
+    return sorted(groups.values(), key=lambda g: g["total"], reverse=True)
+
+
 class TransactionNotFoundError(Exception):
     """Transaction does not exist."""
 
@@ -263,6 +315,29 @@ class TransactionService:
         return self._repo.get_category_breakdown_for_user(
             user_id=user_id, months=months
         )
+
+    def get_category_timeseries_for_user(
+        self,
+        *,
+        user_id: int,
+        range_: str = "90d",
+    ) -> dict:
+        """
+        Month-on-month outgoing spend per category over the selected range.
+
+        Returns a chart-ready shape: a chronological ``periods`` axis plus one
+        ``series`` per category whose ``points`` line up with that axis (0 for a
+        month with no spend). Categories are sorted by total spend descending so
+        the biggest movers read first, matching the breakdown ordering. The
+        Uncategorised bucket (category_id null) surfaces as "Uncategorised".
+        """
+        days = _TIMESERIES_RANGE_DAYS.get(range_, _TIMESERIES_RANGE_DAYS["90d"])
+        rows = self._repo.get_category_timeseries_for_user(
+            user_id=user_id, days=days
+        )
+        periods = _month_axis(days)
+        series = build_category_series(rows, periods)
+        return {"range": range_, "periods": periods, "series": series}
 
     def list_for_card(
         self,

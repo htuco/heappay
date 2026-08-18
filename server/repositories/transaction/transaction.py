@@ -350,6 +350,62 @@ class TransactionRepository:
 
         return [dict(r) for r in self._db.execute(stmt).mappings().all()]
 
+    def get_category_timeseries_for_user(
+        self,
+        *,
+        user_id: int,
+        days: int,
+    ) -> list[dict]:
+        """
+        Monthly outgoing spend per category for the given user over the trailing
+        window of ``days``.
+
+        Same scope as ``get_category_breakdown_for_user`` (sender = money
+        leaving, completed only, Uncategorised bucket included) but bucketed by
+        calendar month, so the analytics page can chart month-on-month movement
+        per category. Returns one row per (month, category) pair; the caller
+        pivots these into per-category series aligned to a period axis.
+        """
+        from models.transaction_category import TransactionCategory
+
+        user_card_ids = (
+            select(Card.card_id).where(Card.user_id == user_id).scalar_subquery()
+        )
+        since = func.now() - text(f"INTERVAL '{int(days)} days'")
+        completed_id = self.get_status_id_by_name("completed")
+
+        period_col = func.to_char(
+            func.date_trunc("month", Transaction.created_at), "YYYY-MM"
+        )
+
+        filters = [
+            Transaction.created_at >= since,
+            Transaction.sender_card_id.in_(user_card_ids),
+        ]
+        if completed_id is not None:
+            filters.append(Transaction.status_id == completed_id)
+
+        stmt = (
+            select(
+                period_col.label("period"),
+                Transaction.category_id.label("category_id"),
+                TransactionCategory.name.label("name"),
+                func.coalesce(func.sum(Transaction.amount), Decimal("0")).label("total"),
+                func.count(Transaction.transaction_id).label("count"),
+            )
+            .select_from(Transaction)
+            .outerjoin(
+                TransactionCategory,
+                Transaction.category_id
+                == TransactionCategory.transaction_category_id,
+            )
+            .where(*filters)
+            .group_by(period_col, Transaction.category_id, TransactionCategory.name)
+            .order_by(period_col.asc())
+        )
+
+        return [dict(r) for r in self._db.execute(stmt).mappings().all()]
+
     def get_platform_stats(
         self,
         *,
