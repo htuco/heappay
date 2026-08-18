@@ -13,6 +13,7 @@ import PaymentWizard from '@/components/payment/PaymentWizard'
 import TopUpModal from '@/components/payment/TopUpModal'
 import AddCardModal from '@/components/AddCardModal'
 import { PageActionButton, PageActionSlot } from '@/components/ui/PageAction'
+import { useTour } from '@/context/tour/tour-context'
 import { useWalletCards } from '@/hooks/useWalletCards'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardCards } from '@/hooks/useDashboardCards'
@@ -100,6 +101,7 @@ function PaymentCardError() {
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const { startTour } = useTour()
   const { cards, isLoading, error, refetch } = useDashboardCards()
   const {
     formattedBalance,
@@ -187,18 +189,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/*
-        Placeholder for the guided product tour — it will walk a new user
-        through the wallet, payments and recurring surfaces. Disabled rather
-        than hidden so the slot is reserved and the affordance is discoverable;
-        follows the same "coming soon" pattern as the other unbuilt controls.
+        Opens the guided product tour — walks a new user through the wallet,
+        payments, recurring, contacts and settings surfaces. Re-runnable at any
+        time; the tour engine lives in a provider in Layout so it survives the
+        route changes it makes while stepping across pages.
       */}
       <PageActionSlot>
         <PageActionButton
           icon={Compass}
           label="Take a tour"
-          variant="outline"
-          disabled
-          title="A guided tour of Heap is coming soon."
+          onClick={startTour}
         />
       </PageActionSlot>
 
