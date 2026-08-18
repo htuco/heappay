@@ -21,7 +21,7 @@ const PAGE_META = {
   '/transactions': { title: 'Transaction History', subtitle: 'All payments, transfers, and refunds on your account.' },
   '/recurring': { title: 'Recurring Payments', subtitle: 'Manage all your recurring payments in one place.' },
   '/contacts': { title: 'Contacts', subtitle: 'People you pay often — send in two clicks, no card re-entry.' },
-  '/analytics': { title: 'Analytics', subtitle: 'Spending insights and trends — under construction.' },
+  '/analytics': { title: 'Analytics', subtitle: 'Where your money goes — spending by category and month-on-month trends.' },
   '/converter': { title: 'Currency Converter', subtitle: 'Get real-time exchange rates and convert currencies instantly.' },
   '/family': { title: 'Family', subtitle: 'Link and manage dependent accounts.' },
   '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
