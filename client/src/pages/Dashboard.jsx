@@ -208,7 +208,7 @@ export default function DashboardPage() {
           line up top and bottom — see .dashboard-hero-row in index.css, and keep the
           widths below in sync with --dashboard-hero-card-width. */}
       <section className="dashboard-hero-row grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="dashboard-balance">
           <TotalBalanceWidget
             totalBalance={formattedBalance}
             walletBalance={formattedWallet}
@@ -270,7 +270,7 @@ export default function DashboardPage() {
             <SpendingByCategory months={6} bare />
           </div>
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="dashboard-quick-actions">
           <QuickActions
             onSend={() => setPaymentWizardOpen(true)}
             onTopUp={() => setTopUpOpen(true)}
