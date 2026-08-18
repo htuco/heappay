@@ -4,9 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from repositories.request.request import RequestRepository
 from routes.dependencies import (
-    get_current_user_id,
     get_user_context,
-    require_admin,
     require_staff,
     require_verified_user,
 )
@@ -14,6 +12,9 @@ from schemas.pagination import Page
 from schemas.request import (
     CardFreezeRequestCreate,
     CardFreezeRequestDetailResponse,
+    MoneyRequestCreate,
+    MoneyRequestDetailResponse,
+    MoneyRequestPay,
     RefundRequestCreate,
     RefundRequestDetailResponse,
     RequestResponse,
@@ -28,13 +29,26 @@ from services.request.request import (
     ForbiddenError,
     FreezeRequestAlreadyPendingError,
     InsufficientBalanceError,
+    MoneyRequestAlreadyPendingError,
     NotRefundableError,
     RefundAlreadyExistsError,
     RequestNotFoundError,
     RequestNotPendingError,
     RequestService,
     RequestStatusNotFoundError,
+    RequesterNoCardError,
+    SelfRequestError,
+    TargetNotFoundError,
     TransactionNotFoundError,
+)
+from services.transaction.transaction import (
+    ApprovalRequiredError as TxApprovalRequiredError,
+    CardFrozenError as TxCardFrozenError,
+    CardNotFoundError as TxCardNotFoundError,
+    DuplicatePaymentError as TxDuplicatePaymentError,
+    ForbiddenError as TxForbiddenError,
+    InsufficientBalanceError as TxInsufficientBalanceError,
+    SpendingLimitExceededError as TxSpendingLimitExceededError,
 )
 from utils.transaction_privacy import mask_refund_detail
 from utils.audit_log import (
@@ -69,6 +83,12 @@ _CARD_NOT_FROZEN = "This card is not frozen."
 _FREEZE_PENDING = "A freeze request for this card is already under review."
 _UNFREEZE_PENDING = "An unfreeze request for this card is already under review."
 _CARD_STATUS_NOT_FOUND = "The frozen card status is not configured."
+_SELF_REQUEST = "You cannot request money from yourself."
+_TARGET_NOT_FOUND = "User not found."
+_MONEY_REQUEST_PENDING = "A money request to this user is already pending."
+_REQUESTER_NO_CARD = "The requester has no active card to receive this payment."
+_PAY_INSUFFICIENT_BALANCE = "Sender card has insufficient balance."
+_SPENDING_LIMIT_EXCEEDED = "This payment would exceed a spending limit."
 
 
 def get_request_service(db: Session = Depends(get_db)) -> RequestService:
@@ -133,6 +153,22 @@ def _to_response(req, *, mask_amounts: bool = False) -> RequestResponse:
             cardholder_name=card.cardholder_name if card is not None else None,
         )
 
+    money_detail = None
+    money_request = getattr(req, "money_request_detail", None)
+    if money_request is not None:
+        settled = getattr(money_request, "settled_transaction", None)
+        money_detail = MoneyRequestDetailResponse(
+            request_id=money_request.request_id,
+            amount=money_request.amount,
+            settled_transaction_id=money_request.settled_transaction_id,
+            requester_name=_user_name(req.requester),
+            target_name=_user_name(req.target),
+            requires_user_approval=bool(
+                getattr(settled, "requires_user_approval", False)
+            ),
+            user_approval_expires_at=getattr(settled, "user_approval_expires_at", None),
+        )
+
     request_type_name = None
     req_type = getattr(req, "request_type", None)
     if req_type is not None:
@@ -151,6 +187,173 @@ def _to_response(req, *, mask_amounts: bool = False) -> RequestResponse:
         resolved_at=req.resolved_at,
         refund_detail=detail,
         card_freeze_detail=freeze_detail,
+        money_request_detail=money_detail,
+    )
+
+
+@router.post(
+    "/money",
+    response_model=ApiResponse[RequestResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_money_request(
+    payload: MoneyRequestCreate,
+    user_id: int = Depends(require_verified_user),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.request_money(
+            requester_user_id=user_id,
+            target_user_id=payload.target_user_id,
+            amount=payload.amount,
+            note=payload.note,
+        )
+    except SelfRequestError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_SELF_REQUEST) from None
+    except TargetNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_TARGET_NOT_FOUND) from None
+    except MoneyRequestAlreadyPendingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_MONEY_REQUEST_PENDING
+        ) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Money request sent.",
+        data=_to_response(req),
+    )
+
+
+@router.get(
+    "/money/incoming",
+    response_model=ApiResponse[Page[RequestResponse]],
+    summary="List pending money requests addressed to the current user.",
+)
+def list_incoming_money_requests(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    user_id: int = Depends(require_verified_user),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[Page[RequestResponse]]:
+    items, total = service.list_incoming_money_requests(
+        user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+    )
+    data = Page[RequestResponse].build(
+        items=[_to_response(r) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return ApiResponse[Page[RequestResponse]](
+        success=True,
+        message=f"{total} incoming money request(s).",
+        data=data,
+    )
+
+
+@router.get(
+    "/money/outgoing",
+    response_model=ApiResponse[Page[RequestResponse]],
+    summary="List money requests the current user has sent.",
+)
+def list_outgoing_money_requests(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    user_id: int = Depends(require_verified_user),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[Page[RequestResponse]]:
+    items, total = service.list_outgoing_money_requests(
+        user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+    )
+    data = Page[RequestResponse].build(
+        items=[_to_response(r) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return ApiResponse[Page[RequestResponse]](
+        success=True,
+        message=f"{total} outgoing money request(s).",
+        data=data,
+    )
+
+
+@router.post(
+    "/money/{request_id}/pay",
+    response_model=ApiResponse[RequestResponse],
+)
+def pay_money_request(
+    request_id: int,
+    payload: MoneyRequestPay,
+    user_id: int = Depends(require_verified_user),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.pay_money_request(
+            request_id=request_id,
+            payer_user_id=user_id,
+            sender_card_id=payload.sender_card_id,
+            biometric=payload.biometric,
+            app_pin=payload.app_pin,
+            totp_code=payload.totp_code,
+            password=payload.password,
+        )
+    except RequestNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except (ForbiddenError, TxForbiddenError):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    except RequesterNoCardError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_REQUESTER_NO_CARD
+        ) from None
+    except (InsufficientBalanceError, TxInsufficientBalanceError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_PAY_INSUFFICIENT_BALANCE
+        ) from None
+    except TxCardFrozenError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+    except TxApprovalRequiredError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+    except TxCardNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND) from None
+    except TxDuplicatePaymentError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A similar payment to this recipient was already submitted. Please wait before trying again.",
+        ) from None
+    except TxSpendingLimitExceededError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_SPENDING_LIMIT_EXCEEDED
+        ) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Money request paid.",
+        data=_to_response(req),
+    )
+
+
+@router.post(
+    "/money/{request_id}/decline",
+    response_model=ApiResponse[RequestResponse],
+)
+def decline_money_request(
+    request_id: int,
+    user_id: int = Depends(require_verified_user),
+    service: RequestService = Depends(get_request_service),
+) -> ApiResponse[RequestResponse]:
+    try:
+        req = service.decline_money_request(request_id=request_id, actor_user_id=user_id)
+    except RequestNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except ForbiddenError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN) from None
+    except RequestNotPendingError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    return ApiResponse[RequestResponse](
+        success=True,
+        message="Money request declined.",
+        data=_to_response(req),
     )
 
 
