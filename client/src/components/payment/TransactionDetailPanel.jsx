@@ -29,6 +29,7 @@ import {
 } from '@/components/payment/transactionHistory.utils'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const TYPE_LABEL = { 1: 'Deposit', 2: 'Payment', 3: 'Refund', 4: 'Withdrawal', 5: 'Chargeback', 6: 'Fine' }
 
@@ -51,12 +52,6 @@ const OVERLAY_EXIT_ANIMATION = 'animate-[transaction-detail-fade-out_240ms_ease-
 
 function getTransactionId(transaction) {
   return transaction?.transaction_id ?? transaction?.id ?? transaction?.payment_id ?? null
-}
-
-function formatAmount(amount) {
-  const num = Number.parseFloat(amount ?? '0')
-  if (Number.isNaN(num)) return '—'
-  return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 function formatDate(iso) {
@@ -215,6 +210,7 @@ function MissingState() {
 }
 
 function HeaderCard({ transaction, currentUserId, ownedCardIds }) {
+  const { formatMoney } = useDisplayCurrency()
   const outgoing = isOutgoing(transaction, currentUserId, ownedCardIds)
   const DirectionIcon = outgoing ? ArrowUpRight : ArrowDownLeft
   const counterparty = getCounterparty(transaction, currentUserId, ownedCardIds)
@@ -260,7 +256,7 @@ function HeaderCard({ transaction, currentUserId, ownedCardIds }) {
           </div>
         </div>
         <p className="shrink-0 text-base font-bold text-card-foreground">
-          {outgoing ? '-' : '+'} {formatAmount(transaction?.amount)}
+          {outgoing ? '-' : '+'} {formatMoney(transaction?.amount)}
         </p>
       </div>
     </div>
@@ -287,6 +283,7 @@ function PartyCard({ label, party, name, email, lastFour }) {
 }
 
 function TransferFlow({ transaction }) {
+  const { formatMoney } = useDisplayCurrency()
   const sender = transaction?.sender
   const recipient = transaction?.recipient
   if (!sender && !recipient) return null
@@ -302,7 +299,7 @@ function TransferFlow({ transaction }) {
       />
       <div className="flex shrink-0 flex-col items-center gap-1">
         <MoveRight className="size-5 text-muted-foreground" />
-        <span className="text-xs font-semibold text-card-foreground">{formatAmount(transaction?.amount)}</span>
+        <span className="text-xs font-semibold text-card-foreground">{formatMoney(transaction?.amount)}</span>
       </div>
       <PartyCard
         label="Recipient"
@@ -316,6 +313,7 @@ function TransferFlow({ transaction }) {
 }
 
 function DetailsSection({ transaction, currentUserId, ownedCardIds }) {
+  const { formatMoney } = useDisplayCurrency()
   const outgoing = isOutgoing(transaction, currentUserId, ownedCardIds)
   const counterparty = getCounterparty(transaction, currentUserId, ownedCardIds)
   const statusMeta = getTransactionStatus(
@@ -346,9 +344,9 @@ function DetailsSection({ transaction, currentUserId, ownedCardIds }) {
           <Badge variant={statusVariant}>{statusLabel}</Badge>
         </DetailRow>
         <DetailRow label={outgoing ? 'Amount Sent' : 'Amount Received'}>
-          {formatAmount(transaction?.amount)}
+          {formatMoney(transaction?.amount)}
         </DetailRow>
-        <DetailRow label="Fee">{formatAmount(transaction?.fee ?? 0)}</DetailRow>
+        <DetailRow label="Fee">{formatMoney(transaction?.fee ?? 0)}</DetailRow>
         <DetailRow label="Type">{getTypeLabel(transaction)}</DetailRow>
       </dl>
     </section>

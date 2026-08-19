@@ -102,15 +102,11 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const { cards, isLoading, error, refetch } = useDashboardCards()
   const {
-    formattedBalance,
-    formattedWallet,
-    formattedCards,
-    formattedReserved,
     hasReserved,
-    // Raw numbers as well as the formatted strings: the balance widget needs
-    // them to work out each side's share of the total.
-    walletBalance: walletAmount,
-    cardsBalance: cardsAmount,
+    availableBalance,
+    walletBalance,
+    cardsBalance,
+    reservedBalance,
     isLoading: balanceLoading,
   } = useTotalBalance()
   const {
@@ -137,9 +133,8 @@ export default function DashboardPage() {
   const lastEntry = chartData[chartData.length - 1]
   const prevEntry = chartData[chartData.length - 2]
 
-  const monthlyAmount = lastEntry
-    ? '$' + Math.abs(lastEntry.net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : undefined
+  // A raw number: TotalBalanceWidget formats it in the active display currency.
+  const monthlyAmount = lastEntry ? Math.abs(lastEntry.net) : undefined
 
   const monthlyGrowth = (lastEntry && prevEntry && prevEntry.net !== 0)
     ? (() => {
@@ -210,12 +205,10 @@ export default function DashboardPage() {
       <section className="dashboard-hero-row grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,29rem)]">
         <div className="min-w-0">
           <TotalBalanceWidget
-            totalBalance={formattedBalance}
-            walletBalance={formattedWallet}
-            cardsBalance={formattedCards}
-            walletAmount={walletAmount}
-            cardsAmount={cardsAmount}
-            reservedBalance={formattedReserved}
+            totalBalance={availableBalance}
+            walletBalance={walletBalance}
+            cardsBalance={cardsBalance}
+            reservedBalance={reservedBalance}
             hasReserved={hasReserved}
             monthlyGrowth={monthlyGrowth}
             monthlyAmount={monthlyAmount}

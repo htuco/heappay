@@ -5,7 +5,6 @@ import { AlertCircle, Loader2, SearchX } from 'lucide-react'
 import {
   categoryOptionsFromRules,
   filterRecurringRules,
-  formatRecurringAmount as formatAmount,
   recipientName,
   statusOptionsFromRules,
 } from '@/utils/recurringPayments.utils'
@@ -35,6 +34,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import { useAppSelector } from '@/store/hooks'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 // ── Edit form ─────────────────────────────────────────────────────────────────
 
@@ -180,6 +180,7 @@ function useRecurringFilters() {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RecurringPaymentList({ recurring, onCreate }) {
+  const { formatMoney } = useDisplayCurrency()
   const {
     rules,
     isLoading,
@@ -305,7 +306,7 @@ export default function RecurringPaymentList({ recurring, onCreate }) {
           <DialogHeader>
             <DialogTitle>Cancel recurring payment</DialogTitle>
             <DialogDescription>
-              Stop the automatic {ruleToCancel ? formatAmount(ruleToCancel.amount) : ''} payment to{' '}
+              Stop the automatic {ruleToCancel ? formatMoney(ruleToCancel.amount) : ''} payment to{' '}
               {ruleToCancel ? recipientName(ruleToCancel) : ''}? No future payments will be sent.
             </DialogDescription>
           </DialogHeader>

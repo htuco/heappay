@@ -15,6 +15,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const emptyProfileStats = {
   isLoading: false,
@@ -31,14 +32,6 @@ function getUserName(user) {
 function formatRole(role) {
   if (!role) return 'User'
   return role.charAt(0).toUpperCase() + role.slice(1)
-}
-
-function formatCurrency(value) {
-  return Number(value || 0).toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
-  })
 }
 
 function formatJoinDate(value) {
@@ -70,6 +63,7 @@ function formatMembershipDuration(value) {
 }
 
 function AccountProfileModal({ user, open, onOpenChange, onOpenAvatarModal, blockOutsideClose }) {
+  const { formatMoney } = useDisplayCurrency()
   const userId = user?.id ?? user?.user_id
   const userName = useMemo(() => getUserName(user), [user])
   const memberFor = useMemo(() => formatMembershipDuration(user?.created_at), [user?.created_at])
@@ -124,7 +118,7 @@ function AccountProfileModal({ user, open, onOpenChange, onOpenAvatarModal, bloc
     { label: 'Cards', value: stats.isLoading ? '...' : stats.cardCount, icon: CreditCard },
     {
       label: 'Balance',
-      value: stats.isLoading ? '...' : formatCurrency(stats.totalBalance),
+      value: stats.isLoading ? '...' : formatMoney(stats.totalBalance),
       icon: Wallet,
     },
     { label: 'Transactions', value: stats.isLoading ? '...' : stats.transactionCount, icon: Receipt },

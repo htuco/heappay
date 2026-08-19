@@ -3,7 +3,7 @@ import { Check } from 'lucide-react'
 
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
-import { formatMoney } from '@/utils/amount'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 /**
  * Step scaffolding shared by the payment wizards (send + recurring) so the two
@@ -90,6 +90,7 @@ export function FieldLabel({ htmlFor, children, hint }) {
 }
 
 export function CardOption({ card, selected, onSelect, maskCard, resolveBrand, badge }) {
+  const { formatMoney } = useDisplayCurrency()
   return (
     <button
       type="button"

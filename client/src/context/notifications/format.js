@@ -24,9 +24,9 @@ export function cardLabel(card) {
  * Formats an amount (number or numeric string) as USD currency.
  * Falls back to the raw string when it isn't a finite number.
  */
-export function formatAmount(amount) {
+export function formatAmount(amount, formatMoney) {
 	if (amount == null) return ''
 	const n = Number.parseFloat(amount)
 	if (Number.isNaN(n)) return String(amount)
-	return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+	return formatMoney(n)
 }

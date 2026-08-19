@@ -23,6 +23,7 @@ import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { createIdempotencyKey } from '@/utils/idempotency'
 import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const QUICK_AMOUNTS = [10, 25, 50, 100]
 const SUCCESS_HOLD_MS = 1200
@@ -30,17 +31,6 @@ const NEXUS_POLL_MS = 3000
 
 function formatAmount(value) {
   return sanitizeAmountInput(value)
-}
-
-function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
 }
 
 function FieldLabel({ htmlFor, children, hint }) {
@@ -62,6 +52,7 @@ function FieldLabel({ htmlFor, children, hint }) {
 }
 
 function CardOption({ card, selected, onSelect, maskCard, resolveBrand }) {
+  const { formatMoney } = useDisplayCurrency()
   return (
     <button
       type="button"
@@ -109,6 +100,7 @@ function CardOption({ card, selected, onSelect, maskCard, resolveBrand }) {
 }
 
 function ContextCardPreview({ card, maskCard, resolveBrand, placeholder }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!card) {
     return (
       <div className="rounded-surface border border-dashed border-border bg-card/40 px-4 py-5 text-center text-xs text-muted-foreground">
@@ -152,6 +144,7 @@ function TopUpLeftPanel({
   resolveBrand,
   useNexusCopy = false,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const hasAmount = !isNaN(amountNum) && amountNum > 0
   const projectedBalance = selectedCard
     ? Number(selectedCard.balance) + (hasAmount ? amountNum : 0)
@@ -206,6 +199,7 @@ function TopUpLeftPanel({
 }
 
 function PendingState({ amount, cardLastFour, statusMessage }) {
+  const { formatMoney } = useDisplayCurrency()
   return (
     <div className="flex flex-col items-center gap-6 py-6 text-center">
       <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -226,6 +220,7 @@ function PendingState({ amount, cardLastFour, statusMessage }) {
 }
 
 function SuccessState({ amount, cardLastFour, onClose }) {
+  const { formatMoney } = useDisplayCurrency()
   return (
     <div className="flex flex-col items-center gap-6 py-6 text-center">
       <span className="relative flex h-20 w-20 items-center justify-center">
@@ -262,6 +257,7 @@ export default function TopUpModal({
   onSuccess,
   initialCardId = null,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const { user } = useAuth()
   const { notify } = useNotifications()
   const { maskCard, resolveBrand } = useCardBrandResolver()
@@ -382,7 +378,7 @@ export default function TopUpModal({
     return () => {
       cancelled = true
     }
-  }, [pendingRequest, isOpen, notify, onSuccess])
+  }, [pendingRequest, isOpen, notify, onSuccess, formatMoney])
 
   async function handleNexusSubmit(amountNum, card) {
     const created = await requestFundTopUp(selectedCardId, amountNum)

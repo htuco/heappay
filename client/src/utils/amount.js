@@ -52,19 +52,6 @@ export function formatAmountDisplay(value) {
   return normalized ?? ''
 }
 
-/**
- * Display helper for USD money in the payment wizards — always two decimals,
- * falls back to $0.00 for anything non-finite.
- * @param {string | number} value
- * @returns {string}
- */
-export function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
+// Money *formatting* deliberately does not live here: this module is about
+// sanitising and normalising input. Rendering an amount is currency-dependent —
+// see `utils/money.js` and `useDisplayCurrency()`.

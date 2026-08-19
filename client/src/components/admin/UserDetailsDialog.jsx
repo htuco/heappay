@@ -22,8 +22,9 @@ import { Select } from '@/components/ui/select'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { titleCase } from '@/utils/admin.utils'
 import transactionsService from '@/services/transactionsService'
-import { TX_STATUS_META, TX_TYPE_META, formatMonetaryValue } from '@/utils/transactionMeta'
+import { TX_STATUS_META, TX_TYPE_META } from '@/utils/transactionMeta'
 import { REQUEST_STATUS_META, REQUEST_STATUS_IDS } from '@/utils/requestStatus'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const TABS = [
   { key: 'cards', label: 'Cards' },
@@ -176,6 +177,7 @@ function txPartyLabel(party, fallback) {
 }
 
 function TransactionRow({ tx }) {
+  const { formatMoney } = useDisplayCurrency()
   const typeMeta = TX_TYPE_META[tx.transaction_type_id] ?? TX_TYPE_META[1]
   const statusMeta = TX_STATUS_META[tx.status_id] ?? TX_STATUS_META[1]
   const TypeIcon = typeMeta.Icon
@@ -197,7 +199,7 @@ function TransactionRow({ tx }) {
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <span className="text-sm font-semibold tabular-nums text-card-foreground">
-          {formatMonetaryValue(tx.amount, { hidden: tx.amount_hidden })}
+          {formatMoney(tx.amount, { hidden: tx.amount_hidden })}
         </span>
         <Badge variant={statusMeta.variant} className="text-[10px]">{statusMeta.label}</Badge>
       </div>
@@ -206,6 +208,7 @@ function TransactionRow({ tx }) {
 }
 
 function ActivityRow({ req }) {
+  const { formatMoney } = useDisplayCurrency()
   const meta = REQUEST_STATUS_META[req.request_status_id] ?? REQUEST_STATUS_META[REQUEST_STATUS_IDS.pending]
   const detail = req.refund_detail
   const amountHidden = Boolean(detail?.transaction_amount_hidden)
@@ -227,7 +230,7 @@ function ActivityRow({ req }) {
       <div className="flex shrink-0 flex-col items-end gap-1">
         {amount != null || amountHidden ? (
           <span className="text-sm font-semibold tabular-nums text-card-foreground">
-            {formatMonetaryValue(amount, { hidden: amountHidden })}
+            {formatMoney(amount, { hidden: amountHidden })}
           </span>
         ) : null}
         <Badge variant={meta.variant} className="text-[10px]">{meta.label}</Badge>

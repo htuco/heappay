@@ -5,19 +5,9 @@ import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import FormBanner from '@/components/ui/FormBanner'
 import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const SUCCESS_HOLD_MS = 1100
-
-function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
 
 const DIRECTIONS = [
   { key: 'to_card', label: 'Wallet → Card', hint: 'Move funds onto a card to spend' },
@@ -37,6 +27,7 @@ export default function WalletTransferModal({
   onTransfer,
   onSuccess,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const [direction, setDirection] = useState('to_card')
   const [selectedCardId, setSelectedCardId] = useState(null)
   const [amount, setAmount] = useState('')

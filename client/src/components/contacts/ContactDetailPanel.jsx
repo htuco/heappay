@@ -7,8 +7,8 @@ import { Card } from '@/components/ui/card'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import { Input } from '@/components/ui/input'
 import UserAvatar from '@/components/ui/UserAvatar'
-import { formatMoney } from '@/utils/amount'
 import { formatTransactionDate } from '@/components/payment/transactionHistory.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 function SectionLabel({ children, action }) {
   return (
@@ -43,6 +43,7 @@ export default function ContactDetailPanel({
   onSaveAlias,
   onRemove,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const [aliasDraft, setAliasDraft] = useState(contact?.alias ?? '')
   const [isEditing, setIsEditing] = useState(mode === 'edit')
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(mode === 'remove')

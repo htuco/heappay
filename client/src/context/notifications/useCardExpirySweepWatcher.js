@@ -3,6 +3,7 @@ import { listCards } from '@/services/cardsService'
 import { CATEGORIES } from './categories'
 import { cardLabel, formatAmount } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const POLL_MS = 30_000
 const SELF_ACTION_WINDOW_MS = 5_000
@@ -37,6 +38,7 @@ function findMainCardId(cards) {
  * expires_at). Emits separate notifications for removal and balance sweep.
  */
 export function useCardExpirySweepWatcher({ userId, notify, selfActionRef }) {
+  const { formatMoney } = useDisplayCurrency()
 	const snapshotRef = useRef(null)
 	const establishedRef = useRef(false)
 
@@ -95,7 +97,7 @@ export function useCardExpirySweepWatcher({ userId, notify, selfActionRef }) {
 				notify({
 					type: 'success',
 					category: CATEGORIES.CARD_BALANCE_SWEPT,
-					message: `${formatAmount(swept)} from your ${label} was transferred to your main card.`,
+					message: `${formatAmount(swept, formatMoney)} from your ${label} was transferred to your main card.`,
 					link: mainCardId
 						? { route: '/wallet', modal: { kind: 'card', id: mainCardId } }
 						: { route: '/wallet' },
@@ -106,7 +108,7 @@ export function useCardExpirySweepWatcher({ userId, notify, selfActionRef }) {
 		}
 
 		snapshotRef.current = nextSnapshot
-	}, [userId, notify, selfActionRef])
+	}, [userId, notify, selfActionRef, formatMoney])
 
 	useVisibilityInterval(tick, POLL_MS, Boolean(userId))
 }

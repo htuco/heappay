@@ -43,12 +43,13 @@ import transactionTypesService from '@/services/transactionTypesService'
 import transactionsService from '@/services/transactionsService'
 import transactionDraftsService from '@/services/transactionDraftsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
-import { formatMoney, normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
+import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 import { createIdempotencyKey } from '@/utils/idempotency'
 import PaymentApprovalModal from '@/components/payment/PaymentApprovalModal'
 import PaymentSendConfirmModal from '@/components/payment/PaymentSendConfirmModal'
 import { getBiometricAssertion, isWebAuthnAssertionAvailable } from '@/utils/webauthn'
 import { paymentConfirmationLabel, userRequiresPaymentConfirmation } from '@/utils/paymentSecurity'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const SEND_TYPE_NAMES = new Set(['payment', 'fine'])
 const AUTO_CLOSE_MS = 1200
@@ -98,6 +99,7 @@ function ContextLabel({ children }) {
 }
 
 function ContextCardPreview({ card, maskCard, resolveBrand, label }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!card) {
     return (
       <div className="rounded-surface border border-dashed border-border bg-card/40 px-4 py-5 text-center text-xs text-muted-foreground">
@@ -142,6 +144,7 @@ function LeftPanel({
   maskCard,
   resolveBrand,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const amountNum = parseFloat(form.amount)
   const hasAmount = !isNaN(amountNum) && amountNum > 0
   const recipient = form.recipientInfo
@@ -358,6 +361,7 @@ function StepTo({
   isSavingDraft,
   draftError,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const [lookupState, setLookupState] = useState(
     state.recipientInfo
       ? { status: 'found', info: state.recipientInfo }
@@ -741,6 +745,7 @@ function StepReview({
   isSavingDraft,
   draftError,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const { maskCard } = useCardBrandResolver()
   const txType = txTypes.find((t) => t.transaction_type_id === state.txTypeId)
   const recipientNameParts = state.recipientInfo?.owner_name?.split(' ') ?? []
@@ -842,6 +847,7 @@ function StepReview({
 // ─── Step 4: Success ──────────────────────────────────────────────────────────
 
 function StepResult({ amount, recipientName, onClose }) {
+  const { formatMoney } = useDisplayCurrency()
   useEffect(() => {
     const timeout = setTimeout(onClose, AUTO_CLOSE_MS)
     return () => clearTimeout(timeout)
@@ -938,6 +944,7 @@ export default function PaymentWizard({
   initialDraft = null,
   initialStep = null,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const { user } = useAuth()
   const { notify } = useNotifications()
   const { maskCard, resolveBrand } = useCardBrandResolver()
@@ -1293,7 +1300,7 @@ export default function PaymentWizard({
   const confirmationHint = user?.totp_enabled
     ? 'Confirm with Face ID / fingerprint, app PIN, or your authenticator code before money is sent.'
     : 'Confirm with Face ID / fingerprint, app PIN, or your password before money is sent. ' +
-      paymentConfirmationLabel(user)
+      paymentConfirmationLabel(user, formatMoney)
 
   return (
     <Modal

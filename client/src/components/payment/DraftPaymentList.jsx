@@ -23,8 +23,8 @@ import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import { useAppSelector } from '@/store/hooks'
 import transactionDraftsService from '@/services/transactionDraftsService'
 import { DATA_CHANGE_KINDS, subscribeDataChange } from '@/utils/dataEvents'
-import { formatMoney } from '@/utils/amount'
 import { cn } from '@/lib/utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 /** A draft's recipient as a person, or null while it has none yet. */
 function recipientUser(draft) {
@@ -60,6 +60,7 @@ function CategoryPill({ category }) {
 }
 
 function DraftCard({ draft, onResume, onSend, onDiscard }) {
+  const { formatMoney } = useDisplayCurrency()
   const categories = useAppSelector(selectTransactionCategories)
   const category = findCategoryById(draft.category_id, categories)
   const person = recipientUser(draft)

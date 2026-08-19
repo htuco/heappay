@@ -19,18 +19,13 @@ import transactionsService from '@/services/transactionsService'
 import usersService from '@/services/usersService'
 import { useAppSelector } from '@/store/hooks'
 import { selectCardStatuses, selectCardTypes } from '@/store/slices/referenceDataSlice'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function fmtAmount(v) {
-  const n = Number.parseFloat(v ?? '0')
-  if (Number.isNaN(n)) return '—'
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 const USER_STATUS = {
@@ -263,6 +258,7 @@ function CardsTab({ userId }) {
 // ─── transactions tab ─────────────────────────────────────────────────────────
 
 function TransactionsTab({ userId }) {
+  const { formatMoney } = useDisplayCurrency()
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -393,7 +389,7 @@ function TransactionsTab({ userId }) {
                         <p className="text-[11px] text-muted-foreground">{fmtDate(tx.created_at)}</p>
                       </div>
                     </div>
-                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{fmtAmount(tx.amount)}</p>
+                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatMoney(tx.amount)}</p>
                   </div>
                   <div className="flex items-center justify-between gap-2 pl-10">
                     <div className="flex items-center gap-2">
@@ -425,7 +421,7 @@ function TransactionsTab({ userId }) {
                   </div>
                   <span className="text-xs text-muted-foreground">{meta.label}</span>
                   <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
-                  <p className="text-right text-sm font-semibold tabular-nums text-foreground">{fmtAmount(tx.amount)}</p>
+                  <p className="text-right text-sm font-semibold tabular-nums text-foreground">{formatMoney(tx.amount)}</p>
                   <div className="flex items-center gap-1.5">
                     {isPendingStatusUpdate && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
                     <Select
@@ -451,6 +447,7 @@ function TransactionsTab({ userId }) {
 // ─── refunds tab ──────────────────────────────────────────────────────────────
 
 function RefundsTab({ userId }) {
+  const { formatMoney } = useDisplayCurrency()
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -500,7 +497,7 @@ function RefundsTab({ userId }) {
                   <p className="text-[11px] text-muted-foreground truncate">{req.note ?? <span className="italic">No reason provided</span>}</p>
                 </div>
                 <div className="flex items-center justify-between gap-3 sm:contents">
-                  <p className="text-sm font-semibold tabular-nums text-foreground">{fmtAmount(req.refund_detail?.transaction_amount)}</p>
+                  <p className="text-sm font-semibold tabular-nums text-foreground">{formatMoney(req.refund_detail?.transaction_amount)}</p>
                   <p className="text-xs text-muted-foreground sm:whitespace-nowrap">{fmtDate(req.created_at)}</p>
                   <Badge variant={statusMeta.variant} className="w-fit text-[11px]">{statusMeta.label}</Badge>
                 </div>

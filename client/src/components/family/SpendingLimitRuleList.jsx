@@ -16,6 +16,7 @@ import { Select } from '@/components/ui/select'
 import Toggle from '@/components/settings/Toggle'
 import { useAppSelector } from '@/store/hooks'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const PERIOD_OPTIONS = [
   { value: 'daily', label: 'Daily' },
@@ -23,16 +24,12 @@ const PERIOD_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
 ]
 
-function formatAmount(amount) {
-  const n = Number.parseFloat(amount)
-  if (Number.isNaN(n)) return String(amount)
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-}
-
-function ruleSummary(rule, categoriesById) {
+// Not a component, so it can't read the display currency itself — the caller
+// passes its bound formatter in.
+function ruleSummary(rule, categoriesById, formatMoney) {
   const category = rule.category_id ? categoriesById[rule.category_id]?.name : null
   const scope = category ? `on ${category}` : 'overall'
-  return `${formatAmount(rule.max_amount)} / ${rule.period} ${scope}`
+  return `${formatMoney(rule.max_amount)} / ${rule.period} ${scope}`
 }
 
 function RuleForm({ initial, categories, onSubmit, onCancel, loading, error }) {
@@ -160,6 +157,7 @@ function RuleForm({ initial, categories, onSubmit, onCancel, loading, error }) {
 }
 
 function RuleCard({ rule, categoriesById, onEdit, onDelete }) {
+  const { formatMoney } = useDisplayCurrency()
   return (
     <div className="rounded-card border border-border bg-card px-4 py-3">
       <div className="flex items-start justify-between gap-3">
@@ -169,13 +167,13 @@ function RuleCard({ rule, categoriesById, onEdit, onDelete }) {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">
-              {ruleSummary(rule, categoriesById)}
+              {ruleSummary(rule, categoriesById, formatMoney)}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {rule.requires_approval_always
                 ? 'Always requires approval'
                 : rule.requires_approval_above
-                  ? `Requires approval above ${formatAmount(rule.requires_approval_above)}`
+                  ? `Requires approval above ${formatMoney(rule.requires_approval_above)}`
                   : 'Blocks outright if exceeded'}
               {!rule.enabled ? ' · Disabled' : ''}
             </p>

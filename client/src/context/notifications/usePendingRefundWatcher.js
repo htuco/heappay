@@ -6,6 +6,7 @@ import { loadBaseline, saveBaseline } from './storage'
 import { CATEGORIES } from './categories'
 import { formatAmount } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const POLL_MS = 30_000
 const PAGE_SIZE = 20
@@ -44,6 +45,7 @@ async function collectPendingSince(minId) {
  * Baseline = max request_id seen; established silently on first poll.
  */
 export function usePendingRefundWatcher({ userId, notify }) {
+  const { formatMoney } = useDisplayCurrency()
 	const user = useSelector(selectAuthUser)
 	const isStaff = STAFF_ROLES.has(user?.role_name)
 	const baselineRef = useRef(null)
@@ -93,7 +95,7 @@ export function usePendingRefundWatcher({ userId, notify }) {
 			.sort((a, b) => a.request_id - b.request_id)
 
 		for (const req of fresh) {
-			const amount = formatAmount(req.refund_detail?.transaction_amount)
+			const amount = formatAmount(req.refund_detail?.transaction_amount, formatMoney)
 			const who = req.requester_name || 'a user'
 			notify({
 				type: 'warning',
@@ -111,7 +113,7 @@ export function usePendingRefundWatcher({ userId, notify }) {
 			baselineRef.current = maxId
 			saveBaseline(userId, 'pending_refunds', maxId)
 		}
-	}, [userId, isStaff, notify])
+	}, [userId, isStaff, notify, formatMoney])
 
 	useVisibilityInterval(tick, POLL_MS, Boolean(userId) && isStaff)
 }

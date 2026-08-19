@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CreditCard, Eye, EyeOff, HelpCircle, TrendingUp, Wallet } from 'lucide-react'
 import { useBalanceScopePreference } from '@/hooks/useBalanceScopePreference'
 import { getBalanceShares } from '@/utils/balanceScope'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const MASKED = '••••••••'
 
@@ -82,20 +83,26 @@ function BreakdownTile({ icon, label, value, share, isActive, isMasked, onClick 
   )
 }
 
+/**
+ * Takes raw numbers and formats them itself.
+ *
+ * It used to receive pre-formatted strings *and* the same figures again as raw
+ * numbers, which meant the currency was decided by whichever caller built the
+ * strings. Formatting here — through the shared display-currency helper — is
+ * what makes switching currency a change in one place.
+ */
 export default function TotalBalanceWidget({
-  totalBalance = '$0.00',
+  totalBalance = 0,
   walletBalance = null,
   cardsBalance = null,
-  walletAmount = 0,
-  cardsAmount = 0,
   reservedBalance = null,
   hasReserved = false,
-  currency = 'USD',
   monthlyGrowth = null,
   monthlyAmount = null,
   isLoading = false,
   noMainCardCta,
 }) {
+  const { formatMoney, currency } = useDisplayCurrency()
   const hasBreakdown = walletBalance != null && cardsBalance != null
   const [isBalanceVisible, setIsBalanceVisible] = useState(true)
 
@@ -112,7 +119,7 @@ export default function TotalBalanceWidget({
     activeScope === 'wallet' ? walletBalance : activeScope === 'cards' ? cardsBalance : totalBalance
   const isMasked = !isBalanceVisible
   const showsReserved = hasReserved && SCOPES[activeScope].showsReserved
-  const shares = getBalanceShares(walletAmount, cardsAmount)
+  const shares = getBalanceShares(walletBalance, cardsBalance)
 
   const selectScope = (next) => setScope((prev) => (prev === next ? 'combined' : next))
 
@@ -149,14 +156,14 @@ export default function TotalBalanceWidget({
         ) : (
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <p className="tabular text-3xl font-bold tracking-tight leading-none text-white sm:text-4xl lg:text-4xl xl:text-5xl">
-              {isMasked ? MASKED : scopeBalance}
+              {isMasked ? MASKED : formatMoney(scopeBalance)}
             </p>
             <p className="text-sm font-medium text-white/75">
               {currency}
               {showsReserved ? (
                 <span className="tabular font-normal text-white/60">
                   {' · '}
-                  {isMasked ? '••••' : reservedBalance}
+                  {isMasked ? '••••' : formatMoney(reservedBalance)}
                   {' reserved'}
                   <ReservedHelp />
                 </span>
@@ -173,7 +180,7 @@ export default function TotalBalanceWidget({
           <>
             <span className="inline-flex items-center gap-1.5 rounded-input border border-white/20 bg-white/15 px-2.5 py-1 text-sm font-semibold backdrop-blur">
               <TrendingUp className="h-3.5 w-3.5" strokeWidth={2.5} />
-              <span className="tabular">{monthlyAmount}</span>
+              <span className="tabular">{formatMoney(monthlyAmount, { absolute: true })}</span>
             </span>
             <span className="text-xs text-white/75">
               {monthlyGrowth != null ? `${monthlyGrowth} ` : ''}this month
@@ -194,7 +201,7 @@ export default function TotalBalanceWidget({
           <BreakdownTile
             icon={Wallet}
             label="Wallet"
-            value={walletBalance}
+            value={formatMoney(walletBalance)}
             share={shares.wallet}
             isActive={activeScope === 'wallet'}
             isMasked={isMasked}
@@ -203,7 +210,7 @@ export default function TotalBalanceWidget({
           <BreakdownTile
             icon={CreditCard}
             label="Cards"
-            value={cardsBalance}
+            value={formatMoney(cardsBalance)}
             share={shares.cards}
             isActive={activeScope === 'cards'}
             isMasked={isMasked}

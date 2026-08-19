@@ -8,10 +8,6 @@ function sumField(cards, field) {
   }, 0)
 }
 
-function formatUsd(value) {
-  return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
 export function useTotalBalance() {
   const { cards, isLoading: cardsLoading, error } = useDashboardCards()
   const { walletBalance, isLoading: walletLoading } = useWallet()
@@ -30,11 +26,6 @@ export function useTotalBalance() {
     walletBalance: wallet,
     cardsBalance,
     reservedBalance,
-    formattedBalance: formatUsd(availableBalance),
-    formattedAvailable: formatUsd(availableBalance),
-    formattedWallet: formatUsd(wallet),
-    formattedCards: formatUsd(cardsBalance),
-    formattedReserved: formatUsd(reservedBalance),
     hasReserved: reservedBalance > 0,
     isLoading: cardsLoading || walletLoading,
     error,

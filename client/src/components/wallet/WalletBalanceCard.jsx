@@ -5,17 +5,7 @@ import { Button } from '@/components/ui/button'
 import Skeleton from '@/components/ui/skeleton'
 import { useWallet } from '@/hooks/useWallet'
 import WalletTransferModal from '@/components/wallet/WalletTransferModal'
-
-function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 /**
  * Wallet (unallocated funds) balance with a Transfer action. Sits above the
@@ -23,6 +13,7 @@ function formatMoney(value) {
  * the wallet↔card transfer modal.
  */
 export default function WalletBalanceCard({ cards = [], isLoading = false }) {
+  const { formatMoney } = useDisplayCurrency()
   const { walletBalance, isLoading: walletLoading, transfer } = useWallet()
   const [transferOpen, setTransferOpen] = useState(false)
   const loading = isLoading || walletLoading

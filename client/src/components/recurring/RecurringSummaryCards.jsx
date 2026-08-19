@@ -3,9 +3,9 @@ import { CalendarCheck2, CalendarClock, Repeat2, TriangleAlert } from 'lucide-re
 import Skeleton from '@/components/ui/skeleton'
 import {
   DUE_SOON_DAYS,
-  formatRecurringAmount,
   summarizeRecurringPayments,
 } from '@/utils/recurringPayments.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 function SummaryTile({ icon, label, value, sub, accentClass, labelClass, isLoading }) {
   const Icon = icon
@@ -48,6 +48,7 @@ function plural(count, noun) {
  * `summarizeRecurringPayments` for why there is no Paused/Completed tile.
  */
 export default function RecurringSummaryCards({ rules, isLoading = false }) {
+  const { formatMoney } = useDisplayCurrency()
   const stats = summarizeRecurringPayments(rules)
 
   return (
@@ -56,7 +57,7 @@ export default function RecurringSummaryCards({ rules, isLoading = false }) {
         icon={Repeat2}
         label="Active Plans"
         value={stats.activeCount}
-        sub={`${formatRecurringAmount(stats.activeTotal)} per full cycle`}
+        sub={`${formatMoney(stats.activeTotal)} per full cycle`}
         accentClass="bg-primary/10 text-primary"
         labelClass="text-primary"
         isLoading={isLoading}
@@ -65,7 +66,7 @@ export default function RecurringSummaryCards({ rules, isLoading = false }) {
         icon={CalendarClock}
         label={`Upcoming (${DUE_SOON_DAYS} days)`}
         value={stats.dueSoonCount}
-        sub={`${formatRecurringAmount(stats.dueSoonTotal)} leaving soon`}
+        sub={`${formatMoney(stats.dueSoonTotal)} leaving soon`}
         accentClass="bg-violet-500/10 text-violet-600 dark:text-violet-400"
         labelClass="text-violet-600 dark:text-violet-400"
         isLoading={isLoading}
@@ -73,7 +74,7 @@ export default function RecurringSummaryCards({ rules, isLoading = false }) {
       <SummaryTile
         icon={CalendarCheck2}
         label="Scheduled This Month"
-        value={formatRecurringAmount(stats.dueThisMonthTotal)}
+        value={formatMoney(stats.dueThisMonthTotal)}
         sub={`across ${plural(stats.dueThisMonthCount, 'payment')}`}
         accentClass="bg-success/10 text-success"
         labelClass="text-success"

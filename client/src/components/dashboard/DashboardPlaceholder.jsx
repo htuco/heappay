@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowDownLeft, ArrowUpRight, ChevronRight } from 'lucide-react'
 import { getApiErrorMessage } from '@/utils/api'
 import { mapTransactionToActivityItem } from '@/utils/dashboardRecentActivity'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 function ActivitySkeletonRow() {
   return (
@@ -39,10 +40,11 @@ export default function DashboardPlaceholder({
   isLoading = false,
   error = null,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const items = useMemo(() => {
     if (!transactions.length) return []
-    return transactions.map((tx) => mapTransactionToActivityItem(tx, activityContext))
-  }, [transactions, activityContext])
+    return transactions.map((tx) => mapTransactionToActivityItem(tx, activityContext, formatMoney))
+  }, [transactions, activityContext, formatMoney])
 
   const errorText =
     error != null

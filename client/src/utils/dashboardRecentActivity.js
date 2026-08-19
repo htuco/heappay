@@ -45,7 +45,7 @@ export function humanizeTransactionTimestamp(iso) {
  * }} ctx
  * @returns {{ id: number, title: string, timestamp: string, amount: string, direction: 'in' | 'out' }}
  */
-export function mapTransactionToActivityItem(tx, ctx) {
+export function mapTransactionToActivityItem(tx, ctx, formatMoney) {
   const { currentUserCardIds: userCardIds, lastFourByCardId, typeNameById } = ctx
   const rawName = typeNameById[tx.transaction_type_id] ?? 'transfer'
   const typeLabel = rawName.length
@@ -88,12 +88,8 @@ export function mapTransactionToActivityItem(tx, ctx) {
   const title = `${typeLabel} · ${counterpartyLine}`
   const timestamp = humanizeTransactionTimestamp(tx.created_at)
 
-  const n = Number(tx.amount)
-  const abs = Number.isFinite(n) ? Math.abs(n) : 0
-  const money = `$${abs.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+  // Not a component, so the caller passes its bound formatter in.
+  const money = formatMoney(tx.amount, { absolute: true })
   const amount = direction === 'in' ? `+${money}` : `-${money}`
 
   return {
