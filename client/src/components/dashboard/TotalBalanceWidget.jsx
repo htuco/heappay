@@ -156,14 +156,14 @@ export default function TotalBalanceWidget({
         ) : (
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <p className="tabular text-3xl font-bold tracking-tight leading-none text-white sm:text-4xl lg:text-4xl xl:text-5xl">
-              {isMasked ? MASKED : formatMoney(scopeBalance)}
+              {isMasked ? MASKED : formatMoney(scopeBalance, { withoutSymbol: true })}
             </p>
             <p className="text-sm font-medium text-white/75">
               {currency}
               {showsReserved ? (
                 <span className="tabular font-normal text-white/60">
                   {' · '}
-                  {isMasked ? '••••' : formatMoney(reservedBalance)}
+                  {isMasked ? '••••' : formatMoney(reservedBalance, { withoutSymbol: true })}
                   {' reserved'}
                   <ReservedHelp />
                 </span>

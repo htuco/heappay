@@ -34,14 +34,15 @@ export const CURRENCY_NAMES = {
 // formats hundreds of figures per render, so instances are reused.
 const formatterCache = new Map()
 
-function getFormatter(currency, { compact = false, signDisplay } = {}) {
-  const key = `${currency}|${compact}|${signDisplay ?? ''}`
+function getFormatter(currency, { compact = false, signDisplay, withoutSymbol = false } = {}) {
+  const key = `${currency}|${compact}|${signDisplay ?? ''}|${withoutSymbol}`
   const cached = formatterCache.get(key)
   if (cached) return cached
 
   const options = {
-    style: 'currency',
-    currency,
+    // `decimal` still applies the locale's grouping and the currency's usual
+    // decimal count; it just omits the symbol.
+    ...(withoutSymbol ? { style: 'decimal' } : { style: 'currency', currency }),
     ...(compact
       ? { notation: 'compact', maximumFractionDigits: 1 }
       : { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -80,6 +81,8 @@ function toNumber(value) {
  * @param {boolean} [options.absolute] Drop the sign (for magnitude-only displays).
  * @param {boolean} [options.compact] Abbreviate (`$1.2K`) — for axis ticks.
  * @param {'zero'|'dash'} [options.invalid] What a non-numeric value renders as.
+ * @param {boolean} [options.withoutSymbol] Digits only, for surfaces that print
+ *   the currency code themselves. Keeps per-currency grouping and decimals.
  * @param {'auto'|'always'|'never'|'exceptZero'} [options.signDisplay]
  * @returns {string}
  */
@@ -90,17 +93,20 @@ export function formatCurrencyAmount(value, currency = BASE_CURRENCY, options = 
     compact = false,
     invalid = 'zero',
     signDisplay,
+    withoutSymbol = false,
   } = options
 
   if (hidden) return HIDDEN_AMOUNT_LABEL
 
+  const format = getFormatter(currency, { compact, signDisplay, withoutSymbol })
+
   const n = toNumber(value)
   if (n === null) {
     if (invalid === 'dash') return UNKNOWN_AMOUNT_LABEL
-    return getFormatter(currency, { compact, signDisplay }).format(0)
+    return format.format(0)
   }
 
-  return getFormatter(currency, { compact, signDisplay }).format(absolute ? Math.abs(n) : n)
+  return format.format(absolute ? Math.abs(n) : n)
 }
 
 /**
