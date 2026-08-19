@@ -240,6 +240,20 @@ class NotificationPreferencesUpdate(BaseModel):
         return self
 
 
+class DisplayPreferencesUpdate(BaseModel):
+    """The currency the client renders amounts in. Display only."""
+
+    display_currency: str = Field(min_length=3, max_length=3)
+
+    @field_validator("display_currency")
+    @classmethod
+    def _upper(cls, value: str) -> str:
+        code = str(value or "").strip().upper()
+        if not code.isalpha():
+            raise ValueError("Currency must be a 3-letter ISO 4217 code.")
+        return code
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -259,6 +273,7 @@ class UserResponse(BaseModel):
     email_outflow_enabled: bool = True
     notify_on_user_requests: bool = False
     email_family_activity_enabled: bool = True
+    display_currency: str = "USD"
     avatar_url: str | None = None
     totp_enabled: bool = False
     payment_confirm_enabled: bool = True

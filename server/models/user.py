@@ -87,6 +87,12 @@ class User(Base):
     notify_on_user_requests: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default="false"
     )
+    # The currency amounts are *displayed* in. Conversion happens at render
+    # time against reference rates; stored balances and transaction amounts are
+    # untouched by it, and neither creation nor settlement reads this.
+    display_currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, server_default="USD"
+    )
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default="false")
