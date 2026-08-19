@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from routes.dependencies import get_current_user_id
 from schemas.fx import (
     FxConvertResponse,
+    FxCurrenciesResponse,
     FxInsightResponse,
+    FxRateResponse,
     FxRatesResponse,
 )
 from schemas.response import ApiResponse
@@ -48,6 +50,47 @@ def convert_currency(
         success=True,
         message="Indicative conversion computed.",
         data=FxConvertResponse(**result),
+    )
+
+
+@router.get("/rate", response_model=ApiResponse[FxRateResponse])
+def pair_rate(
+    from_currency: str = Query(
+        ..., min_length=3, max_length=3, description="ISO 4217 source currency code."
+    ),
+    to_currency: str = Query(
+        ..., min_length=3, max_length=3, description="ISO 4217 target currency code."
+    ),
+    user_id: int = Depends(get_current_user_id),
+    service: FxService = Depends(get_fx_service),
+) -> ApiResponse[FxRateResponse]:
+    """The rate for one pair, without an amount.
+
+    The display-currency switcher fetches this once per (stored -> displayed)
+    pair and formats every amount client-side; /convert would be one request
+    per rendered figure.
+    """
+    try:
+        result = service.rate(from_currency=from_currency, to_currency=to_currency)
+    except FxError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
+    return ApiResponse[FxRateResponse](
+        success=True,
+        message="Indicative rate retrieved.",
+        data=FxRateResponse(**result),
+    )
+
+
+@router.get("/currencies", response_model=ApiResponse[FxCurrenciesResponse])
+def supported_currencies(
+    user_id: int = Depends(get_current_user_id),
+    service: FxService = Depends(get_fx_service),
+) -> ApiResponse[FxCurrenciesResponse]:
+    """Currencies conversion can actually price — drives the display picker."""
+    return ApiResponse[FxCurrenciesResponse](
+        success=True,
+        message="Supported currencies retrieved.",
+        data=FxCurrenciesResponse(**service.supported_currencies()),
     )
 
 

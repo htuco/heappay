@@ -14,11 +14,24 @@ _CENTS = Decimal("0.01")
 _RATE_QUANT = Decimal("0.000001")
 _PCT_QUANT = Decimal("0.01")
 
+_DISCLAIMER = "Indicative rate — for information only. No money was converted."
+
 # Currencies with an official fixed parity to the euro (currency board / peg).
 # The value is how many units equal 1 EUR — a genuine fixed rate, not an estimate.
+#
+# These are absent from the live source entirely: frankfurter publishes the ECB
+# reference set, which does not include pegged currencies like BAM. Because the
+# parity is official and fixed rather than a market price, we can still quote
+# them exactly by routing through EUR -- see `_eur_per_unit`.
 _EUR_FIXED_PEGS = {
     "BAM": Decimal("1.95583"),  # Bosnia and Herzegovina convertible mark
 }
+
+# Used only if the live currency list is unreachable, so the display-currency
+# picker still has something correct to offer.
+_FALLBACK_SUPPORTED = ("USD", "EUR", "GBP", "CHF", "JPY")
+
+_CURRENCY_LIST_TTL = 86_400
 
 # Popular currencies shown as reference cards, priced against the euro.
 _OVERVIEW_BASE = "EUR"
@@ -93,6 +106,7 @@ class FxService:
         self._cache_ttl = max(0, settings.fx_cache_ttl_seconds)
         self._fallback = _parse_fallback_rates(settings.fx_rates, self._base)
         self._cache: dict[tuple[str, str], tuple[float, Decimal]] = {}
+        self._currencies: tuple[float, tuple[str, ...]] | None = None
         self._lock = threading.Lock()
 
     def convert(self, *, amount: Decimal, from_currency: str, to_currency: str) -> dict:
@@ -117,7 +131,7 @@ class FxService:
             "converted": format(converted, "f"),
             "indicative": True,
             "source": source,
-            "disclaimer": "Indicative rate — for information only. No money was converted.",
+            "disclaimer": _DISCLAIMER,
         }
 
     def _resolve_rate(self, src: str, dst: str) -> tuple[Decimal, str]:
@@ -128,6 +142,10 @@ class FxService:
         if live is not None:
             self._put_cached(src, dst, live)
             return live, "live"
+        pegged = self._peg_rate(src, dst)
+        if pegged is not None:
+            self._put_cached(src, dst, pegged)
+            return pegged, "fixed-parity"
         fallback = self._fallback_rate(src, dst)
         if fallback is not None:
             return fallback, "configured"
@@ -168,6 +186,91 @@ class FxService:
         except (httpx.HTTPError, ValueError, InvalidOperation) as exc:
             logger.warning("Live FX lookup failed for %s->%s: %s", src, dst, exc)
             return None
+
+    def _eur_per_unit(self, code: str) -> Decimal | None:
+        """How many EUR one unit of `code` is worth, or None if unknowable.
+
+        A pegged currency uses its official parity; everything else asks the
+        live source. EUR itself is the identity.
+        """
+        if code == "EUR":
+            return Decimal("1")
+        peg = _EUR_FIXED_PEGS.get(code)
+        if peg is not None and peg > 0:
+            return Decimal("1") / peg
+        return self._fetch_live(code, "EUR")
+
+    def _peg_rate(self, src: str, dst: str) -> Decimal | None:
+        """Rate for a pair where at least one side is fixed-pegged to the euro.
+
+        Returns None when neither side is pegged -- that is an ordinary pair the
+        live source should have answered already, and inventing a cross rate for
+        it here would mask a genuine outage.
+        """
+        if src not in _EUR_FIXED_PEGS and dst not in _EUR_FIXED_PEGS:
+            return None
+        src_eur = self._eur_per_unit(src)
+        dst_eur = self._eur_per_unit(dst)
+        if src_eur is None or dst_eur is None or dst_eur <= 0:
+            return None
+        return (src_eur / dst_eur).quantize(_RATE_QUANT)
+
+    def rate(self, *, from_currency: str, to_currency: str) -> dict:
+        """Just the rate for a pair — no amount involved.
+
+        The display-currency switcher needs one rate per (stored -> displayed)
+        pair and then formats every amount locally; asking /convert per amount
+        would be one HTTP call per rendered figure.
+        """
+        src = _normalize_code(from_currency)
+        dst = _normalize_code(to_currency)
+        if not src or not dst:
+            raise FxError("Both a source and target currency are required.")
+        if src == dst:
+            rate, source = Decimal("1"), "identity"
+        else:
+            rate, source = self._resolve_rate(src, dst)
+        return {
+            "from_currency": src,
+            "to_currency": dst,
+            "rate": format(rate, "f"),
+            "indicative": True,
+            "source": source,
+            "disclaimer": _DISCLAIMER,
+        }
+
+    def supported_currencies(self) -> dict:
+        """Currency codes this service can actually price, live set plus pegs.
+
+        Drives the display-currency picker so the options can never drift from
+        what conversion supports.
+        """
+        codes = set(self._fetch_currency_codes() or _FALLBACK_SUPPORTED)
+        codes.update(_EUR_FIXED_PEGS)
+        codes.add(self._base)
+        codes.add("EUR")
+        return {"base": self._base, "codes": sorted(codes)}
+
+    def _fetch_currency_codes(self) -> tuple[str, ...] | None:
+        with self._lock:
+            entry = self._currencies
+        if entry is not None and time.time() - entry[0] <= _CURRENCY_LIST_TTL:
+            return entry[1]
+        if not self._api_url:
+            return None
+        try:
+            with httpx.Client(timeout=5.0, follow_redirects=True) as client:
+                resp = client.get(f"{self._api_url}/currencies")
+            resp.raise_for_status()
+            codes = tuple(sorted(_normalize_code(c) for c in (resp.json() or {})))
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.warning("FX currency list unavailable: %s", exc)
+            return None
+        if not codes:
+            return None
+        with self._lock:
+            self._currencies = (time.time(), codes)
+        return codes
 
     def _fallback_rate(self, src: str, dst: str) -> Decimal | None:
         src_to_base = self._fallback.get(src)
