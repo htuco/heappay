@@ -116,6 +116,25 @@ class CategoryBreakdownResponse(BaseModel):
     months: int
 
 
+class CategoryTimeseriesSeries(BaseModel):
+    # One line per category. `points` is aligned position-for-position with the
+    # response's `periods` list (0 for a month with no spend in that category),
+    # so the client can plot without re-bucketing. category_id is null for the
+    # Uncategorised bucket, matching CategoryBreakdownItem.
+    category_id: int | None
+    name: str
+    total: Decimal
+    points: list[Decimal]
+
+
+class CategoryTimeseriesResponse(BaseModel):
+    # `periods` are chronological "YYYY-MM" labels spanning the selected range;
+    # `range` echoes the requested window (7d | 30d | 90d | 1y).
+    range: str
+    periods: list[str]
+    series: list[CategoryTimeseriesSeries]
+
+
 class TransactionStatsMonthlyPoint(BaseModel):
     period: str  # "YYYY-MM"
     count: int

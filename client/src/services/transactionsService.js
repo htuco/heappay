@@ -131,6 +131,27 @@ export const transactionsService = {
 	},
 
 	/**
+	 * Month-on-month outgoing spend per category over a trailing window.
+	 * `range` uses the shared '7d'|'30d'|'90d'|'1y' vocabulary. Returns a
+	 * chronological `periods` axis plus one `series` per category whose `points`
+	 * line up with that axis (0 for a month with no spend).
+	 * @param {{ range?: '7d'|'30d'|'90d'|'1y' }} [params]
+	 * @returns {Promise<{ range: string, periods: string[], series: Array<{ category_id: number | null, name: string, total: string, points: string[] }> }>}
+	 */
+	async summaryByCategoryTimeseries(params = {}) {
+		try {
+			const query = {}
+			if (typeof params.range === 'string' && params.range) query.range = params.range
+			const { data } = await api.get('/transactions/summary/by-category/timeseries', {
+				params: query,
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * List the current user's transactions (paginated).
 	 * @param {import('@/types/transaction').ListTransactionsParams} [params]
 	 * @returns {Promise<import('@/types/transaction').TransactionPage>}
