@@ -14,6 +14,7 @@ EVENT_USER_UPDATED = "user_updated"
 EVENT_USER_DELETED = "user_deleted"
 EVENT_USER_SUSPENDED = "user_suspended"
 EVENT_USER_ACTIVATED = "user_activated"
+EVENT_USER_PASSWORD_RESET_SENT = "user_password_reset_sent"
 
 # Refund / request decisions
 EVENT_REFUND_APPROVED = "refund_approved"
@@ -40,6 +41,7 @@ AUDIT_EVENT_LABELS: dict[str, str] = {
     EVENT_USER_DELETED: "User deleted",
     EVENT_USER_SUSPENDED: "User suspended",
     EVENT_USER_ACTIVATED: "User activated",
+    EVENT_USER_PASSWORD_RESET_SENT: "Password reset sent",
     EVENT_REFUND_APPROVED: "Refund approved",
     EVENT_REFUND_DECLINED: "Refund declined",
     EVENT_FREEZE_APPROVED: "Freeze approved",
