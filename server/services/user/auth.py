@@ -291,6 +291,7 @@ class UserAuthService:
         self._send_verification_email(user)
         refresh_token = self.create_refresh_token(user.user_id)
         self.repo.save_refresh_token(user.user_id, refresh_token)
+        self.repo.touch_last_login(user.user_id)
         return self._build_token_response(user.user_id, refresh_token)
 
     def _send_verification_email(self, user) -> None:
@@ -341,6 +342,7 @@ class UserAuthService:
 
         refresh_token = self.create_refresh_token(user.user_id)
         self.repo.save_refresh_token(user.user_id, refresh_token)
+        self.repo.touch_last_login(user.user_id)
         return self._build_token_response(user.user_id, refresh_token)
 
     def verify_totp_login(self, partial_token: str, code: str) -> TokenResponse:
@@ -359,6 +361,7 @@ class UserAuthService:
 
         refresh_token = self.create_refresh_token(user_id)
         self.repo.save_refresh_token(user_id, refresh_token)
+        self.repo.touch_last_login(user_id)
         return self._build_token_response(user_id, refresh_token)
 
     def setup_totp(self, user_id: int) -> TotpSetupResponse:
@@ -797,6 +800,7 @@ class UserAuthService:
 
         new_refresh = self.create_refresh_token(user_id)
         self.repo.save_refresh_token(user_id, new_refresh)
+        self.repo.touch_last_login(user_id)
         return self._build_token_response_for_user(
             updated_user,
             new_refresh,
