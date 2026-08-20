@@ -1,19 +1,21 @@
 import { createElement } from 'react'
-import { ArrowRight, Plus, Send, Wallet } from 'lucide-react'
+import { ArrowRight, HandCoins, Plus, Send, Wallet } from 'lucide-react'
 
 const ACTIONS = [
-  { label: 'Send',     icon: Send,   key: 'send'  },
-  { label: 'Add New',  icon: Plus,   key: 'add'   },
-  { label: 'Top Up',   icon: Wallet, key: 'topup' },
+  { label: 'Send',     icon: Send,      key: 'send'    },
+  { label: 'Request',  icon: HandCoins, key: 'request' },
+  { label: 'Add New',  icon: Plus,      key: 'add'     },
+  { label: 'Top Up',   icon: Wallet,    key: 'topup'   },
 ]
 
 function renderIcon(Icon) {
   return createElement(Icon, { className: 'h-4 w-4', strokeWidth: 2.2 })
 }
 
-export default function QuickActions({ onSend, onTopUp, onAddNew }) {
+export default function QuickActions({ onSend, onRequest, onTopUp, onAddNew }) {
   function handleClick(key) {
     if (key === 'send') onSend?.()
+    if (key === 'request') onRequest?.()
     if (key === 'topup') onTopUp?.()
     if (key === 'add') onAddNew?.()
   }

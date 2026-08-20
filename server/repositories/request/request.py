@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from models.card import Card
 from models.card_freeze_request_detail import CardFreezeRequestDetail
+from models.money_request_detail import MoneyRequestDetail
 from models.refund_request_detail import RefundRequestDetail
 from models.request import Request
 from models.request_status import RequestStatus
@@ -444,3 +445,157 @@ class RequestRepository:
             Card.card_id == card_id, Card.deleted_at.is_(None)
         )
         return self._db.execute(stmt).scalar_one_or_none()
+
+    # ── money requests ────────────────────────────────────────────────────
+
+    def user_exists(self, user_id: int) -> bool:
+        from models.user import User
+
+        return self._db.get(User, user_id) is not None
+
+    def get_payment_type_id(self) -> int | None:
+        stmt = select(TransactionType.transaction_type_id).where(
+            TransactionType.name == "payment"
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def default_active_card_id_for_user(self, user_id: int) -> int | None:
+        from models.card_status import CardStatus
+
+        stmt = (
+            select(Card.card_id)
+            .join(CardStatus, Card.status_id == CardStatus.card_status_id)
+            .where(
+                Card.user_id == user_id,
+                Card.deleted_at.is_(None),
+                CardStatus.status_name.ilike("active"),
+            )
+            .order_by(Card.created_at, Card.card_id)
+            .limit(1)
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def get_pending_money_request_between(
+        self, requester_user_id: int, target_user_id: int
+    ) -> Request | None:
+        pending_id = self.get_status_id("pending")
+        type_id = self.get_type_id("money_request")
+        stmt = select(Request).where(
+            Request.requester_user_id == requester_user_id,
+            Request.target_user_id == target_user_id,
+            Request.request_status_id == pending_id,
+            Request.request_type_id == type_id,
+        )
+        return self._db.scalars(stmt).first()
+
+    def create_money_request(
+        self,
+        *,
+        requester_user_id: int,
+        target_user_id: int,
+        amount: Decimal,
+        note: str | None,
+    ) -> Request:
+        type_id = self.get_type_id("money_request")
+        pending_status_id = self.get_status_id("pending")
+
+        req = Request(
+            request_type_id=type_id,
+            request_status_id=pending_status_id,
+            requester_user_id=requester_user_id,
+            target_user_id=target_user_id,
+            note=note,
+        )
+        self._db.add(req)
+        self._db.flush()
+
+        detail = MoneyRequestDetail(request_id=req.request_id, amount=amount)
+        self._db.add(detail)
+        self._db.commit()
+        self._db.refresh(req)
+        return req
+
+    def list_incoming_for_user(
+        self, *, user_id: int, limit: int = 50, offset: int = 0
+    ) -> list[Request]:
+        pending_id = self.get_status_id("pending")
+        type_id = self.get_type_id("money_request")
+        stmt = (
+            select(Request)
+            .where(
+                Request.target_user_id == user_id,
+                Request.request_type_id == type_id,
+                Request.request_status_id == pending_id,
+            )
+            .order_by(Request.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def count_incoming_for_user(self, *, user_id: int) -> int:
+        from sqlalchemy import func
+
+        pending_id = self.get_status_id("pending")
+        type_id = self.get_type_id("money_request")
+        stmt = (
+            select(func.count())
+            .select_from(Request)
+            .where(
+                Request.target_user_id == user_id,
+                Request.request_type_id == type_id,
+                Request.request_status_id == pending_id,
+            )
+        )
+        return int(self._db.execute(stmt).scalar_one())
+
+    def list_outgoing_for_user(
+        self, *, user_id: int, limit: int = 50, offset: int = 0
+    ) -> list[Request]:
+        type_id = self.get_type_id("money_request")
+        stmt = (
+            select(Request)
+            .where(
+                Request.requester_user_id == user_id,
+                Request.request_type_id == type_id,
+            )
+            .order_by(Request.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self._db.scalars(stmt).all())
+
+    def count_outgoing_for_user(self, *, user_id: int) -> int:
+        from sqlalchemy import func
+
+        type_id = self.get_type_id("money_request")
+        stmt = (
+            select(func.count())
+            .select_from(Request)
+            .where(
+                Request.requester_user_id == user_id,
+                Request.request_type_id == type_id,
+            )
+        )
+        return int(self._db.execute(stmt).scalar_one())
+
+    def mark_money_request_approved(
+        self, request: Request, *, settled_transaction_id: int
+    ) -> Request:
+        approved_status_id = self.get_status_id("approved")
+        request.request_status_id = approved_status_id
+        request.resolved_at = datetime.now(timezone.utc)
+        detail = request.money_request_detail
+        if detail is not None:
+            detail.settled_transaction_id = settled_transaction_id
+        self._db.commit()
+        self._db.refresh(request)
+        return request
+
+    def decline_money_request(self, request: Request) -> Request:
+        declined_status_id = self.get_status_id("declined")
+        request.request_status_id = declined_status_id
+        request.resolved_at = datetime.now(timezone.utc)
+        self._db.commit()
+        self._db.refresh(request)
+        return request

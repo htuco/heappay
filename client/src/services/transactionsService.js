@@ -590,6 +590,85 @@ export const transactionsService = {
 			throw mapTransactionApiError(error)
 		}
 	},
+
+	/**
+	 * Ask another user to pay you. Creates a pending money request.
+	 * @param {{ targetUserId: number, amount: string, note?: string | null }} payload
+	 * @returns {Promise<object>}
+	 */
+	async requestMoney({ targetUserId, amount, note = null }) {
+		try {
+			const { data } = await api.post('/requests/money', {
+				target_user_id: targetUserId,
+				amount,
+				note,
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Pending money requests addressed to the current user (paginated).
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listIncomingMoneyRequests(params = {}) {
+		try {
+			const { data } = await api.get('/requests/money/incoming', {
+				params: buildPageParams(params),
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Money requests the current user has sent (paginated).
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listOutgoingMoneyRequests(params = {}) {
+		try {
+			const { data } = await api.get('/requests/money/outgoing', {
+				params: buildPageParams(params),
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Pay a pending money request addressed to the current user.
+	 * @param {number} requestId
+	 * @param {{ sender_card_id: number, biometric?: object, app_pin?: string, totp_code?: string, password?: string }} payload
+	 * @returns {Promise<object>}
+	 */
+	async payMoneyRequest(requestId, payload) {
+		try {
+			const { data } = await api.post(`/requests/money/${requestId}/pay`, payload)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Decline a pending money request addressed to the current user.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async declineMoneyRequest(requestId) {
+		try {
+			const { data } = await api.post(`/requests/money/${requestId}/decline`)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
 }
 
 export default transactionsService

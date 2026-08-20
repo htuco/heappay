@@ -77,6 +77,22 @@ class CardStatusNotFoundError(Exception):
     """The 'frozen' card status is not seeded."""
 
 
+class SelfRequestError(Exception):
+    """A user cannot request money from themselves."""
+
+
+class TargetNotFoundError(Exception):
+    """The money-request target user does not exist."""
+
+
+class MoneyRequestAlreadyPendingError(Exception):
+    """A pending money request already exists between this pair of users."""
+
+
+class RequesterNoCardError(Exception):
+    """The requester has no active card to receive the payment."""
+
+
 REFUNDABLE_TYPE_NAME = "payment"
 COMPLETED_STATUS_NAME = "completed"
 FROZEN_CARD_STATUS_NAME = "frozen"
@@ -84,8 +100,21 @@ ACTIVE_CARD_STATUS_NAME = "active"
 
 
 class RequestService:
-    def __init__(self, repo: RequestRepository) -> None:
+    def __init__(self, repo: RequestRepository, transaction_service=None) -> None:
         self._repo = repo
+        self._transaction_service = transaction_service
+
+    def _tx_service(self):
+        if self._transaction_service is None:
+            from repositories.transaction.transaction import TransactionRepository
+            from repositories.user.auth import UserAuthRepository
+            from services.transaction.transaction import TransactionService
+
+            self._transaction_service = TransactionService(
+                TransactionRepository(self._repo._db),
+                auth_repo=UserAuthRepository(self._repo._db),
+            )
+        return self._transaction_service
 
     def request_refund(
         self,
@@ -377,3 +406,113 @@ class RequestService:
             "cancelled": by_status.get("cancelled", 0),
             "total": sum(by_status.values()),
         }
+
+    # ── money requests ────────────────────────────────────────────────────
+
+    def request_money(
+        self,
+        *,
+        requester_user_id: int,
+        target_user_id: int,
+        amount,
+        note: str | None,
+    ) -> Request:
+        if requester_user_id == target_user_id:
+            raise SelfRequestError()
+        if not self._repo.user_exists(target_user_id):
+            raise TargetNotFoundError()
+        existing = self._repo.get_pending_money_request_between(
+            requester_user_id, target_user_id
+        )
+        if existing is not None:
+            raise MoneyRequestAlreadyPendingError()
+        return self._repo.create_money_request(
+            requester_user_id=requester_user_id,
+            target_user_id=target_user_id,
+            amount=amount,
+            note=note,
+        )
+
+    def pay_money_request(
+        self,
+        *,
+        request_id: int,
+        payer_user_id: int,
+        sender_card_id: int,
+        biometric=None,
+        app_pin: str | None = None,
+        totp_code: str | None = None,
+        password: str | None = None,
+    ) -> Request:
+        from schemas.transaction import TransactionCreate
+
+        request = self._repo.get_by_id(request_id)
+        if request is None:
+            raise RequestNotFoundError()
+        if request.target_user_id != payer_user_id:
+            raise ForbiddenError()
+
+        locked = self._repo.lock_pending_request(request_id)
+        if locked is None:
+            current = self._repo.status_name_for(request.request_status_id)
+            raise RequestNotPendingError(current)
+        request = locked
+
+        detail = request.money_request_detail
+        if detail is None:
+            raise RequestNotFoundError()
+
+        recipient_card_id = self._repo.default_active_card_id_for_user(
+            request.requester_user_id
+        )
+        if recipient_card_id is None:
+            raise RequesterNoCardError()
+
+        payment_type_id = self._repo.get_payment_type_id()
+        payload = TransactionCreate(
+            sender_card_id=sender_card_id,
+            recipient_card_id=recipient_card_id,
+            transaction_type_id=payment_type_id,
+            amount=detail.amount,
+            note=request.note,
+            idempotency_key=f"moneyreq:{request_id}",
+            biometric=biometric,
+            app_pin=app_pin,
+            totp_code=totp_code,
+            password=password,
+        )
+        tx, _created = self._tx_service().create(payload, user_id=payer_user_id)
+        return self._repo.mark_money_request_approved(
+            request, settled_transaction_id=tx.transaction_id
+        )
+
+    def decline_money_request(self, *, request_id: int, actor_user_id: int) -> Request:
+        request = self._repo.get_by_id(request_id)
+        if request is None:
+            raise RequestNotFoundError()
+        if request.target_user_id != actor_user_id:
+            raise ForbiddenError()
+
+        locked = self._repo.lock_pending_request(request_id)
+        if locked is None:
+            current = self._repo.status_name_for(request.request_status_id)
+            raise RequestNotPendingError(current)
+        return self._repo.decline_money_request(locked)
+
+    def list_incoming_money_requests(
+        self, *, user_id: int, limit: int = 50, offset: int = 0
+    ) -> tuple[list[Request], int]:
+        items = self._repo.list_incoming_for_user(
+            user_id=user_id, limit=limit, offset=offset
+        )
+        total = self._repo.count_incoming_for_user(user_id=user_id)
+        return items, total
+
+    def list_outgoing_money_requests(
+        self, *, user_id: int, limit: int = 50, offset: int = 0
+    ) -> tuple[list[Request], int]:
+        items = self._repo.list_outgoing_for_user(
+            user_id=user_id, limit=limit, offset=offset
+        )
+        total = self._repo.count_outgoing_for_user(user_id=user_id)
+        return items, total
