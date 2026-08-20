@@ -5,17 +5,7 @@ import { Button } from '@/components/ui/button'
 import Skeleton from '@/components/ui/skeleton'
 import { useWallet } from '@/hooks/useWallet'
 import WalletTransferModal from '@/components/wallet/WalletTransferModal'
-
-function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
+import { formatMoney } from '@/utils/amount'
 
 /**
  * Wallet (unallocated funds) balance with a Transfer action. Sits above the
