@@ -18,7 +18,7 @@ export function ModalTitle({ className, children, ...props }) {
 }
 
 const modalVariants = cva(
-  "bg-background border border-border/60 rounded-panel w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-auto relative animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-16 duration-400 ease-modal-spring",
+  "bg-background text-foreground border border-border/60 rounded-panel w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-auto relative animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-16 duration-400 ease-modal-spring",
   {
     variants: {
       size: {
@@ -102,7 +102,7 @@ const Modal = forwardRef(
               </div>
             ) : (
               <>
-                <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4">
+                <div className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-background px-6 pt-5 pb-4">
                   <div className="min-w-0 pt-0.5">
                     <h2
                       id={titleId}
@@ -119,10 +119,10 @@ const Modal = forwardRef(
                   <button
                     type="button"
                     onClick={onClose}
-                    className="shrink-0 inline-flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-pill bg-muted/50 text-muted-foreground transition-colors touch-manipulation hover:bg-muted hover:text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="shrink-0 inline-flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-pill bg-muted text-foreground ring-1 ring-border transition-colors touch-manipulation hover:bg-destructive/10 hover:text-destructive hover:ring-destructive/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     aria-label="Close modal"
                   >
-                    <X size={15} strokeWidth={2.5} />
+                    <X size={17} strokeWidth={2.5} />
                   </button>
                 </div>
                 <div
