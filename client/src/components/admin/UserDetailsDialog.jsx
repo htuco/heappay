@@ -7,7 +7,6 @@ import {
   CreditCard,
   KeyRound,
   Loader2,
-  Mail,
   Snowflake,
   Sun,
   Trash2,
@@ -247,6 +246,7 @@ export default function UserDetailsDialog({
   onSuspend,
   onActivate,
   onDelete,
+  onPasswordReset,
   isAdmin,
   // Card freeze/unfreeze is a staff-level action (block/unblock is gated by
   // require_staff on the API), so it stays available to support. Defaults to
@@ -259,6 +259,9 @@ export default function UserDetailsDialog({
   const [pendingCardId, setPendingCardId] = useState(null)
   const [statusAction, setStatusAction] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [resetPending, setResetPending] = useState(false)
+  const [resetSent, setResetSent] = useState('')
   const [error, setError] = useState('')
   const [trackedUserId, setTrackedUserId] = useState(null)
   const [transactions, setTransactions] = useState(null)
@@ -287,6 +290,8 @@ export default function UserDetailsDialog({
     setSelectedRoleId(String(selectedUser?.roleId ?? ''))
     setActiveTab('cards')
     setConfirmDelete(false)
+    setConfirmReset(false)
+    setResetSent('')
     setError('')
     setTransactions(null)
     setActivity(null)
@@ -383,6 +388,20 @@ export default function UserDetailsDialog({
     setStatusAction(true)
     await runAction(isSuspended ? onActivate : onSuspend, selectedUser.id, setError)
     setStatusAction(false)
+  }
+
+  async function handlePasswordReset() {
+    setResetPending(true)
+    setResetSent('')
+    setError('')
+    try {
+      const message = await onPasswordReset(selectedUser.id)
+      setResetSent(typeof message === 'string' ? message : 'Password reset link sent.')
+      setConfirmReset(false)
+    } catch (err) {
+      setError(err?.message || 'Could not send the password reset link.')
+    }
+    setResetPending(false)
   }
 
   async function handleDelete() {
@@ -492,28 +511,56 @@ export default function UserDetailsDialog({
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 text-xs shadow-none"
-            disabled
-            title="Coming soon"
-          >
-            <KeyRound className="size-3.5" aria-hidden />
-            Reset Password
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 text-xs shadow-none"
-            disabled
-            title="Coming soon"
-          >
-            <Mail className="size-3.5" aria-hidden />
-            Magic Link
-          </Button>
-        </div>
+        {typeof onPasswordReset === 'function' ? (
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 w-full gap-1.5 text-xs shadow-none"
+              disabled={resetPending || confirmReset}
+              onClick={() => {
+                setResetSent('')
+                setConfirmReset(true)
+              }}
+            >
+              <KeyRound className="size-3.5" aria-hidden />
+              Reset Password
+            </Button>
+            {confirmReset ? (
+              <div className="space-y-2 rounded-input border border-border bg-background/60 p-2.5">
+                <p className="text-xs text-card-foreground">
+                  Email {selectedUser.email} a password reset link? They choose the new
+                  password themselves — you won&apos;t see or set it.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="h-8 flex-1 text-xs"
+                    disabled={resetPending}
+                    onClick={handlePasswordReset}
+                  >
+                    {resetPending ? 'Sending…' : 'Send reset link'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 flex-1 text-xs shadow-none"
+                    disabled={resetPending}
+                    onClick={() => setConfirmReset(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {resetSent ? (
+              <p className="flex items-start gap-1.5 text-xs text-success">
+                <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                {resetSent}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className={`space-y-2 rounded-surface border p-3 ${

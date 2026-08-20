@@ -230,6 +230,21 @@ export const usersService = {
       throw mapUserApiError(error)
     }
   },
+
+  /**
+   * Email the user the standard password reset link. This does not set a
+   * password — the admin never chooses or sees the user's credentials.
+   * @param {number} userId
+   * @returns {Promise<string>} confirmation message naming the delivery address
+   */
+  async sendPasswordReset(userId) {
+    try {
+      const response = await api.post(`/users/${userId}/reset-password`)
+      return response.data?.message ?? 'Password reset link sent.'
+    } catch (error) {
+      throw mapUserApiError(error)
+    }
+  },
 }
 
 export default usersService

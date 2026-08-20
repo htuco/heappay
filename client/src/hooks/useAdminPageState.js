@@ -183,6 +183,20 @@ export default function useAdminPageState() {
     })
   }
 
+  async function handlePasswordReset(userId) {
+    // Returns the server's confirmation message so the modal can name the
+    // address it went to. Deliberately does not close the modal or refresh --
+    // nothing about the user changed, only an email went out.
+    const message = await usersService.sendPasswordReset(userId)
+    notify({
+      type: 'success',
+      category: CATEGORIES.ADMIN_ACTION,
+      message: 'Password reset link sent.',
+      link: { route: usersRoute },
+    })
+    return message
+  }
+
   async function handleUserDelete(userId) {
     await usersService.delete(userId)
     refresh()
@@ -225,6 +239,7 @@ export default function useAdminPageState() {
     handleUserSuspend,
     handleUserActivate,
     handleUserDelete,
+    handlePasswordReset,
     userRoles,
     userStatuses,
   }
