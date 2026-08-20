@@ -205,6 +205,7 @@ export default function PaymentPage() {
         <PageActionButton
           icon={Send}
           label="New Transaction"
+          data-tour="transactions-send"
           onClick={() => openWizard()}
         />
       </PageActionSlot>

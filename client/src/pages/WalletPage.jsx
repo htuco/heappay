@@ -68,7 +68,7 @@ export default function WalletPage() {
   return (
     <div className="space-y-6">
       <PageActionSlot>
-        <PageActionButton icon={Plus} label="Add card" onClick={() => setAddCardOpen(true)} />
+        <PageActionButton icon={Plus} label="Add card" data-tour="wallet-add-card" onClick={() => setAddCardOpen(true)} />
       </PageActionSlot>
 
       <AddCardModal
@@ -140,7 +140,10 @@ export default function WalletPage() {
 
         {/* Card widget (carousel + balance) — first on mobile, right rail on desktop */}
         {hasCards ? (
-          <div className="order-1 lg:order-0 lg:col-span-2 lg:col-start-4 lg:row-start-2">
+          <div
+            className="order-1 lg:order-0 lg:col-span-2 lg:col-start-4 lg:row-start-2"
+            data-tour="wallet-cards"
+          >
             <CardWidget
               cards={cards}
               activeIndex={safeIndex}

@@ -14,6 +14,7 @@ export default function SettingsNav({ groups, active, onSelect }) {
   return (
     <nav
       aria-label="Settings sections"
+      data-tour="settings-nav"
       className="flex gap-2 overflow-x-auto pb-1 xl:flex-col xl:gap-5 xl:overflow-visible xl:pb-0"
     >
       {groups.map((group) => (

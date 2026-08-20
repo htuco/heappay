@@ -125,7 +125,12 @@ export default function ContactsPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageActionSlot>
-        <PageActionButton icon={UserPlus} label="Add contact" onClick={() => setAddOpen(true)} />
+        <PageActionButton
+          icon={UserPlus}
+          label="Add contact"
+          data-tour="contacts-add"
+          onClick={() => setAddOpen(true)}
+        />
       </PageActionSlot>
 
       {hasContacts && (
