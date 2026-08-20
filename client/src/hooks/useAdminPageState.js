@@ -73,12 +73,21 @@ export default function useAdminPageState() {
     const frozenCards = allCards.filter(
       (item) => item.card.status === 'frozen' || item.card.isDisabled
     ).length
+    // useAdminData pages through every user, so this really is the whole
+    // population rather than the current table page. null means the server
+    // didn't compute spend, which must not read as $0.00.
+    const spendValues = usersWithCards
+      .map((user) => Number.parseFloat(user.totalSpent))
+      .filter((value) => Number.isFinite(value))
     return {
       totalUsers: usersWithCards.length,
       activeUsers: usersWithCards.filter((user) => user.status === 'active').length,
       totalCards: allCards.length,
       disabledCards: frozenCards,
       frozenCards,
+      totalSpend: spendValues.length
+        ? spendValues.reduce((sum, value) => sum + value, 0)
+        : null,
     }
   }, [usersWithCards])
 

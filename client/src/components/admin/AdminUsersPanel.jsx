@@ -7,6 +7,7 @@ import {
   USER_STATUS_FILTER_OPTIONS,
 } from '@/utils/admin.constants'
 import { titleCase } from '@/utils/admin.utils'
+import { formatMonetaryValue } from '@/utils/transactionMeta'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -39,6 +40,13 @@ function StatusPill({ status }) {
       {status}
     </span>
   )
+}
+
+function SpentAmount({ user }) {
+  // null means the server didn't compute spend for this response, which is a
+  // different thing from a user who has genuinely spent nothing.
+  if (user.totalSpent === null || user.totalSpent === undefined) return '—'
+  return formatMonetaryValue(user.totalSpent)
 }
 
 function UserAvatar({ user }) {
@@ -136,14 +144,15 @@ export default function AdminUsersPanel({
         ) : (
           <>
             <div className="hidden overflow-hidden rounded-surface border border-border lg:block">
-              <table className="w-full min-w-205 table-fixed text-left text-sm">
+              <table className="w-full min-w-230 table-fixed text-left text-sm">
                 <thead className="border-b border-border/60 bg-muted/25 text-[11px] uppercase tracking-wider text-muted-foreground/70">
                   <tr>
-                    <th className="w-[34%] px-4 py-3 font-semibold">User</th>
-                    <th className="w-[16%] px-4 py-3 font-semibold">Role</th>
-                    <th className="w-[14%] px-4 py-3 font-semibold">Cards</th>
-                    <th className="w-[18%] px-4 py-3 font-semibold">Status</th>
-                    <th className="w-[18%] px-4 py-3 text-right font-semibold">Actions</th>
+                    <th className="w-[30%] px-4 py-3 font-semibold">User</th>
+                    <th className="w-[13%] px-4 py-3 font-semibold">Role</th>
+                    <th className="w-[12%] px-4 py-3 font-semibold">Cards</th>
+                    <th className="w-[15%] px-4 py-3 text-right font-semibold">Spent</th>
+                    <th className="w-[15%] px-4 py-3 font-semibold">Status</th>
+                    <th className="w-[15%] px-4 py-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/45">
@@ -173,6 +182,9 @@ export default function AdminUsersPanel({
                         <span className="font-medium text-card-foreground tabular-nums">{user.cards.length}</span>{' '}
                         <span className="text-xs">Cards</span>
                       </td>
+                      <td className="px-4 py-3 text-right font-medium tabular-nums text-card-foreground">
+                        <SpentAmount user={user} />
+                      </td>
                       <td className="px-4 py-3">
                         <StatusPill status={user.status} />
                       </td>
@@ -195,7 +207,7 @@ export default function AdminUsersPanel({
                   ))}
                   {emptyRows > 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-0">
+                      <td colSpan={6} className="p-0">
                         <div style={{ minHeight: `${emptyRows * 57}px` }} />
                       </td>
                     </tr>
@@ -235,6 +247,9 @@ export default function AdminUsersPanel({
                     <RoleChip role={user.role} />
                     <StatusPill status={user.status} />
                     <span className="text-xs text-muted-foreground">{user.cards.length} cards</span>
+                    <span className="text-xs text-muted-foreground">
+                      <SpentAmount user={user} /> spent
+                    </span>
                   </div>
                 </article>
               ))}

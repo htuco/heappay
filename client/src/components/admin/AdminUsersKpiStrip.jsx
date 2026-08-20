@@ -1,5 +1,7 @@
 import { BarChart3, CreditCard, Lock, Target, Users } from 'lucide-react'
 
+import { formatMonetaryValue } from '@/utils/transactionMeta'
+
 const TILES = [
   {
     key: 'totalUsers',
@@ -36,13 +38,15 @@ const TILES = [
     tone: 'bg-warning/10 text-warning',
   },
   {
-    // No per-user spend aggregate exists server-side yet — placeholder value.
-    key: 'spend',
-    label: 'Total Spend (MTD)',
+    // Backed by the per-user total_spent the users list now carries, summed
+    // client-side. Dropped the "(MTD)" qualifier: the aggregate is all-time
+    // completed spend, so labelling it month-to-date would have been wrong.
+    key: 'totalSpend',
+    label: 'Total Spend',
     hint: 'Across all users',
     icon: BarChart3,
     tone: 'bg-secondary text-secondary-foreground',
-    placeholder: true,
+    format: formatMonetaryValue,
   },
 ]
 
@@ -77,9 +81,10 @@ export default function AdminUsersKpiStrip({ kpiTotals, isLoading = false }) {
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="User metrics">
       {TILES.map((tile) => {
         const TileIcon = tile.icon
-        const value = tile.placeholder
-          ? '—'
-          : (kpiTotals[tile.key] ?? 0).toLocaleString('en-US')
+        const raw = kpiTotals[tile.key]
+        const value = tile.format
+          ? tile.format(raw)
+          : (raw ?? 0).toLocaleString('en-US')
         const hint = typeof tile.hint === 'function' ? tile.hint(kpiTotals) : tile.hint
 
         return (
