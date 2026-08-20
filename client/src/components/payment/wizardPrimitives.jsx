@@ -141,7 +141,17 @@ export function CardOption({ card, selected, onSelect, maskCard, resolveBrand, b
   )
 }
 
-export function SegmentedControl({ options, value, onChange, ariaLabel }) {
+/**
+ * `tone` picks the active segment's treatment: `neutral` (default) is the raised
+ * white pill the payment wizards use; `primary` is the tinted/accented one the
+ * wallet transfer design calls for. Same markup and semantics either way.
+ */
+export function SegmentedControl({ options, value, onChange, ariaLabel, tone = 'neutral' }) {
+  const activeClass =
+    tone === 'primary'
+      ? 'bg-primary/10 text-primary ring-1 ring-primary/40'
+      : 'bg-card text-card-foreground shadow-sm ring-1 ring-border'
+
   return (
     <div
       role="tablist"
@@ -158,9 +168,7 @@ export function SegmentedControl({ options, value, onChange, ariaLabel }) {
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={`min-h-11 flex-1 rounded-chip px-3 py-2 text-sm font-semibold transition-all duration-200 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-0 ${
-              active
-                ? 'bg-card text-card-foreground shadow-sm ring-1 ring-border'
-                : 'text-muted-foreground hover:text-card-foreground'
+              active ? activeClass : 'text-muted-foreground hover:text-card-foreground'
             }`}
           >
             {opt.label}
