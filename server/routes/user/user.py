@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
@@ -38,13 +40,20 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(UserRepository(db))
 
 
-def _user_response_with_signed_avatar(row) -> UserResponse:
+def _user_response_with_signed_avatar(
+    row, *, total_spent: Decimal | None = None
+) -> UserResponse:
     s = get_settings()
     r = UserResponse.model_validate(row)
+    updates: dict = {}
     url = resolve_avatar_url_for_client(r.avatar_url, s)
-    if url == r.avatar_url:
+    if url != r.avatar_url:
+        updates["avatar_url"] = url
+    if total_spent is not None:
+        updates["total_spent"] = total_spent
+    if not updates:
         return r
-    return r.model_copy(update={"avatar_url": url})
+    return r.model_copy(update=updates)
 
 
 @router.get("", response_model=list[UserResponse])
@@ -68,7 +77,15 @@ def list_users(
         limit=limit,
         offset=offset,
     )
-    return [_user_response_with_signed_avatar(row) for row in rows]
+    # One grouped query for the whole page, so paging through every user
+    # doesn't turn into a spend lookup per row.
+    spend = service.total_spent_by_user([row.user_id for row in rows])
+    return [
+        _user_response_with_signed_avatar(
+            row, total_spent=spend.get(row.user_id, Decimal("0"))
+        )
+        for row in rows
+    ]
 
 
 @router.get("/search", response_model=ApiResponse[list[UserSearchResponse]])
@@ -103,7 +120,10 @@ def get_user(
         row = service.get_user(user_id, include_deleted=include_deleted)
     except UserNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
-    return _user_response_with_signed_avatar(row)
+    spend = service.total_spent_by_user([row.user_id])
+    return _user_response_with_signed_avatar(
+        row, total_spent=spend.get(row.user_id, Decimal("0"))
+    )
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
