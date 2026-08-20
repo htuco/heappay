@@ -60,6 +60,13 @@ class User(Base):
     refresh_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Stamped only when a session actually begins -- login, 2FA second step,
+    # registration and invitation acceptance. Deliberately NOT touched by the
+    # refresh path: a token refresh happens on a timer in every open tab, so
+    # writing it there would turn this column into "last time the SPA was
+    # open" and it would read ~now for anyone with a stale tab.
+    # NULL means the account has never signed in (surfaced as "Never").
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     wallet_balance: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False, server_default="0", default=Decimal("0.00")
     )

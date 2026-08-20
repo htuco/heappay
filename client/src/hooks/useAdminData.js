@@ -24,6 +24,10 @@ function normalizeUsers(rawUsers, rolesById, userStatusesById) {
     roleId: user.user_role_id,
     statusId: user.status_id,
     created_at: user.created_at,
+    lastLoginAt: user.last_login_at ?? null,
+    // null means the server didn't compute it for this response; 0 means the
+    // user genuinely hasn't spent anything. Keep them distinguishable.
+    totalSpent: user.total_spent ?? null,
   }))
 }
 

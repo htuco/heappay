@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import bcrypt
 from sqlalchemy.exc import IntegrityError
@@ -59,6 +60,15 @@ class UserService:
             limit=limit,
             offset=offset,
         )
+
+    def total_spent_by_user(self, user_ids: list[int]) -> dict[int, Decimal]:
+        """Completed outbound spend per user, keyed by user_id.
+
+        Batched on purpose -- one grouped query for a whole page of users
+        rather than a call per row, since the admin users list pages through
+        every user.
+        """
+        return self._repo.total_spent_by_user(user_ids)
 
     def get_user(self, user_id: int, *, include_deleted: bool) -> User:
         row = self._repo.get_by_id(user_id)
