@@ -13,6 +13,7 @@ import {
   Trash2,
   User,
   UserMinus,
+  Wallet,
 } from 'lucide-react'
 
 import SplitModal, { SplitModalContextLabel } from '@/components/ui/SplitModal'
@@ -440,11 +441,14 @@ export default function UserDetailsDialog({
       <dl className="grid grid-cols-1 gap-1.5 text-xs">
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Last login</dt>
-          <dd className="font-medium text-card-foreground">--</dd>
+          {/* null is meaningful here: the account has never signed in. */}
+          <dd className="font-medium text-card-foreground">
+            {selectedUser.lastLoginAt ? formatTxDate(selectedUser.lastLoginAt) : 'Never'}
+          </dd>
         </div>
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Joined</dt>
-          <dd className="font-medium text-card-foreground">--</dd>
+          <dd className="font-medium text-card-foreground">{formatTxDate(selectedUser.created_at)}</dd>
         </div>
       </dl>
 
@@ -452,7 +456,17 @@ export default function UserDetailsDialog({
         <StatTile icon={CreditCard} label="Total Cards" value={stats.total} />
         <StatTile icon={CreditCard} label="Active" value={stats.active} tone="text-success" />
         <StatTile icon={Snowflake} label="Frozen" value={stats.frozen} tone="text-warning" />
-        <StatTile icon={Activity} label="Role" value={<span className="text-sm capitalize">{selectedUser.role}</span>} />
+        <StatTile
+          icon={Wallet}
+          label="Total Spent"
+          value={
+            <span className="text-sm">
+              {selectedUser.totalSpent === null || selectedUser.totalSpent === undefined
+                ? '—'
+                : formatMonetaryValue(selectedUser.totalSpent)}
+            </span>
+          }
+        />
       </div>
 
       <div className="space-y-3">
