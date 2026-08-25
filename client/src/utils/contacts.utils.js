@@ -90,11 +90,9 @@ export function formatRelativeDate(value) {
   return years === 1 ? 'Last year' : `${years} years ago`
 }
 
-/** Compact amount for the quick-send chips: "$240", "$1.1k". */
-export function formatCompactAmount(value) {
-  if (value == null) return null
-  if (Math.abs(value) >= 1000) {
-    return `$${(value / 1000).toFixed(1).replace(/\.0$/, '')}k`
-  }
-  return `$${Math.round(value)}`
+// The quick-send chips used to build their own "$1.1k" strings. Compacting is
+// now `formatMoneyCompact` from `useDisplayCurrency()`; this only decides whether
+// there is an amount worth showing at all.
+export function hasCompactAmount(value) {
+  return value != null && Number.isFinite(Number(value))
 }

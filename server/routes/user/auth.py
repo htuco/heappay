@@ -18,6 +18,7 @@ from schemas.user.auth import (
     DeactivateAccountRequest,
     LoginRequest,
     NotificationPreferencesUpdate,
+    DisplayPreferencesUpdate,
     PaymentSecurityPreferencesUpdate,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
@@ -769,6 +770,28 @@ def update_notification_preferences(
     return AuthResponse(
         success=True,
         message="Notification preferences updated.",
+        data=token_data,
+    )
+
+
+@router.patch("/display-preferences", response_model=AuthResponse)
+def update_display_preferences(
+    payload: DisplayPreferencesUpdate,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    service: UserAuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    """Set the currency amounts are displayed in. Display only — stored
+    balances, transaction creation, and settlement are unaffected."""
+    if credentials is None:
+        raise Unauthorized("Authorization header is required.")
+
+    token_data = service.update_display_preferences(credentials.credentials, payload)
+    if token_data is None:
+        raise Unauthorized("Invalid or expired token.")
+
+    return AuthResponse(
+        success=True,
+        message="Display preferences updated.",
         data=token_data,
     )
 

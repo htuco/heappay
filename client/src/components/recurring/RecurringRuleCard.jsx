@@ -14,12 +14,12 @@ import { cn } from '@/lib/utils'
 import {
   DUE_SOON_DAYS,
   daysUntilDue,
-  formatRecurringAmount,
   nextDueLabel,
   recipientName,
   relativeDueLabel,
   scheduleLabel,
 } from '@/utils/recurringPayments.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const STATUS_META = {
   active: { label: 'Active', variant: 'success' },
@@ -66,6 +66,7 @@ function cancelledOn(value) {
 }
 
 export default function RecurringRuleCard({ rule, onEdit, onCancel }) {
+  const { formatMoney } = useDisplayCurrency()
   const categories = useAppSelector(selectTransactionCategories)
   const category = findCategoryById(rule.category_id, categories)
   const status = statusMeta(rule.status)
@@ -119,7 +120,7 @@ export default function RecurringRuleCard({ rule, onEdit, onCancel }) {
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <p className="tabular text-2xl font-bold tracking-tight text-card-foreground">
-          {formatRecurringAmount(rule.amount)}
+          {formatMoney(rule.amount)}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={status.variant} size="sm">{status.label}</Badge>

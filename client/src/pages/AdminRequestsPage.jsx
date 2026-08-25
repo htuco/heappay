@@ -10,8 +10,8 @@ import FreezeRequestDialog from '@/components/admin/FreezeRequestDialog'
 import transactionsService from '@/services/transactionsService'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
-import { formatMonetaryValue } from '@/utils/transactionMeta'
 import { REQUEST_STATUS_IDS, REQUEST_STATUS_META } from '@/utils/requestStatus'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const PAGE_SIZE = 20
 
@@ -183,6 +183,7 @@ function RequestList({ fetchPage, renderRow, emptyLabel, columns }) {
 }
 
 function RefundTab() {
+  const { formatMoney } = useDisplayCurrency()
   const [selected, setSelected] = useState(null)
   // Remounting RequestList via this key after a resolve refetches the list.
   const [reloadToken, setReloadToken] = useState(0)
@@ -197,7 +198,7 @@ function RefundTab() {
           #{req.refund_detail?.transaction_id ?? '—'}
           {(req.refund_detail?.transaction_amount != null || req.refund_detail?.transaction_amount_hidden) && (
             <span className="ml-2 font-medium text-foreground">
-              {formatMonetaryValue(req.refund_detail?.transaction_amount, {
+              {formatMoney(req.refund_detail?.transaction_amount, {
                 hidden: req.refund_detail?.transaction_amount_hidden,
               })}
             </span>

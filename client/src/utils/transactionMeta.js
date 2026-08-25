@@ -34,18 +34,7 @@ export const TX_SORT_OPTIONS = [
   { value: 'amount_asc', label: 'Amount low' },
 ]
 
-export const HIDDEN_AMOUNT_LABEL = 'Hidden'
-
-export function formatUsd(value, options = {}) {
-  if (options.hidden) return HIDDEN_AMOUNT_LABEL
-  const num = Number.parseFloat(value ?? '')
-  if (Number.isNaN(num)) return '—'
-  return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-}
-
-export function formatMonetaryValue(value, { hidden = false } = {}) {
-  if (hidden) return HIDDEN_AMOUNT_LABEL
-  const num = Number.parseFloat(value ?? '')
-  if (Number.isNaN(num)) return '—'
-  return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-}
+// Money formatting moved to `utils/money.js` so there is one currency-aware
+// path; the label is re-exported here because callers already import it from
+// this module alongside the status/type metadata.
+export { HIDDEN_AMOUNT_LABEL } from '@/utils/money' 

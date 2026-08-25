@@ -24,13 +24,15 @@ import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
-import { formatMoney, normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
+import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const AUTO_CLOSE_MS = 1200
 const QUICK_AMOUNTS = [10, 25, 50]
 const STEP_LABELS = ['Recipient', 'Review']
 
 function StepResult({ amount, recipientName, onClose }) {
+  const { formatMoney } = useDisplayCurrency()
   useEffect(() => {
     const timeout = setTimeout(onClose, AUTO_CLOSE_MS)
     return () => clearTimeout(timeout)
@@ -70,6 +72,7 @@ const INITIAL = {
 }
 
 export default function RequestMoneyModal({ isOpen, onClose, onSuccess }) {
+  const { formatMoney } = useDisplayCurrency()
   const { user } = useAuth()
   const { notify } = useNotifications()
   const currentUserId = user?.id ?? user?.user_id ?? null

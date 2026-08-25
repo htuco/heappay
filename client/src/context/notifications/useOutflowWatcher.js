@@ -6,6 +6,7 @@ import { loadBaseline, saveBaseline } from './storage'
 import { CATEGORIES } from './categories'
 import { formatAmount } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const POLL_MS = 15_000
 const PAGE_SIZE = 20
@@ -80,6 +81,7 @@ async function currentTotalBalance(userId) {
  * (sender === recipient) don't change net balance and are skipped.
  */
 export function useOutflowWatcher({ userId, notify }) {
+  const { formatMoney } = useDisplayCurrency()
 	const baselineRef = useRef(null)
 	const establishedRef = useRef(false)
 	// (transaction_id → status_id) for the user's outgoing transactions, used to
@@ -159,7 +161,7 @@ export function useOutflowWatcher({ userId, notify }) {
 			const balanceLine =
 				balance == null
 					? 'You had an outflow.'
-					: `You had an outflow. Your current balance is ${formatAmount(balance)}.`
+					: `You had an outflow. Your current balance is ${formatAmount(balance, formatMoney)}.`
 			for (const tx of settled) {
 				notify({
 					type: 'warning',
@@ -179,7 +181,7 @@ export function useOutflowWatcher({ userId, notify }) {
 			baselineRef.current = maxId
 			saveBaseline(userId, 'outflow', maxId)
 		}
-	}, [userId, notify])
+	}, [userId, notify, formatMoney])
 
 	useVisibilityInterval(tick, POLL_MS, Boolean(userId))
 }

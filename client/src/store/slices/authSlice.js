@@ -143,6 +143,17 @@ export const updateNotificationPreferences = createAsyncThunk(
   },
 )
 
+export const updateDisplayPreferences = createAsyncThunk(
+  'auth/updateDisplayPreferences',
+  async ({ displayCurrency }, { rejectWithValue }) => {
+    try {
+      return await authService.updateDisplayPreferences({ displayCurrency })
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Could not save the display currency.'))
+    }
+  },
+)
+
 export const updatePaymentSecurityPreferences = createAsyncThunk(
   'auth/updatePaymentSecurityPreferences',
   async ({ paymentConfirmEnabled, paymentConfirmAboveAmount }, { rejectWithValue }) => {
@@ -280,6 +291,13 @@ const authSlice = createSlice({
       .addCase(updatePaymentSecurityPreferences.fulfilled, (state, action) => {
         state.user = action.payload
         state.error = null
+      })
+      .addCase(updateDisplayPreferences.fulfilled, (state, action) => {
+        state.user = action.payload
+        state.error = null
+      })
+      .addCase(updateDisplayPreferences.rejected, (state, action) => {
+        state.error = action.payload ?? 'Could not save the display currency.'
       })
       .addCase(uploadProfileAvatarUser.rejected, (state, action) => {
         state.error = action.payload ?? 'Could not upload profile photo.'

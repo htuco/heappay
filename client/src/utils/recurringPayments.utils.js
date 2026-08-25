@@ -67,16 +67,6 @@ export function formatMonthsPhrase(months) {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
-/**
- * Currency display for a recurring rule amount (the API sends it as a string).
- * @param {string | number} amount
- * @returns {string}
- */
-export function formatRecurringAmount(amount) {
-  const n = Number.parseFloat(amount)
-  if (Number.isNaN(n)) return String(amount)
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-}
 
 /**
  * `next_due_at` is a plain `YYYY-MM-DD` date, not an instant. Passing it to

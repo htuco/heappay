@@ -45,7 +45,7 @@ import { useCardBrandResolver } from '@/hooks/useCardBrandResolver'
 import { lookupCardByNumber } from '@/services/cardsService'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import { useAppSelector } from '@/store/hooks'
-import { formatMoney } from '@/utils/amount'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const STEP_LABELS = ['Pay from', 'Recipient', 'Amount', 'Schedule', 'Review']
 
@@ -383,6 +383,7 @@ function StepAmount({ form, set, categories, onNext, onBack }) {
 // (day_of_month + months), so a single-option field was dead UI. The summary
 // panel at the bottom states the cadence in words instead.
 function StepSchedule({ form, set, onNext, onBack }) {
+  const { formatMoney } = useDisplayCurrency()
   return (
     <div className="space-y-4">
       <DayOfMonthPicker
@@ -442,6 +443,7 @@ function StepReview({
   isSubmitting,
   error,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const recipientNameParts = form.recipientInfo?.owner_name?.split(' ') ?? []
   const schedule = form.day_of_month
     ? `Every ${form.day_of_month}${ordinal(Number(form.day_of_month))} of ${formatMonthsPhrase(form.months)}`
@@ -543,6 +545,7 @@ function StepReview({
 // ─── Success ──────────────────────────────────────────────────────────────────
 
 function StepResult({ created, form, categories, onClose }) {
+  const { formatMoney } = useDisplayCurrency()
   const firstPayment = formatDueDate(created?.next_due_at)
 
   return (

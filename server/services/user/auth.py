@@ -47,6 +47,7 @@ from schemas.user.auth import (
     DeactivateAccountRequest,
     LoginRequest,
     NotificationPreferencesUpdate,
+    DisplayPreferencesUpdate,
     PaymentSecurityPreferencesUpdate,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
@@ -265,6 +266,7 @@ class UserAuthService:
             email_refund_status_enabled=user.email_refund_status_enabled,
             email_outflow_enabled=getattr(user, "email_outflow_enabled", True),
             notify_on_user_requests=getattr(user, "notify_on_user_requests", False),
+            display_currency=getattr(user, "display_currency", "USD") or "USD",
             avatar_url=resolve_avatar_url_for_client(raw_avatar, self.settings),
             totp_enabled=user.totp_enabled,
             payment_confirm_enabled=user.payment_confirm_enabled,
@@ -925,6 +927,26 @@ class UserAuthService:
             email_outflow_enabled=preferences.email_outflow_enabled,
             notify_on_user_requests=preferences.notify_on_user_requests,
             email_family_activity_enabled=preferences.email_family_activity_enabled,
+        )
+        user = self.repo.get_user_by_id(user_id)
+        if user is None:
+            return None
+
+        return self._build_token_response_for_user(
+            user,
+            user.refresh_token or "",
+            access_token=token,
+        )
+
+    def update_display_preferences(
+        self, token: str, preferences: DisplayPreferencesUpdate
+    ) -> TokenResponse | None:
+        user_id = self.resolve_active_user_id(token)
+        if user_id is None:
+            return None
+
+        self.repo.update_display_preferences(
+            user_id, display_currency=preferences.display_currency
         )
         user = self.repo.get_user_by_id(user_id)
         if user is None:

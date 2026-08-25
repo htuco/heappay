@@ -18,9 +18,10 @@ import { Button } from '@/components/ui/button'
 import CardBrandIcon from '@/components/ui/CardBrandIcon'
 import FormBanner from '@/components/ui/FormBanner'
 import { SegmentedControl } from '@/components/payment/wizardPrimitives'
-import { formatMoney, normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
+import { normalizeAmountForSubmit, sanitizeAmountInput } from '@/utils/amount'
 import { getCardTail } from '@/utils/cardMask'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const SUCCESS_HOLD_MS = 1100
 const QUICK_AMOUNTS = [25, 50, 100]
@@ -78,6 +79,7 @@ function SideRole({ isSource }) {
 }
 
 function SideFigure({ isSource, value }) {
+  const { formatMoney } = useDisplayCurrency()
   return (
     <p className="truncate text-[11px] text-muted-foreground">
       {isSource ? 'Available' : 'Balance'}{' '}
@@ -165,6 +167,7 @@ export default function WalletTransferModal({
   onTransfer,
   onSuccess,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const [direction, setDirection] = useState('to_card')
   const [selectedCardId, setSelectedCardId] = useState(null)
   const [amount, setAmount] = useState('')

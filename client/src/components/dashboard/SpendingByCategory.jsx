@@ -5,6 +5,7 @@ import { AlertCircle, ArrowRight, PieChart as PieChartIcon, RefreshCw } from 'lu
 import { Button } from '@/components/ui/button'
 import { getApiErrorMessage } from '@/utils/api'
 import { useSpendingByCategory } from '@/hooks/useSpendingByCategory'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 // The legend used to render every category it was given, so the widget — and
 // with it the whole dashboard row — grew a row taller for each one (13 are
@@ -12,11 +13,8 @@ import { useSpendingByCategory } from '@/hooks/useSpendingByCategory'
 // donut and the centre total still account for 100% of spend either way.
 const MAX_VISIBLE_CATEGORIES = 6
 
-function formatMoney(n) {
-  return `$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
 function CategoryTooltip({ active, payload, total }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!active || !payload?.length) return null
   const segment = payload[0]?.payload
   if (!segment) return null
@@ -28,7 +26,7 @@ function CategoryTooltip({ active, payload, total }) {
         {segment.name}
       </p>
       <p className="tabular-nums text-sm font-semibold text-card-foreground">
-        {formatMoney(segment.value)}
+        {formatMoney(segment.value, { absolute: true })}
         <span className="ml-1 font-normal text-muted-foreground">· {pct}%</span>
       </p>
     </div>
@@ -68,6 +66,7 @@ function ChartErrorState({ error, onRetry }) {
 }
 
 export default function SpendingByCategory({ months = 6, bare = false }) {
+  const { formatMoney } = useDisplayCurrency()
   const { segments, total, isLoading, error, refresh } = useSpendingByCategory({ months })
   const isEmpty = segments.length === 0
   const visibleSegments = segments.slice(0, MAX_VISIBLE_CATEGORIES)
@@ -149,7 +148,7 @@ export default function SpendingByCategory({ months = 6, bare = false }) {
                 Total
               </span>
               <span className="tabular-nums text-base font-semibold text-card-foreground">
-                {formatMoney(total)}
+                {formatMoney(total, { absolute: true })}
               </span>
             </div>
           </div>
@@ -173,7 +172,7 @@ export default function SpendingByCategory({ months = 6, bare = false }) {
                       {pct}%
                     </span>
                     <span className="shrink-0 text-right tabular-nums font-medium text-card-foreground">
-                      {formatMoney(segment.value)}
+                      {formatMoney(segment.value, { absolute: true })}
                     </span>
                   </li>
                 )

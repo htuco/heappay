@@ -7,11 +7,11 @@ import {
   USER_STATUS_FILTER_OPTIONS,
 } from '@/utils/admin.constants'
 import { titleCase } from '@/utils/admin.utils'
-import { formatMonetaryValue } from '@/utils/transactionMeta'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import SharedUserAvatar from '@/components/ui/UserAvatar'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 function RoleChip({ role }) {
   const styles = {
@@ -43,10 +43,11 @@ function StatusPill({ status }) {
 }
 
 function SpentAmount({ user }) {
+  const { formatMoney } = useDisplayCurrency()
   // null means the server didn't compute spend for this response, which is a
   // different thing from a user who has genuinely spent nothing.
   if (user.totalSpent === null || user.totalSpent === undefined) return '—'
-  return formatMonetaryValue(user.totalSpent)
+  return formatMoney(user.totalSpent)
 }
 
 function UserAvatar({ user }) {

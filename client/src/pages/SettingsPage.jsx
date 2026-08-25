@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useBalanceScopePreference } from '@/hooks/useBalanceScopePreference'
 import { useTheme } from '@/hooks/useTheme'
 import { useAppDispatch } from '@/store/hooks'
-import { refreshSession, updateNotificationPreferences, updatePaymentSecurityPreferences, updateProfileUser } from '@/store/slices/authSlice'
+import { refreshSession, updateDisplayPreferences, updateNotificationPreferences, updatePaymentSecurityPreferences, updateProfileUser } from '@/store/slices/authSlice'
 
 import { useWalletCards } from '@/hooks/useWalletCards'
 
@@ -25,6 +25,8 @@ import AllCardsModal from '@/components/wallet/AllCardsModal'
 import { Button } from '@/components/ui/button'
 import { exportService } from '@/services/exportService'
 import { BALANCE_SCOPE_LABELS, BALANCE_SCOPES } from '@/utils/balanceScope'
+import { normalizeCurrency } from '@/utils/money'
+import DisplayCurrencyRow from '@/components/settings/DisplayCurrencyRow'
 import { maskEmail } from '@/utils/maskEmail'
 import { useNotifications } from '@/context/NotificationContext'
 
@@ -120,6 +122,10 @@ export default function SettingsPage() {
   const [paymentPrefs, setPaymentPrefs] = useState(() => savedPaymentSecurityPrefs(user))
   const [discoverable, setDiscoverable] = useState(() => user?.is_discoverable !== false)
   const [saveError, setSaveError] = useState(null)
+  const [displayCurrency, setDisplayCurrency] = useState(
+    () => normalizeCurrency(user?.display_currency),
+  )
+  const [isSavingCurrency, setIsSavingCurrency] = useState(false)
 
   // Re-sync the local mirror when the server-side user record changes (login,
   // refresh, save landing). Render-time adjustment keyed on user identity;
@@ -130,6 +136,7 @@ export default function SettingsPage() {
     setNotifPrefs(savedNotificationPrefs(user))
     setPaymentPrefs(savedPaymentSecurityPrefs(user))
     setDiscoverable(user.is_discoverable !== false)
+    setDisplayCurrency(normalizeCurrency(user.display_currency))
   }
 
   async function handleExportReport(report) {
@@ -414,28 +421,30 @@ export default function SettingsPage() {
           />
         </ControlRow>
 
-        {/*
-          Placeholder until the display-currency work lands: switching it has to
-          convert every amount the app renders, so the control ships disabled
-          rather than silently doing nothing. Real rates come from /fx/convert.
-        */}
-        <ControlRow
-          label="Display currency"
-          hint="Show balances and amounts in your preferred currency, converted at reference rates. Coming soon — amounts are shown in USD for now."
-          emphasize
-          alignToggle
-        >
-          <OptionGroup
-            options={['USD', 'EUR', 'BAM']}
-            active="USD"
-            onSelect={() => {}}
-            disabled
-            title="Display currency is coming soon."
-          />
-        </ControlRow>
+        <DisplayCurrencyRow
+          value={displayCurrency}
+          onSelect={handleDisplayCurrencyChange}
+          disabled={isSavingCurrency}
+        />
       </div>
     </SettingsSection>
   )
+
+  async function handleDisplayCurrencyChange(next) {
+    if (next === displayCurrency || isSavingCurrency) return
+    const previous = displayCurrency
+    setDisplayCurrency(next)
+    setIsSavingCurrency(true)
+    setSaveError(null)
+    try {
+      await dispatch(updateDisplayPreferences({ displayCurrency: next })).unwrap()
+    } catch (error) {
+      setDisplayCurrency(previous)
+      setSaveError(typeof error === 'string' ? error : 'Could not save the display currency.')
+    } finally {
+      setIsSavingCurrency(false)
+    }
+  }
 
   const dataReportsCard = (
     <SettingsSection

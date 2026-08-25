@@ -1,4 +1,4 @@
-import { HIDDEN_AMOUNT_LABEL } from '@/utils/transactionMeta'
+import { HIDDEN_AMOUNT_LABEL } from '@/utils/money'
 import {
   Bus,
   Clapperboard,
@@ -15,11 +15,6 @@ import {
   Utensils,
   Wallet,
 } from 'lucide-react'
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-})
 
 // Maps the backend's snake_case category machine names to a display label,
 // a lucide icon, and a color token used by the history pill and the
@@ -114,14 +109,16 @@ export const TRANSACTION_TYPE_OPTIONS = [
   { value: '6', label: 'Fine' },
 ]
 
-export function formatTransactionAmount(amountOrTx) {
+/**
+ * Pull the amount and hidden flag off either a transaction or a bare amount.
+ * Formatting is the caller's job — it needs the active display currency, which
+ * only a component can read. See `useDisplayCurrency()`.
+ */
+export function transactionAmountParts(amountOrTx) {
   if (amountOrTx && typeof amountOrTx === 'object' && !Array.isArray(amountOrTx)) {
-    if (amountOrTx.amount_hidden) return HIDDEN_AMOUNT_LABEL
-    return formatTransactionAmount(amountOrTx.amount)
+    return { amount: amountOrTx.amount, hidden: Boolean(amountOrTx.amount_hidden) }
   }
-  const numericAmount = Number(amountOrTx)
-  if (Number.isNaN(numericAmount)) return amountOrTx ?? '—'
-  return currencyFormatter.format(numericAmount)
+  return { amount: amountOrTx, hidden: false }
 }
 
 export function formatTransactionDate(value) {
@@ -197,8 +194,10 @@ export function transactionMatchesLookup(transaction, lookupValue) {
     type,
     transaction.status_id,
     status,
+    // The raw amount only: the formatted string now depends on the viewer's
+    // display currency, so matching against it would make search results vary
+    // by preference.
     transaction.amount,
-    formatTransactionAmount(transaction.amount),
     transaction.note,
     formatTransactionDate(transaction.created_at),
   ]

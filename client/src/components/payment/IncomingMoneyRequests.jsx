@@ -19,9 +19,9 @@ import { getAppPinStatus, getBiometricStatus } from '@/services/authService'
 import { listCards } from '@/services/cardsService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange, subscribeDataChange } from '@/utils/dataEvents'
-import { formatMoney } from '@/utils/amount'
 import { getBiometricAssertion, isWebAuthnAssertionAvailable } from '@/utils/webauthn'
 import { paymentConfirmationLabel, userRequiresPaymentConfirmation } from '@/utils/paymentSecurity'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 function requesterLabel(req) {
   return (
@@ -32,6 +32,7 @@ function requesterLabel(req) {
 }
 
 function RequestCard({ req, onPay, onDecline, isBusy }) {
+  const { formatMoney } = useDisplayCurrency()
   const name = requesterLabel(req)
   const amount = req.money_request_detail?.amount
   const nameParts = name.split(' ')
@@ -79,6 +80,7 @@ function RequestCard({ req, onPay, onDecline, isBusy }) {
 }
 
 export default function IncomingMoneyRequests() {
+  const { formatMoney } = useDisplayCurrency()
   const { user } = useAuth()
   const { notify } = useNotifications()
   const { maskCard, resolveBrand } = useCardBrandResolver()

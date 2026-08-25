@@ -11,30 +11,16 @@ import { RefreshCw, AlertCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { getApiErrorMessage } from '@/utils/api'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 // ─── Axis formatting ──────────────────────────────────────────────────────────
-
-/**
- * Compact currency for the y-axis: 4000 -> $4k, -2500 -> -$2.5k. Raw thousands
- * cost more width than the axis has on a phone, and read as counts rather than
- * money.
- */
-function formatAxisTick(value) {
-  const n = Number(value) || 0
-  const sign = n < 0 ? '-' : ''
-  const abs = Math.abs(n)
-  if (abs >= 1_000_000) return `${sign}$${+(abs / 1_000_000).toFixed(1)}m`
-  if (abs >= 1_000) return `${sign}$${+(abs / 1_000).toFixed(1)}k`
-  return `${sign}$${abs}`
-}
 
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 
 function NetTooltip({ active, payload, label }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!active || !payload?.length) return null
   const net = payload[0]?.value ?? 0
-  const fmt = (n) =>
-    `$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   return (
     <div className="rounded-input border border-border bg-card px-3 py-2.5 shadow-lg">
       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -45,7 +31,7 @@ function NetTooltip({ active, payload, label }) {
           net >= 0 ? 'text-success' : 'text-destructive'
         }`}
       >
-        {net < 0 ? '-' : ''}{fmt(net)}
+        {net < 0 ? '-' : ''}{formatMoney(net, { absolute: true })}
       </p>
     </div>
   )
@@ -53,12 +39,13 @@ function NetTooltip({ active, payload, label }) {
 
 // Legacy single-series tooltip (backwards-compat fallback)
 function SingleTooltip({ active, payload, label }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-input border border-border bg-card px-3 py-2 shadow-lg">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="tabular-nums text-sm font-semibold text-card-foreground">
-        ${payload[0].value.toLocaleString()}
+        {formatMoney(payload[0].value)}
       </p>
     </div>
   )
@@ -123,6 +110,7 @@ export default function MoneyFlowPlaceholder({
   points,
   labels,
 }) {
+  const { formatMoneyCompact } = useDisplayCurrency()
   // Determine which data path to use
   const useDual = chartData !== undefined
 
@@ -197,7 +185,7 @@ export default function MoneyFlowPlaceholder({
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                  tickFormatter={formatAxisTick}
+                  tickFormatter={formatMoneyCompact}
                   width={38}
                 />
                 <Tooltip
@@ -242,7 +230,7 @@ export default function MoneyFlowPlaceholder({
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                  tickFormatter={formatAxisTick}
+                  tickFormatter={formatMoneyCompact}
                   width={38}
                 />
                 <Tooltip

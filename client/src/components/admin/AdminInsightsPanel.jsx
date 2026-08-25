@@ -12,7 +12,8 @@ import {
 import { Activity, ArrowUpRight, TicketCheck, TrendingUp } from 'lucide-react'
 
 import { useAdminStats } from '@/hooks/useAdminStats'
-import { TX_STATUS_META, TX_TYPE_META, HIDDEN_AMOUNT_LABEL, formatMonetaryValue } from '@/utils/transactionMeta'
+import { TX_STATUS_META, TX_TYPE_META, HIDDEN_AMOUNT_LABEL } from '@/utils/transactionMeta'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const MONTHS = 6
 
@@ -49,6 +50,7 @@ function buildChartData(monthly, amountsHidden) {
 }
 
 function VolumeTooltip({ active, payload, label }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!active || !payload?.length) return null
   const { volume, count, volumeHidden } = payload[0].payload
   return (
@@ -57,7 +59,7 @@ function VolumeTooltip({ active, payload, label }) {
       {volumeHidden ? (
         <p className="text-sm font-semibold text-card-foreground">{HIDDEN_AMOUNT_LABEL}</p>
       ) : (
-        <p className="tabular-nums text-sm font-semibold text-card-foreground">{formatMonetaryValue(volume)}</p>
+        <p className="tabular-nums text-sm font-semibold text-card-foreground">{formatMoney(volume)}</p>
       )}
       <p className="text-xs text-muted-foreground">{count} transaction{count !== 1 ? 's' : ''}</p>
     </div>
@@ -160,6 +162,7 @@ const TYPE_LABELS = Object.fromEntries(
 )
 
 export default function AdminInsightsPanel({ filters = null }) {
+  const { formatMoney } = useDisplayCurrency()
   const { txStats, requestStats, isLoading, error, refresh } = useAdminStats({ months: MONTHS, filters })
 
   const chartData = useMemo(
@@ -209,7 +212,7 @@ export default function AdminInsightsPanel({ filters = null }) {
         <HeadlineStat
           icon={TrendingUp}
           label="Completed Volume"
-          value={formatMonetaryValue(txStats?.completed_volume, { hidden: amountsHidden })}
+          value={formatMoney(txStats?.completed_volume, { hidden: amountsHidden })}
           hint="All time"
         />
         <HeadlineStat

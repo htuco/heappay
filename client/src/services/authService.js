@@ -191,6 +191,19 @@ export async function updateNotificationPreferences({
 	return user
 }
 
+export async function updateDisplayPreferences({ displayCurrency }) {
+	const { data } = await api.patch('/auth/display-preferences', {
+		display_currency: displayCurrency,
+	})
+	const td = data.data
+	if (td?.access_token && td?.refresh_token) {
+		writeAuthTokens(td.access_token, td.refresh_token)
+	}
+	const user = td.user
+	setAuthUser(user, { remember: getAuthRememberPreference() })
+	return user
+}
+
 export async function updatePaymentSecurityPreferences({
 	paymentConfirmEnabled,
 	paymentConfirmAboveAmount,

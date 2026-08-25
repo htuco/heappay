@@ -1,6 +1,6 @@
 import { BarChart3, CreditCard, Lock, Target, Users } from 'lucide-react'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
-import { formatMonetaryValue } from '@/utils/transactionMeta'
 
 const TILES = [
   {
@@ -46,7 +46,7 @@ const TILES = [
     hint: 'Across all users',
     icon: BarChart3,
     tone: 'bg-secondary text-secondary-foreground',
-    format: formatMonetaryValue,
+    isMoney: true,
   },
 ]
 
@@ -63,6 +63,7 @@ function TileSkeleton() {
 }
 
 export default function AdminUsersKpiStrip({ kpiTotals, isLoading = false }) {
+  const { formatMoney } = useDisplayCurrency()
   if (isLoading) {
     return (
       <section
@@ -82,8 +83,8 @@ export default function AdminUsersKpiStrip({ kpiTotals, isLoading = false }) {
       {TILES.map((tile) => {
         const TileIcon = tile.icon
         const raw = kpiTotals[tile.key]
-        const value = tile.format
-          ? tile.format(raw)
+        const value = tile.isMoney
+          ? formatMoney(raw)
           : (raw ?? 0).toLocaleString('en-US')
         const hint = typeof tile.hint === 'function' ? tile.hint(kpiTotals) : tile.hint
 

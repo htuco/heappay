@@ -49,3 +49,36 @@ export async function getPairInsight({ from, to, range = '7d' }) {
     throw new Error(getApiErrorMessage(error, 'Could not load exchange insight.'))
   }
 }
+
+/**
+ * The rate for one pair, without an amount.
+ *
+ * The display-currency switcher fetches this once per (stored → displayed) pair
+ * and formats locally; /fx/convert would be one request per rendered figure.
+ * @param {{ from: string, to: string }} params
+ * @returns {Promise<{ from_currency: string, to_currency: string, rate: string, indicative: boolean, source: string, disclaimer: string }>}
+ */
+export async function getPairRate({ from, to }) {
+  try {
+    const { data } = await api.get('/fx/rate', {
+      params: { from_currency: from, to_currency: to },
+    })
+    return unwrap({ data })
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'Could not load the exchange rate.'))
+  }
+}
+
+/**
+ * Currency codes conversion can actually price — drives the display-currency
+ * picker so the options can't drift from what the server supports.
+ * @returns {Promise<{ base: string, codes: string[] }>}
+ */
+export async function getSupportedCurrencies() {
+  try {
+    const { data } = await api.get('/fx/currencies')
+    return unwrap({ data })
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'Could not load supported currencies.'))
+  }
+}

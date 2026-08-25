@@ -10,8 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { formatMoney } from '@/utils/amount'
 import { formatRelativeDate } from '@/utils/contacts.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 /**
  * One contact in the directory. Send is the row's primary action and is always
@@ -30,6 +30,7 @@ export default function ContactRow({
   onEdit,
   onRemove,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const card = contact.default_card
   const lastPaid = formatRelativeDate(payment?.lastAt)
 

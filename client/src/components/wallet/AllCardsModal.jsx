@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { formatBrandLabel, formatExpiryDate } from '@/utils/paymentCard.utils'
 import { maskCardNumber } from '@/utils/cardMask'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const DEFAULT_TRIGGER_CLASS =
   'border-border/80 bg-background/90 shadow-sm hover:bg-muted dark:border-white/20 dark:bg-card/70 dark:hover:border-white/30 dark:hover:bg-card'
@@ -28,15 +29,6 @@ const STATUS_LABELS = {
   frozen: 'Frozen',
   expired: 'Expired',
   cancelled: 'Cancelled',
-}
-
-function formatMoney(value) {
-  const num = Number(value ?? 0)
-  if (Number.isNaN(num)) return '$0.00'
-  return num.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  })
 }
 
 function getMaskedNumber(card) {
@@ -57,6 +49,7 @@ function MainBadge() {
 }
 
 function WalletCardListItem({ item, onRequestSetMain, onRequestRemove, onRequestFreeze, onRequestUnfreeze }) {
+  const { formatMoney } = useDisplayCurrency()
   const card = item.card ?? {}
   const brandLabel = formatBrandLabel(card.brand) || 'Card'
   const maskedNumber = getMaskedNumber(card)
@@ -224,6 +217,7 @@ function WalletCardListItem({ item, onRequestSetMain, onRequestRemove, onRequest
 }
 
 function PrimaryCardSummary({ item }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!item) {
     return (
       <div className="rounded-surface border border-dashed border-border bg-card/40 px-4 py-5 text-center text-xs text-muted-foreground">
@@ -267,6 +261,7 @@ function PrimaryCardSummary({ item }) {
 }
 
 function AllCardsLeftPanel({ cards, primaryCard }) {
+  const { formatMoney } = useDisplayCurrency()
   const totalBalance = cards.reduce(
     (sum, item) => sum + (Number(item.balance) || 0),
     0
@@ -307,6 +302,7 @@ function AllCardsLeftPanel({ cards, primaryCard }) {
 }
 
 function RemoveCardConfirmDialog({ isOpen, onClose, onConfirm, candidate, isSubmitting }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!candidate) return null
   const candidateCard = candidate.card ?? {}
   const candidateLabel = formatBrandLabel(candidateCard.brand) || 'this card'

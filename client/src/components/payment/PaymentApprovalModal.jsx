@@ -10,17 +10,7 @@ import { getAppPinStatus, getBiometricStatus } from '@/services/authService'
 import transactionsService from '@/services/transactionsService'
 import { DATA_CHANGE_KINDS, emitDataChange } from '@/utils/dataEvents'
 import { getBiometricAssertion, isWebAuthnAssertionAvailable } from '@/utils/webauthn'
-
-function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 function formatCountdown(expiresAt) {
   if (!expiresAt) return null
@@ -37,6 +27,7 @@ export default function PaymentApprovalModal({
   transaction,
   onApproved,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const { user } = useAuth()
   const totpEnabled = user?.totp_enabled ?? false
   const [pin, setPin] = useState('')

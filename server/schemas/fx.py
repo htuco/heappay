@@ -12,6 +12,20 @@ class FxConvertResponse(BaseModel):
     disclaimer: str
 
 
+class FxRateResponse(BaseModel):
+    from_currency: str
+    to_currency: str
+    rate: str
+    indicative: bool
+    source: str
+    disclaimer: str
+
+
+class FxCurrenciesResponse(BaseModel):
+    base: str
+    codes: list[str]
+
+
 class FxRateCard(BaseModel):
     pair: str
     code: str

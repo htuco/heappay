@@ -397,6 +397,17 @@ class UserAuthRepository:
         )
         self._db.commit()
 
+    def update_display_preferences(self, user_id: int, *, display_currency: str) -> None:
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(
+                display_currency=display_currency,
+                modified_at=datetime.now(timezone.utc),
+            )
+        )
+        self._db.commit()
+
     def update_payment_security_preferences(
         self,
         user_id: int,

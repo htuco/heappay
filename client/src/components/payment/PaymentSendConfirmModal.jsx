@@ -5,17 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormBanner from '@/components/ui/FormBanner'
 import { useAuth } from '@/hooks/useAuth'
-
-function formatMoney(value) {
-  const n = Number(value)
-  if (!isFinite(n)) return '$0.00'
-  return n.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 export default function PaymentSendConfirmModal({
   isOpen,
@@ -24,6 +14,7 @@ export default function PaymentSendConfirmModal({
   recipientName,
   onConfirm,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const { user } = useAuth()
   const totpEnabled = user?.totp_enabled ?? false
   const [totpCode, setTotpCode] = useState('')

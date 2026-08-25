@@ -3,6 +3,7 @@ import { recurringPaymentsService } from '@/services/recurringPaymentsService'
 import { CATEGORIES } from './categories'
 import { formatAmount } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const POLL_MS = 30_000
 
@@ -19,6 +20,7 @@ function recipientLabel(rule) {
  *  - BILL_PAID  when next_due_at advances and last_run_failed is false (payment went through)
  */
 export function useRecurringPaymentWatcher({ userId, notify }) {
+  const { formatMoney } = useDisplayCurrency()
 	// Map of recurring_payment_id → { last_run_failed, next_due_at }
 	const snapshotRef = useRef(new Map())
 	const establishedRef = useRef(false)
@@ -68,7 +70,7 @@ export function useRecurringPaymentWatcher({ userId, notify }) {
 				notify({
 					type: 'error',
 					category: CATEGORIES.BILL_FAILED,
-					message: `Recurring payment of ${formatAmount(r.amount)} to ${recipientLabel(r)} failed. Check your balance.`,
+					message: `Recurring payment of ${formatAmount(r.amount, formatMoney)} to ${recipientLabel(r)} failed. Check your balance.`,
 					link: { route: '/recurring' },
 					surface: 'both',
 					dedupKey: `bill:${r.recurring_payment_id}:failed:${r.next_due_at}`,
@@ -77,7 +79,7 @@ export function useRecurringPaymentWatcher({ userId, notify }) {
 				notify({
 					type: 'success',
 					category: CATEGORIES.BILL_PAID,
-					message: `Recurring payment of ${formatAmount(r.amount)} to ${recipientLabel(r)} was sent.`,
+					message: `Recurring payment of ${formatAmount(r.amount, formatMoney)} to ${recipientLabel(r)} was sent.`,
 					link: { route: '/recurring' },
 					surface: 'panel',
 					dedupKey: `bill:${r.recurring_payment_id}:paid:${prev.next_due_at}`,
@@ -89,7 +91,7 @@ export function useRecurringPaymentWatcher({ userId, notify }) {
 				next_due_at: r.next_due_at,
 			})
 		}
-	}, [userId, notify])
+	}, [userId, notify, formatMoney])
 
 	useVisibilityInterval(tick, POLL_MS, Boolean(userId))
 }

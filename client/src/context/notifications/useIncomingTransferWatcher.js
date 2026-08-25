@@ -4,6 +4,7 @@ import { loadBaseline, saveBaseline } from './storage'
 import { CATEGORIES } from './categories'
 import { formatAmount } from './format'
 import { useVisibilityInterval } from './useVisibilityInterval'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const POLL_MS = 15_000
 const PAGE_SIZE = 20
@@ -55,6 +56,7 @@ function senderLabel(tx) {
  * establishes the baseline silently — older transactions are not replayed.
  */
 export function useIncomingTransferWatcher({ userId, notify }) {
+  const { formatMoney } = useDisplayCurrency()
 	const baselineRef = useRef(null)
 	const establishedRef = useRef(false)
 	// Snapshot of (transaction_id → status_id) for the user's outgoing
@@ -126,7 +128,7 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 			notify({
 				type: 'success',
 				category: CATEGORIES.PAYMENT_RECEIVED,
-				message: `${formatAmount(tx.amount)} received from ${senderLabel(tx)}.`,
+				message: `${formatAmount(tx.amount, formatMoney)} received from ${senderLabel(tx)}.`,
 				link: { route: '/transactions', modal: { kind: 'transaction', id: tx.transaction_id } },
 				surface: 'panel',
 				dedupKey: `tx:${tx.transaction_id}:received`,
@@ -146,7 +148,7 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 				notify({
 					type: 'success',
 					category: CATEGORIES.REFUND_APPROVED,
-					message: `Your refund for ${formatAmount(tx.amount)} was approved.`,
+					message: `Your refund for ${formatAmount(tx.amount, formatMoney)} was approved.`,
 					link: { route: '/transactions', modal: { kind: 'transaction', id: tx.transaction_id } },
 					surface: 'panel',
 					dedupKey: `tx:${tx.transaction_id}:refund_approved`,
@@ -158,7 +160,7 @@ export function useIncomingTransferWatcher({ userId, notify }) {
 			baselineRef.current = maxId
 			saveBaseline(userId, 'incoming_tx', maxId)
 		}
-	}, [userId, notify])
+	}, [userId, notify, formatMoney])
 
 	useVisibilityInterval(tick, POLL_MS, Boolean(userId))
 }

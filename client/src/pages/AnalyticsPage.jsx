@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { getApiErrorMessage } from '@/utils/api'
 import { useSpendingByCategory } from '@/hooks/useSpendingByCategory'
 import { useCategoryTimeseries } from '@/hooks/useCategoryTimeseries'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 // Shared trailing-window vocabulary (mirrors /fx/insight). The breakdown
 // endpoint only takes a month lookback, so map each range to a month count for
@@ -29,23 +30,9 @@ const RANGES = [
 const RANGE_TO_MONTHS = { '7d': 1, '30d': 1, '90d': 3, '1y': 12 }
 const RANGE_NOUN = { '7d': 'last 7 days', '30d': 'last 30 days', '90d': 'last 90 days', '1y': 'last year' }
 
-const usd = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
-const money = (n) => usd.format(Number(n) || 0)
-
-// Compact currency for the y-axis: 4000 -> $4k. Full amounts cost more width
-// than a phone axis has and read as counts, not money.
-function formatAxisTick(value) {
-  const n = Number(value) || 0
-  const abs = Math.abs(n)
-  if (abs >= 1_000_000) return `$${+(abs / 1_000_000).toFixed(1)}m`
-  if (abs >= 1_000) return `$${+(abs / 1_000).toFixed(1)}k`
-  return `$${abs}`
-}
+// Money formatting comes from `useDisplayCurrency()` so Analytics reads in the
+// same currency as the rest of the app. The y-axis uses the compact variant:
+// full amounts cost more width than a phone axis has and read as counts, not money.
 
 // ─── Range toggle ───────────────────────────────────────────────────────────
 
@@ -111,6 +98,7 @@ function EmptyState({ message }) {
 // ─── Trends panel (month-on-month per category) ───────────────────────────────
 
 function TrendsTooltip({ active, payload, label, seriesByKey }) {
+  const { formatMoney } = useDisplayCurrency()
   if (!active || !payload?.length) return null
   const rows = payload
     .filter((p) => (p.value ?? 0) > 0)
@@ -134,20 +122,21 @@ function TrendsTooltip({ active, payload, label, seriesByKey }) {
               </span>
             </span>
             <span className="shrink-0 tabular-nums font-medium text-card-foreground">
-              {money(r.value)}
+              {formatMoney(r.value)}
             </span>
           </li>
         ))}
       </ul>
       <div className="mt-2 flex items-center justify-between gap-4 border-t border-border pt-1.5 text-xs font-semibold">
         <span className="text-muted-foreground">Total</span>
-        <span className="tabular-nums text-card-foreground">{money(total)}</span>
+        <span className="tabular-nums text-card-foreground">{formatMoney(total)}</span>
       </div>
     </div>
   )
 }
 
 function SpendTrendsPanel({ range, onRangeChange, trends, onDrill }) {
+  const { formatMoneyCompact } = useDisplayCurrency()
   const { chartData, series, isLoading, error, isEmpty, refresh } = trends
   const seriesByKey = Object.fromEntries(series.map((s) => [s.key, s]))
 
@@ -194,7 +183,7 @@ function SpendTrendsPanel({ range, onRangeChange, trends, onDrill }) {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                    tickFormatter={formatAxisTick}
+                    tickFormatter={formatMoneyCompact}
                     width={44}
                   />
                   <Tooltip
@@ -264,6 +253,7 @@ function SpendTrendsPanel({ range, onRangeChange, trends, onDrill }) {
 // ─── Breakdown panel (every category, amount + share) ─────────────────────────
 
 function BreakdownRow({ segment, total, onDrill }) {
+  const { formatMoney } = useDisplayCurrency()
   const share = total > 0 ? (segment.value / total) * 100 : 0
   const clickable = segment.key !== 'uncategorised'
 
@@ -279,7 +269,7 @@ function BreakdownRow({ segment, total, onDrill }) {
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <span className="tabular-nums text-sm font-semibold text-card-foreground">
-          {money(segment.value)}
+          {formatMoney(segment.value)}
         </span>
         <span className="w-12 shrink-0 text-right tabular-nums text-xs text-muted-foreground">
           {share.toFixed(1)}%
@@ -325,6 +315,7 @@ function BreakdownRow({ segment, total, onDrill }) {
 }
 
 function CategoryBreakdownPanel({ range, breakdown, onDrill }) {
+  const { formatMoney } = useDisplayCurrency()
   const { segments, total, isLoading, error, refresh } = breakdown
   // segments carry name/value/color/key; attach categoryId for deep-linking.
   const rows = segments.map((s) => ({
@@ -357,7 +348,7 @@ function CategoryBreakdownPanel({ range, breakdown, onDrill }) {
             <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-border pb-3">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Total spend</span>
               <span className="tabular-nums text-lg font-semibold text-card-foreground">
-                {money(total)}
+                {formatMoney(total)}
               </span>
             </div>
             <ul className="-mx-2 space-y-1">

@@ -8,7 +8,8 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { formatCompactAmount } from '@/utils/contacts.utils'
+import { hasCompactAmount } from '@/utils/contacts.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 /**
  * Pinned contacts as one-tap send targets. A chip starts a payment straight
@@ -16,6 +17,7 @@ import { formatCompactAmount } from '@/utils/contacts.utils'
  * `is_favorite` flag the list badges as PINNED.
  */
 export default function QuickSendStrip({ pinned, unpinned, payments, onSend, onPin }) {
+  const { formatMoneyCompact } = useDisplayCurrency()
   const canPin = unpinned.length > 0
   if (pinned.length === 0 && !canPin) return null
 
@@ -30,7 +32,8 @@ export default function QuickSendStrip({ pinned, unpinned, payments, onSend, onP
 
       <div className="flex flex-wrap gap-2">
         {pinned.map((contact) => {
-          const last = formatCompactAmount(payments[contact.user_id]?.lastAmount)
+          const lastAmount = payments[contact.user_id]?.lastAmount
+          const last = hasCompactAmount(lastAmount) ? formatMoneyCompact(lastAmount) : null
           const payable = Boolean(contact.default_card)
           return (
             <button

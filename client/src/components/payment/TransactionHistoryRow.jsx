@@ -12,13 +12,13 @@ import { useAppSelector } from '@/store/hooks'
 import { selectTransactionCategories } from '@/store/slices/referenceDataSlice'
 import {
   findCategoryById,
-  formatTransactionAmount,
   formatTransactionDate,
   getCategoryMeta,
   getTransactionStatus,
   getTransactionType,
 } from '@/components/payment/transactionHistory.utils'
 import { formatBrandLabel } from '@/utils/paymentCard.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const DIRECTION_META = {
   incoming: {
@@ -157,6 +157,7 @@ function getTransactionDisplay(transaction, currentUserId) {
 }
 
 export default function TransactionHistoryRow({ transaction, onSelect }) {
+  const { formatMoney } = useDisplayCurrency()
   const { user } = useAuth()
   const currentUserId = user?.user_id ?? user?.id
   const categories = useAppSelector(selectTransactionCategories)
@@ -224,7 +225,7 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
               {display.title}
             </span>
             <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-              {formatTransactionAmount(transaction.amount)}
+              {formatMoney(transaction.amount, { hidden: transaction.amount_hidden, invalid: 'dash' })}
             </span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -306,7 +307,7 @@ export default function TransactionHistoryRow({ transaction, onSelect }) {
 
         {/* Amount */}
         <span className="text-right text-sm font-semibold tabular-nums text-foreground">
-          {formatTransactionAmount(transaction.amount)}
+          {formatMoney(transaction.amount, { hidden: transaction.amount_hidden, invalid: 'dash' })}
         </span>
       </div>
     </div>

@@ -13,8 +13,8 @@ import transactionsService from '@/services/transactionsService'
 import { useNotifications } from '@/context/NotificationContext'
 import { CATEGORIES } from '@/context/notifications/categories'
 import { REQUEST_STATUS_IDS, REQUEST_STATUS_META } from '@/utils/requestStatus'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
-import { formatMonetaryValue } from '@/utils/transactionMeta'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -23,6 +23,7 @@ function formatDate(iso) {
 }
 
 export default function RefundRequestDialog({ request, open, onOpenChange, onResolved }) {
+  const { formatMoney } = useDisplayCurrency()
   const { notify } = useNotifications()
   const [isApproving, setIsApproving] = useState(false)
   const [isDeclining, setIsDeclining] = useState(false)
@@ -104,7 +105,7 @@ export default function RefundRequestDialog({ request, open, onOpenChange, onRes
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Amount</span>
               <span className="text-sm font-semibold text-card-foreground">
-                {formatMonetaryValue(request?.refund_detail?.transaction_amount, {
+                {formatMoney(request?.refund_detail?.transaction_amount, {
                   hidden: request?.refund_detail?.transaction_amount_hidden,
                 })}
               </span>

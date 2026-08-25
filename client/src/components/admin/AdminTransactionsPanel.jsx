@@ -5,11 +5,12 @@ import AdminTransactionFilters from '@/components/admin/AdminTransactionFilters'
 import transactionsService from '@/services/transactionsService'
 import { toApiFilterParams } from '@/utils/transactionFilterParams'
 import {
-  formatTransactionAmount,
   formatTransactionDate,
+  transactionAmountParts,
   getTransactionStatus,
   getTransactionType,
 } from '@/components/payment/transactionHistory.utils'
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency'
 
 const PAGE_SIZE = 20
 
@@ -37,6 +38,7 @@ function PartyCell({ party }) {
 }
 
 export default function AdminTransactionsPanel({ filters, onFilterChange, onClearFilters, hasActiveFilters }) {
+  const { formatMoney } = useDisplayCurrency()
   const [transactions, setTransactions] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -172,7 +174,7 @@ export default function AdminTransactionsPanel({ filters, onFilterChange, onClea
                             {formatTransactionDate(tx.created_at)}
                           </td>
                           <td className="py-3 text-right text-xs font-semibold tabular-nums text-card-foreground">
-                            {formatTransactionAmount(tx)}
+                            {formatMoney(transactionAmountParts(tx).amount, { hidden: transactionAmountParts(tx).hidden, invalid: 'dash' })}
                           </td>
                         </tr>
                       )
