@@ -30,7 +30,9 @@ export default function RecurringPaymentsPage() {
         <PageActionButton icon={Plus} label="New recurring payment" onClick={openCreate} />
       </PageActionSlot>
 
-      <RecurringSummaryCards rules={recurring.rules} isLoading={recurring.isLoading} />
+      <div data-tour="recurring-summary">
+        <RecurringSummaryCards rules={recurring.rules} isLoading={recurring.isLoading} />
+      </div>
       <RecurringPaymentList recurring={recurring} onCreate={openCreate} />
 
       {/* Mounted only while open so each run starts from a clean slate. */}

@@ -28,6 +28,8 @@ export const USER_API_ERROR_CODES = Object.freeze({
  * @property {string} created_at
  * @property {string} modified_at
  * @property {string | null} deleted_at
+ * @property {string | null} [last_login_at] null when the account has never signed in
+ * @property {string | null} [total_spent] completed outbound spend; staff-only reads
  */
 
 /**

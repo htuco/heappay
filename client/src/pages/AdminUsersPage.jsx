@@ -20,6 +20,7 @@ export default function AdminUsersPage() {
     handleUserSuspend,
     handleUserActivate,
     handleUserDelete,
+    handlePasswordReset,
     userRoles,
   } = useAdminPageState()
 
@@ -69,6 +70,7 @@ export default function AdminUsersPage() {
         onSuspend={handleUserSuspend}
         onActivate={handleUserActivate}
         onDelete={handleUserDelete}
+        onPasswordReset={handlePasswordReset}
         isAdmin={isAdmin}
       />
     </div>

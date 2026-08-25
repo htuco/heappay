@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
@@ -100,6 +101,13 @@ class UserResponse(BaseModel):
     created_at: datetime
     modified_at: datetime
     deleted_at: datetime | None
+    # NULL means the account has never signed in -- rendered as "Never", not
+    # as a missing value.
+    last_login_at: datetime | None = None
+    # Aggregate outbound spend, filled in by the staff-only list/detail routes.
+    # None means "not computed for this response", which is why it is not 0:
+    # a user who has genuinely spent nothing gets Decimal("0").
+    total_spent: Decimal | None = None
 
 
 class UserSearchDefaultCard(BaseModel):

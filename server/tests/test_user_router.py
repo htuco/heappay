@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 import os
 
 from fastapi.testclient import TestClient
 
 from routes.dependencies import require_admin, require_staff
-from routes.user.user import get_user_service
+from routes.user.user import get_auth_service, get_user_service
 from services.user.user import (
     DuplicateEmailError,
     InvalidUserRoleError,
@@ -31,6 +32,7 @@ class _UserRow:
         user_role_id: int = 1,
         address: str | None = None,
         deleted_at: datetime | None = None,
+        last_login_at: datetime | None = None,
     ) -> None:
         now = datetime.now(timezone.utc)
         self.user_id = user_id
@@ -44,6 +46,7 @@ class _UserRow:
         self.created_at = now
         self.modified_at = now
         self.deleted_at = deleted_at
+        self.last_login_at = last_login_at
 
 
 class FakeUserService:
@@ -75,6 +78,9 @@ class FakeUserService:
         if user_role_id is not None:
             rows = [r for r in rows if r.user_role_id == user_role_id]
         return rows[offset : offset + limit]
+
+    def total_spent_by_user(self, user_ids: list[int]) -> dict[int, Decimal]:
+        return {uid: Decimal("10.00") for uid in user_ids if uid in self._rows}
 
     def get_user(self, user_id: int, *, include_deleted: bool) -> _UserRow:
         row = self._rows.get(user_id)
@@ -135,13 +141,37 @@ class FakeUserService:
         row.deleted_at = datetime.now(timezone.utc)
 
 
+class FakeAuthService:
+    """Covers only what the admin reset-password route calls."""
+
+    def __init__(self) -> None:
+        self.reset_calls: list[int] = []
+        self.raises: str | None = None
+
+    def send_password_reset_for_user(self, user_id: int) -> str:
+        if self.raises is not None:
+            raise ValueError(self.raises)
+        self.reset_calls.append(user_id)
+        return f"user{user_id}@example.com"
+
+
 def _build_client() -> tuple[TestClient, FakeUserService]:
     app = create_app()
     fake_service = FakeUserService()
     app.dependency_overrides[get_user_service] = lambda: fake_service
+    app.dependency_overrides[get_auth_service] = lambda: FakeAuthService()
     app.dependency_overrides[require_admin] = lambda: 1
     app.dependency_overrides[require_staff] = lambda: 1
     return TestClient(app), fake_service
+
+
+def _build_client_with_auth(auth: "FakeAuthService") -> TestClient:
+    app = create_app()
+    app.dependency_overrides[get_user_service] = lambda: FakeUserService()
+    app.dependency_overrides[get_auth_service] = lambda: auth
+    app.dependency_overrides[require_admin] = lambda: 1
+    app.dependency_overrides[require_staff] = lambda: 1
+    return TestClient(app)
 
 
 def test_list_users_returns_200() -> None:
@@ -288,3 +318,46 @@ def test_delete_user_with_pending_transaction_returns_409() -> None:
     assert "pending" in response.json()["message"].lower()
     # the user must NOT be soft-deleted when the guard trips
     assert fake_service._rows[1].deleted_at is None
+
+
+def test_list_users_includes_last_login_and_total_spent() -> None:
+    client, _ = _build_client()
+    rows = client.get("/users").json()
+    assert all("last_login_at" in row for row in rows)
+    # Never signed in -> null, rendered as "Never" rather than a missing value.
+    assert all(row["last_login_at"] is None for row in rows)
+    assert all(row["total_spent"] == "10.00" for row in rows)
+
+
+def test_admin_reset_password_triggers_the_reset_and_reports_the_address() -> None:
+    auth = FakeAuthService()
+    client = _build_client_with_auth(auth)
+
+    response = client.post("/users/1/reset-password")
+
+    assert response.status_code == 200
+    assert auth.reset_calls == [1]
+    assert "user1@example.com" in response.json()["message"]
+
+
+def test_admin_reset_password_for_unknown_user_returns_404() -> None:
+    auth = FakeAuthService()
+    auth.raises = "USER_NOT_FOUND"
+    response = _build_client_with_auth(auth).post("/users/999/reset-password")
+    assert response.status_code == 404
+
+
+def test_admin_reset_password_reports_mail_failure_as_502() -> None:
+    auth = FakeAuthService()
+    auth.raises = "MAIL_DELIVERY_FAILED"
+    response = _build_client_with_auth(auth).post("/users/1/reset-password")
+    assert response.status_code == 502
+
+
+def test_admin_reset_password_requires_admin() -> None:
+    """No require_admin override -- the real dependency must reject the call."""
+    app = create_app()
+    app.dependency_overrides[get_user_service] = lambda: FakeUserService()
+    app.dependency_overrides[get_auth_service] = lambda: FakeAuthService()
+    response = TestClient(app).post("/users/1/reset-password")
+    assert response.status_code in (401, 403)

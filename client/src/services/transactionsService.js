@@ -131,6 +131,27 @@ export const transactionsService = {
 	},
 
 	/**
+	 * Month-on-month outgoing spend per category over a trailing window.
+	 * `range` uses the shared '7d'|'30d'|'90d'|'1y' vocabulary. Returns a
+	 * chronological `periods` axis plus one `series` per category whose `points`
+	 * line up with that axis (0 for a month with no spend).
+	 * @param {{ range?: '7d'|'30d'|'90d'|'1y' }} [params]
+	 * @returns {Promise<{ range: string, periods: string[], series: Array<{ category_id: number | null, name: string, total: string, points: string[] }> }>}
+	 */
+	async summaryByCategoryTimeseries(params = {}) {
+		try {
+			const query = {}
+			if (typeof params.range === 'string' && params.range) query.range = params.range
+			const { data } = await api.get('/transactions/summary/by-category/timeseries', {
+				params: query,
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
 	 * List the current user's transactions (paginated).
 	 * @param {import('@/types/transaction').ListTransactionsParams} [params]
 	 * @returns {Promise<import('@/types/transaction').TransactionPage>}
@@ -585,6 +606,85 @@ export const transactionsService = {
 				query.user_role_name = params.userRoleName
 			}
 			const { data } = await api.get('/transactions/stats', { params: query })
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Ask another user to pay you. Creates a pending money request.
+	 * @param {{ targetUserId: number, amount: string, note?: string | null }} payload
+	 * @returns {Promise<object>}
+	 */
+	async requestMoney({ targetUserId, amount, note = null }) {
+		try {
+			const { data } = await api.post('/requests/money', {
+				target_user_id: targetUserId,
+				amount,
+				note,
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Pending money requests addressed to the current user (paginated).
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listIncomingMoneyRequests(params = {}) {
+		try {
+			const { data } = await api.get('/requests/money/incoming', {
+				params: buildPageParams(params),
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Money requests the current user has sent (paginated).
+	 * @param {{ page?: number, pageSize?: number }} [params]
+	 * @returns {Promise<object>}
+	 */
+	async listOutgoingMoneyRequests(params = {}) {
+		try {
+			const { data } = await api.get('/requests/money/outgoing', {
+				params: buildPageParams(params),
+			})
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Pay a pending money request addressed to the current user.
+	 * @param {number} requestId
+	 * @param {{ sender_card_id: number, biometric?: object, app_pin?: string, totp_code?: string, password?: string }} payload
+	 * @returns {Promise<object>}
+	 */
+	async payMoneyRequest(requestId, payload) {
+		try {
+			const { data } = await api.post(`/requests/money/${requestId}/pay`, payload)
+			return data.data
+		} catch (error) {
+			throw mapTransactionApiError(error)
+		}
+	},
+
+	/**
+	 * Decline a pending money request addressed to the current user.
+	 * @param {number} requestId
+	 * @returns {Promise<object>}
+	 */
+	async declineMoneyRequest(requestId) {
+		try {
+			const { data } = await api.post(`/requests/money/${requestId}/decline`)
 			return data.data
 		} catch (error) {
 			throw mapTransactionApiError(error)

@@ -33,9 +33,8 @@ export const MAIN_NAV_LINKS = [
   // CalendarClock, not Repeat — Converter already owns Repeat in this list.
   { name: 'Recurring', path: '/recurring', icon: CalendarClock },
   // Insight surface — checked occasionally, so it sits with the other
-  // non-core pages. Still under construction: the route renders a
-  // coming-soon page and the row carries a "Soon" badge.
-  { name: 'Analytics', path: '/analytics', icon: ChartPie, comingSoon: true },
+  // non-core pages.
+  { name: 'Analytics', path: '/analytics', icon: ChartPie },
   // Reference utility, not part of any core task.
   { name: 'Converter', path: '/converter', icon: Repeat },
   // Guardian/dependent setup — configured occasionally, not a core task.

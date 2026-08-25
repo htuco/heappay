@@ -293,6 +293,7 @@ class UserAuthService:
         self._send_verification_email(user)
         refresh_token = self.create_refresh_token(user.user_id)
         self.repo.save_refresh_token(user.user_id, refresh_token)
+        self.repo.touch_last_login(user.user_id)
         return self._build_token_response(user.user_id, refresh_token)
 
     def _send_verification_email(self, user) -> None:
@@ -343,6 +344,7 @@ class UserAuthService:
 
         refresh_token = self.create_refresh_token(user.user_id)
         self.repo.save_refresh_token(user.user_id, refresh_token)
+        self.repo.touch_last_login(user.user_id)
         return self._build_token_response(user.user_id, refresh_token)
 
     def verify_totp_login(self, partial_token: str, code: str) -> TokenResponse:
@@ -361,6 +363,7 @@ class UserAuthService:
 
         refresh_token = self.create_refresh_token(user_id)
         self.repo.save_refresh_token(user_id, refresh_token)
+        self.repo.touch_last_login(user_id)
         return self._build_token_response(user_id, refresh_token)
 
     def setup_totp(self, user_id: int) -> TotpSetupResponse:
@@ -707,11 +710,8 @@ class UserAuthService:
             new_password=payload.new_password,
         )
 
-    def request_password_reset(self, payload: PasswordResetRequest) -> None:
-        user = self.repo.get_user_by_email(str(payload.email))
-        if user is None or user.deleted_at is not None:
-            return
-
+    def _issue_password_reset(self, user) -> None:
+        """Mint a reset token for *user* and email them the link."""
         token = secrets.token_urlsafe(48)
         token_hash = self._hash_token(token)
         expires_at = datetime.now(timezone.utc) + timedelta(
@@ -727,6 +727,32 @@ class UserAuthService:
             )
         except Exception as exc:
             raise ValueError("MAIL_DELIVERY_FAILED") from exc
+
+    def request_password_reset(self, payload: PasswordResetRequest) -> None:
+        user = self.repo.get_user_by_email(str(payload.email))
+        # Deliberately silent for an unknown address: this is the public form,
+        # and a distinguishable response would confirm which emails have
+        # accounts.
+        if user is None or user.deleted_at is not None:
+            return
+        self._issue_password_reset(user)
+
+    def send_password_reset_for_user(self, user_id: int) -> str:
+        """Admin-triggered reset for a known user. Returns the delivery email.
+
+        Same token and mailer as the self-service flow -- an admin sends the
+        user the standard reset link and never sets a password on their behalf.
+
+        Unlike request_password_reset this fails loudly: the caller is an admin
+        acting on a user id they already have, so there is no address to
+        enumerate, and silently reporting success having sent nothing would be
+        worse than an error.
+        """
+        user = self.repo.get_user_by_id(user_id)
+        if user is None or user.deleted_at is not None:
+            raise ValueError("USER_NOT_FOUND")
+        self._issue_password_reset(user)
+        return notification_email_for_user(user)
 
     def confirm_password_reset(self, payload: PasswordResetConfirmRequest) -> None:
         token_hash = self._hash_token(payload.token)
@@ -799,6 +825,7 @@ class UserAuthService:
 
         new_refresh = self.create_refresh_token(user_id)
         self.repo.save_refresh_token(user_id, new_refresh)
+        self.repo.touch_last_login(user_id)
         return self._build_token_response_for_user(
             updated_user,
             new_refresh,

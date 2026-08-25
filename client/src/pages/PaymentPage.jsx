@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, Loader2, MessageSquareText, Send } from 'lucide-react'
 
 import DraftPaymentList from '@/components/payment/DraftPaymentList'
+import IncomingMoneyRequests from '@/components/payment/IncomingMoneyRequests'
 import TransactionDetailPanel from '@/components/payment/TransactionDetailPanel'
 import TransactionHistory from '@/components/payment/TransactionHistory'
 import PaymentWizard from '@/components/payment/PaymentWizard'
@@ -205,6 +206,7 @@ export default function PaymentPage() {
         <PageActionButton
           icon={Send}
           label="New Transaction"
+          data-tour="transactions-send"
           onClick={() => openWizard()}
         />
       </PageActionSlot>
@@ -224,6 +226,8 @@ export default function PaymentPage() {
         // everything it needs to show.
         onSend={(draft) => openWizard({ draft, step: draft.sender_card_id ? 2 : 1 })}
       />
+
+      <IncomingMoneyRequests />
 
       <TransactionHistory
         onTransactionSelect={setSelectedTransaction}

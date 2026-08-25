@@ -7,6 +7,7 @@ import MobileTabBar from './ui/MobileTabBar'
 import ToastStack from './ui/ToastStack'
 import ChatWidget from './chat/ChatWidget'
 import EmailVerificationBanner from './EmailVerificationBanner'
+import TourProvider from '@/context/tour/TourProvider'
 
 const SIDEBAR_COLLAPSED_KEY = 'heap.shell.sidebarCollapsed'
 
@@ -21,7 +22,7 @@ const PAGE_META = {
   '/transactions': { title: 'Transaction History', subtitle: 'All payments, transfers, and refunds on your account.' },
   '/recurring': { title: 'Recurring Payments', subtitle: 'Manage all your recurring payments in one place.' },
   '/contacts': { title: 'Contacts', subtitle: 'People you pay often — send in two clicks, no card re-entry.' },
-  '/analytics': { title: 'Analytics', subtitle: 'Spending insights and trends — under construction.' },
+  '/analytics': { title: 'Analytics', subtitle: 'Where your money goes — spending by category and month-on-month trends.' },
   '/converter': { title: 'Currency Converter', subtitle: 'Get real-time exchange rates and convert currencies instantly.' },
   '/family': { title: 'Family', subtitle: 'Link and manage dependent accounts.' },
   '/settings': { title: 'Settings', subtitle: 'Configure your preferences.' },
@@ -64,38 +65,40 @@ export default function Layout() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-background md:grid md:grid-cols-[var(--shell-sidebar)_minmax(0,1fr)]"
-      style={{ '--shell-sidebar': collapsed ? '4.75rem' : '15.5rem' }}
-    >
-      <AppSidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+    <TourProvider>
+      <div
+        className="min-h-screen bg-background md:grid md:grid-cols-[var(--shell-sidebar)_minmax(0,1fr)]"
+        style={{ '--shell-sidebar': collapsed ? '4.75rem' : '15.5rem' }}
+      >
+        <AppSidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
 
-      <div className="flex min-w-0 flex-col">
-        <PageHeader
-          title={pageMeta?.title}
-          subtitle={pageMeta?.subtitle}
-          /*
-            The current page's primary action portals in here. `empty:hidden`
-            keeps the flex gap from opening up on pages with no action.
-          */
-          actions={<div className="flex items-center empty:hidden" ref={setPageActionSlot} />}
-        />
+        <div className="flex min-w-0 flex-col">
+          <PageHeader
+            title={pageMeta?.title}
+            subtitle={pageMeta?.subtitle}
+            /*
+              The current page's primary action portals in here. `empty:hidden`
+              keeps the flex gap from opening up on pages with no action.
+            */
+            actions={<div className="flex items-center empty:hidden" ref={setPageActionSlot} />}
+          />
 
-        <main className="flex-1 overflow-x-hidden px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 md:px-8 md:py-8 md:pb-8">
-          <EmailVerificationBanner />
-          <PageActionSlotContext.Provider value={pageActionSlot}>
-            <Outlet />
-          </PageActionSlotContext.Provider>
-        </main>
+          <main className="flex-1 overflow-x-hidden px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 md:px-8 md:py-8 md:pb-8">
+            <EmailVerificationBanner />
+            <PageActionSlotContext.Provider value={pageActionSlot}>
+              <Outlet />
+            </PageActionSlotContext.Provider>
+          </main>
 
-        <footer className="hidden border-t border-border py-5 text-center text-xs text-muted-foreground md:block">
-          © {new Date().getFullYear()} Heap. All rights reserved.
-        </footer>
+          <footer className="hidden border-t border-border py-5 text-center text-xs text-muted-foreground md:block">
+            © {new Date().getFullYear()} Heap. All rights reserved.
+          </footer>
+        </div>
+
+        <MobileTabBar />
+        <ToastStack />
+        <ChatWidget />
       </div>
-
-      <MobileTabBar />
-      <ToastStack />
-      <ChatWidget />
-    </div>
+    </TourProvider>
   )
 }

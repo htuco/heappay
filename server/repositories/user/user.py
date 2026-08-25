@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from models.card import Card
 from models.card_status import CardStatus
@@ -205,6 +205,76 @@ class UserRepository:
         row.deleted_at = now
         row.modified_at = now
         self._db.commit()
+
+    def total_spent_by_user(self, user_ids: list[int]) -> dict[int, Decimal]:
+        """Total money that has actually left each of the given users.
+
+        Lives here rather than in TransactionRepository for the same reason
+        has_pending_transaction below does -- the caller is the admin user read
+        model, and routing it through the transaction feature would mean
+        injecting a second repository into UserService just for one aggregate.
+
+        Definition (deliberate, and worth reading before changing):
+
+        * **Completed only.** Resolved by name, never a hardcoded id. Pending
+          money has not been spent yet, and a reversed transaction flips to the
+          'reversed' status, so it drops out of this sum on its own.
+        * **Outflows only** -- the row must have a sender card. Deposits and
+          top-ups have no sender card, so they cannot be mistaken for spend
+          even though the user initiated them (initiated_by_user_id means
+          "who started this", not "who paid").
+        * **Attributed to the spender, not the card owner.** For a shared
+          family card the dependent spends from a card the guardian owns, so
+          initiated_by_user_id is the only correct answer; it is NULL on rows
+          predating that column, hence the fall back to the sender card owner.
+        * **Own-account moves excluded.** Shuffling money between two of your
+          own cards is not spend.
+        * **Gross, not net.** A later refund does not subtract from this
+          figure; it is a separate inbound transaction.
+        """
+        if not user_ids:
+            return {}
+
+        from sqlalchemy import case
+        from models.transaction import Transaction
+        from models.transaction_status import TransactionStatus
+
+        completed_id = self._db.execute(
+            select(TransactionStatus.transaction_status_id).where(
+                TransactionStatus.name == "completed"
+            )
+        ).scalar_one_or_none()
+        if completed_id is None:
+            return {}
+
+        sender_card = aliased(Card)
+        recipient_card = aliased(Card)
+        spender_id = func.coalesce(Transaction.initiated_by_user_id, sender_card.user_id)
+
+        stmt = (
+            select(
+                spender_id.label("spender_id"),
+                func.coalesce(func.sum(Transaction.amount), Decimal("0")).label("total"),
+            )
+            .select_from(Transaction)
+            .join(sender_card, sender_card.card_id == Transaction.sender_card_id)
+            .outerjoin(
+                recipient_card, recipient_card.card_id == Transaction.recipient_card_id
+            )
+            .where(
+                Transaction.status_id == completed_id,
+                spender_id.in_(user_ids),
+                case(
+                    (recipient_card.user_id.is_(None), True),
+                    else_=recipient_card.user_id != spender_id,
+                ),
+            )
+            .group_by(spender_id)
+        )
+        return {
+            int(row.spender_id): Decimal(row.total)
+            for row in self._db.execute(stmt).all()
+        }
 
     def has_pending_transaction(self, user_id: int) -> bool:
         """True if the user has any transaction in the 'pending' status.

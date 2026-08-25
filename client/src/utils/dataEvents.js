@@ -22,4 +22,5 @@ export const DATA_CHANGE_KINDS = Object.freeze({
   TRANSACTION_DRAFT: 'transaction_draft',
   CARD: 'card',
   WALLET: 'wallet',
+  MONEY_REQUEST: 'money_request',
 })

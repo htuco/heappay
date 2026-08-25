@@ -7,12 +7,12 @@ import {
   CreditCard,
   KeyRound,
   Loader2,
-  Mail,
   Snowflake,
   Sun,
   Trash2,
   User,
   UserMinus,
+  Wallet,
 } from 'lucide-react'
 
 import SplitModal, { SplitModalContextLabel } from '@/components/ui/SplitModal'
@@ -249,18 +249,23 @@ export default function UserDetailsDialog({
   onSuspend,
   onActivate,
   onDelete,
+  onPasswordReset,
   isAdmin,
   // Card freeze/unfreeze is a staff-level action (block/unblock is gated by
   // require_staff on the API), so it stays available to support. Defaults to
   // isAdmin to keep admin behavior unchanged for callers that don't pass it.
   canManageCards = isAdmin,
 }) {
+  const { formatMoney } = useDisplayCurrency()
   const [selectedRoleId, setSelectedRoleId] = useState('')
   const [activeTab, setActiveTab] = useState('cards')
   const [isSaving, setIsSaving] = useState(false)
   const [pendingCardId, setPendingCardId] = useState(null)
   const [statusAction, setStatusAction] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [resetPending, setResetPending] = useState(false)
+  const [resetSent, setResetSent] = useState('')
   const [error, setError] = useState('')
   const [trackedUserId, setTrackedUserId] = useState(null)
   const [transactions, setTransactions] = useState(null)
@@ -289,6 +294,8 @@ export default function UserDetailsDialog({
     setSelectedRoleId(String(selectedUser?.roleId ?? ''))
     setActiveTab('cards')
     setConfirmDelete(false)
+    setConfirmReset(false)
+    setResetSent('')
     setError('')
     setTransactions(null)
     setActivity(null)
@@ -387,6 +394,20 @@ export default function UserDetailsDialog({
     setStatusAction(false)
   }
 
+  async function handlePasswordReset() {
+    setResetPending(true)
+    setResetSent('')
+    setError('')
+    try {
+      const message = await onPasswordReset(selectedUser.id)
+      setResetSent(typeof message === 'string' ? message : 'Password reset link sent.')
+      setConfirmReset(false)
+    } catch (err) {
+      setError(err?.message || 'Could not send the password reset link.')
+    }
+    setResetPending(false)
+  }
+
   async function handleDelete() {
     setStatusAction(true)
     await runAction(onDelete, selectedUser.id, (msg) => {
@@ -443,11 +464,14 @@ export default function UserDetailsDialog({
       <dl className="grid grid-cols-1 gap-1.5 text-xs">
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Last login</dt>
-          <dd className="font-medium text-card-foreground">--</dd>
+          {/* null is meaningful here: the account has never signed in. */}
+          <dd className="font-medium text-card-foreground">
+            {selectedUser.lastLoginAt ? formatTxDate(selectedUser.lastLoginAt) : 'Never'}
+          </dd>
         </div>
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Joined</dt>
-          <dd className="font-medium text-card-foreground">--</dd>
+          <dd className="font-medium text-card-foreground">{formatTxDate(selectedUser.created_at)}</dd>
         </div>
       </dl>
 
@@ -455,7 +479,17 @@ export default function UserDetailsDialog({
         <StatTile icon={CreditCard} label="Total Cards" value={stats.total} />
         <StatTile icon={CreditCard} label="Active" value={stats.active} tone="text-success" />
         <StatTile icon={Snowflake} label="Frozen" value={stats.frozen} tone="text-warning" />
-        <StatTile icon={Activity} label="Role" value={<span className="text-sm capitalize">{selectedUser.role}</span>} />
+        <StatTile
+          icon={Wallet}
+          label="Total Spent"
+          value={
+            <span className="text-sm">
+              {selectedUser.totalSpent === null || selectedUser.totalSpent === undefined
+                ? '—'
+                : formatMoney(selectedUser.totalSpent)}
+            </span>
+          }
+        />
       </div>
 
       <div className="space-y-3">
@@ -481,28 +515,56 @@ export default function UserDetailsDialog({
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 text-xs shadow-none"
-            disabled
-            title="Coming soon"
-          >
-            <KeyRound className="size-3.5" aria-hidden />
-            Reset Password
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 text-xs shadow-none"
-            disabled
-            title="Coming soon"
-          >
-            <Mail className="size-3.5" aria-hidden />
-            Magic Link
-          </Button>
-        </div>
+        {typeof onPasswordReset === 'function' ? (
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 w-full gap-1.5 text-xs shadow-none"
+              disabled={resetPending || confirmReset}
+              onClick={() => {
+                setResetSent('')
+                setConfirmReset(true)
+              }}
+            >
+              <KeyRound className="size-3.5" aria-hidden />
+              Reset Password
+            </Button>
+            {confirmReset ? (
+              <div className="space-y-2 rounded-input border border-border bg-background/60 p-2.5">
+                <p className="text-xs text-card-foreground">
+                  Email {selectedUser.email} a password reset link? They choose the new
+                  password themselves — you won&apos;t see or set it.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="h-8 flex-1 text-xs"
+                    disabled={resetPending}
+                    onClick={handlePasswordReset}
+                  >
+                    {resetPending ? 'Sending…' : 'Send reset link'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 flex-1 text-xs shadow-none"
+                    disabled={resetPending}
+                    onClick={() => setConfirmReset(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {resetSent ? (
+              <p className="flex items-start gap-1.5 text-xs text-success">
+                <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                {resetSent}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className={`space-y-2 rounded-surface border p-3 ${

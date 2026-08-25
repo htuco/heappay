@@ -45,3 +45,6 @@ class Request(Base):
     card_freeze_detail = relationship(
         "CardFreezeRequestDetail", back_populates="request", uselist=False, cascade="all, delete-orphan"
     )
+    money_request_detail = relationship(
+        "MoneyRequestDetail", back_populates="request", uselist=False, cascade="all, delete-orphan"
+    )

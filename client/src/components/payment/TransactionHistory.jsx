@@ -200,7 +200,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     <div className="mx-auto max-w-5xl">
       {/* Filter toolbar */}
       {!error ? (
-        <div className="mb-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+        <div className="mb-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center" data-tour="transactions-filters">
           {/* Search — full row on phone, grows to fill space at md+ */}
           <div className="relative md:min-w-40 md:flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
@@ -331,7 +331,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
           the table's own width (matches the Wallet activity table). Without this
           the row's @[560px]/tbl breakpoint has no container and both the stacked
           and grid layouts render at once. */}
-      <div className="@container/tbl overflow-hidden rounded-input border border-border/80 bg-card shadow-sm">
+      <div className="@container/tbl overflow-hidden rounded-input border border-border/80 bg-card shadow-sm" data-tour="transactions-list">
         {/* Column headers */}
         {!error && !isLoading && hasFiltered ? (
           <div className="hidden border-b border-border/60 bg-muted/30 px-4 py-2.5 @[560px]/tbl:grid @[560px]/tbl:grid-cols-[28px_1fr_84px_120px_84px_128px_92px] @[560px]/tbl:gap-x-4">

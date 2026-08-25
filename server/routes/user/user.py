@@ -1,12 +1,16 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from repositories.user.auth import UserAuthRepository
 from repositories.user.user import UserRepository
 from routes.dependencies import get_current_user_id, require_admin, require_staff
 from schemas.response import ApiResponse
 from schemas.user.crud import UserCreateRequest, UserResponse, UserSearchResponse, UserUpdateRequest
 from services.storage.avatar_display_url import resolve_avatar_url_for_client
+from services.user.auth import UserAuthService
 from services.user.user import (
     DuplicateEmailError,
     InvalidUserRoleError,
@@ -20,6 +24,7 @@ from utils.audit_log import (
     EVENT_USER_ACTIVATED,
     EVENT_USER_CREATED,
     EVENT_USER_DELETED,
+    EVENT_USER_PASSWORD_RESET_SENT,
     EVENT_USER_SUSPENDED,
     EVENT_USER_UPDATED,
     record_audit_log,
@@ -32,19 +37,31 @@ _DUPLICATE_EMAIL_DETAIL = "Email already exists"
 _INVALID_ROLE_DETAIL = "Invalid user_role_id"
 _INVALID_STATUS_DETAIL = "Invalid status_id"
 _PENDING_TX_DETAIL = "User has a pending transaction and cannot be deleted yet."
+_MAIL_FAILED_DETAIL = "Could not send the password reset email."
 
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(UserRepository(db))
 
 
-def _user_response_with_signed_avatar(row) -> UserResponse:
+def get_auth_service(db: Session = Depends(get_db)) -> UserAuthService:
+    return UserAuthService(UserAuthRepository(db))
+
+
+def _user_response_with_signed_avatar(
+    row, *, total_spent: Decimal | None = None
+) -> UserResponse:
     s = get_settings()
     r = UserResponse.model_validate(row)
+    updates: dict = {}
     url = resolve_avatar_url_for_client(r.avatar_url, s)
-    if url == r.avatar_url:
+    if url != r.avatar_url:
+        updates["avatar_url"] = url
+    if total_spent is not None:
+        updates["total_spent"] = total_spent
+    if not updates:
         return r
-    return r.model_copy(update={"avatar_url": url})
+    return r.model_copy(update=updates)
 
 
 @router.get("", response_model=list[UserResponse])
@@ -68,7 +85,15 @@ def list_users(
         limit=limit,
         offset=offset,
     )
-    return [_user_response_with_signed_avatar(row) for row in rows]
+    # One grouped query for the whole page, so paging through every user
+    # doesn't turn into a spend lookup per row.
+    spend = service.total_spent_by_user([row.user_id for row in rows])
+    return [
+        _user_response_with_signed_avatar(
+            row, total_spent=spend.get(row.user_id, Decimal("0"))
+        )
+        for row in rows
+    ]
 
 
 @router.get("/search", response_model=ApiResponse[list[UserSearchResponse]])
@@ -103,7 +128,10 @@ def get_user(
         row = service.get_user(user_id, include_deleted=include_deleted)
     except UserNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL) from exc
-    return _user_response_with_signed_avatar(row)
+    spend = service.total_spent_by_user([row.user_id])
+    return _user_response_with_signed_avatar(
+        row, total_spent=spend.get(row.user_id, Decimal("0"))
+    )
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -238,3 +266,45 @@ def activate_user(
         resource_id=user_id,
     )
     return UserResponse.model_validate(row)
+
+
+@router.post(
+    "/{user_id}/reset-password",
+    response_model=ApiResponse[None],
+    summary="(Admin) Email a password reset link to a user.",
+)
+def send_user_password_reset(
+    user_id: int,
+    actor_id: int = Depends(require_admin),
+    db: Session = Depends(get_db),
+    auth_service: UserAuthService = Depends(get_auth_service),
+) -> ApiResponse[None]:
+    """Trigger the standard self-service reset for someone else.
+
+    This sends the user a reset *link* -- it never sets a password on their
+    behalf, so an admin cannot learn or choose someone's credentials.
+    """
+    try:
+        delivery_email = auth_service.send_password_reset_for_user(user_id)
+    except ValueError as exc:
+        if str(exc) == "USER_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND_DETAIL
+            ) from None
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=_MAIL_FAILED_DETAIL
+        ) from None
+
+    record_audit_log(
+        db,
+        event_type=EVENT_USER_PASSWORD_RESET_SENT,
+        actor_user_id=actor_id,
+        target_user_id=user_id,
+        resource_type="user",
+        resource_id=user_id,
+    )
+    return ApiResponse[None](
+        success=True,
+        message=f"Password reset link sent to {delivery_email}.",
+        data=None,
+    )

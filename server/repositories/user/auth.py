@@ -93,6 +93,20 @@ class UserAuthRepository:
         )
         self._db.commit()
 
+    def touch_last_login(self, user_id: int) -> None:
+        """Stamp the moment a session actually began.
+
+        Called only from the genuine sign-in paths -- never from refresh, which
+        fires on a timer for every open tab and would otherwise keep this
+        column pinned to ~now for anyone with a stale one.
+        """
+        self._db.execute(
+            update(User)
+            .where(User.user_id == user_id)
+            .values(last_login_at=datetime.now(timezone.utc))
+        )
+        self._db.commit()
+
     def clear_refresh_token(self, user_id: int) -> None:
         self._db.execute(
             update(User)
