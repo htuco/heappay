@@ -1,11 +1,12 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import case, func, or_, select, text
+from sqlalchemy import String, case, cast, func, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from models.card import Card
+from models.card_type import CardType
 from models.refund_request_detail import RefundRequestDetail
 from models.request import Request
 from models.transaction import Transaction
@@ -48,8 +49,10 @@ class TransactionRepository:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        card_id: int | None = None,
         from_date: date | None = None,
         to_date: date | None = None,
+        search: str | None = None,
         sort: str = "newest",
     ) -> list[Transaction]:
         """List transactions where the user owns either the sender or recipient card."""
@@ -59,8 +62,10 @@ class TransactionRepository:
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
                 category_id=category_id,
+                card_id=card_id,
                 from_date=from_date,
                 to_date=to_date,
+                search=search,
             )
             .options(*self._party_load_options())
             .order_by(_SORT_COLUMNS.get(sort, _SORT_COLUMNS["newest"]))
@@ -76,8 +81,10 @@ class TransactionRepository:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        card_id: int | None = None,
         from_date: date | None = None,
         to_date: date | None = None,
+        search: str | None = None,
     ) -> int:
         stmt = select(func.count()).select_from(
             self._filtered_user_transactions_stmt(
@@ -85,8 +92,10 @@ class TransactionRepository:
                 status_id=status_id,
                 transaction_type_id=transaction_type_id,
                 category_id=category_id,
+                card_id=card_id,
                 from_date=from_date,
                 to_date=to_date,
+                search=search,
             ).subquery()
         )
         return int(self._db.execute(stmt).scalar_one())
@@ -142,17 +151,86 @@ class TransactionRepository:
         )
         return int(self._db.execute(stmt).scalar_one())
 
+    @staticmethod
+    def _escape_like(value: str) -> str:
+        """Neutralise LIKE wildcards so a literal % or _ in the query can't match everything."""
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    def _search_clause(self, search: str):
+        """
+        Free-text match across the fields the transactions list exposes.
+
+        Card-derived fields are matched through an `IN (SELECT card_id ...)`
+        subquery rather than joins: a transaction has two card sides, so joining
+        both would duplicate rows and break the count.
+        """
+        pattern = f"%{self._escape_like(search.strip())}%"
+        matching_card_ids = (
+            select(Card.card_id)
+            .outerjoin(User, Card.user_id == User.user_id)
+            .outerjoin(CardType, Card.card_type_id == CardType.card_type_id)
+            .where(
+                or_(
+                    Card.cardholder_name.ilike(pattern, escape="\\"),
+                    Card.last_four.ilike(pattern, escape="\\"),
+                    User.email.ilike(pattern, escape="\\"),
+                    User.first_name.ilike(pattern, escape="\\"),
+                    User.last_name.ilike(pattern, escape="\\"),
+                    (User.first_name + " " + User.last_name).ilike(pattern, escape="\\"),
+                    CardType.vendor.ilike(pattern, escape="\\"),
+                )
+            )
+        )
+        status_ids = select(TransactionStatus.transaction_status_id).where(
+            TransactionStatus.name.ilike(pattern, escape="\\")
+        )
+        type_ids = select(TransactionType.transaction_type_id).where(
+            TransactionType.name.ilike(pattern, escape="\\")
+        )
+        category_ids = select(TransactionCategory.transaction_category_id).where(
+            TransactionCategory.name.ilike(pattern, escape="\\")
+        )
+        clauses = [
+            Transaction.sender_card_id.in_(matching_card_ids),
+            Transaction.recipient_card_id.in_(matching_card_ids),
+            Transaction.status_id.in_(status_ids),
+            Transaction.transaction_type_id.in_(type_ids),
+            Transaction.category_id.in_(category_ids),
+            cast(Transaction.amount, String).ilike(pattern, escape="\\"),
+        ]
+        # The list also lets you search by raw id, so match those exactly.
+        digits = search.strip()
+        if digits.isdigit():
+            as_int = int(digits)
+            clauses.extend([
+                Transaction.transaction_id == as_int,
+                Transaction.sender_card_id == as_int,
+                Transaction.recipient_card_id == as_int,
+            ])
+        return or_(*clauses)
+
     def _transaction_filter_clauses(
         self,
         *,
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        card_id: int | None = None,
         from_date: date | None = None,
         to_date: date | None = None,
+        search: str | None = None,
         user_role_name: str | None = None,
     ) -> list:
         clauses = []
+        if card_id is not None:
+            clauses.append(
+                or_(
+                    Transaction.sender_card_id == card_id,
+                    Transaction.recipient_card_id == card_id,
+                )
+            )
+        if search is not None and search.strip():
+            clauses.append(self._search_clause(search))
         if status_id is not None:
             clauses.append(Transaction.status_id == status_id)
         if transaction_type_id is not None:
@@ -221,16 +299,20 @@ class TransactionRepository:
         status_id: int | None,
         transaction_type_id: int | None,
         category_id: int | None = None,
+        card_id: int | None = None,
         from_date: date | None = None,
         to_date: date | None = None,
+        search: str | None = None,
     ):
         stmt = self._user_transactions_stmt(user_id)
         for clause in self._transaction_filter_clauses(
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            card_id=card_id,
             from_date=from_date,
             to_date=to_date,
+            search=search,
         ):
             stmt = stmt.where(clause)
         return stmt
@@ -619,6 +701,19 @@ class TransactionRepository:
             .order_by(Transaction.created_at.desc())
         )
         return list(self._db.scalars(stmt).all())
+
+    def get_card_label_by_id(self, card_id: int) -> str | None:
+        """Human-readable card label for a self-describing export, e.g. 'Visa 4242'."""
+        stmt = (
+            select(CardType.vendor, Card.last_four)
+            .outerjoin(CardType, Card.card_type_id == CardType.card_type_id)
+            .where(Card.card_id == card_id)
+        )
+        row = self._db.execute(stmt).first()
+        if row is None:
+            return None
+        vendor, last_four = row
+        return " ".join(part for part in (vendor, last_four) if part) or None
 
     def card_owner_id(self, card_id: int) -> int | None:
         stmt = select(Card.user_id).where(

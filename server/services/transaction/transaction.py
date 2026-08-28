@@ -194,10 +194,14 @@ class TransactionService:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        card_id: int | None = None,
         from_date: date | None = None,
         to_date: date | None = None,
+        search: str | None = None,
         sort: str = "newest",
     ) -> tuple[list[Transaction], int]:
+        if card_id is not None:
+            self._assert_card_readable(card_id, user_id=user_id)
         if status_id is not None and not self._repo.transaction_status_exists(status_id):
             raise TransactionStatusNotFoundError()
         if transaction_type_id is not None and not self._repo.transaction_type_exists(
@@ -215,8 +219,10 @@ class TransactionService:
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            card_id=card_id,
             from_date=from_date,
             to_date=to_date,
+            search=search,
             sort=sort,
         )
         total = self._repo.count_for_user(
@@ -224,8 +230,10 @@ class TransactionService:
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            card_id=card_id,
             from_date=from_date,
             to_date=to_date,
+            search=search,
         )
         return items, total
 
@@ -235,9 +243,11 @@ class TransactionService:
         status_id: int | None = None,
         transaction_type_id: int | None = None,
         category_id: int | None = None,
+        card_id: int | None = None,
     ) -> dict[str, str | None]:
         """Resolve filter ids to human-readable names for a self-describing export."""
         return {
+            "card": self._repo.get_card_label_by_id(card_id) if card_id else None,
             "status": self._repo.get_status_name_by_id(status_id) if status_id else None,
             "type": (
                 self._repo.get_transaction_type_name(transaction_type_id)
@@ -359,6 +369,18 @@ class TransactionService:
         series = build_category_series(rows, periods)
         return {"range": range_, "periods": periods, "series": series}
 
+    def _assert_card_readable(self, card_id: int, *, user_id: int) -> None:
+        """The user must own the card -- or, for a shared card, be an authorized
+        member of it. Used both by the per-card list and the card filter on the
+        main list so the two can't drift apart."""
+        owner_id = self._repo.card_owner_id(card_id)
+        if owner_id is None:
+            raise CardNotFoundError()
+        if owner_id != user_id and not self._family_card_member_repo.is_member(
+            card_id=card_id, dependent_user_id=user_id
+        ):
+            raise ForbiddenError()
+
     def list_for_card(
         self,
         card_id: int,
@@ -369,13 +391,7 @@ class TransactionService:
     ) -> tuple[list[Transaction], int]:
         """Return transactions for a specific card, after verifying the user
         owns it -- or, for a shared card, is an authorized member of it."""
-        owner_id = self._repo.card_owner_id(card_id)
-        if owner_id is None:
-            raise CardNotFoundError()
-        if owner_id != user_id and not self._family_card_member_repo.is_member(
-            card_id=card_id, dependent_user_id=user_id
-        ):
-            raise ForbiddenError()
+        self._assert_card_readable(card_id, user_id=user_id)
         items = self._repo.list_for_card(card_id=card_id, limit=limit, offset=offset)
         total = self._repo.count_for_card(card_id=card_id)
         return items, total
