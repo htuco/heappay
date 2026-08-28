@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, Search, X } from 'lucide-react'
+import { Download, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import TransactionHistoryEmptyState from '@/components/payment/TransactionHistoryEmptyState'
 import TransactionHistoryErrorState from '@/components/payment/TransactionHistoryErrorState'
 import TransactionHistoryRow from '@/components/payment/TransactionHistoryRow'
@@ -22,7 +23,6 @@ import {
   TRANSACTION_TYPE_OPTIONS,
   buildCategoryOptions,
   getTransactionStatus,
-  transactionMatchesLookup,
 } from '@/components/payment/transactionHistory.utils'
 
 const STATUS_DOT_BY_VARIANT = {
@@ -36,6 +36,13 @@ const DATE_SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
 ]
+
+const SEARCH_DEBOUNCE_MS = 300
+
+/** Shared control styling so every filter reads as one set. */
+const CONTROL_CLASS =
+  'h-8 rounded-input border-border/70 bg-background text-sm shadow-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+const SELECT_CLASS = 'h-8 w-full rounded-input border-border/70 bg-background py-0 shadow-none'
 
 const MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'long',
@@ -54,8 +61,21 @@ function getTransactionMonthGroup(transaction) {
   }
 }
 
+/** One labelled row inside the Filters popover. */
+function FilterField({ label, htmlFor, children }) {
+  return (
+    <div className="grid gap-1.5">
+      <label htmlFor={htmlFor} className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
 export default function TransactionHistory({ onTransactionSelect, onRefreshReady, pageSize = 20 }) {
   const [lookupValue, setLookupValue] = useState('')
+  const [debouncedLookup, setDebouncedLookup] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const { filters, setFilters, clearFilters: clearUrlFilters } = useTransactionFilterParams()
   const [isExportingPdf, setIsExportingPdf] = useState(false)
@@ -107,6 +127,16 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
   const fromDate = dateFilter || undefined
   const toDate = filters.to || dateFilter || undefined
 
+  // Search now runs server-side (so it spans every page and the export can
+  // honour it), which means it must be debounced -- otherwise every keystroke
+  // is a request.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedLookup(lookupValue.trim()), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [lookupValue])
+
+  const search = debouncedLookup || undefined
+
   const { transactions, isLoading, error, page, totalPages, total, setPage, refresh } =
     useTransactions({
       pageSize,
@@ -116,6 +146,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
       categoryId,
       fromDate,
       toDate,
+      search,
       sort: dateSort,
     })
 
@@ -125,9 +156,9 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     onRefreshReady?.(refresh)
   }, [onRefreshReady, refresh])
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => transactionMatchesLookup(t, lookupValue))
-  }, [transactions, lookupValue])
+  // Every filter, search included, is applied server-side now, so the page the
+  // hook returns is already the filtered set.
+  const filteredTransactions = transactions
 
   const hasTransactions = transactions.length > 0
   const hasFiltered = filteredTransactions.length > 0
@@ -172,11 +203,32 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     categoryFilter !== 'all' ||
     dateSort !== 'newest'
 
+  // Only what's tucked inside the popover — the search box is visible on its
+  // own, so counting it would tell the user something they can already see.
+  const hiddenFilterCount = [
+    dateFilter,
+    statusFilter !== 'all',
+    typeFilter !== 'all',
+    cardFilter !== 'all',
+    categoryFilter !== 'all',
+    dateSort !== 'newest',
+  ].filter(Boolean).length
+
   async function handleExportPdf() {
     if (isExportingPdf) return
     setIsExportingPdf(true)
     try {
-      await exportService.transactionsPdf({ statusId, transactionTypeId, categoryId, sort: dateSort })
+      // The same filter set the list is showing, so the PDF matches the screen.
+      await exportService.transactionsPdf({
+        statusId,
+        transactionTypeId,
+        categoryId,
+        cardId,
+        fromDate,
+        toDate,
+        search,
+        sort: dateSort,
+      })
       notify({ type: 'success', message: 'Transactions exported as PDF.', surface: 'toast' })
     } catch (err) {
       notify({
@@ -191,6 +243,7 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
 
   function clearFilters() {
     setLookupValue('')
+    setDebouncedLookup('')
     clearUrlFilters()
     setCardFilter('all')
     setCategoryFilter('all')
@@ -200,9 +253,9 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
     <div className="mx-auto max-w-5xl">
       {/* Filter toolbar */}
       {!error ? (
-        <div className="mb-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center" data-tour="transactions-filters">
-          {/* Search — full row on phone, grows to fill space at md+ */}
-          <div className="relative md:min-w-40 md:flex-1">
+        <div className="mb-3 flex flex-wrap items-center gap-2" data-tour="transactions-filters">
+          {/* Search — the one filter kept inline; grows to take the free space */}
+          <div className="relative min-w-0 flex-1 basis-full sm:basis-56">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
             <Input
               type="search"
@@ -210,102 +263,147 @@ export default function TransactionHistory({ onTransactionSelect, onRefreshReady
               onChange={(e) => setLookupValue(e.target.value)}
               placeholder="Search transactions…"
               disabled={!hasTransactions && !isLoading}
-              className="h-8 rounded-input border-border/70 bg-background pl-8 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={`${CONTROL_CLASS} w-full pl-8 placeholder:text-muted-foreground/50`}
             />
           </div>
 
-          {/* Filters — two-up grid on phone, inline at md+ */}
-          <div className="grid grid-cols-2 gap-2 md:contents">
-            <Input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => {
-                const value = e.target.value
-                setFilters({ from: value, to: value })
-              }}
-              disabled={!hasTransactions && !isLoading}
-              className="h-8 rounded-input border-border/70 bg-background text-sm shadow-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:w-auto"
-            />
-
-            <Select
-              value={statusFilter}
-              onChange={(e) => setFilters({ status: e.target.value === 'all' ? '' : e.target.value })}
-              disabled={!hasTransactions && !isLoading}
-              options={[{ value: 'all', label: 'All statuses' }, ...TRANSACTION_STATUS_OPTIONS]}
-              className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
-            />
-
-            <Select
-              value={typeFilter}
-              onChange={(e) => setFilters({ type: e.target.value === 'all' ? '' : e.target.value })}
-              disabled={!hasTransactions && !isLoading}
-              options={[{ value: 'all', label: 'All types' }, ...TRANSACTION_TYPE_OPTIONS]}
-              className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
-            />
-
-            {cardOptions.length > 1 ? (
-              <Select
-                value={cardFilter}
-                onChange={(e) => setCardFilter(e.target.value)}
-                options={[{ value: 'all', label: 'All cards' }, ...cardOptions]}
-                className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
-              />
-            ) : null}
-
-            {categoryOptions.length > 0 ? (
-              <Select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                disabled={!hasTransactions && !isLoading}
-                options={[{ value: 'all', label: 'All categories' }, ...categoryOptions]}
-                className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
-              />
-            ) : null}
-
-            <Select
-              value={dateSort}
-              onChange={(e) => setFilters({ sort: e.target.value })}
-              disabled={!hasTransactions && !isLoading}
-              options={DATE_SORT_OPTIONS}
-              className="h-8 rounded-input border-border/70 bg-background py-0 shadow-none md:w-auto"
-            />
-          </div>
-
-          {/* Clear + export + count — one row on phone, inline at md+ */}
-          <div className="flex items-center gap-2 md:contents">
-            {isFilterActive ? (
-              <Button
-                variant="ghost"
-                className="h-8 gap-1 px-2.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                onClick={clearFilters}
-              >
-                <X className="h-3 w-3" />
-                Clear
-              </Button>
-            ) : null}
-
-            {hasTransactions ? (
+          {/* Everything else lives behind one compact button, so the toolbar
+              stays a single tidy row from phone to desktop. */}
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 rounded-input border-border/70 px-2.5 text-xs shadow-none"
-                disabled={isExportingPdf}
-                onClick={handleExportPdf}
+                disabled={!hasTransactions && !isLoading}
+                className="h-8 shrink-0 gap-1.5 rounded-input border-border/70 px-2.5 text-xs shadow-none"
               >
-                <Download className="h-3.5 w-3.5" />
-                {isExportingPdf ? 'Exporting…' : 'Export PDF'}
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filters
+                {hiddenFilterCount > 0 ? (
+                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground">
+                    {hiddenFilterCount}
+                  </span>
+                ) : null}
               </Button>
-            ) : null}
+            </PopoverTrigger>
 
-            {/* Transaction count — right-aligned in toolbar */}
-            {!isLoading ? (
-              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                {isFilterActive
-                  ? `${filteredTransactions.length} of ${total} transactions`
-                  : `${total} transaction${total !== 1 ? 's' : ''}`}
-              </span>
-            ) : null}
-          </div>
+            <PopoverContent className="grid gap-3">
+              <FilterField label="Date" htmlFor="tx-filter-date">
+                <Input
+                  id="tx-filter-date"
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setFilters({ from: value, to: value })
+                  }}
+                  className={`${CONTROL_CLASS} w-full`}
+                />
+              </FilterField>
+
+              <FilterField label="Status" htmlFor="tx-filter-status">
+                <Select
+                  id="tx-filter-status"
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setFilters({ status: e.target.value === 'all' ? '' : e.target.value })
+                  }
+                  options={[{ value: 'all', label: 'All statuses' }, ...TRANSACTION_STATUS_OPTIONS]}
+                  className={SELECT_CLASS}
+                />
+              </FilterField>
+
+              <FilterField label="Type" htmlFor="tx-filter-type">
+                <Select
+                  id="tx-filter-type"
+                  value={typeFilter}
+                  onChange={(e) =>
+                    setFilters({ type: e.target.value === 'all' ? '' : e.target.value })
+                  }
+                  options={[{ value: 'all', label: 'All types' }, ...TRANSACTION_TYPE_OPTIONS]}
+                  className={SELECT_CLASS}
+                />
+              </FilterField>
+
+              {cardOptions.length > 1 ? (
+                <FilterField label="Card" htmlFor="tx-filter-card">
+                  <Select
+                    id="tx-filter-card"
+                    value={cardFilter}
+                    onChange={(e) => setCardFilter(e.target.value)}
+                    options={[{ value: 'all', label: 'All cards' }, ...cardOptions]}
+                    className={SELECT_CLASS}
+                  />
+                </FilterField>
+              ) : null}
+
+              {categoryOptions.length > 0 ? (
+                <FilterField label="Category" htmlFor="tx-filter-category">
+                  <Select
+                    id="tx-filter-category"
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    options={[{ value: 'all', label: 'All categories' }, ...categoryOptions]}
+                    className={SELECT_CLASS}
+                  />
+                </FilterField>
+              ) : null}
+
+              <FilterField label="Sort" htmlFor="tx-filter-sort">
+                <Select
+                  id="tx-filter-sort"
+                  value={dateSort}
+                  onChange={(e) => setFilters({ sort: e.target.value })}
+                  options={DATE_SORT_OPTIONS}
+                  className={SELECT_CLASS}
+                />
+              </FilterField>
+
+              {isFilterActive ? (
+                <Button
+                  variant="ghost"
+                  className="h-8 w-full gap-1 px-2.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3 w-3" />
+                  Clear all filters
+                </Button>
+              ) : null}
+            </PopoverContent>
+          </Popover>
+
+          {isFilterActive ? (
+            <Button
+              variant="ghost"
+              className="h-8 shrink-0 gap-1 px-2.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              onClick={clearFilters}
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </Button>
+          ) : null}
+
+          {hasTransactions ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 gap-1.5 rounded-input border-border/70 px-2.5 text-xs shadow-none"
+              disabled={isExportingPdf}
+              onClick={handleExportPdf}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {isExportingPdf ? 'Exporting…' : 'Export PDF'}
+            </Button>
+          ) : null}
+
+          {/* Transaction count — right-aligned in toolbar */}
+          {!isLoading ? (
+            <span className="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">
+              {isFilterActive
+                ? `${filteredTransactions.length} of ${total} transactions`
+                : `${total} transaction${total !== 1 ? 's' : ''}`}
+            </span>
+          ) : null}
         </div>
       ) : null}
 
