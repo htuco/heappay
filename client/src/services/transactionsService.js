@@ -85,6 +85,8 @@ function buildPageParams(params = {}) {
 	if (typeof params.statusId === 'number') query.status_id = params.statusId
 	if (typeof params.transactionTypeId === 'number') query.transaction_type_id = params.transactionTypeId
 	if (typeof params.categoryId === 'number') query.category_id = params.categoryId
+	if (typeof params.cardId === 'number') query.card_id = params.cardId
+	if (typeof params.search === 'string' && params.search.trim()) query.q = params.search.trim()
 	if (typeof params.fromDate === 'string' && params.fromDate) query.from_date = params.fromDate
 	if (typeof params.toDate === 'string' && params.toDate) query.to_date = params.toDate
 	if (typeof params.userRoleName === 'string' && params.userRoleName) {

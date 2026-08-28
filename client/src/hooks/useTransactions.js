@@ -16,12 +16,13 @@ function getUserId(user) {
  * card appears as sender or recipient (the card must belong to the logged-in
  * user). When omitted, all of the user's transactions are returned.
  *
- * Status and transaction-type filtering are applied server-side (the list
- * endpoints accept `status_id` / `transaction_type_id`), so filtering stays
- * correct across pages. Date + free-text search remain client-side over the
- * current page.
+ * Every filter -- including the card scope and the free-text search -- is
+ * applied server-side by the one `/transactions` endpoint, so results stay
+ * correct across pages and the "X of N" count stays truthful. The card scope
+ * used to go to `/transactions/card/{id}`, which silently ignored every other
+ * filter; it is now just another query param on the same call.
  *
- * @param {{ cardId?: number, pageSize?: number, statusId?: number, transactionTypeId?: number, categoryId?: number, fromDate?: string, toDate?: string, sort?: string }} [options]
+ * @param {{ cardId?: number, pageSize?: number, statusId?: number, transactionTypeId?: number, categoryId?: number, fromDate?: string, toDate?: string, search?: string, sort?: string }} [options]
  */
 export function useTransactions({
   cardId,
@@ -31,6 +32,7 @@ export function useTransactions({
   categoryId,
   fromDate,
   toDate,
+  search,
   sort = 'newest',
 } = {}) {
   const { user, isLoading: authLoading } = useAuth()
@@ -62,7 +64,7 @@ export function useTransactions({
   // Reset to page 1 whenever a server-side query input changes so we don't stay
   // on a stale page (e.g. page 3 of "all" after switching to a status with one page).
   const prevQuery = useRef({
-    cardId, statusId, transactionTypeId, categoryId, fromDate, toDate, sort,
+    cardId, statusId, transactionTypeId, categoryId, fromDate, toDate, search, sort,
   })
   useEffect(() => {
     const prev = prevQuery.current
@@ -73,10 +75,11 @@ export function useTransactions({
       prev.categoryId !== categoryId ||
       prev.fromDate !== fromDate ||
       prev.toDate !== toDate ||
+      prev.search !== search ||
       prev.sort !== sort
     ) {
       prevQuery.current = {
-        cardId, statusId, transactionTypeId, categoryId, fromDate, toDate, sort,
+        cardId, statusId, transactionTypeId, categoryId, fromDate, toDate, search, sort,
       }
       let cancelled = false
       Promise.resolve().then(() => {
@@ -86,7 +89,7 @@ export function useTransactions({
         cancelled = true
       }
     }
-  }, [cardId, statusId, transactionTypeId, categoryId, fromDate, toDate, sort])
+  }, [cardId, statusId, transactionTypeId, categoryId, fromDate, toDate, search, sort])
 
   useEffect(() => {
     if (authLoading) return
@@ -114,14 +117,13 @@ export function useTransactions({
       if (typeof statusId === 'number') params.statusId = statusId
       if (typeof transactionTypeId === 'number') params.transactionTypeId = transactionTypeId
       if (typeof categoryId === 'number') params.categoryId = categoryId
+      if (typeof cardId === 'number') params.cardId = cardId
       if (fromDate) params.fromDate = fromDate
       if (toDate) params.toDate = toDate
-      const fetch =
-        cardId != null
-          ? transactionsService.listByCard(cardId, params)
-          : transactionsService.list(params)
+      if (search) params.search = search
 
-      fetch
+      transactionsService
+        .list(params)
         .then((pageData) => {
           if (cancelled) return
           setTransactions(pageData.items)
@@ -139,7 +141,7 @@ export function useTransactions({
     return () => {
       cancelled = true
     }
-  }, [authLoading, userId, cardId, page, pageSize, statusId, transactionTypeId, categoryId, fromDate, toDate, sort, refreshKey])
+  }, [authLoading, userId, cardId, page, pageSize, statusId, transactionTypeId, categoryId, fromDate, toDate, search, sort, refreshKey])
 
   return {
     transactions,

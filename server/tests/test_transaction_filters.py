@@ -127,3 +127,19 @@ def test_invalid_user_role_name_rejected() -> None:
     client, _service = _client()
     response = client.get("/transactions/all", params={"user_role_name": "hacker"})
     assert response.status_code == 422
+
+
+def test_consumer_list_forwards_card_and_search() -> None:
+    """The card filter used to bypass this route entirely (it went to
+    /transactions/card/{id}, which ignores every other filter)."""
+    client, service = _client(admin=False)
+    response = client.get(
+        "/transactions",
+        params={"card_id": 7, "q": "coffee", "status_id": 2},
+    )
+    assert response.status_code == 200
+    assert service.last_list_for_user is not None
+    assert service.last_list_for_user["card_id"] == 7
+    assert service.last_list_for_user["search"] == "coffee"
+    # The card filter must not displace the others.
+    assert service.last_list_for_user["status_id"] == 2

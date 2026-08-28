@@ -54,7 +54,9 @@ export const exportService = {
 
 	/**
 	 * Transaction list, honouring the same filters as the Transactions page.
-	 * @param {{ statusId?: number, transactionTypeId?: number, categoryId?: number, sort?: string }} [filters]
+	 * Every active filter is forwarded so the PDF matches the on-screen list --
+	 * the server runs them through the same query the list endpoint uses.
+	 * @param {{ statusId?: number, transactionTypeId?: number, categoryId?: number, cardId?: number, fromDate?: string, toDate?: string, search?: string, sort?: string }} [filters]
 	 */
 	transactionsPdf: (filters = {}) =>
 		downloadPdf(
@@ -63,6 +65,10 @@ export const exportService = {
 				status_id: filters.statusId,
 				transaction_type_id: filters.transactionTypeId,
 				category_id: filters.categoryId,
+				card_id: filters.cardId,
+				from_date: filters.fromDate,
+				to_date: filters.toDate,
+				q: filters.search?.trim() || undefined,
 				sort: filters.sort,
 			},
 			'transactions.pdf',

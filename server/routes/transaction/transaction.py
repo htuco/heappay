@@ -117,8 +117,10 @@ def list_transactions(
     category_id: int | None = Query(default=None, ge=1),
     status_id: int | None = Query(default=None, ge=1),
     transaction_type_id: int | None = Query(default=None, ge=1),
+    card_id: int | None = Query(default=None, ge=1),
     from_date: date | None = Query(default=None),
     to_date: date | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=100),
     sort: str = Query(
         default="newest",
         pattern="^(newest|oldest|amount_desc|amount_asc)$",
@@ -135,10 +137,20 @@ def list_transactions(
             category_id=category_id,
             status_id=status_id,
             transaction_type_id=transaction_type_id,
+            card_id=card_id,
             from_date=from_date,
             to_date=to_date,
+            search=q,
             sort=sort,
         )
+    except CardNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_CARD_NOT_FOUND
+        ) from None
+    except ForbiddenError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN
+        ) from None
     except TransactionCategoryNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=_CATEGORY_NOT_FOUND
