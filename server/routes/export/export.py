@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,8 @@ from services.export.pdf_export import (
     humanize,
 )
 from services.transaction.transaction import (
+    CardNotFoundError,
+    ForbiddenError,
     TransactionCategoryNotFoundError,
     TransactionService,
     TransactionStatusNotFoundError,
@@ -49,8 +53,27 @@ def _format_date_range(transactions: list) -> str | None:
     return f"{lo.strftime('%b %d, %Y')} \u2013 {hi.strftime('%b %d, %Y')}"
 
 
+def _format_requested_dates(from_date: date | None, to_date: date | None) -> str | None:
+    """The dates the user actually asked for -- shown in preference to the range
+    derived from the rows, which would silently read empty on a no-match export."""
+    if from_date and to_date:
+        if from_date == to_date:
+            return from_date.strftime("%b %d, %Y")
+        return f"{from_date.strftime('%b %d, %Y')} \u2013 {to_date.strftime('%b %d, %Y')}"
+    if from_date:
+        return f"From {from_date.strftime('%b %d, %Y')}"
+    if to_date:
+        return f"Until {to_date.strftime('%b %d, %Y')}"
+    return None
+
+
 def _build_transactions_context_line(
-    labels: dict, sort: str, transactions: list | None = None
+    labels: dict,
+    sort: str,
+    transactions: list | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    search: str | None = None,
 ) -> str:
     parts: list[str] = []
     if labels.get("status"):
@@ -59,9 +82,15 @@ def _build_transactions_context_line(
         parts.append(f"Type: {humanize(labels['type'])}")
     if labels.get("category"):
         parts.append(f"Category: {humanize(labels['category'])}")
+    if labels.get("card"):
+        parts.append(f"Card: {labels['card']}")
+    if search and search.strip():
+        parts.append(f'Search: "{search.strip()}"')
     if not parts:
         parts.append("All transactions")
-    date_range = _format_date_range(transactions or [])
+    date_range = _format_requested_dates(from_date, to_date) or _format_date_range(
+        transactions or []
+    )
     if date_range:
         parts.append(date_range)
     parts.append(_SORT_LABELS.get(sort, "Newest first"))
@@ -116,6 +145,10 @@ def export_transactions(
     status_id: int | None = Query(default=None, ge=1),
     transaction_type_id: int | None = Query(default=None, ge=1),
     category_id: int | None = Query(default=None, ge=1),
+    card_id: int | None = Query(default=None, ge=1),
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=100),
     sort: str = Query(default="newest", pattern="^(newest|oldest|amount_desc|amount_asc)$"),
     user_id: int = Depends(get_current_user_id),
     user_repo: UserRepository = Depends(get_user_repo),
@@ -123,6 +156,8 @@ def export_transactions(
 ) -> Response:
     user = _require_user(user_repo, user_id)
     try:
+        # Same service call the transactions list uses, with the same filter set,
+        # so the exported rows can't drift from what the page shows.
         transactions, total = service.list_for_user(
             user_id=user_id,
             limit=_TRANSACTIONS_EXPORT_LIMIT,
@@ -130,8 +165,16 @@ def export_transactions(
             status_id=status_id,
             transaction_type_id=transaction_type_id,
             category_id=category_id,
+            card_id=card_id,
+            from_date=from_date,
+            to_date=to_date,
+            search=q,
             sort=sort,
         )
+    except CardNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found.") from None
+    except ForbiddenError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this card.") from None
     except TransactionStatusNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction status not found.") from None
     except TransactionTypeNotFoundError:
@@ -142,8 +185,16 @@ def export_transactions(
         status_id=status_id,
         transaction_type_id=transaction_type_id,
         category_id=category_id,
+        card_id=card_id,
     )
-    context_line = _build_transactions_context_line(filter_labels, sort, transactions)
+    context_line = _build_transactions_context_line(
+        filter_labels,
+        sort,
+        transactions,
+        from_date=from_date,
+        to_date=to_date,
+        search=q,
+    )
     pdf_bytes = build_transactions_pdf(
         user,
         transactions,

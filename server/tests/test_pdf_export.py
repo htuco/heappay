@@ -1,7 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 
-from routes.export.export import _build_transactions_context_line, _format_date_range
+from routes.export.export import (
+    _build_transactions_context_line,
+    _format_date_range,
+    _format_requested_dates,
+)
 from services.export import pdf_export
 from services.export.pdf_export import (
     _counterparty,
@@ -188,6 +192,39 @@ def test_context_line_includes_date_range():
     assert "Jun 01 \u2013 Aug 06, 2026" in line
     assert line.startswith("Filters: Status: Completed")
     assert line.endswith("Newest first")
+
+
+def test_context_line_includes_card_and_search():
+    """The PDF has to say what it was filtered by, or a filtered export is
+    indistinguishable from an unfiltered one."""
+    line = _build_transactions_context_line(
+        {"status": "completed", "card": "Visa 4242"},
+        "newest",
+        [],
+        search="coffee",
+    )
+    assert "Card: Visa 4242" in line
+    assert 'Search: "coffee"' in line
+
+
+def test_context_line_prefers_requested_dates_over_derived_range():
+    """With an explicit date filter that matched nothing, the header must still
+    show the requested window rather than falling back to no range at all."""
+    line = _build_transactions_context_line(
+        {},
+        "newest",
+        [],
+        from_date=date(2026, 6, 1),
+        to_date=date(2026, 6, 30),
+    )
+    assert "Jun 01, 2026 \u2013 Jun 30, 2026" in line
+
+
+def test_format_requested_dates_variants():
+    assert _format_requested_dates(date(2026, 6, 1), date(2026, 6, 1)) == "Jun 01, 2026"
+    assert _format_requested_dates(date(2026, 6, 1), None) == "From Jun 01, 2026"
+    assert _format_requested_dates(None, date(2026, 6, 30)) == "Until Jun 30, 2026"
+    assert _format_requested_dates(None, None) is None
 
 
 def test_format_date_range_variants():
